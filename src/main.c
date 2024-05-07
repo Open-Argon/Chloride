@@ -1,32 +1,29 @@
 #include "string/string.h"
+#include "number/number.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
+void initialize() {
+    initNumber();
+}
+
+void cleanup() {
+    cleanupNumber();
+}
+
 int main() {
-    char* str = malloc(100 * sizeof(char));
-    if (str == NULL) {
-        printf("Failed to allocate memory\n");
+    initialize();
+    char *code = "1.2e20";
+    struct number mynum = translateNumber(code);
+    if (mynum.denominator == 0) {
+        printf("Invalid number\n");
         return 1;
     }
-    strcpy(str, "  \t\n\r\f\vHello, World!  \t\n\r\f\v");
-    char* clone = cloneString(str);
-
-    if (clone == NULL) {
-        printf("Failed to clone string\n");
-        return 1;
-    }
-
-    stripString(clone, WHITE_SPACE);
-
-    printf("Original string: \"%s\"\n", str);
-
-    free(str);
-
-    
-    printf("Cloned string: \"%s\"\n", clone);
-    free(clone);
-
+    double f = 1.0 * mynum.numerator / mynum.denominator;
+    printf("Numerator: %ld\n", mynum.numerator);
+    printf("Denominator: %lu\n", mynum.denominator);
+    printf("Float: %lf\n", f);
     return 0;
 }
