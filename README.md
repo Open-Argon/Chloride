@@ -1,2 +1,2 @@
 # Chloride
-A remake of Argon-v3 in C.
+An Argon interpreter written in C
