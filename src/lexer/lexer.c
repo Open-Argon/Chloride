@@ -1,16 +1,8 @@
 #include "lex.yy.h"
 #include "lexer.h"
-#include "../string/string.h"
-#include <stdlib.h>
 
 void lexer(LexerState state) {
     yyscan_t scanner;
-
-    char *unquoted = unquote(state.content);
-    if (unquoted) {
-        printf("%s\n", unquoted);
-        free(unquoted);
-    }
 
     yylex_init(&scanner);
 

@@ -1,5 +1,7 @@
 #include "lexer/lexer.h"
+#include "parser/parser.h"
 
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -46,9 +48,11 @@ int main() {
     };
     lexer(state);
     free(content);
-    for (int i = 0; i<tokenStruct->count; i++) {
-        printf("%d\n", tokenStruct->tokens[i].type);
-    }
+
+    TaggedValueStruct taggedValueStruct = init_TaggedValueStruct();
+
+    parser(&taggedValueStruct, tokenStruct, false);
+
     free_tokens(tokenStruct);
     return 0;
 }

@@ -6,7 +6,7 @@
 
 
 TokenStruct* init_token() {
-    TokenStruct *tokenStruct = malloc(sizeof(TokenStruct));\
+    TokenStruct *tokenStruct = malloc(sizeof(TokenStruct));
     if (tokenStruct == NULL) {
         // handle malloc failure
         return NULL;
