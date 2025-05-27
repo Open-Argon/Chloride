@@ -14,6 +14,10 @@ $(BINARY): $(CFILES) $(LEXER_C) $(LEXER_H)
 	mkdir -p bin
 	gcc -O3 -o $(BINARY) $(CFILES) -lm -Wall -Wextra -Wno-unused-function
 
+debug: $(CFILES) $(LEXER_C) $(LEXER_H)
+	mkdir -p bin
+	gcc -g -O0 -o $(BINARY) $(CFILES) -lm -Wall -Wextra -Wno-unused-function
+
 clean:
 	rm -rf bin
 	rm -f $(LEXER_C) $(LEXER_H)
