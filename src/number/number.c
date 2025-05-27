@@ -49,19 +49,19 @@ void doubleToFraction(double num, int64_t *numerator, uint64_t *denominator) {
     int currentSign = (num < 0) ? -1 : 1;
     num = fabs(num);
 
-    double tolerance = 1.0e-10;
-    double h1 = 1, h2 = 0, k1 = 0, k2 = 1;
-    double b = num;
+    long double tolerance = 1.0e-10;
+    long double  h1 = 1, h2 = 0, k1 = 0, k2 = 1;
+    long double  b = num;
     do {
-        double a = floor(b);
-        double aux = h1;
+        long double  a = floor(b);
+        long double  aux = h1;
         h1 = a * h1 + h2;
         h2 = aux;
         aux = k1;
         k1 = a * k1 + k2;
         k2 = aux;
         b = 1 / (b - a);
-    } while (fabs(num - h1 / k1) > num * tolerance);
+    } while (fabsl(num - h1 / k1) > num * tolerance);
 
     *numerator = (int64_t)(h1 * currentSign);
     *denominator = (uint64_t)k1;
