@@ -4,32 +4,44 @@
 
 #define INITIAL_CAPACITY 64
 
-Token* tokens = NULL;
-int token_count = 0;
-static int token_capacity = 0;
 
-void add_token(TokenType type, const char* value, int line, int column) {
-    if (tokens == NULL) {
-        token_capacity = INITIAL_CAPACITY;
-        tokens = malloc(sizeof(Token) * token_capacity);
-    } else if (token_count >= token_capacity) {
-        token_capacity *= 2;
-        tokens = realloc(tokens, sizeof(Token) * token_capacity);
+TokenStruct* init_token() {
+    TokenStruct *tokenStruct = malloc(sizeof(TokenStruct));\
+    if (tokenStruct == NULL) {
+        // handle malloc failure
+        return NULL;
     }
-
-    tokens[token_count].type = type;
-    tokens[token_count].value = strdup(value);
-    tokens[token_count].line = line;
-    tokens[token_count].column = column;
-    token_count++;
+    tokenStruct->count = 0;
+    tokenStruct->capacity = INITIAL_CAPACITY;
+    tokenStruct->tokens = malloc(sizeof(Token) * INITIAL_CAPACITY);
+    if (tokenStruct->tokens == NULL) {
+        // handle malloc failure
+        free(tokenStruct);
+        return NULL;
+    }
+    return tokenStruct;
 }
 
-void free_tokens() {
-    for (int i = 0; i < token_count; ++i) {
-        free(tokens[i].value);
+void add_token(TokenStruct* token,TokenType type, const char* value, int line, int column) {
+    if (token->count >= token->capacity) {
+        token->capacity *= 2;
+        token->tokens = realloc(token->tokens, sizeof(Token) * token->capacity);
     }
-    free(tokens);
-    tokens = NULL;
-    token_count = 0;
-    token_capacity = 0;
+
+    token->tokens[token->count].type = type;
+    token->tokens[token->count].value = strdup(value);
+    token->tokens[token->count].line = line;
+    token->tokens[token->count].column = column;
+    token->count++;
+}
+
+void free_tokens(TokenStruct* token) {
+    for (int i = 0; i < token->count; ++i) {
+        free(token->tokens[i].value);
+    }
+    free(token->tokens);
+    token->tokens = NULL;
+    token->count = 0;
+    token->capacity = 0;
+    free(token);
 }

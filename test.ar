@@ -1,0 +1,54 @@
+import "url.ar" as url
+
+let __makeFile(name, type, data) = do
+    let File = {name: name, type: type, data: data}
+    let save(path) = do
+        let file = file.write(path)
+        file.buffer(data)
+        file.close()
+    File.save = save
+    return File
+
+let __multipart(req, res) = do
+    let boundary = buffer().from(req.headers["content-type"].splitN("boundary=", 2)[1])
+    let newLineSplit = buffer().from("\r\n\r\n")
+    let parts = req.buffer.body.split(boundary)
+    for (i from 0 to parts.length) do
+        let str = parts[i].to("string")
+        if (str == "" || str=="--" || str=="--\r\n") continue
+        str = null
+        let headers = {}
+        let lines = parts[i].splitN(newLineSplit, 2)
+        let headerLines = lines[0].to("string").split("\r\n")
+        for (j from 0 to headerLines.length) do
+            let header = headerLines[j].splitN(": ", 2)
+            if (header.length != 2) continue
+            headers[header[0].lower()] = header[1]
+        if (lines.length != 2) continue
+        let body = lines[1]
+        if (i != parts.length-1) do
+            body = body.slice(0, body.length-4)
+        if ("content-disposition" in headers) do
+            let disposition = headers["content-disposition"].split("; ")
+            if (disposition[0] == "form-data") do
+                let name = json.parse(disposition[1].splitN("=", 2)[1])
+                if (disposition.length >= 3) do
+                    let filename = json.parse(disposition[2].splitN("=", 2)[1])
+                    req.files[name] = __makeFile(filename, headers["content-type"], body)
+                else do
+                    req.formdata[name] = body.to("string")
+    res.next()
+    
+
+let formdata(req, res) = do
+    req.formdata = {}
+    req.files = {}
+
+    if (req.method != "POST") return res.next()
+    if ("content-type" not in req.headers) return res.next()
+    let loweredContentType = req.headers["content-type"].lower()
+    if (loweredContentType.startswith("multipart/form-data")) return __multipart(req, res)
+    else if (loweredContentType.startswith("application/x-www-form-urlencoded")) req.formdata = url.decodeURLQuery(req.buffer.body.to("string"))
+    else if (loweredContentType.startswith("application/json")) req.formdata = json.parse(req.buffer.body.to("string"))
+    else req.files.file = __makeFile("file", req.headers["content-type"], req.buffer.body)
+    res.next()

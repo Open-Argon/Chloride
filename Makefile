@@ -3,7 +3,8 @@ LEXER_C = src/lexer/lex.yy.c
 LEXER_H = src/lexer/lex.yy.h
 
 CFILES = $(shell find src -name '*.c')
-BINARY = bin/cargon
+CFLAGS = -lm -lcjson -Wall -Wextra -Wno-unused-function -s
+BINARY = bin/argon
 
 all: $(BINARY)
 
@@ -12,11 +13,11 @@ $(LEXER_C) $(LEXER_H): $(LEXER_SRC)
 
 $(BINARY): $(CFILES) $(LEXER_C) $(LEXER_H)
 	mkdir -p bin
-	gcc -O3 -o $(BINARY) $(CFILES) -lm -Wall -Wextra -Wno-unused-function
+	gcc -O3 -o $(BINARY) $(CFILES) $(CFLAGS)
 
 debug: $(CFILES) $(LEXER_C) $(LEXER_H)
 	mkdir -p bin
-	gcc -g -O0 -o $(BINARY) $(CFILES) -lm -Wall -Wextra -Wno-unused-function
+	gcc -g -O0 -o $(BINARY) $(CFILES) $(CFLAGS)
 
 clean:
 	rm -rf bin
