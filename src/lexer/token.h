@@ -71,17 +71,5 @@ typedef struct {
   char *value;
 } Token;
 
-typedef struct {
-  int count;
-  int capacity;
-  Token *tokens;
-} TokenStruct;
-
-TokenStruct *init_token();
-
-void add_token(TokenStruct *token, TokenType type, const char *value, int line,
-               int column);
-
-void free_tokens(TokenStruct *token);
-
+Token *create_token(TokenType type, int line, int column, char *value);
 #endif

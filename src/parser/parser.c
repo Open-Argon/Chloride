@@ -1,20 +1,23 @@
 #include "parser.h"
+#include <stddef.h>
 
-TaggedValue parse_token(TokenStruct * tokenStruct, int *index) {
-  Token token = tokenStruct->tokens[*index];
-  switch (token.type) {
+TaggedValue parse_token(LinkedList * tokens, size_t *index) {
+  Token * token = get_element_at(tokens, *index);
+  switch (token->type) {
     case TOKEN_STRING:
-      index++;
-      return parse_string(token);
+      (*index)++;
+      return parse_string(*token);
     default:
       perror("unreachable");
       exit(0);
   }
 }
 
-void parser(TaggedValueStruct * taggedValueStruct, TokenStruct * tokenStruct, bool inline_flag) {
-  int index = 0;
-  while (index < tokenStruct->count) {
-    TaggedValueStruct_append(taggedValueStruct, parse_token(tokenStruct, &index));
+void parser(LinkedList * parsed, LinkedList * tokens, bool inline_flag) {
+  size_t index = 0;
+  size_t length = list_length(tokens);
+  while (index < length) {
+    TaggedValue parsed_code = parse_token(tokens, &index);
+    append(parsed,&parsed_code);
   }
 }

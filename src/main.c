@@ -1,4 +1,5 @@
 #include "lexer/lexer.h"
+#include "lexer/token.h"
 #include "parser/parser.h"
 
 #include <stdbool.h>
@@ -37,22 +38,28 @@ int main() {
     const char * path = "test.ar";
 
     char *content = read_file_as_text(path);
-    TokenStruct* tokenStruct = init_token();
+    LinkedList* tokens = create_list(sizeof(Token));
     if (!content) return 1;
 
     LexerState state = {
         path,
         content,
         1,
-        tokenStruct
+        tokens
     };
     lexer(state);
+
+    LinkedList * parsed = create_list(sizeof(TaggedValue));
+
+    parser(parsed, tokens, false);
+    free_list(tokens);
     free(content);
 
-    TaggedValueStruct taggedValueStruct = init_TaggedValueStruct();
+    Node *current = parsed->head;
+    while (current) {
+        printf("%s\n", (char*)current->data);
+        current = current->next;
+    }
 
-    parser(&taggedValueStruct, tokenStruct, false);
-
-    free_tokens(tokenStruct);
     return 0;
 }

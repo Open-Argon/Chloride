@@ -4,6 +4,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-void parser(TaggedValueStruct * TaggedValueStruct, TokenStruct * tokenStruct, bool inline_flag);
+void parser(LinkedList * parsed, LinkedList * tokens, bool inline_flag);
 
-TaggedValue parse_token(TokenStruct * tokenStruct, int *index);
+TaggedValue parse_token(LinkedList * tokens, size_t *index);

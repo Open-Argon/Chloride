@@ -1,8 +1,8 @@
 #include "../../lexer/token.h"
 #include "../taggedValue.h"
 
-char *swap_quotes(const char *input);
+char *swap_quotes(char *input);
 
-char *unquote(const char *str);
+char *unquote(char *str);
 
 TaggedValue parse_string(Token token);
