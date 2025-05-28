@@ -1,5 +1,4 @@
 #include "string.h"
-#include "../../string/string.h"
 #include "../../lexer/token.h"
 
 #include <cjson/cJSON.h>
@@ -27,7 +26,6 @@ char *swap_quotes(char *input) {
 }
 
 char *unquote(char *str) {
-  return str;
   if (*str == '\0')
     return NULL;
 
@@ -76,6 +74,6 @@ char *unquote(char *str) {
 TaggedValue parse_string(Token token) {
   return (TaggedValue){
     AST_STRING,
-    cloneString(token.value),
+    unquote(token.value),
   };
 }

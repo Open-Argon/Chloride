@@ -16,7 +16,7 @@ int yywrap(void *) {
 
 %%
 
-(\"(\\[a-z\"'`]|[^\\"])*\") {
+\"((\\([\"\\\/bfnrt]|u[0-9a-fA-F]{4}))|[^\\\"\n])*\" {
     GET_STATE
     Token * token = create_token(
         TOKEN_STRING,
@@ -28,7 +28,7 @@ int yywrap(void *) {
     ADD_TO_COLUMN
 }
 
-('((\\([a-z'\"`]))|[^'])*') {
+\'((\\([\'\\\/bfnrt]|u[0-9a-fA-F]{4}))|[^\\\'\n])*\' {
     GET_STATE
     append(TOKENS, create_token(
         TOKEN_STRING,

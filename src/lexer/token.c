@@ -1,6 +1,7 @@
 #include "token.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include "../string/string.h"
 
 Token *create_token(TokenType type, int line, int column, char *value) {
     Token * token = malloc(sizeof(Token));
@@ -8,6 +9,6 @@ Token *create_token(TokenType type, int line, int column, char *value) {
     token->type = type;
     token->line=line;
     token->column=column;
-    token->value=value;
+    token->value=cloneString(value);
     return token;
 }

@@ -1,6 +1,7 @@
 #include "lexer/lexer.h"
 #include "lexer/token.h"
 #include "parser/parser.h"
+#include "memory.h"
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -35,6 +36,7 @@ char* read_file_as_text(const char* filename) {
 }
 
 int main() {
+    ar_memory_init();
     const char * path = "test.ar";
 
     char *content = read_file_as_text(path);
@@ -52,12 +54,10 @@ int main() {
     LinkedList * parsed = create_list(sizeof(TaggedValue));
 
     parser(parsed, tokens, false);
-    free_list(tokens);
-    free(content);
 
     Node *current = parsed->head;
     while (current) {
-        printf("%s\n", (char*)current->data);
+        printf("%s\n", (char*)((TaggedValue*)current->data)->data);
         current = current->next;
     }
 
