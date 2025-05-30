@@ -18,7 +18,7 @@ void lexer(LexerState state) {
             state.current_column,
             yyget_text(scanner)
         );
-        append(state.tokens, token_struct);
+        darray_push(state.tokens, token_struct);
         if (token == TOKEN_NEW_LINE) {
             state.current_column = 0;
         } else {

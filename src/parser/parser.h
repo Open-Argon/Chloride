@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include <stddef.h>
+#include "../dynamic_array/darray.h"
 
 
 typedef struct LinkedList LinkedList;
@@ -15,13 +16,13 @@ typedef struct {
   ValueType type;
   void *data;
   
-} TaggedValue;
+} ParsedValue;
 
-void parser(LinkedList *parsed, LinkedList *tokens, bool inline_flag);
+void parser(DArray * parsed, DArray * tokens, bool inline_flag);
 
-TaggedValue *parse_token(LinkedList *tokens, size_t *index);
+ParsedValue * parse_token(DArray * tokens, size_t *index);
 
-void free_tagged_value(void *ptr);
+void free_parsed_value(void *ptr);
 
 
 #endif // PARSER_H

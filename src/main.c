@@ -2,32 +2,36 @@
 #include "lexer/token.h"
 #include "parser/parser.h"
 #include "memory.h"
+#include "dynamic_array/darray.h"
 
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <stdio.h>
 
 int main() {
     const char * path = "test.ar";
-    LinkedList* tokens = create_list(sizeof(Token));
+    DArray tokens;
+
+    darray_init(&tokens, sizeof(Token));
 
     LexerState state = {
         path,
         fopen(path, "r"),
         0,
-        tokens
+        &tokens
     };
     lexer(state);
 
-    LinkedList * parsed = create_list(sizeof(TaggedValue));
+    DArray parsed;
 
-    parser(parsed, tokens, false);
+    darray_init(&parsed, sizeof(ParsedValue));
 
-    free_list(tokens, free_token);
 
-    free_list(parsed,free_tagged_value);
+    parser(&parsed, &tokens, false);
+    darray_free(&tokens, free_token);
+
+    darray_free(&parsed,free_parsed_value);
 
     ar_memory_init();
 

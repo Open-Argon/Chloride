@@ -10,6 +10,6 @@ char *swap_quotes(char *input, char quote);
 
 char *unquote(char *str);
 
-TaggedValue *parse_string(Token token);
+ParsedValue *parse_string(Token token);
 
 #endif // STRING_UTILS_H

@@ -71,10 +71,10 @@ char *unquote(char *str) {
   return unescaped;
 }
 
-TaggedValue * parse_string(Token token) {
-  TaggedValue * taggedValue = malloc(sizeof(TaggedValue));
+ParsedValue * parse_string(Token token) {
+  ParsedValue * parsedValue = malloc(sizeof(ParsedValue));
   
-  taggedValue->type = AST_STRING;
-  taggedValue->data = unquote(token.value);
-  return taggedValue;
+  parsedValue->type = AST_STRING;
+  parsedValue->data = unquote(token.value);
+  return parsedValue;
 }
