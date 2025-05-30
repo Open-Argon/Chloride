@@ -7,9 +7,9 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
-#include <stdio.h>
 
 int main() {
+    ar_memory_init();
     const char * path = "test.ar";
     DArray tokens;
 
@@ -32,8 +32,6 @@ int main() {
     darray_free(&tokens, free_token);
 
     darray_free(&parsed,free_parsed_value);
-
-    ar_memory_init();
 
     return 0;
 }

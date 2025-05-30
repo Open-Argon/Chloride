@@ -15,7 +15,7 @@ void lexer(LexerState state) {
         Token * token_struct = create_token(
             token,
             yyget_lineno(scanner),
-            state.current_column,
+            state.current_column+1,
             yyget_text(scanner)
         );
         darray_push(state.tokens, token_struct);

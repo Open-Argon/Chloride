@@ -16,8 +16,11 @@ ParsedValue *parse_token(DArray *tokens, size_t *index) {
   case TOKEN_NEW_LINE:
     (*index)++;
     return NULL;
+  case TOKEN_INDENT:
+    fprintf(stderr, "error: \n");
+    exit(EXIT_FAILURE);
   default:
-    fprintf(stderr, "Panic: %s\n", "unreachable");
+    fprintf(stderr, "Panic: unreachable\n");
     exit(EXIT_FAILURE);
   }
 }
@@ -40,6 +43,5 @@ void free_parsed_value(void *ptr) {
   case AST_STRING:
     free(tagged->data);
     break;
-    // Add cases if needed
   }
 }

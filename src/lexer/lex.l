@@ -14,21 +14,9 @@ int yywrap(void *) {
 
 %%
 
-\"((\\([\"\\\/bfnrt]|u[0-9a-fA-F]{4}))|[^\\\"\n])*\" {
-    return TOKEN_STRING;
-}
-
-\'((\\([\'\\\/bfnrt]|u[0-9a-fA-F]{4}))|[^\\\'\n])*\' {
-    return TOKEN_STRING;
-}
-
-((([0-9]+(\.[0-9]+)?)|(\.[0-9]+))(e((\-|\+)?([0-9]+(\.[0-9]+)?)))?) {
-    return TOKEN_NUMBER;
-}
-
-([0-9]+\/[0-9]+) {
-    return TOKEN_FRACTION;
-}
+"." { return TOKEN_DOT; }
+"," {return TOKEN_COMMA; }
+":" {return TOKEN_COLON; }
 
 "not"[ \t]+"in"     { return TOKEN_NOT_IN; }
 "&&"                { return TOKEN_AND; }
@@ -79,9 +67,21 @@ int yywrap(void *) {
 
 [a-zA-Z_][a-zA-Z0-9_]* { return TOKEN_IDENTIFIER; }
 
-"." { return TOKEN_DOT; }
-"," {return TOKEN_COMMA; }
-":" {return TOKEN_COLON; }
+\"((\\([\"\\\/bfnrt]|u[0-9a-fA-F]{4}))|[^\\\"\n])*\" {
+    return TOKEN_STRING;
+}
+
+\'((\\([\'\\\/bfnrt]|u[0-9a-fA-F]{4}))|[^\\\'\n])*\' {
+    return TOKEN_STRING;
+}
+
+((([0-9]+(\.[0-9]+)?)|(\.[0-9]+))(e((\-|\+)?([0-9]+(\.[0-9]+)?)))?) {
+    return TOKEN_NUMBER;
+}
+
+([0-9]+\/[0-9]+) {
+    return TOKEN_FRACTION;
+}
 
 \n { return TOKEN_NEW_LINE; }
 
@@ -95,7 +95,7 @@ int yywrap(void *) {
 
 .   {
     GET_STATE
-    fprintf(stderr, "%s:%u:%u: unexpected character '%s'\n", state->path, yylineno+1, COLUMN_NO+1, yytext);
+    fprintf(stderr, "%s:%u:%u error: unexpected character '%s'\n", state->path, yylineno, COLUMN_NO+1, yytext);
     exit(1);
 }
 %%
