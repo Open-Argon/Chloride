@@ -37,6 +37,6 @@ size_t list_length(LinkedList *list);
 void print_list(LinkedList *list, void (*print_func)(void *));
 
 // Free all memory used by the list
-void free_list(LinkedList *list);
+void free_list(LinkedList *list, void (*free_data)(void *));
 
 #endif // LINKEDLIST_H

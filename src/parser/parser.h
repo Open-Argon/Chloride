@@ -1,9 +1,27 @@
-#include "../lexer/token.h"
-#include "string/string.h"
+#ifndef PARSER_H
+#define PARSER_H
+
 #include <stdbool.h>
-#include <stdio.h>
-#include <stdlib.h>
+#include <stddef.h>
 
-void parser(LinkedList * parsed, LinkedList * tokens, bool inline_flag);
 
-TaggedValue parse_token(LinkedList * tokens, size_t *index);
+typedef struct LinkedList LinkedList;
+
+typedef enum {
+  AST_STRING,
+} ValueType;
+
+typedef struct {
+  ValueType type;
+  void *data;
+  
+} TaggedValue;
+
+void parser(LinkedList *parsed, LinkedList *tokens, bool inline_flag);
+
+TaggedValue *parse_token(LinkedList *tokens, size_t *index);
+
+void free_tagged_value(void *ptr);
+
+
+#endif // PARSER_H

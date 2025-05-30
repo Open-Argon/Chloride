@@ -2,7 +2,7 @@
 #define TOKEN_H
 
 typedef enum {
-  TOKEN_STRING,
+  TOKEN_STRING = 256,
   TOKEN_NUMBER,
   TOKEN_FRACTION,
   TOKEN_IDENTIFIER,
@@ -72,4 +72,5 @@ typedef struct {
 } Token;
 
 Token *create_token(TokenType type, int line, int column, char *value);
+void free_token(void * ptr);
 #endif

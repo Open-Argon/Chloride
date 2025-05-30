@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-char *swap_quotes(char *input) {
+char *swap_quotes(char *input, char quote) {
   size_t len = strlen(input);
   char *result = malloc(len + 1);
   if (!result)
@@ -15,8 +15,8 @@ char *swap_quotes(char *input) {
 
   for (size_t i = 0; i < len; ++i) {
     if (input[i] == '"')
-      result[i] = '\'';
-    else if (input[i] == '\'')
+      result[i] = quote;
+    else if (input[i] == quote)
       result[i] = '"';
     else
       result[i] = input[i];
@@ -33,8 +33,8 @@ char *unquote(char *str) {
   char *swapped = NULL;
   char *unescaped = NULL;
 
-  if (quote == '\'') {
-    swapped = swap_quotes(str);
+  if (quote != '"') {
+    swapped = swap_quotes(str, quote);
     if (!swapped)
       return NULL;
     str = swapped;
@@ -62,8 +62,8 @@ char *unquote(char *str) {
     free(swapped);
 
   // If input was single-quoted, swap quotes back in the output
-  if (quote == '\'') {
-    char *final = swap_quotes(unescaped);
+  if (quote != '"') {
+    char *final = swap_quotes(unescaped, quote);
     free(unescaped);
     return final;
   }
@@ -71,9 +71,10 @@ char *unquote(char *str) {
   return unescaped;
 }
 
-TaggedValue parse_string(Token token) {
-  return (TaggedValue){
-    AST_STRING,
-    unquote(token.value),
-  };
+TaggedValue * parse_string(Token token) {
+  TaggedValue * taggedValue = malloc(sizeof(TaggedValue));
+  
+  taggedValue->type = AST_STRING;
+  taggedValue->data = unquote(token.value);
+  return taggedValue;
 }

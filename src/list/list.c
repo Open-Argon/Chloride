@@ -82,11 +82,14 @@ void print_list(LinkedList *list, void (*print_func)(void *)) {
     }
 }
 
-void free_list(LinkedList *list) {
+void free_list(LinkedList *list, void (*free_data)(void *)) {
     Node *current = list->head;
     while (current) {
         Node *next = current->next;
-        free(current->data);
+
+        if (free_data)  // Safe to pass NULL if you don't need it
+            free_data(current->data);
+
         free(current);
         current = next;
     }

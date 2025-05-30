@@ -1,12 +1,10 @@
 %option reentrant
+%option yylineno
 
 %{
 #include "token.h"
 #include "lexer.h"
 #define GET_STATE LexerState *state = (LexerState *)yyget_extra(yyscanner);
-#define ADD_TO_COLUMN COLUMN_NO += yyleng;
-#define LINE_NO yylineno+1
-#define TOKENS state->tokens
 #define COLUMN_NO state->current_column
 
 int yywrap(void *) {
@@ -17,326 +15,87 @@ int yywrap(void *) {
 %%
 
 \"((\\([\"\\\/bfnrt]|u[0-9a-fA-F]{4}))|[^\\\"\n])*\" {
-    GET_STATE
-    Token * token = create_token(
-        TOKEN_STRING,
-        LINE_NO,
-        COLUMN_NO,
-        yytext
-    );
-    append(TOKENS, token);
-    ADD_TO_COLUMN
+    return TOKEN_STRING;
 }
 
 \'((\\([\'\\\/bfnrt]|u[0-9a-fA-F]{4}))|[^\\\'\n])*\' {
-    GET_STATE
-    append(TOKENS, create_token(
-        TOKEN_STRING,
-        LINE_NO,
-        COLUMN_NO,
-        yytext
-    ));
-    ADD_TO_COLUMN
+    return TOKEN_STRING;
 }
 
 ((([0-9]+(\.[0-9]+)?)|(\.[0-9]+))(e((\-|\+)?([0-9]+(\.[0-9]+)?)))?) {
-    GET_STATE
-    append(TOKENS, create_token(
-        TOKEN_NUMBER,
-        LINE_NO,
-        COLUMN_NO,
-        yytext
-    ));
-    ADD_TO_COLUMN
+    return TOKEN_NUMBER;
 }
 
 ([0-9]+\/[0-9]+) {
-    GET_STATE
-    append(TOKENS, create_token(
-        TOKEN_FRACTION,
-        LINE_NO,
-        COLUMN_NO,
-        yytext
-    ));
-    ADD_TO_COLUMN
+    return TOKEN_FRACTION;
 }
 
-"not"[ \t]+"in"     { GET_STATE; append(TOKENS, create_token(TOKEN_NOT_IN,
-        LINE_NO,
-        COLUMN_NO,
-        yytext
-    ));
-    append(TOKENS, create_token(
-        TOKEN_NOT_IN,
-        LINE_NO,
-        COLUMN_NO,
-        yytext
-    )); ADD_TO_COLUMN; }
-"&&"                { GET_STATE; append(TOKENS, create_token(TOKEN_AND,
-        LINE_NO,
-        COLUMN_NO,
-        yytext
-    )); ADD_TO_COLUMN; }
-"||"                { GET_STATE; append(TOKENS, create_token(TOKEN_OR,
-        LINE_NO,
-        COLUMN_NO,
-        yytext
-    )); ADD_TO_COLUMN; }
-"<="                { GET_STATE; append(TOKENS, create_token(TOKEN_LE,
-        LINE_NO,
-        COLUMN_NO,
-        yytext
-    )); ADD_TO_COLUMN; }
-">="                { GET_STATE; append(TOKENS, create_token(TOKEN_GE,
-        LINE_NO,
-        COLUMN_NO,
-        yytext
-    )); ADD_TO_COLUMN; }
-"!="                { GET_STATE; append(TOKENS, create_token(TOKEN_NE,
-        LINE_NO,
-        COLUMN_NO,
-        yytext
-    )); ADD_TO_COLUMN; }
-"=="                { GET_STATE; append(TOKENS, create_token(TOKEN_EQ,
-        LINE_NO,
-        COLUMN_NO,
-        yytext
-    )); ADD_TO_COLUMN; }
-"="                 { GET_STATE; append(TOKENS, create_token(TOKEN_ASSIGN,
-        LINE_NO,
-        COLUMN_NO,
-        yytext
-    )); ADD_TO_COLUMN; }
-"//"                { GET_STATE; append(TOKENS, create_token(TOKEN_FLOORDIV,
-        LINE_NO,
-        COLUMN_NO,
-        yytext
-    )); ADD_TO_COLUMN; }
-"<"                 { GET_STATE; append(TOKENS, create_token(TOKEN_LT,
-        LINE_NO,
-        COLUMN_NO,
-        yytext
-    )); ADD_TO_COLUMN; }
-">"                 { GET_STATE; append(TOKENS, create_token(TOKEN_GT,
-        LINE_NO,
-        COLUMN_NO,
-        yytext
-    )); ADD_TO_COLUMN; }
-"+"                 { GET_STATE; append(TOKENS, create_token(TOKEN_PLUS,
-        LINE_NO,
-        COLUMN_NO,
-        yytext
-    )); ADD_TO_COLUMN; }
-"-"                 { GET_STATE; append(TOKENS, create_token(TOKEN_MINUS,
-        LINE_NO,
-        COLUMN_NO,
-        yytext
-    )); ADD_TO_COLUMN; }
-"%"                 { GET_STATE; append(TOKENS, create_token(TOKEN_MODULO,
-        LINE_NO,
-        COLUMN_NO,
-        yytext
-    )); ADD_TO_COLUMN; }
-"*"                 { GET_STATE; append(TOKENS, create_token(TOKEN_STAR,
-        LINE_NO,
-        COLUMN_NO,
-        yytext
-    )); ADD_TO_COLUMN; }
-"/"                 { GET_STATE; append(TOKENS, create_token(TOKEN_SLASH,
-        LINE_NO,
-        COLUMN_NO,
-        yytext
-    )); ADD_TO_COLUMN; }
-"^"                 { GET_STATE; append(TOKENS, create_token(TOKEN_CARET,
-        LINE_NO,
-        COLUMN_NO,
-        yytext
-    )); ADD_TO_COLUMN; }
+"not"[ \t]+"in"     { return TOKEN_NOT_IN; }
+"&&"                { return TOKEN_AND; }
+"||"                { return TOKEN_OR; }
+"<="                { return TOKEN_LE; }
+">="                { return TOKEN_GE; }
+"!="                { return TOKEN_NE; }
+"=="                { return TOKEN_EQ; }
+"="                 { return TOKEN_ASSIGN; }
+"//"                { return TOKEN_FLOORDIV; }
+"<"                 { return TOKEN_LT; }
+">"                 { return TOKEN_GT; }
+"+"                 { return TOKEN_PLUS; }
+"-"                 { return TOKEN_MINUS; }
+"%"                 { return TOKEN_MODULO; }
+"*"                 { return TOKEN_STAR; }
+"/"                 { return TOKEN_SLASH; }
+"^"                 { return TOKEN_CARET; }
 
 
-"if"                { GET_STATE; append(TOKENS, create_token(TOKEN_IF,
-        LINE_NO,
-        COLUMN_NO,
-        yytext
-    )); ADD_TO_COLUMN; }
-"else"              { GET_STATE; append(TOKENS, create_token(TOKEN_ELSE,
-        LINE_NO,
-        COLUMN_NO,
-        yytext
-    )); ADD_TO_COLUMN; }
-"while"             { GET_STATE; append(TOKENS, create_token(TOKEN_WHILE,
-        LINE_NO,
-        COLUMN_NO,
-        yytext
-    )); ADD_TO_COLUMN; }
-"forever"           { GET_STATE; append(TOKENS, create_token(TOKEN_FOREVER,
-        LINE_NO,
-        COLUMN_NO,
-        yytext
-    )); ADD_TO_COLUMN; }
-"for"               { GET_STATE; append(TOKENS, create_token(TOKEN_FOR,
-        LINE_NO,
-        COLUMN_NO,
-        yytext
-    )); ADD_TO_COLUMN; }
-"break"             { GET_STATE; append(TOKENS, create_token(TOKEN_BREAK,
-        LINE_NO,
-        COLUMN_NO,
-        yytext
-    )); ADD_TO_COLUMN; }
-"continue"          { GET_STATE; append(TOKENS, create_token(TOKEN_CONTINUE,
-        LINE_NO,
-        COLUMN_NO,
-        yytext
-    )); ADD_TO_COLUMN; }
-"return"            { GET_STATE; append(TOKENS, create_token(TOKEN_RETURN,
-        LINE_NO,
-        COLUMN_NO,
-        yytext
-    )); ADD_TO_COLUMN; }
-"let"               { GET_STATE; append(TOKENS, create_token(TOKEN_LET,
-        LINE_NO,
-        COLUMN_NO,
-        yytext
-    )); ADD_TO_COLUMN; }
-"import"            { GET_STATE; append(TOKENS, create_token(TOKEN_IMPORT,
-        LINE_NO,
-        COLUMN_NO,
-        yytext
-    )); ADD_TO_COLUMN; }
-"from"              { GET_STATE; append(TOKENS, create_token(TOKEN_FROM,
-        LINE_NO,
-        COLUMN_NO,
-        yytext
-    )); ADD_TO_COLUMN; }
-"do"                { GET_STATE; append(TOKENS, create_token(TOKEN_DO,
-        LINE_NO,
-        COLUMN_NO,
-        yytext
-    )); ADD_TO_COLUMN; }
-"true"              { GET_STATE; append(TOKENS, create_token(TOKEN_TRUE,
-        LINE_NO,
-        COLUMN_NO,
-        yytext
-    )); ADD_TO_COLUMN; }
-"false"             { GET_STATE; append(TOKENS, create_token(TOKEN_FALSE,
-        LINE_NO,
-        COLUMN_NO,
-        yytext
-    )); ADD_TO_COLUMN; }
-"null"              { GET_STATE; append(TOKENS, create_token(TOKEN_NULL,
-        LINE_NO,
-        COLUMN_NO,
-        yytext
-    )); ADD_TO_COLUMN; }
-"delete"            { GET_STATE; append(TOKENS, create_token(TOKEN_DELETE,
-        LINE_NO,
-        COLUMN_NO,
-        yytext
-    )); ADD_TO_COLUMN; }
-"not"               { GET_STATE; append(TOKENS, create_token(TOKEN_NOT,
-        LINE_NO,
-        COLUMN_NO,
-        yytext
-    )); ADD_TO_COLUMN; }
-"in"                { GET_STATE; append(TOKENS, create_token(TOKEN_IN,
-        LINE_NO,
-        COLUMN_NO,
-        yytext
-    )); ADD_TO_COLUMN; }
-"try"               { GET_STATE; append(TOKENS, create_token(TOKEN_TRY,
-        LINE_NO,
-        COLUMN_NO,
-        yytext
-    )); ADD_TO_COLUMN; }
-"catch"             { GET_STATE; append(TOKENS, create_token(TOKEN_CATCH,
-        LINE_NO,
-        COLUMN_NO,
-        yytext
-    )); ADD_TO_COLUMN; }
+"if"                { return TOKEN_IF; }
+"else"              { return TOKEN_ELSE; }
+"while"             { return TOKEN_WHILE; }
+"forever"           { return TOKEN_FOREVER; }
+"for"               { return TOKEN_FOR; }
+"break"             { return TOKEN_BREAK; }
+"continue"          { return TOKEN_CONTINUE; }
+"return"            { return TOKEN_RETURN; }
+"let"               { return TOKEN_LET; }
+"import"            { return TOKEN_IMPORT; }
+"from"              { return TOKEN_FROM; }
+"do"                { return TOKEN_DO; }
+"true"              { return TOKEN_TRUE; }
+"false"             { return TOKEN_FALSE; }
+"null"              { return TOKEN_NULL; }
+"delete"            { return TOKEN_DELETE; }
+"not"               { return TOKEN_NOT; }
+"in"                { return TOKEN_IN; }
+"try"               { return TOKEN_TRY; }
+"catch"             { return TOKEN_CATCH; }
 
-"("                 { GET_STATE; append(TOKENS, create_token(TOKEN_LPAREN,
-        LINE_NO,
-        COLUMN_NO,
-        yytext
-    )); ADD_TO_COLUMN; }
-")"                 { GET_STATE; append(TOKENS, create_token(TOKEN_RPAREN,
-        LINE_NO,
-        COLUMN_NO,
-        yytext
-    )); ADD_TO_COLUMN; }
-"["                 { GET_STATE; append(TOKENS, create_token(TOKEN_LBRACKET,
-        LINE_NO,
-        COLUMN_NO,
-        yytext
-    )); ADD_TO_COLUMN; }
-"]"                 { GET_STATE; append(TOKENS, create_token(TOKEN_RBRACKET,
-        LINE_NO,
-        COLUMN_NO,
-        yytext
-    )); ADD_TO_COLUMN; }
-"{"                 { GET_STATE; append(TOKENS, create_token(TOKEN_LBRACE,
-        LINE_NO,
-        COLUMN_NO,
-        yytext
-    )); ADD_TO_COLUMN; }
-"}"                 { GET_STATE; append(TOKENS, create_token(TOKEN_RBRACE,
-        LINE_NO,
-        COLUMN_NO,
-        yytext
-    )); ADD_TO_COLUMN; }
+"("                 { return TOKEN_LPAREN; }
+")"                 { return TOKEN_RPAREN; }
+"["                 { return TOKEN_LBRACKET; }
+"]"                 { return TOKEN_RBRACKET; }
+"{"                 { return TOKEN_LBRACE; }
+"}"                 { return TOKEN_RBRACE; }
 
-[a-zA-Z_][a-zA-Z0-9_]* {
-    GET_STATE
-    append(TOKENS, create_token(TOKEN_IDENTIFIER,
-        LINE_NO,
-        COLUMN_NO,
-        yytext
-    ));
-    ADD_TO_COLUMN
-}
+[a-zA-Z_][a-zA-Z0-9_]* { return TOKEN_IDENTIFIER; }
 
-"." {GET_STATE;append(TOKENS, create_token(TOKEN_DOT,
-        LINE_NO,
-        COLUMN_NO,
-        yytext
-    ));ADD_TO_COLUMN}
-"," {GET_STATE;append(TOKENS, create_token(TOKEN_COMMA,
-        LINE_NO,
-        COLUMN_NO,
-        yytext
-    ));ADD_TO_COLUMN}
-":" {GET_STATE;append(TOKENS, create_token(TOKEN_COLON,
-        LINE_NO,
-        COLUMN_NO,
-        yytext
-    ));ADD_TO_COLUMN}
+"." { return TOKEN_DOT; }
+"," {return TOKEN_COMMA; }
+":" {return TOKEN_COLON; }
 
-\n {
-    GET_STATE
-    append(TOKENS, create_token(TOKEN_NEW_LINE,
-        LINE_NO,
-        COLUMN_NO,
-        yytext
-    ));
-    COLUMN_NO = 1;
-}
+\n { return TOKEN_NEW_LINE; }
 
 [ \t]+ {
     GET_STATE
-    if (COLUMN_NO == 1){
-        append(TOKENS, create_token(TOKEN_INDENT,
-        LINE_NO,
-        COLUMN_NO,
-        yytext
-    ));
+    if (COLUMN_NO == 0){
+        return TOKEN_INDENT;
     }
-    ADD_TO_COLUMN  // Advance column for whitespace
+    COLUMN_NO += yyleng;
 }
 
 .   {
     GET_STATE
-    fprintf(stderr, "%s: line %d column %d: unexpected character '%s'\n", state->path, LINE_NO, COLUMN_NO, yytext);
+    fprintf(stderr, "%s:%u:%u: unexpected character '%s'\n", state->path, yylineno+1, COLUMN_NO+1, yytext);
     exit(1);
 }
 %%

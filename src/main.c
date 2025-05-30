@@ -6,6 +6,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 char* read_file_as_text(const char* filename) {
     FILE *file = fopen(filename, "r");
@@ -46,7 +47,7 @@ int main() {
     LexerState state = {
         path,
         content,
-        1,
+        0,
         tokens
     };
     lexer(state);
@@ -55,11 +56,9 @@ int main() {
 
     parser(parsed, tokens, false);
 
-    Node *current = parsed->head;
-    while (current) {
-        printf("%s\n", (char*)((TaggedValue*)current->data)->data);
-        current = current->next;
-    }
+    free_list(tokens, free_token);
+
+    free_list(parsed,free_tagged_value);
 
     return 0;
 }
