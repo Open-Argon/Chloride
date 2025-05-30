@@ -8,8 +8,7 @@ void lexer(LexerState state) {
 
     yyset_extra(&state, scanner);
 
-    void* buffer = yy_scan_string(state.content, scanner);
-    yy_switch_to_buffer(buffer, scanner);
+    yyset_in(state.file, scanner);
 
     int token;
     while ((token = yylex(scanner)) != 0) {
@@ -26,7 +25,5 @@ void lexer(LexerState state) {
             state.current_column += yyget_leng(scanner);
         }
     }
-
-    yy_delete_buffer(buffer, scanner);
     yylex_destroy(scanner);
 }
