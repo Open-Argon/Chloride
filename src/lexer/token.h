@@ -10,6 +10,15 @@ typedef enum {
   TOKEN_NEW_LINE,
   TOKEN_INDENT,
 
+  TOKEN_ASSIGN,
+  TOKEN_ASSIGN_PLUS,
+  TOKEN_ASSIGN_MINUS,
+  TOKEN_ASSIGN_FLOORDIV,
+  TOKEN_ASSIGN_SLASH,
+  TOKEN_ASSIGN_MODULO,
+  TOKEN_ASSIGN_STAR,
+  TOKEN_ASSIGN_CARET,
+
   // Operators
   TOKEN_AND,    // &&
   TOKEN_OR,     // ||
@@ -20,7 +29,6 @@ typedef enum {
   TOKEN_GT,     // >
   TOKEN_NE,     // !=
   TOKEN_EQ,     // ==
-  TOKEN_ASSIGN,
   TOKEN_PLUS,     // +
   TOKEN_MINUS,    // -
   TOKEN_MODULO,   // %
@@ -72,5 +80,5 @@ typedef struct {
 } Token;
 
 Token *create_token(TokenType type, int line, int column, char *value);
-void free_token(void * ptr);
+void free_token(void *ptr);
 #endif

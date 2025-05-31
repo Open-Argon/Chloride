@@ -18,6 +18,16 @@ int yywrap(void *) {
 "," {return TOKEN_COMMA; }
 ":" {return TOKEN_COLON; }
 
+
+"="                 { return TOKEN_ASSIGN; }
+"+="                 { return TOKEN_ASSIGN_PLUS; }
+"-="                 { return TOKEN_ASSIGN_MINUS; }
+"//="                 { return TOKEN_ASSIGN_FLOORDIV; }
+"/="                 { return TOKEN_ASSIGN_SLASH; }
+"%="                 { return TOKEN_ASSIGN_MODULO; }
+"*="                 { return TOKEN_ASSIGN_STAR; }
+"^="                 { return TOKEN_ASSIGN_CARET; }
+
 "not"[ \t]+"in"     { return TOKEN_NOT_IN; }
 "&&"                { return TOKEN_AND; }
 "||"                { return TOKEN_OR; }
@@ -25,7 +35,6 @@ int yywrap(void *) {
 ">="                { return TOKEN_GE; }
 "!="                { return TOKEN_NE; }
 "=="                { return TOKEN_EQ; }
-"="                 { return TOKEN_ASSIGN; }
 "//"                { return TOKEN_FLOORDIV; }
 "<"                 { return TOKEN_LT; }
 ">"                 { return TOKEN_GT; }

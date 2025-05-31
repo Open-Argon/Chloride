@@ -10,7 +10,7 @@
 
 int main() {
     ar_memory_init();
-    const char * path = "test.ar";
+    char * path = "test.ar";
     DArray tokens;
 
     darray_init(&tokens, sizeof(Token));
@@ -22,16 +22,17 @@ int main() {
         &tokens
     };
     lexer(state);
+    fclose(state.file);
 
-    DArray parsed;
+    DArray ast;
 
-    darray_init(&parsed, sizeof(ParsedValue));
+    darray_init(&ast, sizeof(ParsedValue));
 
 
-    parser(&parsed, &tokens, false);
+    parser(path,&ast, &tokens, false);
     darray_free(&tokens, free_token);
-
-    darray_free(&parsed,free_parsed_value);
+    
+    darray_free(&ast,free_parsed);
 
     return 0;
 }

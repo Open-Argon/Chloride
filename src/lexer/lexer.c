@@ -19,6 +19,7 @@ void lexer(LexerState state) {
             yyget_text(scanner)
         );
         darray_push(state.tokens, token_struct);
+        free(token_struct);
         if (token == TOKEN_NEW_LINE) {
             state.current_column = 0;
         } else {

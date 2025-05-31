@@ -10,6 +10,7 @@ typedef struct LinkedList LinkedList;
 
 typedef enum {
   AST_STRING,
+  AST_ASSIGN,
 } ValueType;
 
 typedef struct {
@@ -18,11 +19,11 @@ typedef struct {
   
 } ParsedValue;
 
-void parser(DArray * parsed, DArray * tokens, bool inline_flag);
+void parser(char*file,DArray *parsed, DArray *tokens, bool inline_flag);
 
-ParsedValue * parse_token(DArray * tokens, size_t *index);
+ParsedValue *parse_token(char*file,DArray *parsed, DArray *tokens, size_t *index, bool inline_flag);
 
-void free_parsed_value(void *ptr);
+void free_parsed(void *ptr);
 
 
 #endif // PARSER_H

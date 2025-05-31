@@ -1,3 +1,6 @@
+#ifndef LEXER_H
+#define LEXER_H
+
 #include "token.h"
 #include "../dynamic_array/darray.h"
 #include <stdio.h>
@@ -11,3 +14,6 @@ typedef struct {
 } LexerState;
 
 void lexer(LexerState state);
+
+
+#endif // LEXER_H

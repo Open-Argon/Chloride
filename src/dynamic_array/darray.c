@@ -15,8 +15,7 @@ void darray_init(DArray *arr, size_t element_size) {
 }
 
 void darray_resize(DArray *arr, size_t new_size) {
-    size_t new_capacity = ((new_size + CHUNK_SIZE - 1) / CHUNK_SIZE) * CHUNK_SIZE;
-
+    size_t new_capacity = ((new_size + CHUNK_SIZE) / CHUNK_SIZE) * CHUNK_SIZE;
     if (new_capacity != arr->capacity) {
         void *new_data = realloc(arr->data, new_capacity * arr->element_size);
         if (!new_data) {
@@ -37,7 +36,7 @@ void darray_push(DArray *arr, void *element) {
         arr->size++;
     }
 
-    void *target = (char *)arr->data + (arr->size - 1) * arr->element_size;
+    void *target = (void *)arr->data + (arr->size - 1) * arr->element_size;
     memcpy(target, element, arr->element_size);
 }
 
@@ -48,7 +47,7 @@ void darray_pop(DArray *arr, void (*free_data)(void *)) {
     arr->size--;
 
     if (free_data) {
-        void *target = (char *)arr->data + arr->size * arr->element_size;
+        void *target = (void *)arr->data + arr->size * arr->element_size;
         free_data(target);
     }
 
@@ -60,13 +59,13 @@ void *darray_get(DArray *arr, size_t index) {
         fprintf(stderr, "darray_get: index out of bounds\n");
         exit(EXIT_FAILURE);
     }
-    return (char *)arr->data + index * arr->element_size;
+    return (void *)arr->data + index * arr->element_size;
 }
 
 void darray_free(DArray *arr, void (*free_data)(void *)) {
     if (free_data) {
         for (size_t i = 0; i < arr->size; ++i) {
-            void *element = (char *)arr->data + i * arr->element_size;
+            void *element = (void *)arr->data + i * arr->element_size;
             free_data(element);
         }
     }

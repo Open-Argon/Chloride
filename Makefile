@@ -19,6 +19,13 @@ debug: $(CFILES) $(LEXER_C) $(LEXER_H)
 	mkdir -p bin
 	gcc -g -O0 -o $(BINARY) $(CFILES) $(CFLAGS)
 
+optimised: $(CFILES) $(LEXER_C) $(LEXER_H)
+	mkdir -p bin
+	gcc -O3 -fprofile-generate -o $(BINARY) $(CFILES) $(CFLAGS)
+	${BINARY}
+	gcc -O3 -fprofile-use -o $(BINARY) $(CFILES) $(CFLAGS)
+	
+
 clean:
 	rm -rf bin
 	rm -f $(LEXER_C) $(LEXER_H)
