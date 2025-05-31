@@ -42,7 +42,7 @@ ParsedValue *parse_token(char *file, DArray *parsed, DArray *tokens,
   case TOKEN_ASSIGN_SLASH:
   case TOKEN_ASSIGN_STAR:
     if (parsed->size == 0) {
-      fprintf(stderr, "%s:%u:%u error: assigning to nothing\n", file, token->line,
+      fprintf(stderr, "%s:%u:%u error: syntax error\n", file, token->line,
             token->column);
       exit(EXIT_FAILURE);
     }
