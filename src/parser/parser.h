@@ -10,8 +10,10 @@ typedef struct LinkedList LinkedList;
 typedef enum {
   AST_STRING,
   AST_ASSIGN,
-  AST_IDENTIFIER,
+  AST_IDENTIFIER
 } ValueType;
+
+extern const char* ValueTypeNames[];
 
 typedef struct {
   ValueType type;

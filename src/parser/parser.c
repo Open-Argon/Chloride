@@ -10,6 +10,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+const char *ValueTypeNames[] = {"string", "assign", "identifier"};
+
 ParsedValue *parse_token(char *file, DArray *parsed, DArray *tokens,
                          size_t *index, bool inline_flag) {
   Token *token = darray_get(tokens, *index);
@@ -34,6 +36,26 @@ ParsedValue *parse_token(char *file, DArray *parsed, DArray *tokens,
     fprintf(stderr, "%s:%u:%u error: invalid indentation\n", file, token->line,
             token->column);
     exit(EXIT_FAILURE);
+  case TOKEN_IDENTIFIER:;
+    ParsedValue *assign_to = parse_identifier(token);
+    (*index)++;
+    if (*index >= tokens->size)
+      return assign_to;
+    token = darray_get(tokens, *index);
+    switch (token->type) {
+    case TOKEN_ASSIGN:
+    case TOKEN_ASSIGN_CARET:
+    case TOKEN_ASSIGN_FLOORDIV:
+    case TOKEN_ASSIGN_MINUS:
+    case TOKEN_ASSIGN_MODULO:
+    case TOKEN_ASSIGN_PLUS:
+    case TOKEN_ASSIGN_SLASH:
+    case TOKEN_ASSIGN_STAR:;
+      DArray slice = darray_slice(parsed, parsed->size, parsed->size);
+      return parse_assign(file, &slice, tokens, assign_to, index);
+    default:
+      return assign_to;
+    }
   case TOKEN_ASSIGN:
   case TOKEN_ASSIGN_CARET:
   case TOKEN_ASSIGN_FLOORDIV:
@@ -42,19 +64,9 @@ ParsedValue *parse_token(char *file, DArray *parsed, DArray *tokens,
   case TOKEN_ASSIGN_PLUS:
   case TOKEN_ASSIGN_SLASH:
   case TOKEN_ASSIGN_STAR:
-    if (parsed->size == 0) {
-      fprintf(stderr, "%s:%u:%u error: syntax error\n", file, token->line,
-              token->column);
-      exit(EXIT_FAILURE);
-    }
-    ParsedValue *assign_to = malloc(sizeof(ParsedValue));
-    memcpy(assign_to, darray_get(parsed, parsed->size - 1),
-           sizeof(ParsedValue));
-    darray_resize(parsed, parsed->size - 1);
-    return parse_assign(file, parsed, tokens, assign_to, index);
-  case TOKEN_IDENTIFIER:
-    (*index)++;
-    return parse_identifier(token);
+    fprintf(stderr, "%s:%u:%u error: syntax error\n", file, token->line,
+            token->column);
+    exit(EXIT_FAILURE);
   default:
     fprintf(stderr, "Panic: unreachable\n");
     exit(EXIT_FAILURE);

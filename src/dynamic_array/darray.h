@@ -1,15 +1,17 @@
 #ifndef DARRAY_H
 #define DARRAY_H
 
-#include <stddef.h>  // for size_t
+#include <stdbool.h>
+#include <stddef.h> // for size_t
 
 #define CHUNK_SIZE 16
 
 typedef struct {
-    void *data;
-    size_t element_size;
-    size_t size;
-    size_t capacity;
+  void *data;
+  size_t element_size;
+  size_t size;
+  size_t capacity;
+  bool resizable;
 } DArray;
 
 // Initializes the dynamic_array
@@ -29,5 +31,7 @@ void darray_free(DArray *arr, void (*free_data)(void *));
 
 // Resizes the array to a new size (internal use, but exposed)
 void darray_resize(DArray *arr, size_t new_size);
+
+DArray darray_slice(DArray *arr, size_t start, size_t end);
 
 #endif // DARRAY_H
