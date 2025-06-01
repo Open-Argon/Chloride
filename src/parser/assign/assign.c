@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-ParsedValue *parse_assign(char*file,DArray *parsed, DArray *tokens,
+ParsedValue *parse_assign(char *file, DArray *parsed, DArray *tokens,
                           ParsedValue *assign_to, size_t *index) {
   Token *token = darray_get(tokens, *index);
   ParsedAssign *assign = malloc(sizeof(ParsedAssign));
@@ -24,20 +24,20 @@ ParsedValue *parse_assign(char*file,DArray *parsed, DArray *tokens,
   case TOKEN_ASSIGN_STAR:
     fprintf(stderr, "%s:%u:%u error: invalid syntax\n", file, token->line,
             token->column);
-      exit(EXIT_FAILURE);
-    default:
-      break;
+    exit(EXIT_FAILURE);
+  default:
+    break;
   }
-  assign->from = parse_token(file,parsed, tokens, index, true);
+  assign->from = parse_token(file, parsed, tokens, index, true);
   ParsedValue *parsedValue = malloc(sizeof(ParsedValue));
   parsedValue->type = AST_ASSIGN;
   parsedValue->data = assign;
   return parsedValue;
 }
 
-void free_parse_assign(void*ptr) {
-  ParsedValue * parsedValue = ptr;
-  ParsedAssign* parsedAssign = parsedValue->data;
+void free_parse_assign(void *ptr) {
+  ParsedValue *parsedValue = ptr;
+  ParsedAssign *parsedAssign = parsedValue->data;
   free_parsed(parsedAssign->to);
   free_parsed(parsedAssign->from);
   free(parsedAssign);

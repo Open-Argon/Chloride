@@ -1,14 +1,10 @@
 #ifndef TRANSLATOR_H
 #define TRANSLATOR_H
 
-#include <stddef.h>
 #include "../dynamic_array/darray.h"
+#include <stddef.h>
 
-
-typedef enum {
-  OP_INIT_STRING
-} OperationType;
-
+typedef enum { OP_INIT_STRING } OperationType;
 
 typedef struct {
   size_t registerCount;

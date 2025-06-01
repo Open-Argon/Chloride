@@ -5,14 +5,14 @@
 
 // Node structure (opaque to user)
 typedef struct Node {
-    void *data;
-    struct Node *next;
+  void *data;
+  struct Node *next;
 } Node;
 
 typedef struct LinkedList {
-    Node *head;
-    size_t data_size;
-    size_t length;
+  Node *head;
+  size_t data_size;
+  size_t length;
 } LinkedList;
 
 // Create a new list for the given data type size

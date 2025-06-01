@@ -1,38 +1,34 @@
+#include "dynamic_array/darray.h"
 #include "lexer/lexer.h"
 #include "lexer/token.h"
-#include "parser/parser.h"
 #include "memory.h"
-#include "dynamic_array/darray.h"
+#include "parser/parser.h"
 
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
 
-int main() {
-    ar_memory_init();
-    char * path = "test.ar";
-    DArray tokens;
+int main(int argc, char *argv[]) {
+  if (argc <= 1)
+    return -1;
+  ar_memory_init();
+  char *path = argv[1];
+  DArray tokens;
 
-    darray_init(&tokens, sizeof(Token));
+  darray_init(&tokens, sizeof(Token));
 
-    LexerState state = {
-        path,
-        fopen(path, "r"),
-        0,
-        &tokens
-    };
-    lexer(state);
-    fclose(state.file);
+  LexerState state = {path, fopen(path, "r"), 0, &tokens};
+  lexer(state);
+  fclose(state.file);
 
-    DArray ast;
+  DArray ast;
 
-    darray_init(&ast, sizeof(ParsedValue));
+  darray_init(&ast, sizeof(ParsedValue));
 
+  parser(path, &ast, &tokens, false);
+  darray_free(&tokens, free_token);
 
-    parser(path,&ast, &tokens, false);
-    darray_free(&tokens, free_token);
-    
-    darray_free(&ast,free_parsed);
+  darray_free(&ast, free_parsed);
 
-    return 0;
+  return 0;
 }

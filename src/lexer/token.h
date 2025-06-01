@@ -20,15 +20,15 @@ typedef enum {
   TOKEN_ASSIGN_CARET,
 
   // Operators
-  TOKEN_AND,    // &&
-  TOKEN_OR,     // ||
-  TOKEN_NOT_IN, // not in
-  TOKEN_LE,     // <=
-  TOKEN_GE,     // >=
-  TOKEN_LT,     // <
-  TOKEN_GT,     // >
-  TOKEN_NE,     // !=
-  TOKEN_EQ,     // ==
+  TOKEN_AND,      // &&
+  TOKEN_OR,       // ||
+  TOKEN_NOT_IN,   // not in
+  TOKEN_LE,       // <=
+  TOKEN_GE,       // >=
+  TOKEN_LT,       // <
+  TOKEN_GT,       // >
+  TOKEN_NE,       // !=
+  TOKEN_EQ,       // ==
   TOKEN_PLUS,     // +
   TOKEN_MINUS,    // -
   TOKEN_MODULO,   // %

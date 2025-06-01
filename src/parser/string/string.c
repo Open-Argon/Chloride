@@ -42,6 +42,7 @@ char *unquote(char *str) {
 
   cJSON *json = cJSON_Parse(str);
   if (!json || !cJSON_IsString(json)) {
+    cJSON_Delete(json);
     if (swapped)
       free(swapped);
     return NULL;
@@ -71,9 +72,8 @@ char *unquote(char *str) {
   return unescaped;
 }
 
-ParsedValue * parse_string(Token token) {
-  ParsedValue * parsedValue = malloc(sizeof(ParsedValue));
-  
+ParsedValue *parse_string(Token token) {
+  ParsedValue *parsedValue = malloc(sizeof(ParsedValue));
   parsedValue->type = AST_STRING;
   parsedValue->data = unquote(token.value);
   return parsedValue;

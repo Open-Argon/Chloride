@@ -2,6 +2,7 @@
 #include "../dynamic_array/darray.h"
 #include "../lexer/token.h"
 #include "assign/assign.h"
+#include "identifier/identifier.h"
 #include "string/string.h"
 #include <stdbool.h>
 #include <stddef.h>
@@ -14,8 +15,8 @@ ParsedValue *parse_token(char *file, DArray *parsed, DArray *tokens,
   Token *token = darray_get(tokens, *index);
   if (!inline_flag) {
     switch (token->type) {
-      default:
-        break;
+    default:
+      break;
     };
   }
   switch (token->type) {
@@ -23,11 +24,11 @@ ParsedValue *parse_token(char *file, DArray *parsed, DArray *tokens,
     (*index)++;
     return parse_string(*token);
   case TOKEN_NEW_LINE:
-    while (token->type  == TOKEN_NEW_LINE && *index+1 <= tokens->size) {
-      (*index)++;
+    while (token->type == TOKEN_NEW_LINE && ++(*index) < tokens->size) {
       token = darray_get(tokens, *index);
     }
-    if (token->type == TOKEN_NEW_LINE) return NULL;
+    if (token->type == TOKEN_NEW_LINE)
+      return NULL;
     return parse_token(file, parsed, tokens, index, inline_flag);
   case TOKEN_INDENT:
     fprintf(stderr, "%s:%u:%u error: invalid indentation\n", file, token->line,
@@ -43,13 +44,17 @@ ParsedValue *parse_token(char *file, DArray *parsed, DArray *tokens,
   case TOKEN_ASSIGN_STAR:
     if (parsed->size == 0) {
       fprintf(stderr, "%s:%u:%u error: syntax error\n", file, token->line,
-            token->column);
+              token->column);
       exit(EXIT_FAILURE);
     }
     ParsedValue *assign_to = malloc(sizeof(ParsedValue));
-    memcpy(assign_to, darray_get(parsed, parsed->size-1), sizeof(ParsedValue));
-    darray_resize(parsed, parsed->size-1);
+    memcpy(assign_to, darray_get(parsed, parsed->size - 1),
+           sizeof(ParsedValue));
+    darray_resize(parsed, parsed->size - 1);
     return parse_assign(file, parsed, tokens, assign_to, index);
+  case TOKEN_IDENTIFIER:
+    (*index)++;
+    return parse_identifier(token);
   default:
     fprintf(stderr, "Panic: unreachable\n");
     exit(EXIT_FAILURE);
@@ -72,6 +77,7 @@ void parser(char *file, DArray *parsed, DArray *tokens, bool inline_flag) {
 void free_parsed(void *ptr) {
   ParsedValue *parsed = ptr;
   switch (parsed->type) {
+  case AST_IDENTIFIER:
   case AST_STRING:
     free(parsed->data);
     break;
