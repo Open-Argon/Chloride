@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "../memory.h"
 
 const char *WHITE_SPACE = " \t\n\r\f\v";
 
@@ -12,7 +13,7 @@ char *cloneString(char *str) {
   }
 
   size_t len = strlen(str);
-  char *clone = malloc((len + 1) * sizeof(char));
+  char *clone = checked_malloc((len + 1) * sizeof(char));
 
   if (clone == NULL) {
     return NULL;

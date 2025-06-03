@@ -11,4 +11,6 @@ char *ar_strdup(const char *str);
 // Memory init/shutdown
 void ar_memory_init();
 
+void *checked_malloc(size_t size);
+
 #endif // ARGON_MEMORY_H

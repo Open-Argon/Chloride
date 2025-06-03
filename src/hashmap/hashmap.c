@@ -1,12 +1,13 @@
 #include "hashmap.h"
 
 #include <stdlib.h>
+#include "../memory.h"
 
 struct table *createTable(int size)
 {
-    struct table *t = (struct table *)malloc(sizeof(struct table));
+    struct table *t = (struct table *)checked_malloc(sizeof(struct table));
     t->size = size;
-    t->list = (struct node **)malloc(sizeof(struct node *) * size);
+    t->list = (struct node **)checked_malloc(sizeof(struct node *) * size);
     int i;
     for (i = 0; i < size; i++)
         t->list[i] = NULL;
@@ -48,7 +49,7 @@ void insert(struct table *t, int key, void* val)
 {
     int pos = hashCode(t, key);
     struct node *list = t->list[pos];
-    struct node *newNode = (struct node *)malloc(sizeof(struct node));
+    struct node *newNode = (struct node *)checked_malloc(sizeof(struct node));
     struct node *temp = list;
     while (temp)
     {

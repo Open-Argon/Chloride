@@ -6,10 +6,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "../../memory.h"
 
 char *swap_quotes(char *input, char quote) {
   size_t len = strlen(input);
-  char *result = malloc(len + 1);
+  char *result = checked_malloc(len + 1);
   if (!result)
     return NULL;
 
@@ -73,7 +74,7 @@ char *unquote(char *str) {
 }
 
 ParsedValue *parse_string(Token token) {
-  ParsedValue *parsedValue = malloc(sizeof(ParsedValue));
+  ParsedValue *parsedValue = checked_malloc(sizeof(ParsedValue));
   parsedValue->type = AST_STRING;
   parsedValue->data = unquote(token.value);
   return parsedValue;

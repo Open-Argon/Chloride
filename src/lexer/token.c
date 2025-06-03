@@ -1,9 +1,10 @@
 #include "token.h"
 #include "../string/string.h"
 #include <stdlib.h>
+#include "../memory.h"
 
 Token *create_token(TokenType type, int line, int column, char *value) {
-  Token *token = malloc(sizeof(Token));
+  Token *token = checked_malloc(sizeof(Token));
   token->type = type;
   token->line = line;
   token->column = column;

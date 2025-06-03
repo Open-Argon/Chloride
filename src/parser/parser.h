@@ -12,6 +12,7 @@ typedef enum {
   AST_ASSIGN,
   AST_IDENTIFIER,
   AST_NUMBER,
+  AST_IF,
 } ValueType;
 
 extern const char* ValueTypeNames[];
@@ -27,5 +28,7 @@ ParsedValue *parse_token(char *file, DArray *parsed, DArray *tokens,
                          size_t *index, bool inline_flag);
 
 void free_parsed(void *ptr);
+
+void error_if_finished(char *file,DArray *tokens, size_t *index);
 
 #endif // PARSER_H

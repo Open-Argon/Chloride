@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "../../memory.h"
 
 ParsedValue *parse_assign(char *file, DArray *parsed, DArray *tokens,
                           ParsedValue *assign_to, size_t *index) {
@@ -17,13 +18,14 @@ ParsedValue *parse_assign(char *file, DArray *parsed, DArray *tokens,
               token->column, ValueTypeNames[assign_to->type]);
       exit(EXIT_FAILURE);
   }
-  ParsedAssign *assign = malloc(sizeof(ParsedAssign));
+  ParsedAssign *assign = checked_malloc(sizeof(ParsedAssign));
   assign->to = assign_to;
   assign->type = token->type;
   (*index)++;
+  error_if_finished(file,tokens,index);
   token = darray_get(tokens, *index);
   assign->from = parse_token(file, parsed, tokens, index, true);
-  ParsedValue *parsedValue = malloc(sizeof(ParsedValue));
+  ParsedValue *parsedValue = checked_malloc(sizeof(ParsedValue));
   parsedValue->type = AST_ASSIGN;
   parsedValue->data = assign;
   return parsedValue;

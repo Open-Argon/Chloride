@@ -4,7 +4,16 @@
 #include <gmp.h>
 #include <stdlib.h> // for malloc/free (temp arena fallback)
 #include <string.h>
+#include <stdio.h>
 
+void *checked_malloc(size_t size) {
+  void *ptr = malloc(size);
+  if (!ptr) {
+    fprintf(stderr, "fatal error: failed to allocate %zu bytes\n", size);
+    exit(EXIT_FAILURE);
+  }
+  return ptr;
+}
 
 void *gmp_gc_realloc(void *ptr, size_t old_size, size_t new_size) {
     (void)old_size;  // Ignore old_size, Boehm doesn't need it

@@ -2,9 +2,10 @@
 #include "../dynamic_array/darray.h"
 #include <stdint.h>
 #include <stdlib.h>
+#include "../memory.h"
 
 Translated *init_translator() {
-  Translated *translated = malloc(sizeof(Translated));
+  Translated *translated = checked_malloc(sizeof(Translated));
   if (!translated)
     return NULL;
 

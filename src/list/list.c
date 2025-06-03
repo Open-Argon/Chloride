@@ -2,9 +2,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "../memory.h"
 
 LinkedList *create_list(size_t data_size) {
-  LinkedList *list = malloc(sizeof(LinkedList));
+  LinkedList *list = checked_malloc(sizeof(LinkedList));
   list->head = NULL;
   list->data_size = data_size;
   list->length = 0;
@@ -12,8 +13,8 @@ LinkedList *create_list(size_t data_size) {
 }
 
 void append(LinkedList *list, void *element) {
-  Node *new_node = malloc(sizeof(Node));
-  new_node->data = malloc(list->data_size);
+  Node *new_node = checked_malloc(sizeof(Node));
+  new_node->data = checked_malloc(list->data_size);
   memcpy(new_node->data, element, list->data_size);
   new_node->next = NULL;
 
