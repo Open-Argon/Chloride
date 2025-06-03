@@ -4,6 +4,7 @@
 #include "../../lexer/token.h"
 
 typedef struct {
+  bool let;
   ParsedValue * to;
   TokenType type;
   ParsedValue * from;

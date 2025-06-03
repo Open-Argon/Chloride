@@ -8,7 +8,14 @@
 
 ParsedValue *parse_assign(char *file, DArray *parsed, DArray *tokens,
                           ParsedValue *assign_to, size_t *index) {
+  bool islet = false;
   Token *token = darray_get(tokens, *index);
+  if (token->type == TOKEN_LET) {
+    islet = true;
+    (*index)++;
+    error_if_finished(file,tokens,index);
+    token = darray_get(tokens, *index);
+  }
   switch (assign_to->type) {
     case AST_IDENTIFIER:
     case AST_ASSIGN:
@@ -25,6 +32,7 @@ ParsedValue *parse_assign(char *file, DArray *parsed, DArray *tokens,
   error_if_finished(file,tokens,index);
   token = darray_get(tokens, *index);
   assign->from = parse_token(file, parsed, tokens, index, true);
+  assign->let = islet;
   ParsedValue *parsedValue = checked_malloc(sizeof(ParsedValue));
   parsedValue->type = AST_ASSIGN;
   parsedValue->data = assign;

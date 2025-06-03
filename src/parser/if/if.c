@@ -10,54 +10,115 @@ ParsedValue *parse_if(char *file, DArray *parsed, DArray *tokens,
                       size_t *index) {
   (*index)++;
   error_if_finished(file, tokens, index);
-  Token *token = darray_get(tokens, *index);
-  if (token->type != TOKEN_LPAREN) {
-    fprintf(stderr,
-            "%s:%u:%u error: if statement requires paren for the condition\n",
-            file, token->line, token->column);
-    exit(EXIT_FAILURE);
-  }
-  (*index)++;
-  error_if_finished(file, tokens, index);
+
   DArray *parsed_if = checked_malloc(sizeof(DArray));
   darray_init(parsed_if, sizeof(ParsedConditional));
-  DArray *condition = checked_malloc(sizeof(DArray));
-  darray_init(condition, sizeof(ParsedValue));
-  while ((*index) < tokens->size) {
-    ParsedValue *parsed_code = parse_token(file, parsed, tokens, index, true);
-    if (parsed_code) {
-      darray_push(condition, parsed_code);
-      free(parsed_code);
+
+  bool expect_conditional = true;
+
+  while (*index < tokens->size) {
+    Token *token = darray_get(tokens, *index);
+
+    // Handle TOKEN_ELSE or TOKEN_ELSE_IF for subsequent branches
+    if (!expect_conditional) {
+      if (token->type != TOKEN_NEW_LINE)
+        break; // no more branches
+      (*index)++;
+      error_if_finished(file, tokens, index);
+      token = darray_get(tokens, *index);
+
+      if (token->type == TOKEN_ELSE || token->type == TOKEN_ELSE_IF) {
+        (*index)++;
+        error_if_finished(file, tokens, index);
+      } else {
+        break; // no more branches
+      }
     }
-    token = darray_get(tokens, *index);
-    if (token->type == TOKEN_RPAREN)
-      break;
+
+    DArray *condition = NULL;
+
+    if (token->type != TOKEN_ELSE) {
+      // Parse ( condition )
+      token = darray_get(tokens, *index);
+      if (token->type != TOKEN_LPAREN) {
+        fprintf(stderr,
+                "%s:%u:%u error: expected '(' after if\n",
+                file, token->line, token->column);
+        exit(EXIT_FAILURE);
+      }
+
+      (*index)++;
+      error_if_finished(file, tokens, index);
+
+      condition = checked_malloc(sizeof(DArray));
+      darray_init(condition, sizeof(ParsedValue));
+
+      while (*index < tokens->size) {
+        ParsedValue *parsed_code = parse_token(file, parsed, tokens, index, true);
+        if (parsed_code) {
+          darray_push(condition, parsed_code);
+          free(parsed_code);
+        }
+
+        token = darray_get(tokens, *index);
+        if (token->type == TOKEN_RPAREN)
+          break;
+      }
+
+      if (token->type != TOKEN_RPAREN) {
+        fprintf(stderr,
+                "%s:%u:%u error: missing closing ')' in condition\n",
+                file, token->line, token->column);
+        exit(EXIT_FAILURE);
+      }
+
+      (*index)++;
+      error_if_finished(file, tokens, index);
+    }
+
+    // Parse the body
+    ParsedValue *parsed_content =
+        parse_token(file, parsed, tokens, index, false);
+
+    if (!parsed_content) {
+      fprintf(stderr,
+              "%s:%u:%u error: expected body after condition\n",
+              file, token->line, token->column);
+      exit(EXIT_FAILURE);
+    }
+
+    ParsedConditional conditional = {condition, parsed_content};
+    darray_push(parsed_if, &conditional);
+
+    expect_conditional = false; // After first iteration, expect newline + else/else if
   }
-  if (token->type != TOKEN_RPAREN) {
-    fprintf(stderr,
-            "%s:%u:%u error: missing closing parenthesis in if condition\n",
-            file, token->line, token->column);
-    exit(EXIT_FAILURE);
-  }
-  (*index)++;
-  error_if_finished(file, tokens, index);
-  ParsedValue *parsed_content = parse_token(file, parsed, tokens, index, true);
-  if (!parsed_content) {
-    fprintf(stderr, "%s:%u:%u error: expected body after if condition\n", file,
-            token->line, token->column);
-    exit(EXIT_FAILURE);
-  }
-  ParsedConditional output_conditional = {condition, parsed_content};
-  darray_push(parsed_if, &output_conditional);
+
   ParsedValue *parsedValue = checked_malloc(sizeof(ParsedValue));
   parsedValue->type = AST_IF;
   parsedValue->data = parsed_if;
+
+  // printf("Parsed if chain:\n");
+  // for (size_t i = 0; i < parsed_if->size; i++) {
+  //   ParsedConditional *cond = darray_get(parsed_if, i);
+  //   if (cond->condition) {
+  //     printf("  if/else if condition:\n");
+  //     for (size_t j = 0; j < cond->condition->size; j++) {
+  //       ParsedValue *v = darray_get(cond->condition, j);
+  //       printf("    - condition value type: %d\n", v->type);
+  //     }
+  //   } else {
+  //     printf("  else:\n");
+  //   }
+  //   printf("    - content value type: %d\n", cond->content->type);
+  // }
+
   return parsedValue;
 }
 
 void free_conditional(void *ptr) {
   ParsedConditional *conditional = ptr;
-  darray_free(conditional->condition, free_parsed);
+  if (conditional->condition)
+    darray_free(conditional->condition, free_parsed);
   free_parsed(conditional->content);
 }
 

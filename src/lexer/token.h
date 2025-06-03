@@ -39,6 +39,7 @@ typedef enum {
 
   // Keywords
   TOKEN_IF,
+  TOKEN_ELSE_IF,
   TOKEN_ELSE,
   TOKEN_WHILE,
   TOKEN_FOREVER,

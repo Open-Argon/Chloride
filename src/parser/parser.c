@@ -12,7 +12,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-const char *ValueTypeNames[] = {"string", "assign", "identifier", "number", "if statement"};
+const char *ValueTypeNames[] = {"string", "assign", "identifier", "number",
+                                "if statement"};
 
 void error_if_finished(char *file, DArray *tokens, size_t *index) {
   if ((*index) >= tokens->size) {
@@ -49,6 +50,7 @@ ParsedValue *parse_token(char *file, DArray *parsed, DArray *tokens,
     fprintf(stderr, "%s:%u:%u error: invalid indentation\n", file, token->line,
             token->column);
     exit(EXIT_FAILURE);
+  case TOKEN_LET:
   case TOKEN_IDENTIFIER:;
     ParsedValue *assign_to = parse_identifier(token);
     (*index)++;
@@ -90,7 +92,8 @@ ParsedValue *parse_token(char *file, DArray *parsed, DArray *tokens,
     (*index)++;
     return parse_number(token);
   default:
-    fprintf(stderr, "Panic: unreachable\n");
+    fprintf(stderr, "%s:%u:%u error: syntax error\n", file, token->line,
+            token->column);
     exit(EXIT_FAILURE);
   }
 }

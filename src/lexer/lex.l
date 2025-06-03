@@ -47,6 +47,7 @@ int yywrap(void *) {
 
 
 "if"                { return TOKEN_IF; }
+"else if"              { return TOKEN_ELSE_IF; }
 "else"              { return TOKEN_ELSE; }
 "while"             { return TOKEN_WHILE; }
 "forever"           { return TOKEN_FOREVER; }
@@ -101,6 +102,8 @@ int yywrap(void *) {
     }
     COLUMN_NO += yyleng;
 }
+
+#[^\n]* {}
 
 .   {
     GET_STATE
