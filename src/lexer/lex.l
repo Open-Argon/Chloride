@@ -103,7 +103,7 @@ int yywrap(void *) {
     COLUMN_NO += yyleng;
 }
 
-#[^\n]* {}
+#[^\n]*        { /* skip comment */ }
 
 .   {
     GET_STATE
