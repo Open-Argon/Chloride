@@ -3,7 +3,7 @@ LEXER_C = src/lexer/lex.yy.c
 LEXER_H = src/lexer/lex.yy.h
 
 CFILES = $(shell find src -name '*.c')
-CFLAGS = -lm -lcjson -lgc -Wall -Wextra -Wno-unused-function -s
+CFLAGS = -lm -lcjson -lgc -lgmp -Wall -Wextra -Wno-unused-function -s
 BINARY = bin/argon
 
 all: $(BINARY)

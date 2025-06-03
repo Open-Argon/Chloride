@@ -2,6 +2,7 @@
 #include "../dynamic_array/darray.h"
 #include "../lexer/token.h"
 #include "assign/assign.h"
+#include "number/number.h"
 #include "identifier/identifier.h"
 #include "string/string.h"
 #include <stdbool.h>
@@ -10,7 +11,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-const char *ValueTypeNames[] = {"string", "assign", "identifier"};
+const char *ValueTypeNames[] = {"string", "assign", "identifier", "number"};
 
 ParsedValue *parse_token(char *file, DArray *parsed, DArray *tokens,
                          size_t *index, bool inline_flag) {
@@ -64,9 +65,18 @@ ParsedValue *parse_token(char *file, DArray *parsed, DArray *tokens,
   case TOKEN_ASSIGN_PLUS:
   case TOKEN_ASSIGN_SLASH:
   case TOKEN_ASSIGN_STAR:
-    fprintf(stderr, "%s:%u:%u error: syntax error\n", file, token->line,
-            token->column);
+    if (parsed->size == 0) {
+      fprintf(stderr, "%s:%u:%u error: syntax error\n", file, token->line,
+              token->column);
+      exit(EXIT_FAILURE);
+    }
+    ParsedValue *assigning_to = darray_get(parsed, parsed->size-1);
+    fprintf(stderr, "%s:%u:%u error: cannot assign to %s\n", file, token->line,
+              token->column, ValueTypeNames[assigning_to->type]);
     exit(EXIT_FAILURE);
+  case TOKEN_NUMBER:
+    (*index)++;
+    return parse_number(token);
   default:
     fprintf(stderr, "Panic: unreachable\n");
     exit(EXIT_FAILURE);
@@ -95,6 +105,8 @@ void free_parsed(void *ptr) {
     break;
   case AST_ASSIGN:
     free_parse_assign(parsed);
+    break;
+  case AST_NUMBER:
     break;
   }
 }
