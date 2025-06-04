@@ -1,8 +1,8 @@
 #include "parser.h"
 #include "../dynamic_array/darray.h"
 #include "../lexer/token.h"
-#include "assign/assign.h"
-#include "identifier/identifier.h"
+#include "assignable/assign/assign.h"
+#include "assignable/identifier/identifier.h"
 #include "if/if.h"
 #include "number/number.h"
 #include "string/string.h"
@@ -12,8 +12,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-const char *ValueTypeNames[] = {"string", "assign", "identifier", "number",
-                                "if statement"};
+const char *ValueTypeNames[] = {"string", "assign",       "identifier",
+                                "number", "if statement", "access",
+                                "call"};
 
 void error_if_finished(char *file, DArray *tokens, size_t *index) {
   if ((*index) >= tokens->size) {
@@ -24,13 +25,16 @@ void error_if_finished(char *file, DArray *tokens, size_t *index) {
   }
 }
 
-ParsedValue *parse_token(char *file, DArray *parsed, DArray *tokens,
+ParsedValue *parse_token(char *file, DArray *tokens,
                          size_t *index, bool inline_flag) {
   Token *token = darray_get(tokens, *index);
+
+  ParsedValue * output = NULL;
+
   if (!inline_flag) {
     switch (token->type) {
     case TOKEN_IF:
-      return parse_if(file, parsed, tokens, index);
+      return parse_if(file, tokens, index);
     default:
       break;
     };
@@ -38,24 +42,37 @@ ParsedValue *parse_token(char *file, DArray *parsed, DArray *tokens,
   switch (token->type) {
   case TOKEN_STRING:
     (*index)++;
-    return parse_string(*token);
+    output = parse_string(*token);
+    break;
   case TOKEN_NEW_LINE:
     while (token->type == TOKEN_NEW_LINE && ++(*index) < tokens->size) {
       token = darray_get(tokens, *index);
     }
     if (token->type == TOKEN_NEW_LINE)
-      return NULL;
-    return parse_token(file, parsed, tokens, index, inline_flag);
+      break;
+    output = parse_token(file, tokens, index, inline_flag);
+    break;
   case TOKEN_INDENT:
     fprintf(stderr, "%s:%u:%u error: invalid indentation\n", file, token->line,
             token->column);
     exit(EXIT_FAILURE);
-  case TOKEN_LET:
-  case TOKEN_IDENTIFIER:;
-    ParsedValue *assign_to = parse_identifier(token);
+  case TOKEN_IDENTIFIER:
     (*index)++;
-    if (*index >= tokens->size)
-      return assign_to;
+    output = parse_identifier(token);
+    break;
+  case TOKEN_NUMBER:
+    (*index)++;
+    output = parse_number(token);
+    break;
+  default:
+    fprintf(stderr, "%s:%u:%u error: syntax error\n", file, token->line,
+            token->column);
+    exit(EXIT_FAILURE);
+  }
+
+  // LHS required
+  bool passed = false;
+  while (!passed && (*index) < tokens->size) {
     token = darray_get(tokens, *index);
     switch (token->type) {
     case TOKEN_ASSIGN:
@@ -66,43 +83,21 @@ ParsedValue *parse_token(char *file, DArray *parsed, DArray *tokens,
     case TOKEN_ASSIGN_PLUS:
     case TOKEN_ASSIGN_SLASH:
     case TOKEN_ASSIGN_STAR:;
-      DArray slice = darray_slice(parsed, parsed->size, parsed->size);
-      return parse_assign(file, &slice, tokens, assign_to, index);
-    default:
-      return assign_to;
+      output = parse_assign(file, tokens, output, index);
+      break;
+      default:
+        passed = true;
     }
-  case TOKEN_ASSIGN:
-  case TOKEN_ASSIGN_CARET:
-  case TOKEN_ASSIGN_FLOORDIV:
-  case TOKEN_ASSIGN_MINUS:
-  case TOKEN_ASSIGN_MODULO:
-  case TOKEN_ASSIGN_PLUS:
-  case TOKEN_ASSIGN_SLASH:
-  case TOKEN_ASSIGN_STAR:
-    if (parsed->size == 0) {
-      fprintf(stderr, "%s:%u:%u error: syntax error\n", file, token->line,
-              token->column);
-      exit(EXIT_FAILURE);
-    }
-    ParsedValue *assigning_to = darray_get(parsed, parsed->size - 1);
-    fprintf(stderr, "%s:%u:%u error: cannot assign to %s\n", file, token->line,
-            token->column, ValueTypeNames[assigning_to->type]);
-    exit(EXIT_FAILURE);
-  case TOKEN_NUMBER:
-    (*index)++;
-    return parse_number(token);
-  default:
-    fprintf(stderr, "%s:%u:%u error: syntax error\n", file, token->line,
-            token->column);
-    exit(EXIT_FAILURE);
   }
+
+  return output;
 }
 
 void parser(char *file, DArray *parsed, DArray *tokens, bool inline_flag) {
   size_t index = 0;
   while (index < tokens->size) {
     ParsedValue *parsed_code =
-        parse_token(file, parsed, tokens, &index, inline_flag);
+        parse_token(file, tokens, &index, inline_flag);
     if (parsed_code) {
       darray_push(parsed, parsed_code);
       free(parsed_code);

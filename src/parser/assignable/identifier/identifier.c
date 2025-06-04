@@ -1,8 +1,8 @@
 #include "identifier.h"
-#include "../../lexer/token.h"
-#include "../parser.h"
+#include "../../../lexer/token.h"
+#include "../../parser.h"
 #include <string.h>
-#include "../../memory.h"
+#include "../../../memory.h"
 
 ParsedValue *parse_identifier(Token *token) {
   ParsedValue *parsedValue = checked_malloc(sizeof(ParsedValue));

@@ -7,26 +7,26 @@
 #define GET_STATE LexerState *state = (LexerState *)yyget_extra(yyscanner);
 #define COLUMN_NO state->current_column
 
-int yywrap(void *) {
+int yywrap(void * unused_param) {
+    (void)unused_param;
     return 1;
 }
 %}
 
 %%
 
-"." { return TOKEN_DOT; }
-"," {return TOKEN_COMMA; }
-":" {return TOKEN_COLON; }
-
+"."                 { return TOKEN_DOT; }
+","                 { return TOKEN_COMMA; }
+":"                 { return TOKEN_COLON; }
 
 "="                 { return TOKEN_ASSIGN; }
-"+="                 { return TOKEN_ASSIGN_PLUS; }
-"-="                 { return TOKEN_ASSIGN_MINUS; }
-"//="                 { return TOKEN_ASSIGN_FLOORDIV; }
-"/="                 { return TOKEN_ASSIGN_SLASH; }
-"%="                 { return TOKEN_ASSIGN_MODULO; }
-"*="                 { return TOKEN_ASSIGN_STAR; }
-"^="                 { return TOKEN_ASSIGN_CARET; }
+"+="                { return TOKEN_ASSIGN_PLUS; }
+"-="                { return TOKEN_ASSIGN_MINUS; }
+"//="               { return TOKEN_ASSIGN_FLOORDIV; }
+"/="                { return TOKEN_ASSIGN_SLASH; }
+"%="                { return TOKEN_ASSIGN_MODULO; }
+"*="                { return TOKEN_ASSIGN_STAR; }
+"^="                { return TOKEN_ASSIGN_CARET; }
 
 "not"[ \t]+"in"     { return TOKEN_NOT_IN; }
 "&&"                { return TOKEN_AND; }
@@ -47,7 +47,7 @@ int yywrap(void *) {
 
 
 "if"                { return TOKEN_IF; }
-"else if"              { return TOKEN_ELSE_IF; }
+"else"[ \t]+"if"    { return TOKEN_ELSE_IF; }
 "else"              { return TOKEN_ELSE; }
 "while"             { return TOKEN_WHILE; }
 "forever"           { return TOKEN_FOREVER; }

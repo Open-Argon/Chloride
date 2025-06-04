@@ -13,6 +13,9 @@ typedef enum {
   AST_IDENTIFIER,
   AST_NUMBER,
   AST_IF,
+  AST_ACCESS,
+  AST_CALL,
+  AST_DECLARATION
 } ValueType;
 
 extern const char* ValueTypeNames[];
@@ -24,7 +27,7 @@ typedef struct {
 
 void parser(char *file, DArray *parsed, DArray *tokens, bool inline_flag);
 
-ParsedValue *parse_token(char *file, DArray *parsed, DArray *tokens,
+ParsedValue *parse_token(char *file, DArray *tokens,
                          size_t *index, bool inline_flag);
 
 void free_parsed(void *ptr);

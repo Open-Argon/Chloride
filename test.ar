@@ -1,2 +1,4 @@
-let x = 10 # hello world
-if (x = 10) "hello world"
+let y = 0
+let x = 10
+
+if (y) x += 1

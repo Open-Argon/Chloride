@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include "../../memory.h"
 
-ParsedValue *parse_if(char *file, DArray *parsed, DArray *tokens,
+ParsedValue *parse_if(char *file, DArray *tokens,
                       size_t *index) {
   (*index)++;
   error_if_finished(file, tokens, index);
@@ -54,7 +54,7 @@ ParsedValue *parse_if(char *file, DArray *parsed, DArray *tokens,
       darray_init(condition, sizeof(ParsedValue));
 
       while (*index < tokens->size) {
-        ParsedValue *parsed_code = parse_token(file, parsed, tokens, index, true);
+        ParsedValue *parsed_code = parse_token(file, tokens, index, true);
         if (parsed_code) {
           darray_push(condition, parsed_code);
           free(parsed_code);
@@ -78,7 +78,7 @@ ParsedValue *parse_if(char *file, DArray *parsed, DArray *tokens,
 
     // Parse the body
     ParsedValue *parsed_content =
-        parse_token(file, parsed, tokens, index, false);
+        parse_token(file, tokens, index, false);
 
     if (!parsed_content) {
       fprintf(stderr,
@@ -120,6 +120,7 @@ void free_conditional(void *ptr) {
   if (conditional->condition)
     darray_free(conditional->condition, free_parsed);
   free_parsed(conditional->content);
+  free(conditional->content);
 }
 
 void free_parsed_if(void *ptr) {
