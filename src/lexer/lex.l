@@ -16,6 +16,7 @@ int yywrap(void * unused_param) {
 %%
 
 "."                 { return TOKEN_DOT; }
+"!"                 { return TOKEN_EXCLAMATION; }
 ","                 { return TOKEN_COMMA; }
 ":"                 { return TOKEN_COLON; }
 

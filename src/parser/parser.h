@@ -15,7 +15,9 @@ typedef enum {
   AST_IF,
   AST_ACCESS,
   AST_CALL,
-  AST_DECLARATION
+  AST_DECLARATION,
+  AST_NULL,
+  AST_BOOLEAN
 } ValueType;
 
 extern const char* ValueTypeNames[];

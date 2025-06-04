@@ -34,9 +34,11 @@ ParsedValue *parse_call(char *file, DArray *tokens, size_t *index,
       break;
     ParsedValue *parsedValue = parse_token(file, tokens, index, true);
     darray_push(arg, parsedValue);
+    free(parsedValue);
     switch (token->type) {
     case TOKEN_COMMA:
       darray_push(args, arg);
+      free(arg);
       arg = checked_malloc(sizeof(DArray));
       darray_init(arg, sizeof(ParsedValue));
       break;

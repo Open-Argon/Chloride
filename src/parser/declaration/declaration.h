@@ -6,11 +6,12 @@
 typedef struct {
   char * name;
   bool is_function;
-  DArray args; // string[]
+  DArray * parameters; // string[]
   ParsedValue * from;
 } ParsedDeclaration;
 
 // Function declaration for parsing an identifier
-ParsedValue *parse_declaration(char *file, DArray *parsed, DArray *tokens, size_t *index);
+ParsedValue *parse_declaration(char *file, DArray *tokens,
+                              size_t *index);
 
 #endif // DECLARATION_H
