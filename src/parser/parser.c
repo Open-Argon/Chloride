@@ -9,6 +9,7 @@
 #include "string/string.h"
 #include "literals/literals.h"
 #include "assignable/call/call.h"
+#include "assignable/access/access.h"
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -106,6 +107,9 @@ ParsedValue *parse_token(char *file, DArray *tokens, size_t *index,
     case TOKEN_LPAREN:
       output = parse_call(file, tokens, index, output);
       break;
+    case TOKEN_DOT:
+      output = parse_access(file, tokens, index, output);
+      break;
     default:
       passed = true;
     }
@@ -140,6 +144,9 @@ void free_parsed(void *ptr) {
     break;
   case AST_CALL:
     free_parse_call(parsed);
+    break;
+  case AST_ACCESS:
+    free_parse_access(parsed);
     break;
   case AST_NUMBER:
   case AST_NULL:
