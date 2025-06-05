@@ -37,6 +37,6 @@ void free_parsed(void *ptr);
 
 void error_if_finished(char *file,DArray *tokens, size_t *index);
 
-void skip_newlines_and_indents(DArray *tokens, size_t *index);
+size_t skip_newlines_and_indents(DArray *tokens, size_t *index);
 
 #endif // PARSER_H

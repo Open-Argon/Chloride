@@ -30,19 +30,22 @@ void error_if_finished(char *file, DArray *tokens, size_t *index) {
   }
 }
 
-void skip_newlines_and_indents(DArray *tokens, size_t *index) {
+size_t skip_newlines_and_indents(DArray *tokens, size_t *index) {
   bool passed = false;
+  size_t count = 0;
   while (!passed && (*index) < tokens->size) {
     Token *token = darray_get(tokens, *index);
     switch (token->type) {
     case TOKEN_NEW_LINE:
     case TOKEN_INDENT:
+      count++;
       (*index)++;
       break;
     default:
       passed = true;
     }
   }
+  return count;
 }
 
 ParsedValue *parse_token(char *file, DArray *tokens, size_t *index,
@@ -140,10 +143,11 @@ void parser(char *file, DArray *parsed, DArray *tokens, bool inline_flag) {
   size_t index = 0;
   bool expecting_new_line = false;
   while (index < tokens->size) {
+    size_t old_index = index;
     ParsedValue *parsed_code = parse_token(file, tokens, &index, inline_flag);
     if (parsed_code) {
       if (expecting_new_line) {
-        Token *token = darray_get(tokens, index-1);
+        Token *token = darray_get(tokens, old_index);
         fprintf(stderr, "%s:%zu:%zu error: syntax error\n", file, token->line,
                 token->column);
         exit(EXIT_FAILURE);
