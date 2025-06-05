@@ -23,7 +23,23 @@ let  a,
 
 
 
+                            
 
 
-if (x) term.log("hello world")
+
+if (x) do
+    term.log("hello world")
+    term.log("hello world")
 else term.log("bruh")
+
+
+
+
+
+
+
+
+
+
+
+

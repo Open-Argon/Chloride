@@ -83,10 +83,13 @@ ParsedValue *parse_token(char *file, DArray *tokens, size_t *index,
     (*index)++;
     return NULL;
   case TOKEN_INDENT:
-    if (strlen(token->value) > 0) {
-    fprintf(stderr, "%s:%zu:%zu error: invalid indentation\n", file,
-            token->line, token->column);
-    exit(EXIT_FAILURE);
+    if (strlen(token->value) > 0 && (*index + 1) < tokens->size) {
+      token = darray_get(tokens, (*index) + 1);
+      if (token->type != TOKEN_NEW_LINE) {
+        fprintf(stderr, "%s:%zu:%zu error: invalid indentation\n", file,
+                token->line, token->column);
+        exit(EXIT_FAILURE);
+      }
     }
     (*index)++;
     return NULL;
