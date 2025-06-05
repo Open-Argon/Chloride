@@ -1,6 +1,7 @@
 #ifndef TOKEN_H
 #define TOKEN_H
 
+#include <stddef.h>
 typedef enum {
   TOKEN_STRING = 256,
   TOKEN_NUMBER,
@@ -76,8 +77,8 @@ typedef enum {
 
 typedef struct {
   TokenType type;
-  int line;
-  int column;
+  size_t line;
+  size_t column;
   char *value;
 } Token;
 

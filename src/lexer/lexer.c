@@ -13,11 +13,12 @@ void lexer(LexerState state) {
   int token;
   while ((token = yylex(scanner)) != 0) {
     Token *token_struct =
-        create_token(token, yyget_lineno(scanner), state.current_column + 1,
+        create_token(token, state.current_line+1, state.current_column + 1,
                      yyget_text(scanner));
     darray_push(state.tokens, token_struct);
     free(token_struct);
     if (token == TOKEN_NEW_LINE) {
+      state.current_line += 1;
       state.current_column = 0;
     } else {
       state.current_column += yyget_leng(scanner);

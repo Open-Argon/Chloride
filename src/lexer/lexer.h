@@ -8,7 +8,8 @@
 typedef struct {
   const char *path;
   FILE *file;
-  int current_column;
+  size_t current_line;
+  size_t current_column;
   DArray *tokens;
   // add more fields as needed
 } LexerState;

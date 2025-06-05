@@ -42,7 +42,7 @@ ParsedValue *parse_if(char *file, DArray *tokens,
       token = darray_get(tokens, *index);
       if (token->type != TOKEN_LPAREN) {
         fprintf(stderr,
-                "%s:%u:%u error: expected '(' after if\n",
+                "%s:%zu:%zu error: expected '(' after if\n",
                 file, token->line, token->column);
         exit(EXIT_FAILURE);
       }
@@ -67,7 +67,7 @@ ParsedValue *parse_if(char *file, DArray *tokens,
 
       if (token->type != TOKEN_RPAREN) {
         fprintf(stderr,
-                "%s:%u:%u error: missing closing ')' in condition\n",
+                "%s:%zu:%zu error: missing closing ')' in condition\n",
                 file, token->line, token->column);
         exit(EXIT_FAILURE);
       }
@@ -82,7 +82,7 @@ ParsedValue *parse_if(char *file, DArray *tokens,
 
     if (!parsed_content) {
       fprintf(stderr,
-              "%s:%u:%u error: expected body after condition\n",
+              "%s:%zu:%zu error: expected body after condition\n",
               file, token->line, token->column);
       exit(EXIT_FAILURE);
     }

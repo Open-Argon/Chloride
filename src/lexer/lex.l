@@ -108,7 +108,7 @@ int yywrap(void * unused_param) {
 
 .   {
     GET_STATE
-    fprintf(stderr, "%s:%u:%u error: unexpected character '%s'\n", state->path, yylineno, COLUMN_NO+1, yytext);
+    fprintf(stderr, "%s:%zu:%zu error: unexpected character '%s'\n", state->path, state->current_line+1, COLUMN_NO+1, yytext);
     exit(1);
 }
 %%

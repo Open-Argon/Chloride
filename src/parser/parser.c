@@ -8,6 +8,7 @@
 #include "number/number.h"
 #include "string/string.h"
 #include "literals/literals.h"
+#include "assignable/call/call.h"
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -21,7 +22,7 @@ const char *ValueTypeNames[] = {"string", "assign",       "identifier",
 void error_if_finished(char *file, DArray *tokens, size_t *index) {
   if ((*index) >= tokens->size) {
     Token *token = darray_get(tokens, tokens->size - 1);
-    fprintf(stderr, "%s:%u:%u error: syntax error\n", file, token->line,
+    fprintf(stderr, "%s:%zu:%zu error: syntax error\n", file, token->line,
             token->column);
     exit(EXIT_FAILURE);
   }
@@ -67,7 +68,7 @@ ParsedValue *parse_token(char *file, DArray *tokens, size_t *index,
     output = parse_token(file, tokens, index, inline_flag);
     break;
   case TOKEN_INDENT:
-    fprintf(stderr, "%s:%u:%u error: invalid indentation\n", file, token->line,
+    fprintf(stderr, "%s:%zu:%zu error: invalid indentation\n", file, token->line,
             token->column);
     exit(EXIT_FAILURE);
   case TOKEN_IDENTIFIER:
@@ -82,7 +83,7 @@ ParsedValue *parse_token(char *file, DArray *tokens, size_t *index,
     output = parse_declaration(file, tokens, index);
     break;
   default:
-    fprintf(stderr, "%s:%u:%u error: syntax error\n", file, token->line,
+    fprintf(stderr, "%s:%zu:%zu error: syntax error\n", file, token->line,
             token->column);
     exit(EXIT_FAILURE);
   }
@@ -101,6 +102,9 @@ ParsedValue *parse_token(char *file, DArray *tokens, size_t *index,
     case TOKEN_ASSIGN_SLASH:
     case TOKEN_ASSIGN_STAR:;
       output = parse_assign(file, tokens, output, index);
+      break;
+    case TOKEN_LPAREN:
+      output = parse_call(file, tokens, index, output);
       break;
     default:
       passed = true;
@@ -130,6 +134,12 @@ void free_parsed(void *ptr) {
     break;
   case AST_ASSIGN:
     free_parse_assign(parsed);
+    break;
+  case AST_DECLARATION:
+    free_declaration(parsed);
+    break;
+  case AST_CALL:
+    free_parse_call(parsed);
     break;
   case AST_NUMBER:
   case AST_NULL:

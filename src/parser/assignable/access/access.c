@@ -12,7 +12,7 @@ ParsedValue *parse_access(char*file,DArray *tokens, size_t * index, ParsedValue 
   ParsedValue *parsedValue = checked_malloc(sizeof(ParsedValue));
   ParsedAccess *parsedAccess = checked_malloc(sizeof(ParsedAccess));
   parsedAccess->to_access = to_access;
-  parsedAccess->access = strcpy(checked_malloc(sizeof(token->value)), token->value);
+  parsedAccess->access = strcpy(checked_malloc(strlen(token->value) + 1), token->value);
   parsedValue->type = AST_ACCESS;
   parsedValue->data = parsedAccess;
   return parsedValue;

@@ -8,10 +8,12 @@ typedef struct {
   bool is_function;
   DArray * parameters; // string[]
   ParsedValue * from;
-} ParsedDeclaration;
+} ParsedSingleDeclaration;
 
 // Function declaration for parsing an identifier
 ParsedValue *parse_declaration(char *file, DArray *tokens,
                               size_t *index);
+
+void free_declaration(void *ptr);
 
 #endif // DECLARATION_H

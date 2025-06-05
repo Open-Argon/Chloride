@@ -17,7 +17,7 @@ int main(int argc, char *argv[]) {
 
   darray_init(&tokens, sizeof(Token));
 
-  LexerState state = {path, fopen(path, "r"), 0, &tokens};
+  LexerState state = {path, fopen(path, "r"), 0, 0, &tokens};
   lexer(state);
   fclose(state.file);
 

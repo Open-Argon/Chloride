@@ -8,42 +8,41 @@
 
 ParsedValue *parse_call(char *file, DArray *tokens, size_t *index,
                         ParsedValue *to_call) {
+  ParsedValue *parsedValue = checked_malloc(sizeof(ParsedValue));
+  ParsedCall *call = checked_malloc(sizeof(ParsedCall));
+  call->to_call = to_call;
+  parsedValue->data = call;
+  parsedValue->type = AST_CALL;
+  call->args = checked_malloc(sizeof(DArray));
+  darray_init(call->args, sizeof(ParsedValue));
   (*index)++;
   error_if_finished(file, tokens, index);
-  ParsedValue *parsedValue = checked_malloc(sizeof(ParsedValue));
-  ParsedCall *parsedCall = checked_malloc(sizeof(ParsedCall));
-  DArray *args = checked_malloc(sizeof(DArray));
-  darray_init(args, sizeof(ParsedValue));
-  parsedCall->to_call = to_call;
-  parsedCall->args = args;
-  parsedValue->type = AST_ACCESS;
-  parsedValue->data = parsedCall;
   Token *token = darray_get(tokens, *index);
-  DArray *arg = checked_malloc(sizeof(DArray));
-  darray_init(arg, sizeof(ParsedValue));
-  while (true) {
-    bool to_break = false;
-    switch (token->type) {
-    case TOKEN_RPAREN:
-      to_break = true;
-      break;
-    default:
-      break;
-    }
-    if (to_break)
-      break;
-    ParsedValue *parsedValue = parse_token(file, tokens, index, true);
-    darray_push(arg, parsedValue);
-    free(parsedValue);
-    switch (token->type) {
-    case TOKEN_COMMA:
-      darray_push(args, arg);
-      free(arg);
-      arg = checked_malloc(sizeof(DArray));
-      darray_init(arg, sizeof(ParsedValue));
-      break;
-    default:
-      break;
+  if (token->type == TOKEN_RPAREN) {
+    (*index)++;
+    if ((*index) >= tokens->size)
+      return parsedValue;
+    token = darray_get(tokens, *index);
+  } else {
+    while ((*index) < tokens->size) {
+      ParsedValue *parsedArg = parse_token(file, tokens, index, true);
+      darray_push(call->args, parsedArg);
+      free(parsedArg);
+      error_if_finished(file, tokens, index);
+      token = darray_get(tokens, *index);
+      if (token->type == TOKEN_RPAREN) {
+        (*index)++;
+        if ((*index) >= tokens->size)
+          break;
+        token = darray_get(tokens, *index);
+        break;
+      } else if (token->type != TOKEN_COMMA) {
+        fprintf(stderr, "%s:%zu:%zu error: expected comma\n", file, token->line,
+                token->column);
+        exit(EXIT_FAILURE);
+      }
+      (*index)++;
+      error_if_finished(file, tokens, index);
     }
   }
   return parsedValue;
@@ -53,9 +52,7 @@ void free_parse_call(void *ptr) {
   ParsedValue *parsedValue = ptr;
   ParsedCall *parsedCall = parsedValue->data;
 
+  darray_free(parsedCall->args, free_parsed);
   free_parsed(parsedCall->to_call);
-
-  
-
   free(parsedCall);
 }
