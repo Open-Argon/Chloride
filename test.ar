@@ -1,3 +1,21 @@
-let a, b = 1, c, d = 42, temp_result, compute_area(radius) = 3.1415, identity(x) = x, f(x), g(y, z), result, z = 0, extremely_long_variable_name_to_test_limits, cache_value = compute_area(5), placeholder_fn_with_no_body(arg1, arg2, arg3), total = identity(100), deeply_nested_args_function(arg1, arg2, arg3, arg4, arg5), sum = a, another, another_function(), just_null_here
-x = 10
-x.epic_test_long_variable_name = "hello world"
+let  a, 
+    b = 1, 
+    c, 
+    d = 42, 
+    temp_result, 
+    compute_area(radius) = 3.1415, 
+    identity(x) = x, 
+    f(x), 
+    g(y, z), 
+    result, 
+    z = 0, 
+    extremely_long_variable_name_to_test_limits, 
+    cache_value = compute_area(5), 
+    placeholder_fn_with_no_body(arg1, arg2, arg3), 
+    total = identity(100), 
+    deeply_nested_args_function(arg1, arg2, arg3, arg4, arg5), 
+    sum = a, 
+    another, 
+    another_function(),
+    just_null_here
+if (x) term.log("hello world")

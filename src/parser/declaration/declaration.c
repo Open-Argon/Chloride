@@ -65,6 +65,8 @@ ParsedValue *parse_declaration(char *file, DArray *tokens, size_t *index) {
           darray_push(declaration->parameters, &parameter_name);
           (*index)++;
           error_if_finished(file, tokens, index);
+          skip_newlines_and_indents(tokens, index);
+          error_if_finished(file, tokens, index);
           token = darray_get(tokens, *index);
           if (token->type == TOKEN_RPAREN) {
             (*index)++;
@@ -89,6 +91,11 @@ ParsedValue *parse_declaration(char *file, DArray *tokens, size_t *index) {
       free(declaration->from);
 
       declaration->from = parse_token(file, tokens, index, true);
+      if (!declaration->from) {
+        fprintf(stderr, "%s:%zu:%zu error: syntax error\n", file, token->line,
+                token->column);
+        exit(EXIT_FAILURE);
+      }
       if ((*index) >= tokens->size)
         break;
       token = darray_get(tokens, *index);
@@ -96,6 +103,8 @@ ParsedValue *parse_declaration(char *file, DArray *tokens, size_t *index) {
     if (token->type != TOKEN_COMMA)
       break;
     (*index)++;
+    error_if_finished(file, tokens, index);
+    skip_newlines_and_indents(tokens, index);
     error_if_finished(file, tokens, index);
     token = darray_get(tokens, *index);
   }

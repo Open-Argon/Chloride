@@ -25,9 +25,13 @@ ParsedValue *parse_call(char *file, DArray *tokens, size_t *index,
     token = darray_get(tokens, *index);
   } else {
     while ((*index) < tokens->size) {
+      skip_newlines_and_indents(tokens, index);
+      error_if_finished(file, tokens, index);
       ParsedValue *parsedArg = parse_token(file, tokens, index, true);
       darray_push(call->args, parsedArg);
       free(parsedArg);
+      error_if_finished(file, tokens, index);
+      skip_newlines_and_indents(tokens, index);
       error_if_finished(file, tokens, index);
       token = darray_get(tokens, *index);
       if (token->type == TOKEN_RPAREN) {

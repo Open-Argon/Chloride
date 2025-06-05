@@ -29,6 +29,21 @@ void error_if_finished(char *file, DArray *tokens, size_t *index) {
   }
 }
 
+void skip_newlines_and_indents(DArray *tokens, size_t *index) {
+  bool passed = false;
+  while (!passed && (*index) < tokens->size) {
+    Token *token = darray_get(tokens, *index);
+    switch (token->type) {
+    case TOKEN_NEW_LINE:
+    case TOKEN_INDENT:
+      (*index)++;
+      break;
+    default:
+      passed = true;
+    }
+  }
+}
+
 ParsedValue *parse_token(char *file, DArray *tokens, size_t *index,
                          bool inline_flag) {
   Token *token = darray_get(tokens, *index);
@@ -61,12 +76,8 @@ ParsedValue *parse_token(char *file, DArray *tokens, size_t *index,
     output = parse_string(*token);
     break;
   case TOKEN_NEW_LINE:
-    while (token->type == TOKEN_NEW_LINE && ++(*index) < tokens->size) {
-      token = darray_get(tokens, *index);
-    }
-    if (token->type == TOKEN_NEW_LINE)
-      break;
-    output = parse_token(file, tokens, index, inline_flag);
+    (*index)++;
+    return NULL;
     break;
   case TOKEN_INDENT:
     fprintf(stderr, "%s:%zu:%zu error: invalid indentation\n", file, token->line,
@@ -101,7 +112,7 @@ ParsedValue *parse_token(char *file, DArray *tokens, size_t *index,
     case TOKEN_ASSIGN_MODULO:
     case TOKEN_ASSIGN_PLUS:
     case TOKEN_ASSIGN_SLASH:
-    case TOKEN_ASSIGN_STAR:;
+    case TOKEN_ASSIGN_STAR:
       output = parse_assign(file, tokens, output, index);
       break;
     case TOKEN_LPAREN:
