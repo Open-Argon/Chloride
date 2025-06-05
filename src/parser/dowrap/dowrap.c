@@ -1,3 +1,4 @@
+#include "dowrap.h"
 #include "../../lexer/token.h"
 #include "../../memory.h"
 #include "../parser.h"
@@ -101,4 +102,11 @@ ParsedValue *parse_dowrap(char *file, DArray *tokens, size_t *index) {
   darray_free(&to_free, free_string_dowrap);
 
   return parsedValue;
+}
+
+void free_dowrap(void *ptr) {
+  ParsedValue *parsedValue = ptr;
+  DArray *parsed = parsedValue->data;
+  darray_free(parsed, free_parsed);
+  free(parsed);
 }

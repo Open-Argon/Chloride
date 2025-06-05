@@ -1,13 +1,12 @@
 #include "if.h"
 #include "../../lexer/token.h"
+#include "../../memory.h"
 #include "../parser.h"
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include "../../memory.h"
 
-ParsedValue *parse_if(char *file, DArray *tokens,
-                      size_t *index) {
+ParsedValue *parse_if(char *file, DArray *tokens, size_t *index) {
   (*index)++;
   error_if_finished(file, tokens, index);
 
@@ -24,7 +23,8 @@ ParsedValue *parse_if(char *file, DArray *tokens,
       if (token->type != TOKEN_NEW_LINE)
         break; // no more branches
       (*index)++;
-      error_if_finished(file, tokens, index);
+      if ((*index) >= tokens->size)
+        break;
       token = darray_get(tokens, *index);
 
       if (token->type == TOKEN_ELSE || token->type == TOKEN_ELSE_IF) {
@@ -41,9 +41,8 @@ ParsedValue *parse_if(char *file, DArray *tokens,
       // Parse ( condition )
       token = darray_get(tokens, *index);
       if (token->type != TOKEN_LPAREN) {
-        fprintf(stderr,
-                "%s:%zu:%zu error: expected '(' after if\n",
-                file, token->line, token->column);
+        fprintf(stderr, "%s:%zu:%zu error: expected '(' after if\n", file,
+                token->line, token->column);
         exit(EXIT_FAILURE);
       }
 
@@ -66,8 +65,7 @@ ParsedValue *parse_if(char *file, DArray *tokens,
       }
 
       if (token->type != TOKEN_RPAREN) {
-        fprintf(stderr,
-                "%s:%zu:%zu error: missing closing ')' in condition\n",
+        fprintf(stderr, "%s:%zu:%zu error: missing closing ')' in condition\n",
                 file, token->line, token->column);
         exit(EXIT_FAILURE);
       }
@@ -77,20 +75,19 @@ ParsedValue *parse_if(char *file, DArray *tokens,
     }
 
     // Parse the body
-    ParsedValue *parsed_content =
-        parse_token(file, tokens, index, false);
+    ParsedValue *parsed_content = parse_token(file, tokens, index, false);
 
     if (!parsed_content) {
-      fprintf(stderr,
-              "%s:%zu:%zu error: expected body after condition\n",
-              file, token->line, token->column);
+      fprintf(stderr, "%s:%zu:%zu error: expected body after condition\n", file,
+              token->line, token->column);
       exit(EXIT_FAILURE);
     }
 
     ParsedConditional conditional = {condition, parsed_content};
     darray_push(parsed_if, &conditional);
 
-    expect_conditional = false; // After first iteration, expect newline + else/else if
+    expect_conditional =
+        false; // After first iteration, expect newline + else/else if
   }
 
   ParsedValue *parsedValue = checked_malloc(sizeof(ParsedValue));

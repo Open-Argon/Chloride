@@ -187,5 +187,8 @@ void free_parsed(void *ptr) {
   case AST_IF:
     free_parsed_if(parsed);
     break;
+  case AST_DOWRAP:
+    free_dowrap(parsed);
+    break;
   }
 }

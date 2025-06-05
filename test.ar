@@ -5,7 +5,9 @@ let  a,
     temp_result, 
     compute_area(radius) = 3.1415, 
     identity(x) = x, 
-    f(x), 
+    f(x)=do
+        term.log("hello world")
+    , 
     g(y, z), 
     result, 
     z = 0, 
@@ -24,3 +26,4 @@ let  a,
 
 
 if (x) term.log("hello world")
+else term.log("bruh")
