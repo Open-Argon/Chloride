@@ -75,7 +75,7 @@ ParsedValue *parse_dowrap(char *file, DArray *tokens, size_t *index) {
         pass = true;
         break;
       }
-      if (temp_indent_depth >= indent_depth) {
+      if (temp_indent_depth > indent_depth) {
         size_t indent_amount = temp_indent_depth-indent_depth;
         Token indent_token;
         indent_token.line = token->line;

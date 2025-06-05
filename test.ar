@@ -7,7 +7,10 @@ let  a,
     identity(x) = x, 
     f(x)=do
         term.log("hello world")
-    , 
+        do
+            term.log('hello world')
+        term.log("hello world")
+    ,
     g(y, z), 
     result, 
     z = 0, 
@@ -23,7 +26,7 @@ let  a,
 
 
 
-                            
+
 
 
 
@@ -38,7 +41,7 @@ else term.log("bruh")
 
 
 
-
+mm
 
 
 
