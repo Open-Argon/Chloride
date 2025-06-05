@@ -86,12 +86,8 @@ int yywrap(void * unused_param) {
     return TOKEN_STRING;
 }
 
-((([0-9]+(\.[0-9]+)?)|(\.[0-9]+))(e((\-|\+)?([0-9]+(\.[0-9]+)?)))?) {
+\-?((([0-9]+(\.[0-9]+)?)|(\.[0-9]+))(e((\-|\+)?([0-9]+(\.[0-9]+)?)))?) {
     return TOKEN_NUMBER;
-}
-
-([0-9]+\/[0-9]+) {
-    return TOKEN_FRACTION;
 }
 
 \n { return TOKEN_NEW_LINE; }

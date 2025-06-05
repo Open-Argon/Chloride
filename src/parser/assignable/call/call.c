@@ -18,12 +18,7 @@ ParsedValue *parse_call(char *file, DArray *tokens, size_t *index,
   (*index)++;
   error_if_finished(file, tokens, index);
   Token *token = darray_get(tokens, *index);
-  if (token->type == TOKEN_RPAREN) {
-    (*index)++;
-    if ((*index) >= tokens->size)
-      return parsedValue;
-    token = darray_get(tokens, *index);
-  } else {
+  if (token->type != TOKEN_RPAREN) {
     while ((*index) < tokens->size) {
       skip_newlines_and_indents(tokens, index);
       error_if_finished(file, tokens, index);
@@ -35,10 +30,6 @@ ParsedValue *parse_call(char *file, DArray *tokens, size_t *index,
       error_if_finished(file, tokens, index);
       token = darray_get(tokens, *index);
       if (token->type == TOKEN_RPAREN) {
-        (*index)++;
-        if ((*index) >= tokens->size)
-          break;
-        token = darray_get(tokens, *index);
         break;
       } else if (token->type != TOKEN_COMMA) {
         fprintf(stderr, "%s:%zu:%zu error: expected comma\n", file, token->line,
@@ -49,6 +40,7 @@ ParsedValue *parse_call(char *file, DArray *tokens, size_t *index,
       error_if_finished(file, tokens, index);
     }
   }
+  (*index)++;
   return parsedValue;
 }
 

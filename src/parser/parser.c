@@ -1,24 +1,25 @@
 #include "parser.h"
 #include "../dynamic_array/darray.h"
 #include "../lexer/token.h"
+#include "assignable/access/access.h"
 #include "assignable/assign/assign.h"
+#include "assignable/call/call.h"
 #include "assignable/identifier/identifier.h"
 #include "declaration/declaration.h"
+#include "dowrap/dowrap.h"
 #include "if/if.h"
+#include "literals/literals.h"
 #include "number/number.h"
 #include "string/string.h"
-#include "literals/literals.h"
-#include "assignable/call/call.h"
-#include "assignable/access/access.h"
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-const char *ValueTypeNames[] = {"string", "assign",       "identifier",
-                                "number", "if statement", "access",
-                                "call", "declaration", "null", "boolean"};
+const char *ValueTypeNames[] = {
+    "string", "assign",      "identifier", "number",  "if statement", "access",
+    "call",   "declaration", "null",       "boolean", "do wrap"};
 
 void error_if_finished(char *file, DArray *tokens, size_t *index) {
   if ((*index) >= tokens->size) {
@@ -78,11 +79,14 @@ ParsedValue *parse_token(char *file, DArray *tokens, size_t *index,
   case TOKEN_NEW_LINE:
     (*index)++;
     return NULL;
-    break;
   case TOKEN_INDENT:
-    fprintf(stderr, "%s:%zu:%zu error: invalid indentation\n", file, token->line,
-            token->column);
+    if (strlen(token->value) > 0) {
+    fprintf(stderr, "%s:%zu:%zu error: invalid indentation\n", file,
+            token->line, token->column);
     exit(EXIT_FAILURE);
+    }
+    (*index)++;
+    return NULL;
   case TOKEN_IDENTIFIER:
     (*index)++;
     output = parse_identifier(token);
@@ -93,6 +97,9 @@ ParsedValue *parse_token(char *file, DArray *tokens, size_t *index,
     break;
   case TOKEN_LET:
     output = parse_declaration(file, tokens, index);
+    break;
+  case TOKEN_DO:
+    output = parse_dowrap(file, tokens, index);
     break;
   default:
     fprintf(stderr, "%s:%zu:%zu error: syntax error\n", file, token->line,
@@ -131,11 +138,21 @@ ParsedValue *parse_token(char *file, DArray *tokens, size_t *index,
 
 void parser(char *file, DArray *parsed, DArray *tokens, bool inline_flag) {
   size_t index = 0;
+  bool expecting_new_line = false;
   while (index < tokens->size) {
     ParsedValue *parsed_code = parse_token(file, tokens, &index, inline_flag);
     if (parsed_code) {
+      if (expecting_new_line) {
+        Token *token = darray_get(tokens, index-1);
+        fprintf(stderr, "%s:%zu:%zu error: syntax error\n", file, token->line,
+                token->column);
+        exit(EXIT_FAILURE);
+      }
+      expecting_new_line = true;
       darray_push(parsed, parsed_code);
       free(parsed_code);
+    } else {
+      expecting_new_line = false;
     }
   }
 }

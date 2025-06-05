@@ -12,9 +12,9 @@ ParsedValue *parse_declaration(char *file, DArray *tokens, size_t *index) {
   error_if_finished(file, tokens, index);
   Token *token = darray_get(tokens, *index);
 
-  ParsedValue *parsedValue = malloc(sizeof(ParsedValue));
+  ParsedValue *parsedValue = checked_malloc(sizeof(ParsedValue));
   parsedValue->type = AST_DECLARATION;
-  DArray *declarations = malloc(sizeof(DArray));
+  DArray *declarations = checked_malloc(sizeof(DArray));
   darray_init(declarations, sizeof(ParsedSingleDeclaration));
   parsedValue->data = declarations;
   while (true) {
@@ -100,6 +100,10 @@ ParsedValue *parse_declaration(char *file, DArray *tokens, size_t *index) {
         break;
       token = darray_get(tokens, *index);
     }
+    skip_newlines_and_indents(tokens, index);
+    if ((*index) >= tokens->size)
+      break;
+    token = darray_get(tokens, *index);
     if (token->type != TOKEN_COMMA)
       break;
     (*index)++;

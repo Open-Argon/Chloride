@@ -61,8 +61,8 @@ void darray_pop(DArray *arr, void (*free_data)(void *)) {
     void *target = (char *)arr->data + (arr->size-1) * arr->element_size;
     free_data(target);
   }
-
-  darray_resize(arr, arr->size);
+  
+  darray_resize(arr, arr->size-1);
 }
 
 void *darray_get(DArray *arr, size_t index) {
@@ -106,4 +106,5 @@ void darray_free(DArray *arr, void (*free_data)(void *)) {
   arr->size = 0;
   arr->capacity = 0;
   arr->element_size = 0;
+  arr->resizable = false;
 }
