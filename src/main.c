@@ -17,7 +17,13 @@ int main(int argc, char *argv[]) {
 
   darray_init(&tokens, sizeof(Token));
 
-  LexerState state = {path, fopen(path, "r"), 0, 0, &tokens};
+  FILE * file = fopen(path, "r");
+
+  if (!file) {
+    return -1;
+  }
+
+  LexerState state = {path, file, 0, 0, &tokens};
   lexer(state);
   fclose(state.file);
 
@@ -29,6 +35,5 @@ int main(int argc, char *argv[]) {
   darray_free(&tokens, free_token);
 
   darray_free(&ast, free_parsed);
-
   return 0;
 }

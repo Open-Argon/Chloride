@@ -4,10 +4,13 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 ParsedValue *convert_to_operation(DArray * to_operate_on, DArray * operations) {
   if (to_operate_on->size == 1) {
-    return darray_get(to_operate_on, 0);
+    ParsedValue * parsedValue = malloc(sizeof(ParsedValue));
+    memcpy(parsedValue, darray_get(to_operate_on, 0), sizeof(ParsedValue));
+    return parsedValue;
   }
   TokenType operation = 0;
   DArray positions;
@@ -68,8 +71,8 @@ ParsedValue *parse_operations(char *file, DArray *tokens, size_t *index,
     darray_push(&to_operate_on, parse_token_full(file, tokens, index, true, false));
   }
   ParsedValue *output = convert_to_operation(&to_operate_on, &operations);
-  darray_free(&to_operate_on, free_parsed);
-  darray_free(&operations, free_parsed);
+  darray_free(&to_operate_on, NULL);
+  darray_free(&operations, NULL);
   return output;
 }
 

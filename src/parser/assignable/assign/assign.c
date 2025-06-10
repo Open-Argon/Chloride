@@ -54,6 +54,8 @@ void free_parse_assign(void *ptr) {
   ParsedValue *parsedValue = ptr;
   ParsedAssign *parsedAssign = parsedValue->data;
   free_parsed(parsedAssign->to);
+  free(parsedAssign->to);
   free_parsed(parsedAssign->from);
+  free(parsedAssign->from);
   free(parsedAssign);
 }

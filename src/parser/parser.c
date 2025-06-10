@@ -17,6 +17,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <gmp.h>
 
 const char *ValueTypeNames[] = {
     "string", "assign",      "identifier", "number",  "if statement", "access",
@@ -196,6 +197,8 @@ void free_parsed(void *ptr) {
     free_parse_access(parsed);
     break;
   case AST_NUMBER:
+    mpz_clear(parsed->data);
+    break;
   case AST_NULL:
   case AST_BOOLEAN:
     break;
