@@ -6,6 +6,7 @@
 #include "assignable/call/call.h"
 #include "assignable/identifier/identifier.h"
 #include "declaration/declaration.h"
+#include "operations/operations.h"
 #include "dowrap/dowrap.h"
 #include "if/if.h"
 #include "literals/literals.h"
@@ -19,7 +20,7 @@
 
 const char *ValueTypeNames[] = {
     "string", "assign",      "identifier", "number",  "if statement", "access",
-    "call",   "declaration", "null",       "boolean", "do wrap"};
+    "call",   "declaration", "null",       "boolean", "do wrap", "operations"};
 
 void error_if_finished(char *file, DArray *tokens, size_t *index) {
   if ((*index) >= tokens->size) {
@@ -48,8 +49,8 @@ size_t skip_newlines_and_indents(DArray *tokens, size_t *index) {
   return count;
 }
 
-ParsedValue *parse_token(char *file, DArray *tokens, size_t *index,
-                         bool inline_flag) {
+ParsedValue *parse_token_full(char *file, DArray *tokens, size_t *index,
+                              bool inline_flag, bool process_operations) {
   Token *token = darray_get(tokens, *index);
 
   ParsedValue *output = NULL;
@@ -134,12 +135,23 @@ ParsedValue *parse_token(char *file, DArray *tokens, size_t *index,
     case TOKEN_DOT:
       output = parse_access(file, tokens, index, output);
       break;
+    SWITCH_OPERATIONS
+      if (process_operations) {
+        output = parse_operations(file, tokens, index, output);
+        break;
+      }
+      /* fall through */
     default:
       passed = true;
     }
   }
 
   return output;
+}
+
+ParsedValue *parse_token(char *file, DArray *tokens, size_t *index,
+                         bool inline_flag) {
+  return parse_token_full(file, tokens, index, inline_flag, true);
 }
 
 void parser(char *file, DArray *parsed, DArray *tokens, bool inline_flag) {
@@ -151,8 +163,8 @@ void parser(char *file, DArray *parsed, DArray *tokens, bool inline_flag) {
     if (parsed_code) {
       if (expecting_new_line) {
         Token *token = darray_get(tokens, old_index);
-        fprintf(stderr, "%s:%zu:%zu error: syntax error\n", file, token->line,
-                token->column);
+        fprintf(stderr, "%s:%zu:%zu error: expected a new line\n", file,
+                token->line, token->column);
         exit(EXIT_FAILURE);
       }
       expecting_new_line = true;
@@ -189,6 +201,9 @@ void free_parsed(void *ptr) {
     break;
   case AST_IF:
     free_parsed_if(parsed);
+    break;
+  case AST_OPERATION:
+    free_operation(parsed);
     break;
   case AST_DOWRAP:
     free_dowrap(parsed);

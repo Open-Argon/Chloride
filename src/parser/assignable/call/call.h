@@ -5,7 +5,7 @@
 
 typedef struct {
   ParsedValue * to_call;
-  DArray * args;
+  DArray args;
 } ParsedCall;
 
 // Function declaration for parsing an identifier

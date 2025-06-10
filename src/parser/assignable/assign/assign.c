@@ -16,8 +16,8 @@ ParsedValue *parse_assign(char *file, DArray *tokens, ParsedValue *assign_to,
     break;
   case AST_CALL:;
     ParsedCall *call = assign_to->data;
-    for (size_t i = 0; i < call->args->size; i++) {
-      if (((ParsedValue *)darray_get(call->args, i))->type != AST_IDENTIFIER) {
+    for (size_t i = 0; i < call->args.size; i++) {
+      if (((ParsedValue *)darray_get(&call->args, i))->type != AST_IDENTIFIER) {
         fprintf(stderr,
                 "%s:%zu:%zu error: parameter names need to start with a letter "
                 "or _, "

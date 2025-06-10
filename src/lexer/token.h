@@ -21,22 +21,22 @@ typedef enum {
   TOKEN_ASSIGN_CARET,
 
   // Operators
-  TOKEN_AND,      // &&
-  TOKEN_OR,       // ||
-  TOKEN_NOT_IN,   // not in
-  TOKEN_LE,       // <=
-  TOKEN_GE,       // >=
+  TOKEN_CARET,    // ^      (Exponentiation)
+  TOKEN_STAR,     // *      (Multiplication)
+  TOKEN_SLASH,    // /      (Division)
+  TOKEN_FLOORDIV, // //     (Floor Division)
+  TOKEN_MODULO,   // %      (Modulo)
+  TOKEN_PLUS,     // +      (Addition)
+  TOKEN_MINUS,    // -      (Subtraction)
   TOKEN_LT,       // <
   TOKEN_GT,       // >
-  TOKEN_NE,       // !=
+  TOKEN_LE,       // <=
+  TOKEN_GE,       // >=
   TOKEN_EQ,       // ==
-  TOKEN_PLUS,     // +
-  TOKEN_MINUS,    // -
-  TOKEN_MODULO,   // %
-  TOKEN_STAR,     // *
-  TOKEN_FLOORDIV, // //
-  TOKEN_SLASH,    // /
-  TOKEN_CARET,    // ^
+  TOKEN_NE,       // !=
+  TOKEN_NOT_IN,   // not in (Usually treated like a comparison)
+  TOKEN_AND,      // &&
+  TOKEN_OR,       // ||
 
   // Keywords
   TOKEN_IF,

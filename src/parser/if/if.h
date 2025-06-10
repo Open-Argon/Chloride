@@ -1,12 +1,10 @@
-// parser.h
-
 #ifndef iF_H
 #define iF_H
 #include "../../lexer/token.h" // for Token
 #include "../parser.h"
 
 typedef struct {
-  DArray *condition; // NULL for 'else'
+  ParsedValue * condition; // NULL for 'else'
   ParsedValue *content;
 } ParsedConditional;
 

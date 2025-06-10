@@ -40,9 +40,4 @@ else term.log("bruh")
 
 
 
-
-mm
-
-
-
-
+mm = 10*10 - 10

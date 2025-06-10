@@ -1,5 +1,3 @@
-// parser.h
-
 #ifndef IDENTIFIER_H
 #define IDENTIFIER_H
 #include "../../parser.h"

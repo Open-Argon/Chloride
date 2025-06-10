@@ -48,8 +48,6 @@ ParsedValue *parse_dowrap(char *file, DArray *tokens, size_t *index) {
   DArray to_free;
   darray_init(&to_free, sizeof(char *));
 
-  size_t starting_index = *index;
-
   size_t temp_index_count = 0;
 
   while (!pass && ++(*index) < tokens->size) {

@@ -13,8 +13,7 @@ ParsedValue *parse_call(char *file, DArray *tokens, size_t *index,
   call->to_call = to_call;
   parsedValue->data = call;
   parsedValue->type = AST_CALL;
-  call->args = checked_malloc(sizeof(DArray));
-  darray_init(call->args, sizeof(ParsedValue));
+  darray_init(&call->args, sizeof(ParsedValue));
   (*index)++;
   error_if_finished(file, tokens, index);
   Token *token = darray_get(tokens, *index);
@@ -23,7 +22,7 @@ ParsedValue *parse_call(char *file, DArray *tokens, size_t *index,
       skip_newlines_and_indents(tokens, index);
       error_if_finished(file, tokens, index);
       ParsedValue *parsedArg = parse_token(file, tokens, index, true);
-      darray_push(call->args, parsedArg);
+      darray_push(&call->args, parsedArg);
       free(parsedArg);
       error_if_finished(file, tokens, index);
       skip_newlines_and_indents(tokens, index);
@@ -48,7 +47,7 @@ void free_parse_call(void *ptr) {
   ParsedValue *parsedValue = ptr;
   ParsedCall *parsedCall = parsedValue->data;
 
-  darray_free(parsedCall->args, free_parsed);
+  darray_free(&parsedCall->args, free_parsed);
   free_parsed(parsedCall->to_call);
   free(parsedCall);
 }

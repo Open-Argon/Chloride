@@ -35,7 +35,7 @@ ParsedValue *parse_if(char *file, DArray *tokens, size_t *index) {
       }
     }
 
-    DArray *condition = NULL;
+    ParsedValue *condition = NULL;
 
     if (token->type != TOKEN_ELSE) {
       // Parse ( condition )
@@ -48,22 +48,11 @@ ParsedValue *parse_if(char *file, DArray *tokens, size_t *index) {
 
       (*index)++;
       error_if_finished(file, tokens, index);
+      skip_newlines_and_indents(tokens, index);
+      condition = parse_token(file, tokens, index, true);
+      skip_newlines_and_indents(tokens, index);
 
-      condition = checked_malloc(sizeof(DArray));
-      darray_init(condition, sizeof(ParsedValue));
-
-      while (*index < tokens->size) {
-        ParsedValue *parsed_code = parse_token(file, tokens, index, true);
-        if (parsed_code) {
-          darray_push(condition, parsed_code);
-          free(parsed_code);
-        }
-
-        token = darray_get(tokens, *index);
-        if (token->type == TOKEN_RPAREN)
-          break;
-      }
-
+      token = darray_get(tokens, *index);
       if (token->type != TOKEN_RPAREN) {
         fprintf(stderr, "%s:%zu:%zu error: missing closing ')' in condition\n",
                 file, token->line, token->column);
@@ -114,8 +103,10 @@ ParsedValue *parse_if(char *file, DArray *tokens, size_t *index) {
 
 void free_conditional(void *ptr) {
   ParsedConditional *conditional = ptr;
-  if (conditional->condition)
-    darray_free(conditional->condition, free_parsed);
+  if (conditional->condition) {
+    free_parsed(conditional->condition);
+    free(conditional->condition);
+  }
   free_parsed(conditional->content);
   free(conditional->content);
 }
@@ -124,4 +115,5 @@ void free_parsed_if(void *ptr) {
   ParsedValue *parsedValue = ptr;
   DArray *parsed_if = parsedValue->data;
   darray_free(parsed_if, free_conditional);
+  free(parsedValue->data);
 }

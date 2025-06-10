@@ -39,8 +39,7 @@ ParsedValue *parse_declaration(char *file, DArray *tokens, size_t *index) {
     token = darray_get(tokens, *index);
     if (token->type == TOKEN_LPAREN) {
       declaration->is_function = true;
-      declaration->parameters = checked_malloc(sizeof(DArray));
-      darray_init(declaration->parameters, sizeof(char *));
+      darray_init(&declaration->parameters, sizeof(char *));
       (*index)++;
       error_if_finished(file, tokens, index);
       token = darray_get(tokens, *index);
@@ -62,7 +61,7 @@ ParsedValue *parse_declaration(char *file, DArray *tokens, size_t *index) {
           }
           char *parameter_name =
               strcpy(checked_malloc(strlen(token->value) + 1), token->value);
-          darray_push(declaration->parameters, &parameter_name);
+          darray_push(&declaration->parameters, &parameter_name);
           (*index)++;
           error_if_finished(file, tokens, index);
           skip_newlines_and_indents(tokens, index);
@@ -127,7 +126,7 @@ void free_single_declaration(void *ptr) {
   ParsedSingleDeclaration *declaration = ptr;
   free(declaration->name);
   if (declaration->is_function)
-    darray_free(declaration->parameters, free_string);
+    darray_free(&declaration->parameters, free_string);
   free_parsed(declaration->from);
   free(declaration->from);
 }
