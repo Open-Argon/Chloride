@@ -8,9 +8,7 @@
 
 ParsedValue *convert_to_operation(DArray * to_operate_on, DArray * operations) {
   if (to_operate_on->size == 1) {
-    ParsedValue * parsedValue = malloc(sizeof(ParsedValue));
-    memcpy(parsedValue, darray_get(to_operate_on, 0), sizeof(ParsedValue));
-    return parsedValue;
+    return darray_get(to_operate_on, 0);
   }
   TokenType operation = 0;
   DArray positions;

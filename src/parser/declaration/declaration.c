@@ -50,6 +50,8 @@ ParsedValue *parse_declaration(char *file, DArray *tokens, size_t *index) {
         token = darray_get(tokens, *index);
       } else {
         while ((*index) < tokens->size) {
+          skip_newlines_and_indents(tokens, index);
+          error_if_finished(file, tokens, index);
           token = darray_get(tokens, *index);
           if (token->type != TOKEN_IDENTIFIER) {
             fprintf(stderr,
@@ -104,7 +106,7 @@ ParsedValue *parse_declaration(char *file, DArray *tokens, size_t *index) {
       break;
     token = darray_get(tokens, *index);
     if (token->type != TOKEN_COMMA) {
-      (*index)-=count;
+      (*index) -= count;
       break;
     }
     (*index)++;

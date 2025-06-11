@@ -6,22 +6,24 @@
 #include "assignable/call/call.h"
 #include "assignable/identifier/identifier.h"
 #include "declaration/declaration.h"
-#include "operations/operations.h"
 #include "dowrap/dowrap.h"
 #include "if/if.h"
+#include "list/list.h"
 #include "literals/literals.h"
 #include "number/number.h"
+#include "operations/operations.h"
 #include "string/string.h"
+#include <gmp.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <gmp.h>
 
 const char *ValueTypeNames[] = {
-    "string", "assign",      "identifier", "number",  "if statement", "access",
-    "call",   "declaration", "null",       "boolean", "do wrap", "operations"};
+    "string",  "assign",     "identifier",  "number", "if statement",
+    "access",  "call",       "declaration", "null",   "boolean",
+    "do wrap", "operations", "list"};
 
 void error_if_finished(char *file, DArray *tokens, size_t *index) {
   if ((*index) >= tokens->size) {
@@ -109,6 +111,9 @@ ParsedValue *parse_token_full(char *file, DArray *tokens, size_t *index,
   case TOKEN_DO:
     output = parse_dowrap(file, tokens, index);
     break;
+  case TOKEN_LBRACKET:
+    output = parse_list(file, tokens, index);
+    break;
   default:
     fprintf(stderr, "%s:%zu:%zu error: syntax error\n", file, token->line,
             token->column);
@@ -136,7 +141,7 @@ ParsedValue *parse_token_full(char *file, DArray *tokens, size_t *index,
     case TOKEN_DOT:
       output = parse_access(file, tokens, index, output);
       break;
-    SWITCH_OPERATIONS
+      SWITCH_OPERATIONS
       if (process_operations) {
         output = parse_operations(file, tokens, index, output);
         break;
@@ -211,5 +216,9 @@ void free_parsed(void *ptr) {
   case AST_DOWRAP:
     free_dowrap(parsed);
     break;
+  case AST_LIST:
+    free_parsed_list(parsed);
+    break;
   }
+  printf("%d\n",parsed->type);
 }
