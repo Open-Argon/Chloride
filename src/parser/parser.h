@@ -8,6 +8,7 @@
 #define SWITCH_OPERATIONS case TOKEN_AND:\
 case TOKEN_OR:\
 case TOKEN_NOT_IN:\
+case TOKEN_IN:\
 case TOKEN_LE:\
 case TOKEN_GE:\
 case TOKEN_LT:\

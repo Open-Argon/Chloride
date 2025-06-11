@@ -12,7 +12,7 @@ ParsedValue *parse_assign(char *file, DArray *tokens, ParsedValue *assign_to,
   Token *token = darray_get(tokens, *index);
   switch (assign_to->type) {
   case AST_IDENTIFIER:
-  case AST_ASSIGN:
+  case AST_ACCESS:
     break;
   case AST_CALL:;
     ParsedCall *call = assign_to->data;

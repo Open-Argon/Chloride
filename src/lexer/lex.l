@@ -30,6 +30,7 @@ int yywrap(void * unused_param) {
 "^="                { return TOKEN_ASSIGN_CARET; }
 
 "not"[ \t]+"in"     { return TOKEN_NOT_IN; }
+"in"                { return TOKEN_IN; }
 "&&"                { return TOKEN_AND; }
 "||"                { return TOKEN_OR; }
 "<="                { return TOKEN_LE; }
@@ -65,7 +66,6 @@ int yywrap(void * unused_param) {
 "null"              { return TOKEN_NULL; }
 "delete"            { return TOKEN_DELETE; }
 "not"               { return TOKEN_NOT; }
-"in"                { return TOKEN_IN; }
 "try"               { return TOKEN_TRY; }
 "catch"             { return TOKEN_CATCH; }
 
@@ -86,11 +86,11 @@ int yywrap(void * unused_param) {
     return TOKEN_STRING;
 }
 
-\-?((([0-9]+(\.[0-9]+)?)|(\.[0-9]+))(e((\-|\+)?([0-9]+(\.[0-9]+)?)))?) {
+((([0-9]+(\.[0-9]+)?)|(\.[0-9]+))(e((\-|\+)?([0-9]+(\.[0-9]+)?)))?) {
     return TOKEN_NUMBER;
 }
 
-\n { return TOKEN_NEW_LINE; }
+"\n" { return TOKEN_NEW_LINE; }
 
 [ \t]+ {
     GET_STATE

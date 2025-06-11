@@ -34,7 +34,8 @@ typedef enum {
   TOKEN_GE,       // >=
   TOKEN_EQ,       // ==
   TOKEN_NE,       // !=
-  TOKEN_NOT_IN,   // not in (Usually treated like a comparison)
+  TOKEN_NOT_IN,   // not in
+  TOKEN_IN,       // in
   TOKEN_AND,      // &&
   TOKEN_OR,       // ||
 
@@ -57,7 +58,6 @@ typedef enum {
   TOKEN_NULL,
   TOKEN_DELETE,
   TOKEN_NOT,
-  TOKEN_IN,
   TOKEN_TRY,
   TOKEN_CATCH,
 

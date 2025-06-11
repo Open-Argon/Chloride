@@ -1,0 +1,51 @@
+
+let __makeFile(name, type, data) = do
+    let save(path) = do
+        let file = file.write(path)
+        file.buffer(data)
+        file.close()
+    File.save = save
+
+let __multipart(req, res) = do
+    let boundary = buffer().from(req.headers.splitN("boundary=", 2))
+    let newLineSplit = buffer().from("\r\n\r\n")
+    let parts = req.buffer.body.split(boundary)
+    if (true) do
+        let str = parts.to("string")
+        if (str == "" || str=="--" || str=="--\r\n") do
+        str = null
+        let headers = []
+        let lines = parts.splitN(newLineSplit, 2)
+        let headerLines = lines.to("string").split("\r\n")
+        if (true) do
+            let header = headerLines.splitN(": ", 2)
+            if (header.length != 2) do
+            headers = header
+        if (lines.length != 2) do
+        let body = lines
+        if (i != parts.length-1) do
+            body = body.slice(0, body.length-4)
+        if ("content-disposition" in headers) do
+            let disposition = headers.split("; ")
+            if (disposition == "form-data") do
+                let name = json.parse(disposition.splitN("=", 2))
+                if (disposition.length >= 3) do
+                    let filename = json.parse(disposition.splitN("=", 2))
+                    req.files = __makeFile(filename, headers, body)
+                else do
+                    req.formdata = body.to("string")
+    res.next()
+    
+
+let formdata(req, res) = do
+    req.formdata = {}
+    req.files = {}
+
+    if (req.method != "POST") return res.next()
+    if ("content-type" not in req.headers) return res.next()
+    let loweredContentType = req.headers["content-type"].lower()
+    if (loweredContentType.startswith("multipart/form-data")) return __multipart(req, res)
+    else if (loweredContentType.startswith("application/x-www-form-urlencoded")) req.formdata = url.decodeURLQuery(req.buffer.body.to("string"))
+    else if (loweredContentType.startswith("application/json")) req.formdata = json.parse(req.buffer.body.to("string"))
+    else req.files.file = __makeFile("file", req.headers["content-type"], req.buffer.body)
+    res.next()
