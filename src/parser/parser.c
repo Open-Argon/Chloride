@@ -220,5 +220,4 @@ void free_parsed(void *ptr) {
     free_parsed_list(parsed);
     break;
   }
-  printf("%d\n",parsed->type);
 }
