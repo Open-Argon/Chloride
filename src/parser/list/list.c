@@ -1,3 +1,4 @@
+#include "list.h"
 #include "../../lexer/token.h"
 #include "../../memory.h"
 #include "../parser.h"
@@ -12,6 +13,7 @@ ParsedValue *parse_list(char *file, DArray *tokens, size_t *index) {
   parsedValue->data = list;
   darray_init(list, sizeof(ParsedValue));
   (*index)++;
+  skip_newlines_and_indents(tokens, index);
   error_if_finished(file, tokens, index);
   Token *token = darray_get(tokens, *index);
   if (token->type != TOKEN_RBRACKET) {

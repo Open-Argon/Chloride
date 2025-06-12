@@ -38,7 +38,8 @@ typedef enum {
   AST_BOOLEAN,
   AST_DOWRAP,
   AST_OPERATION,
-  AST_LIST
+  AST_LIST,
+  AST_DICTIONARY
 } ValueType;
 
 extern const char* ValueTypeNames[];

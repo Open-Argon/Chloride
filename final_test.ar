@@ -1,39 +1,42 @@
 
+
 let __makeFile(name, type, data) = do
+    let File = {name: name, type: type, data: data}
     let save(path) = do
         let file = file.write(path)
         file.buffer(data)
         file.close()
     File.save = save
+    return File
 
 let __multipart(req, res) = do
-    let boundary = buffer().from(req.headers.splitN("boundary=", 2))
+    let boundary = buffer().from(req.headers["content-type"].splitN("boundary=", 2)[1])
     let newLineSplit = buffer().from("\r\n\r\n")
     let parts = req.buffer.body.split(boundary)
-    if (true) do
-        let str = parts.to("string")
-        if (str == "" || str=="--" || str=="--\r\n") do
+    for (i from 0 to parts.length) do
+        let str = parts[i].to("string")
+        if (str == "" || str=="--" || str=="--\r\n") continue
         str = null
-        let headers = []
-        let lines = parts.splitN(newLineSplit, 2)
-        let headerLines = lines.to("string").split("\r\n")
-        if (true) do
-            let header = headerLines.splitN(": ", 2)
-            if (header.length != 2) do
-            headers = header
-        if (lines.length != 2) do
-        let body = lines
+        let headers = {}
+        let lines = parts[i].splitN(newLineSplit, 2)
+        let headerLines = lines[0].to("string").split("\r\n")
+        for (j from 0 to headerLines.length) do
+            let header = headerLines[j].splitN(": ", 2)
+            if (header.length != 2) continue
+            headers[header[0].lower()] = header[1]
+        if (lines.length != 2) continue
+        let body = lines[1]
         if (i != parts.length-1) do
             body = body.slice(0, body.length-4)
         if ("content-disposition" in headers) do
-            let disposition = headers.split("; ")
-            if (disposition == "form-data") do
-                let name = json.parse(disposition.splitN("=", 2))
+            let disposition = headers["content-disposition"].split("; ")
+            if (disposition[0] == "form-data") do
+                let name = json.parse(disposition[1].splitN("=", 2)[1])
                 if (disposition.length >= 3) do
-                    let filename = json.parse(disposition.splitN("=", 2))
-                    req.files = __makeFile(filename, headers, body)
+                    let filename = json.parse(disposition[2].splitN("=", 2)[1])
+                    req.files[name] = __makeFile(filename, headers["content-type"], body)
                 else do
-                    req.formdata = body.to("string")
+                    req.formdata[name] = body.to("string")
     res.next()
     
 

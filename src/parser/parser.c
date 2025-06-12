@@ -6,6 +6,7 @@
 #include "assignable/call/call.h"
 #include "assignable/identifier/identifier.h"
 #include "declaration/declaration.h"
+#include "dictionary/dictionary.h"
 #include "dowrap/dowrap.h"
 #include "if/if.h"
 #include "list/list.h"
@@ -21,9 +22,9 @@
 #include <string.h>
 
 const char *ValueTypeNames[] = {
-    "string",  "assign",     "identifier",  "number", "if statement",
-    "access",  "call",       "declaration", "null",   "boolean",
-    "do wrap", "operations", "list"};
+    "string",  "assign",     "identifier",  "number",    "if statement",
+    "access",  "call",       "declaration", "null",      "boolean",
+    "do wrap", "operations", "list",        "dictionary"};
 
 void error_if_finished(char *file, DArray *tokens, size_t *index) {
   if ((*index) >= tokens->size) {
@@ -114,6 +115,9 @@ ParsedValue *parse_token_full(char *file, DArray *tokens, size_t *index,
   case TOKEN_LBRACKET:
     output = parse_list(file, tokens, index);
     break;
+  case TOKEN_LBRACE:
+    output = parse_dictionary(file, tokens, index);
+    break;
   default:
     fprintf(stderr, "%s:%zu:%zu error: syntax error\n", file, token->line,
             token->column);
@@ -139,6 +143,7 @@ ParsedValue *parse_token_full(char *file, DArray *tokens, size_t *index,
       output = parse_call(file, tokens, index, output);
       break;
     case TOKEN_DOT:
+    case TOKEN_LBRACKET:
       output = parse_access(file, tokens, index, output);
       break;
       SWITCH_OPERATIONS
@@ -183,6 +188,10 @@ void parser(char *file, DArray *parsed, DArray *tokens, bool inline_flag) {
 }
 
 void free_parsed(void *ptr) {
+  if (!ptr) {
+    fprintf(stderr, "panic: freeing NULL pointer\n");
+    exit(EXIT_FAILURE);
+  }
   ParsedValue *parsed = ptr;
   switch (parsed->type) {
   case AST_IDENTIFIER:
@@ -218,6 +227,9 @@ void free_parsed(void *ptr) {
     break;
   case AST_LIST:
     free_parsed_list(parsed);
+    break;
+  case AST_DICTIONARY:
+    free_parsed_dictionary(parsed);
     break;
   }
 }

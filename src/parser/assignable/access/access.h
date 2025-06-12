@@ -4,8 +4,8 @@
 #include "../../../lexer/token.h"  // for Token
 
 typedef struct {
-  ParsedValue * to_access;
-  char * access;
+  ParsedValue to_access;
+  DArray access;
 } ParsedAccess;
 
 // Function declaration for parsing an identifier
