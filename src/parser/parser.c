@@ -156,7 +156,7 @@ ParsedValue *parse_token_full(char *file, DArray *tokens, size_t *index,
       passed = true;
     }
   }
-
+  
   return output;
 }
 
@@ -188,6 +188,7 @@ void parser(char *file, DArray *parsed, DArray *tokens, bool inline_flag) {
 }
 
 void free_parsed(void *ptr) {
+
   if (!ptr) {
     fprintf(stderr, "panic: freeing NULL pointer\n");
     exit(EXIT_FAILURE);

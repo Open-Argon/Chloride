@@ -52,7 +52,10 @@ Mkfile.old
 dkms.conf
 vcpkg_installed/
 
+.venv
+
 bin
+build
 
 *.yy.c
 *.yy.h

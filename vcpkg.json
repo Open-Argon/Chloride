@@ -1,6 +1,0 @@
-{
-  "dependencies": [
-    "bdwgc",
-    "json-c"
-  ]
-}

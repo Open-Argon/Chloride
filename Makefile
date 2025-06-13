@@ -13,7 +13,7 @@ $(LEXER_C) $(LEXER_H): $(LEXER_SRC)
 
 $(BINARY): $(CFILES) $(LEXER_C) $(LEXER_H)
 	mkdir -p bin
-	gcc -O3 -o $(BINARY) $(CFILES) $(CFLAGS) -s
+	gcc -static -O3 -o $(BINARY) $(CFILES) $(CFLAGS) -s
 
 debug: $(CFILES) $(LEXER_C) $(LEXER_H)
 	mkdir -p bin
@@ -31,5 +31,5 @@ optimised: $(CFILES) $(LEXER_C) $(LEXER_H)
 	
 
 clean:
-	rm -rf bin
+	rm -rf build bin
 	rm -f $(LEXER_C) $(LEXER_H)

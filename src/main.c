@@ -3,10 +3,12 @@
 #include "lexer/token.h"
 #include "memory.h"
 #include "parser/parser.h"
+#include "translator/translator.h"
 
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
+#include <unistd.h>
 
 int main(int argc, char *argv[]) {
   if (argc <= 1)
@@ -34,6 +36,21 @@ int main(int argc, char *argv[]) {
   parser(path, &ast, &tokens, false);
   darray_free(&tokens, free_token);
 
+  Translated translated = init_translator();
+
+  translate(&translated, &ast);
+
   darray_free(&ast, free_parsed);
+
+  file = fopen("out.car", "wb");
+  
+  fwrite(&translated.registerCount, sizeof(size_t), 1, file);
+  fwrite(&translated.constants.size, sizeof(size_t), 1, file);
+  fwrite(&translated.bytecode.size, sizeof(size_t), 1, file);
+  fwrite(translated.constants.data, 1, translated.constants.size, file);
+  
+  fclose(file);
+
+  free_translator(&translated);
   return 0;
 }
