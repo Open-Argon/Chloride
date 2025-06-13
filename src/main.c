@@ -48,6 +48,7 @@ int main(int argc, char *argv[]) {
   fwrite(&translated.constants.size, sizeof(size_t), 1, file);
   fwrite(&translated.bytecode.size, sizeof(size_t), 1, file);
   fwrite(translated.constants.data, 1, translated.constants.size, file);
+  fwrite(translated.bytecode.data, translated.bytecode.element_size, translated.bytecode.size, file);
   
   fclose(file);
 

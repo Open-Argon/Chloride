@@ -7,7 +7,8 @@
 #include "../parser/parser.h"
 #include "../memory.h"
 
-typedef enum { OP_INIT_STRING } OperationType;
+typedef enum { OP_LOAD_CONST=255 } OperationType;
+typedef enum { OP_TYPE_STRING=255 } types;
 
 typedef struct {
   void *data;

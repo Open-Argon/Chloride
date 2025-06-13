@@ -55,8 +55,7 @@ size_t arena_push(ConstantArena *arena, const void *data, size_t length) {
 
 Translated init_translator() {
   Translated translated;
-
-  darray_init(&translated.bytecode, sizeof(uint8_t));
+  darray_init(&translated.bytecode, sizeof(size_t));
   arena_init(&translated.constants);
   return translated;
 }
