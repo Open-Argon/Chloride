@@ -44,7 +44,7 @@ jobs:
       - name: Archive build folder
         run: |
           ARCH=$(uname -m)
-          TAR_NAME="build-linux-${ARCH}.tar.gz"
+          TAR_NAME="chloride-$TAG-linux-${ARCH}.tar.gz"
           mv build/bin chloride
           cp LICENSE chloride
           tar -czf "$TAR_NAME" chloride
