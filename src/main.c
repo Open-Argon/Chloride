@@ -5,9 +5,11 @@
 #include "parser/parser.h"
 #include "translator/translator.h"
 
+#include <endian.h>
 #include <locale.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <unistd.h>
 
@@ -44,11 +46,19 @@ int main(int argc, char *argv[]) {
 
   darray_free(&ast, free_parsed);
 
-  file = fopen("out.car", "wb");
+  file = fopen("out.arbin", "wb");
 
-  fwrite(&translated.registerCount, sizeof(size_t), 1, file);
-  fwrite(&translated.constants.size, sizeof(size_t), 1, file);
-  fwrite(&translated.bytecode.size, sizeof(size_t), 1, file);
+  uint64_t regCount = (uint64_t)translated.registerCount;
+  uint64_t constantsSize = (uint64_t)translated.constants.size;
+  uint64_t bytecodeSize = (uint64_t)translated.bytecode.size;
+
+  regCount = htole64(regCount);
+  constantsSize = htole64(constantsSize);
+  bytecodeSize = htole64(bytecodeSize);
+
+  fwrite(&regCount, sizeof(uint64_t), 1, file);
+  fwrite(&constantsSize, sizeof(uint64_t), 1, file);
+  fwrite(&bytecodeSize, sizeof(uint64_t), 1, file);
   fwrite(translated.constants.data, 1, translated.constants.size, file);
   fwrite(translated.bytecode.data, translated.bytecode.element_size,
          translated.bytecode.size, file);

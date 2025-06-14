@@ -46,12 +46,13 @@ size_t arena_push(ConstantArena *arena, const void *data, size_t length) {
 Translated init_translator() {
   Translated translated;
   translated.registerCount = 0;
-  darray_init(&translated.bytecode, sizeof(size_t));
+  darray_init(&translated.bytecode, sizeof(uint64_t));
   arena_init(&translated.constants);
   return translated;
 }
 
-size_t push_instruction_code(Translated * translator, size_t code) {
+size_t push_instruction_code(Translated * translator, uint64_t code) {
+  code = htole64(code);
   size_t offset = translator->bytecode.size;
   darray_push(&translator->bytecode, &code);
   return offset;

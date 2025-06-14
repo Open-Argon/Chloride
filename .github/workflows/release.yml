@@ -1,0 +1,45 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - '*'    # Trigger on any tag push
+
+jobs:
+  build_and_release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Python (needed for Conan)
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Install Conan
+        run: |
+          python -m pip install --upgrade pip
+          pip install conan
+
+      - name: Configure Conan
+        run: |
+          conan profile new default --detect --force
+          conan profile update settings.compiler.libcxx=libstdc++11 default
+
+      - name: Install dependencies and build with Conan
+        run: |
+          conan install . --build=missing
+          conan build .
+
+      - name: Create GitHub Release
+        id: create_release
+        uses: ncipollo/release-action@v1
+        with:
+          tag: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          body: |
+            Automated release based on tag ${{ github.ref_name }}
+          draft: false
+          prerelease: false

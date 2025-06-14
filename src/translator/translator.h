@@ -3,6 +3,7 @@
 
 #include "../dynamic_array/darray.h"
 #include <stddef.h>
+#include <stdint.h>
 #include "../dynamic_array/darray.h"
 #include "../parser/parser.h"
 #include "../memory.h"
@@ -26,7 +27,7 @@ void * arena_get(ConstantArena *arena, size_t offset);
 
 size_t arena_push(ConstantArena *arena, const void *data, size_t length);
 
-size_t push_instruction_code(Translated * translator, size_t code);
+size_t push_instruction_code(Translated * translator, uint64_t code);
 
 void set_registers(Translated * translator, size_t count);
 

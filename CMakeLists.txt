@@ -42,7 +42,6 @@ set_target_properties(argon PROPERTIES
 
 # Step 6: Conan libraries
 find_package(BDWgc REQUIRED)
-find_package(cJSON REQUIRED)
 find_package(gmp REQUIRED)
 
 target_compile_options(argon PRIVATE -O3 -Wall -Wextra -Wno-unused-function -s)
@@ -50,7 +49,6 @@ target_link_options(argon PRIVATE -static)
 
 target_link_libraries(argon PRIVATE
     BDWgc::BDWgc
-    cjson::cjson
     gmp::gmp
     m
 )

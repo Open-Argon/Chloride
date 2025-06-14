@@ -2,7 +2,6 @@
 #include "../../lexer/token.h"
 
 #include "../../memory.h"
-#include <cjson/cJSON.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
