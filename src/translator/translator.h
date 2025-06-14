@@ -24,8 +24,6 @@ typedef struct {
 
 void * arena_get(ConstantArena *arena, size_t offset);
 
-size_t arena_push_string(ConstantArena *arena, const char *string);
-
 size_t arena_push(ConstantArena *arena, const void *data, size_t length);
 
 size_t push_instruction_code(Translated * translator, size_t code);

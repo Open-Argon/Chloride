@@ -15,6 +15,11 @@ int yywrap(void * unused_param) {
 
 %%
 
+"\0" {
+    fprintf(stderr, "Error: Null character encountered at line %d\n", yylineno);
+    exit(1);
+}
+
 "."                 { return TOKEN_DOT; }
 "!"                 { return TOKEN_EXCLAMATION; }
 ","                 { return TOKEN_COMMA; }

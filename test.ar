@@ -13,14 +13,9 @@
 "hello world"
 "hello world"
 "hello world"
-"hello world"
-"hello world"
-"hello world"
-"hello world"
-"hello world"
-"hello world"
-"hello world"
-
+"hello\u0000world"
+"🇬🇧"
+"hello\u0000world"
 
 let a, 
     b = 1, 

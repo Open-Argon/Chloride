@@ -78,9 +78,9 @@ typedef struct {
   TokenType type;
   size_t line;
   size_t column;
+  size_t length;
   char *value;
 } Token;
 
-Token *create_token(TokenType type, int line, int column, char *value);
 void free_token(void *ptr);
 #endif

@@ -13,15 +13,15 @@ void arena_init(ConstantArena *arena) {
 }
 
 void arena_resize(ConstantArena *arena, size_t new_size) {
-  new_size = ((new_size / CHUNK_SIZE) + 1)*CHUNK_SIZE;
-  if (new_size == arena->capacity)
+  size_t new_capacity = ((new_size / CHUNK_SIZE) + 1)*CHUNK_SIZE;
+  if (new_capacity == arena->capacity)
     return;
-  arena->data = realloc(arena->data, new_size);
+  arena->data = realloc(arena->data, new_capacity);
   if (!arena->data) {
-    fprintf(stderr, "error: failed to resize arena from %zu to %zu\n", new_size, arena->capacity);
+    fprintf(stderr, "error: failed to resize arena from %zu to %zu\n", new_capacity, arena->capacity);
     exit(EXIT_FAILURE);
   }
-  arena->capacity = new_size;
+  arena->capacity = new_capacity;
 }
 
 
@@ -35,16 +35,6 @@ void * arena_get(ConstantArena *arena, size_t offset) {
   return arena->data + offset;
 }
 
-
-size_t arena_push_string(ConstantArena *arena, const char *string) {
-  size_t length = strlen(string)+1;
-  arena_resize(arena, arena->size+length);
-  size_t offset = arena->size;
-  strcpy(arena->data + arena->size, string);
-  arena->size += length;
-  return offset;
-}
-
 size_t arena_push(ConstantArena *arena, const void *data, size_t length) {
   arena_resize(arena, arena->size+length);
   size_t offset = arena->size;
@@ -55,6 +45,7 @@ size_t arena_push(ConstantArena *arena, const void *data, size_t length) {
 
 Translated init_translator() {
   Translated translated;
+  translated.registerCount = 0;
   darray_init(&translated.bytecode, sizeof(size_t));
   arena_init(&translated.constants);
   return translated;
