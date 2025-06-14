@@ -100,7 +100,7 @@ char *unquote_json_string(const char *input, size_t *out_len) {
     size_t input_len = end - (input + 1); // length inside quotes
     const char *src = input + 1;
     // Allocate max output size = input_len, decoded string cannot be longer than input_len
-    char *outbuf = (char *)malloc(input_len + 1);
+    char *outbuf = (char *)checked_malloc(input_len + 1);
     if (!outbuf) return NULL;
 
     char *dst = outbuf;
@@ -245,7 +245,7 @@ char *unquote(char *str, size_t *decoded_len) {
   return unescaped;
 }
 
-ParsedValue *parse_string(char*file,Token* token) {
+ParsedValue *parse_string(Token* token) {
   ParsedValue *parsedValue = checked_malloc(sizeof(ParsedValue));
   parsedValue->type = AST_STRING;
   ParsedString *parsedString = checked_malloc(sizeof(ParsedString));

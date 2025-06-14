@@ -1,7 +1,7 @@
-#ifndef STRING_H
-#define STRING_H
+#ifndef BYTECODE_STRING_H
+#define BYTECODE_STRING_H
 #include "../translator.h"
 
-void translate_parsed_string(Translated * translator, ParsedValue * parsedValue);
+size_t translate_parsed_string(Translated *translated, ParsedValue *parsedValue);
 
 #endif

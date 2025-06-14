@@ -13,6 +13,9 @@
 #include <stdio.h>
 #include <unistd.h>
 
+const char FILE_IDENTIFIER[] = "ARBI";
+const uint64_t version_number = 0;
+
 int main(int argc, char *argv[]) {
   setlocale(LC_ALL, "");
   if (argc <= 1)
@@ -52,10 +55,15 @@ int main(int argc, char *argv[]) {
   uint64_t constantsSize = (uint64_t)translated.constants.size;
   uint64_t bytecodeSize = (uint64_t)translated.bytecode.size;
 
+  uint64_t version_number_htole64ed = htole64(version_number);
+  regCount = htole64(regCount);
   regCount = htole64(regCount);
   constantsSize = htole64(constantsSize);
   bytecodeSize = htole64(bytecodeSize);
+  
 
+  fwrite(&FILE_IDENTIFIER, sizeof(char), sizeof(FILE_IDENTIFIER)/sizeof(char), file);
+  fwrite(&version_number_htole64ed, sizeof(uint64_t), 1, file);
   fwrite(&regCount, sizeof(uint64_t), 1, file);
   fwrite(&constantsSize, sizeof(uint64_t), 1, file);
   fwrite(&bytecodeSize, sizeof(uint64_t), 1, file);

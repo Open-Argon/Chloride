@@ -1,5 +1,6 @@
 #include "translator.h"
 #include "string/string.h"
+#include "declaration/declaration.h"
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -51,6 +52,12 @@ Translated init_translator() {
   return translated;
 }
 
+void set_instruction_code(Translated * translator, size_t offset, uint64_t code) {
+  code = htole64(code);
+  size_t* ptr = (translator->bytecode.data+offset);
+  *ptr = code;
+}
+
 size_t push_instruction_code(Translated * translator, uint64_t code) {
   code = htole64(code);
   size_t offset = translator->bytecode.size;
@@ -62,11 +69,14 @@ void set_registers(Translated * translator, size_t count) {
   if (count>translator->registerCount) translator->registerCount = count;
 }
 
-void translate_parsed(Translated * translator, ParsedValue * parsedValue) {
+size_t translate_parsed(Translated * translator, ParsedValue * parsedValue) {
   switch (parsedValue->type) {
     case AST_STRING:
-      translate_parsed_string(translator,parsedValue);
+      return translate_parsed_string(translator,parsedValue);
+    case AST_DECLARATION:
+      return translate_parsed_declaration(translator,parsedValue);
   }
+  return 0;
 }
 
 void translate(Translated * translator, DArray *ast) {

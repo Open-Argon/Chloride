@@ -82,7 +82,7 @@ ParsedValue *parse_token_full(char *file, DArray *tokens, size_t *index,
     break;
   case TOKEN_STRING:
     (*index)++;
-    output = parse_string(file,token);
+    output = parse_string(token);
     break;
   case TOKEN_NEW_LINE:
     (*index)++;

@@ -15,6 +15,6 @@ char *swap_quotes(char *input, char quote);
 
 char *unquote(char *str, size_t *decoded_len);
 
-ParsedValue *parse_string(char*file,Token* token);
+ParsedValue *parse_string(Token* token);
 
 #endif // STRING_UTILS_H
