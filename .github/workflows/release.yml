@@ -45,10 +45,11 @@ jobs:
         run: |
           TAG=${GITHUB_REF##refs/tags/}
           ARCH=$(uname -m)
-          TAR_NAME="chloride-$TAG-linux-${ARCH}.tar.gz"
-          mv build/bin chloride
-          cp LICENSE chloride
-          tar -czf "$TAR_NAME" chloride
+          FOLDER_NAME="chloride-$TAG-linux-${ARCH}"
+          TAR_NAME="$FOLDER_NAME.tar.gz"
+          mv build/bin "$FOLDER_NAME"
+          cp LICENSE "$FOLDER_NAME"
+          tar -czf "$TAR_NAME" "$FOLDER_NAME"
           echo "TAR_NAME=$TAR_NAME" >> $GITHUB_ENV
 
       - name: Create GitHub Release
