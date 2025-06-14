@@ -1,6 +1,7 @@
 #include "translator.h"
 #include "string/string.h"
 #include "declaration/declaration.h"
+#include "number/number.h"
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -69,20 +70,27 @@ void set_registers(Translated * translator, size_t count) {
   if (count>translator->registerCount) translator->registerCount = count;
 }
 
-size_t translate_parsed(Translated * translator, ParsedValue * parsedValue) {
+size_t translate_parsed(Translated * translated, ParsedValue * parsedValue) {
   switch (parsedValue->type) {
     case AST_STRING:
-      return translate_parsed_string(translator,parsedValue);
+      return translate_parsed_string(translated,parsedValue);
     case AST_DECLARATION:
-      return translate_parsed_declaration(translator,parsedValue);
+      return translate_parsed_declaration(translated,parsedValue);
+    case AST_NUMBER:
+      return translate_parsed_number(translated,parsedValue);
+    case AST_NULL:
+      set_registers(translated, 1);
+      size_t output = push_instruction_code(translated, OP_LOAD_NULL);
+      push_instruction_code(translated, 0);
+      return output;
   }
   return 0;
 }
 
-void translate(Translated * translator, DArray *ast) {
+void translate(Translated * translated, DArray *ast) {
   for (size_t i = 0; i<ast->size; i++) {
     ParsedValue * parsedValue = darray_get(ast, i);
-    translate_parsed(translator,parsedValue);
+    translate_parsed(translated,parsedValue);
   }
 }
 

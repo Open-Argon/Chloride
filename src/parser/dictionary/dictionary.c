@@ -2,6 +2,7 @@
 #include "../../lexer/token.h"
 #include "../../memory.h"
 #include "../parser.h"
+#include "../string/string.h"
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -22,9 +23,12 @@ ParsedValue *parse_dictionary(char *file, DArray *tokens, size_t *index) {
       error_if_finished(file, tokens, index);
       size_t keyIndex = *index;
       Token *keyToken = darray_get(tokens, *index);
-      ParsedValue *key = parse_token(file, tokens, index, true);
+      ParsedValue *key;
       if (keyToken->type == TOKEN_IDENTIFIER) {
-        key->type = AST_STRING;
+        (*index)++;
+        key = parse_string(keyToken, false);
+      } else {
+        key = parse_token(file, tokens, index, true);
       }
       skip_newlines_and_indents(tokens, index);
       error_if_finished(file, tokens, index);

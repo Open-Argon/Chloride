@@ -6,6 +6,7 @@
 #include "translator/translator.h"
 
 #include <endian.h>
+#include <string.h>
 #include <locale.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -61,8 +62,7 @@ int main(int argc, char *argv[]) {
   constantsSize = htole64(constantsSize);
   bytecodeSize = htole64(bytecodeSize);
   
-
-  fwrite(&FILE_IDENTIFIER, sizeof(char), sizeof(FILE_IDENTIFIER)/sizeof(char), file);
+  fwrite(&FILE_IDENTIFIER, sizeof(char), strlen(FILE_IDENTIFIER), file);
   fwrite(&version_number_htole64ed, sizeof(uint64_t), 1, file);
   fwrite(&regCount, sizeof(uint64_t), 1, file);
   fwrite(&constantsSize, sizeof(uint64_t), 1, file);

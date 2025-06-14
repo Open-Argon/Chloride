@@ -1,6 +1,7 @@
 #include "access.h"
 #include "../../../lexer/token.h"
 #include "../../../memory.h"
+#include "../../string/string.h"
 #include "../../parser.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -18,11 +19,9 @@ ParsedValue *parse_access(char *file, DArray *tokens, size_t *index,
   if (first_token->type == TOKEN_DOT) {
     error_if_finished(file, tokens, index);
     Token *token = darray_get(tokens, *index);
-    ParsedValue parsedString;
-    parsedString.type = AST_STRING;
-    parsedString.data =
-        strcpy(checked_malloc(strlen(token->value) + 1), token->value);
-    darray_push(&parsedAccess->access, &parsedString);
+    ParsedValue *parsedString = parse_string(token, false);
+    darray_push(&parsedAccess->access, parsedString);
+    free(parsedString);
   } else {
     while (true) {
       skip_newlines_and_indents(tokens, index);

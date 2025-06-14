@@ -245,12 +245,24 @@ char *unquote(char *str, size_t *decoded_len) {
   return unescaped;
 }
 
-ParsedValue *parse_string(Token* token) {
+ParsedValue *parse_string(Token* token, bool to_unquote) {
   ParsedValue *parsedValue = checked_malloc(sizeof(ParsedValue));
   parsedValue->type = AST_STRING;
   ParsedString *parsedString = checked_malloc(sizeof(ParsedString));
   parsedValue->data = parsedString;
-  parsedString->length = 0;
-  parsedString->string = unquote(token->value, &parsedString->length);
+  if (to_unquote) {
+    parsedString->length = 0;
+    parsedString->string = unquote(token->value, &parsedString->length);
+  } else {
+    parsedString->string = strdup(token->value);
+    parsedString->length = token->length;
+  }
   return parsedValue;
+}
+
+void free_parsed_string(void *ptr) {
+  ParsedValue *parsedValue = ptr;
+  ParsedString *parsedString = parsedValue->data;
+  free(parsedString->string);
+  free(parsedString);
 }

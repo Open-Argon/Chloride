@@ -82,7 +82,7 @@ ParsedValue *parse_token_full(char *file, DArray *tokens, size_t *index,
     break;
   case TOKEN_STRING:
     (*index)++;
-    output = parse_string(token);
+    output = parse_string(token, true);
     break;
   case TOKEN_NEW_LINE:
     (*index)++;
@@ -196,8 +196,11 @@ void free_parsed(void *ptr) {
   ParsedValue *parsed = ptr;
   switch (parsed->type) {
   case AST_IDENTIFIER:
-  case AST_STRING:
+  case AST_NUMBER:
     free(parsed->data);
+    break;
+  case AST_STRING:
+    free_parsed_string(parsed);
     break;
   case AST_ASSIGN:
     free_parse_assign(parsed);
@@ -210,9 +213,6 @@ void free_parsed(void *ptr) {
     break;
   case AST_ACCESS:
     free_parse_access(parsed);
-    break;
-  case AST_NUMBER:
-    mpz_clear(parsed->data);
     break;
   case AST_NULL:
   case AST_BOOLEAN:

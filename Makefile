@@ -26,7 +26,7 @@ full-debug: $(CFILES) $(LEXER_C) $(LEXER_H)
 optimised: $(CFILES) $(LEXER_C) $(LEXER_H)
 	mkdir -p bin
 	gcc -O3 -fprofile-generate -o $(BINARY) $(CFILES) $(CFLAGS)
-	${BINARY}
+	${BINARY} test.ar
 	gcc -O3 -fprofile-use -o $(BINARY) $(CFILES) $(CFLAGS)
 	
 

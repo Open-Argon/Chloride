@@ -14,7 +14,5 @@ size_t translate_parsed_string(Translated *translated, ParsedValue *parsedValue)
   push_instruction_code(translated, TYPE_OP_STRING);
   push_instruction_code(translated,parsedString->length);
   push_instruction_code(translated, string_pos);
-  fwrite(parsedString->string, 1, parsedString->length, stdout);
-  putchar('\n');
   return start;
 }
