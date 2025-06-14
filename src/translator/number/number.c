@@ -1,6 +1,6 @@
 #include "../translator.h"
 #include "number.h"
-#include <gmp-x86_64.h>
+#include <gmp.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
