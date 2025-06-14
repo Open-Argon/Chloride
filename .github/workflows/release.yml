@@ -43,6 +43,7 @@ jobs:
           echo "prerelease=$(cat prerelease.txt)" >> $GITHUB_OUTPUT
       - name: Archive build folder
         run: |
+          TAG=${GITHUB_REF##refs/tags/}
           ARCH=$(uname -m)
           TAR_NAME="chloride-$TAG-linux-${ARCH}.tar.gz"
           mv build/bin chloride
