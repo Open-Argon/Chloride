@@ -32,6 +32,13 @@ jobs:
           conan install . --build=missing
           conan build .
 
+      - name: Archive build folder
+        run: |
+          ARCH=$(uname -m)
+          TAR_NAME="build-linux-${ARCH}.tar.gz"
+          tar -czf "$TAR_NAME" build
+          echo "TAR_NAME=$TAR_NAME" >> $GITHUB_ENV
+
       - name: Create GitHub Release
         id: create_release
         uses: ncipollo/release-action@v1
@@ -42,3 +49,4 @@ jobs:
             Automated release based on tag ${{ github.ref_name }}
           draft: false
           prerelease: false
+          artifacts: ${{ env.TAR_NAME }}
