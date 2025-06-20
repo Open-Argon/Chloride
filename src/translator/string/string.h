@@ -3,6 +3,6 @@
 #include "../translator.h"
 #include "../../parser/string/string.h"
 
-size_t translate_parsed_string(Translated *translated, ParsedString parsedString, size_t to_register);
+size_t translate_parsed_string(Translated *translated, ParsedString parsedString);
 
 #endif
