@@ -82,7 +82,7 @@ void set_registers(Translated *translator, size_t count) {
 size_t translate_parsed(Translated *translated, ParsedValue *parsedValue) {
   switch (parsedValue->type) {
   case AST_STRING:
-    return translate_parsed_string(translated, *((ParsedString*)parsedValue->data), 0);
+    return translate_parsed_string(translated, *((ParsedString*)parsedValue->data));
   case AST_DECLARATION:
     return translate_parsed_declaration(translated, *((DArray*)parsedValue->data));
   case AST_NUMBER:

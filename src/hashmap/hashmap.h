@@ -1,15 +1,17 @@
 #ifndef HASHMAP_H
 #define HASHMAP_H
+#include <stdlib.h>
 
 struct node
 {
-    int key;
+    size_t key;
     void *val;
     struct node *next;
 };
 struct table
 {
-    int size;
+    size_t size;
+    size_t count;
     struct node **list;
 };
 
