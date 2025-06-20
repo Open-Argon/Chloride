@@ -8,19 +8,19 @@ struct node
     void *val;
     struct node *next;
 };
-struct table
+struct hashmap
 {
     size_t size;
     size_t count;
     struct node **list;
 };
 
-struct table *createTable(int size);
+struct hashmap *createTable(int size);
 
-int hashCode(struct table *t, int key);
+int hashCode(struct hashmap *t, int key);
 
-int remove(struct table *t, int key);
+int remove(struct hashmap *t, int key);
 
-void insert(struct table *t, int key, void* val);
+void insert(struct hashmap *t, int key, void* val);
 
 #endif // HASHMAP_H
