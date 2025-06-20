@@ -9,7 +9,7 @@ typedef struct {
 
 
 typedef struct {
-
+  
 } ArObject;
 
 void run_instruction(Translated *translated, RuntimeState *state);
