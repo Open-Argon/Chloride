@@ -4,6 +4,7 @@
 #include "memory.h"
 #include "parser/parser.h"
 #include "translator/translator.h"
+#include "runtime/runtime.h"
 
 #include <endian.h>
 #include <string.h>
@@ -72,6 +73,8 @@ int main(int argc, char *argv[]) {
          translated.bytecode.size, file);
 
   fclose(file);
+
+  runtime(translated);
 
   free_translator(&translated);
   return 0;

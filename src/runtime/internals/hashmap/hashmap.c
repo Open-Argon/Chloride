@@ -1,10 +1,11 @@
 #include "hashmap.h"
 
+#include <stdint.h>
 #include <gc/gc.h>
 #include <stdlib.h>
-#include "../memory.h"
+#include "../../../memory.h"
 
-struct hashmap *createTable(int size)
+struct hashmap *createHashmap(int size)
 {
     struct hashmap *t = (struct hashmap *)ar_alloc(sizeof(struct hashmap));
     t->size = size;
@@ -34,28 +35,26 @@ void resize_hashmap(struct hashmap *t)
     for (int i = 0; i < old_size; i++) {
         struct node *temp = old_list[i];
         while (temp) {
-            insert(t, temp->key, temp->val); // Will increment count
+            hashmap_insert(t, temp->hash, temp->key, temp->val); // Will increment count
             temp = temp->next;
         }
     }
 }
 
-int hashCode(struct hashmap *t, int key)
+int hashCode(struct hashmap *t, uint64_t hash)
 {
-    if (key < 0)
-        return -(key % t->size);
-    return key % t->size;
+    return hash % t->size;
 }
 
-int remove(struct hashmap *t, int key)
+int hashmap_remove(struct hashmap *t, uint64_t hash)
 {
-    int pos = hashCode(t, key);
+    int pos = hashCode(t, hash);
     struct node *list = t->list[pos];
     struct node *temp = list;
     struct node *prev = NULL;
     while (temp)
     {
-        if (temp->key == key)
+        if (temp->hash == hash)
         {
             if (prev)
                 prev->next = temp->next;
@@ -90,19 +89,19 @@ void resize(struct hashmap *t)
     for (int i = 0; i < old_size; i++) {
         struct node *temp = old_list[i];
         while (temp) {
-            insert(t, temp->key, temp->val); // Will increment count
+            hashmap_insert(t, temp->hash, temp->key, temp->val); // Will increment count
             temp = temp->next;
         }
     }
 }
 
-void insert(struct hashmap *t, int key, void* val)
+void hashmap_insert(struct hashmap *t, uint64_t  hash, ArgonObject* key, ArgonObject* val)
 {
     if ((t->count + 1) > t->size * 0.75) {
         resize(t);
     }
 
-    int pos = hashCode(t, key);
+    int pos = hashCode(t, hash);
     struct node *list = t->list[pos];
     struct node *temp = list;
 
@@ -119,6 +118,7 @@ void insert(struct hashmap *t, int key, void* val)
 
     // Insert new node
     struct node *newNode = (struct node *)ar_alloc(sizeof(struct node));
+    newNode->hash = hash;
     newNode->key = key;
     newNode->val = val;
     newNode->next = list;
@@ -126,14 +126,14 @@ void insert(struct hashmap *t, int key, void* val)
     t->count++;
 }
 
-void *lookup(struct hashmap *t, int key)
+void *lookup(struct hashmap *t, uint64_t hash)
 {
-    int pos = hashCode(t, key);
+    int pos = hashCode(t, hash);
     struct node *list = t->list[pos];
     struct node *temp = list;
     while (temp)
     {
-        if (temp->key == key)
+        if (temp->hash == hash)
         {
             return temp->val;
         }
