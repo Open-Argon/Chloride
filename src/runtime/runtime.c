@@ -1,6 +1,7 @@
 #include "runtime.h"
 #include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 uint64_t pop_bytecode(Translated *translated, RuntimeState *state) {
@@ -10,7 +11,7 @@ uint64_t pop_bytecode(Translated *translated, RuntimeState *state) {
 
 void run_instruction(Translated *translated, RuntimeState *state) {
   uint64_t opcode = pop_bytecode(translated, state);
-  switch (opcode) { case OP_LOAD_NULL: }
+  switch (opcode) { case OP_LOAD_NULL: pop_bytecode(translated, state);printf("null\n");}
 }
 
 void runtime(Translated translated) {

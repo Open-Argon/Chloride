@@ -62,7 +62,6 @@ Translated init_translator() {
 
 void set_instruction_code(Translated *translator, size_t offset,
                           uint64_t code) {
-  code = htole64(code);
   size_t *ptr = (translator->bytecode.data + offset);
   *ptr = code;
 }

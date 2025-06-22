@@ -8,10 +8,6 @@ typedef struct {
 } RuntimeState;
 
 
-typedef struct {
-  
-} ArObject;
-
 void run_instruction(Translated *translated, RuntimeState *state);
 
 void runtime(Translated translated);
