@@ -1,9 +1,10 @@
 #ifndef RUNTIME_H
 #define RUNTIME_H
 #include "../translator/translator.h"
+#include "internals/hashmap/hashmap.h"
 
 typedef struct {
-  uint64_t *registers;
+  ArgonObject **registers;
   size_t head;
 } RuntimeState;
 

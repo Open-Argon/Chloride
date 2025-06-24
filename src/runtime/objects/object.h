@@ -4,6 +4,8 @@
 #include <gmp.h>
 #include <stdbool.h>
 
+extern ArgonObject *BASE_OBJECT;
+
 struct string_struct {
   char *data;
   size_t length;
@@ -21,6 +23,7 @@ typedef enum {
 
 struct ArgonObject {
   ArgonType type;
+  ArgonObject *baseObject;
   ArgonObject *typeObject;
   struct hashmap *fields; // dynamic fields/methods
   union {
@@ -32,6 +35,7 @@ struct ArgonObject {
   } value;
 };
 typedef struct ArgonObject ArgonObject;
+void init_base_field();
 
 ArgonObject *init_argon_object();
 
