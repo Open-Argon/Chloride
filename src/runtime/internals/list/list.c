@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "../memory.h"
+#include "../../../memory.h"
 
 LinkedList *create_list(size_t data_size) {
   LinkedList *list = checked_malloc(sizeof(LinkedList));

@@ -2,9 +2,9 @@
 #define TYPES_H
 #include "../object.h"
 
-extern ArgonObject *ARGON_TYPE_OBJ;
+extern ArgonObject *ARGON_TYPE;
 
-void init_type_obj();
+void init_type();
 
 
 #endif // TYPES_H

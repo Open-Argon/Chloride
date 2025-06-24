@@ -74,6 +74,10 @@ int main(int argc, char *argv[]) {
 
   fclose(file);
 
+  generate_siphash_key();
+
+  init_types();
+
   runtime(translated);
 
   free_translator(&translated);
