@@ -33,7 +33,6 @@ void gmp_gc_free(void *ptr, size_t size) {
 void ar_memory_init() {
   GC_INIT();
   mp_set_memory_functions(GC_malloc, gmp_gc_realloc, gmp_gc_free);
-  init_type_obj();
 }
 
 

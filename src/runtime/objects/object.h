@@ -4,6 +4,11 @@
 #include <gmp.h>
 #include <stdbool.h>
 
+struct string_struct {
+  char *data;
+  size_t length;
+};
+
 typedef enum {
   TYPE_NULL,
   TYPE_BOOL,
@@ -16,14 +21,19 @@ typedef enum {
 
 struct ArgonObject {
   ArgonType type;
-  struct ArgonObject *cls; // class pointer or type object
-  struct hashmap *fields;  // dynamic fields/methods
+  ArgonObject *typeObject;
+  struct hashmap *fields; // dynamic fields/methods
   union {
     mpq_t as_number;
     bool as_bool;
-    char *as_str;
+    struct string_struct as_str;
     void *native_fn;
     // others as needed
   } value;
 };
+typedef struct ArgonObject ArgonObject;
+
+ArgonObject *init_argon_object();
+
+void add_field(ArgonObject*target, char* name, ArgonObject *object);
 #endif // OBJECT_H
