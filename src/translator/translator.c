@@ -1,5 +1,6 @@
 #include "translator.h"
 #include "declaration/declaration.h"
+#include "function/function.h"
 #include "number/number.h"
 #include "string/string.h"
 #include <stddef.h>
@@ -81,16 +82,21 @@ void set_registers(Translated *translator, size_t count) {
 size_t translate_parsed(Translated *translated, ParsedValue *parsedValue) {
   switch (parsedValue->type) {
   case AST_STRING:
-    return translate_parsed_string(translated, *((ParsedString*)parsedValue->data));
+    return translate_parsed_string(translated,
+                                   *((ParsedString *)parsedValue->data));
   case AST_DECLARATION:
-    return translate_parsed_declaration(translated, *((DArray*)parsedValue->data));
+    return translate_parsed_declaration(translated,
+                                        *((DArray *)parsedValue->data));
   case AST_NUMBER:
-    return translate_parsed_number(translated, (char*)parsedValue->data, 0);
+    return translate_parsed_number(translated, (char *)parsedValue->data, 0);
   case AST_NULL:
     set_registers(translated, 1);
     size_t output = push_instruction_code(translated, OP_LOAD_NULL);
     push_instruction_code(translated, 0);
     return output;
+  case AST_FUNCTION:
+    return translate_parsed_function(translated,
+                                     (ParsedFunction *)parsedValue->data);
   }
   return 0;
 }

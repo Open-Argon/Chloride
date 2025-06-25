@@ -9,7 +9,6 @@ size_t translate_parsed_declaration(Translated *translated,
   set_registers(translated, 1);
   size_t first = 0;
   for (size_t i = 0; i < delcarations.size; i++) {
-    // TODO: add function delclaration
     ParsedSingleDeclaration *singleDeclaration = darray_get(&delcarations, i);
     size_t temp = translate_parsed(translated, singleDeclaration->from);
     if (i == 0)

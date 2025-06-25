@@ -1,2 +1,1 @@
-null
-"hello\u0000world"
+let x(hello,lol,world, WORLD,HELLOOOO,LOLLLLLL, WORLD)="HELLOOOO WORLD"

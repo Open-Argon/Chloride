@@ -7,7 +7,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-typedef enum { OP_LOAD_CONST = 255, OP_DECLARE, OP_LOAD_NULL } OperationType;
+typedef enum { OP_LOAD_CONST = 255, OP_DECLARE, OP_LOAD_NULL, OP_LOAD_FUNCTION } OperationType;
 typedef enum { TYPE_OP_STRING = 255, TYPE_OP_NUMBER } types;
 
 typedef struct {
