@@ -4,7 +4,7 @@
 #include <gmp.h>
 #include <stdbool.h>
 
-extern ArgonObject *BASE_OBJECT;
+extern ArgonObject *BASE_CLASS;
 
 struct string_struct {
   char *data;
@@ -17,14 +17,14 @@ typedef enum {
   TYPE_NUMBER,
   TYPE_STRING,
   TYPE_FUNCTION,
-  TYPE_NATIVE_FUNCTION,
   TYPE_OBJECT, // generic user object
 } ArgonType;
 
 struct ArgonObject {
   ArgonType type;
+  char* name;
+  ArgonObject *self;
   ArgonObject *baseObject;
-  ArgonObject *typeObject;
   struct hashmap *fields; // dynamic fields/methods
   union {
     mpq_t as_number;
@@ -36,8 +36,8 @@ struct ArgonObject {
 };
 typedef struct ArgonObject ArgonObject;
 void init_base_field();
-
-ArgonObject *init_argon_object();
+ArgonObject* init_child_argon_object(ArgonObject *cls);
+ArgonObject* init_argon_class(char*name);
 
 void add_field(ArgonObject*target, char* name, ArgonObject *object);
 #endif // OBJECT_H

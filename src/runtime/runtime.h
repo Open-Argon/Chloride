@@ -8,9 +8,14 @@ typedef struct {
   size_t head;
 } RuntimeState;
 
+typedef struct Stack {
+    ArgonObject *scope;
+    struct Stack *prev;
+} Stack;
+
 void init_types();
 
-void run_instruction(Translated *translated, RuntimeState *state);
+void run_instruction(Translated *translated, RuntimeState *state, struct Stack stack);
 
 void runtime(Translated translated);
 

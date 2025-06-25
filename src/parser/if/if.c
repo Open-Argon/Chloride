@@ -115,5 +115,5 @@ void free_parsed_if(void *ptr) {
   ParsedValue *parsedValue = ptr;
   DArray *parsed_if = parsedValue->data;
   darray_free(parsed_if, free_conditional);
-  free(parsedValue->data);
+  free(parsed_if);
 }

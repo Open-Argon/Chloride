@@ -3,6 +3,7 @@
 #include "../../memory.h"
 #include "../literals/literals.h"
 #include "../parser.h"
+#include "../function/function.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -22,7 +23,8 @@ ParsedValue *parse_declaration(char *file, DArray *tokens, size_t *index) {
     darray_push(declarations, &_declaration);
     ParsedSingleDeclaration *declaration =
         darray_get(declarations, declarations->size - 1);
-    declaration->is_function = false;
+    bool isFunction = false;
+    DArray parameters;
     declaration->from = parse_null();
 
     if (token->type != TOKEN_IDENTIFIER) {
@@ -38,8 +40,8 @@ ParsedValue *parse_declaration(char *file, DArray *tokens, size_t *index) {
       return parsedValue;
     token = darray_get(tokens, *index);
     if (token->type == TOKEN_LPAREN) {
-      declaration->is_function = true;
-      darray_init(&declaration->parameters, sizeof(char *));
+      isFunction = true;
+      darray_init(&parameters, sizeof(char *));
       (*index)++;
       error_if_finished(file, tokens, index);
       token = darray_get(tokens, *index);
@@ -63,7 +65,7 @@ ParsedValue *parse_declaration(char *file, DArray *tokens, size_t *index) {
           }
           char *parameter_name =
               strcpy(checked_malloc(strlen(token->value) + 1), token->value);
-          darray_push(&declaration->parameters, &parameter_name);
+          darray_push(&parameters, &parameter_name);
           (*index)++;
           error_if_finished(file, tokens, index);
           skip_newlines_and_indents(tokens, index);
@@ -97,6 +99,9 @@ ParsedValue *parse_declaration(char *file, DArray *tokens, size_t *index) {
                 token->column);
         exit(EXIT_FAILURE);
       }
+      if (isFunction) {
+        declaration->from = create_parsed_function(declaration->name, parameters, declaration->from);
+      }
       if ((*index) >= tokens->size)
         break;
       token = darray_get(tokens, *index);
@@ -127,8 +132,6 @@ void free_string(void *ptr) {
 void free_single_declaration(void *ptr) {
   ParsedSingleDeclaration *declaration = ptr;
   free(declaration->name);
-  if (declaration->is_function)
-    darray_free(&declaration->parameters, free_string);
   free_parsed(declaration->from);
   free(declaration->from);
 }

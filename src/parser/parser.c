@@ -8,6 +8,7 @@
 #include "declaration/declaration.h"
 #include "dictionary/dictionary.h"
 #include "dowrap/dowrap.h"
+#include "function/function.h"
 #include "if/if.h"
 #include "list/list.h"
 #include "literals/literals.h"
@@ -24,7 +25,7 @@
 const char *ValueTypeNames[] = {
     "string",  "assign",     "identifier",  "number",    "if statement",
     "access",  "call",       "declaration", "null",      "boolean",
-    "do wrap", "operations", "list",        "dictionary"};
+    "do wrap", "operations", "list",        "dictionary", "function"};
 
 void error_if_finished(char *file, DArray *tokens, size_t *index) {
   if ((*index) >= tokens->size) {
@@ -232,5 +233,7 @@ void free_parsed(void *ptr) {
   case AST_DICTIONARY:
     free_parsed_dictionary(parsed);
     break;
+  case AST_FUNCTION:
+    free_function(parsed);
   }
 }

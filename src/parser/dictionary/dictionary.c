@@ -88,5 +88,5 @@ void free_parsed_dictionary(void *ptr) {
   ParsedValue *parsedValue = ptr;
   DArray *parsed_dictionary = parsedValue->data;
   darray_free(parsed_dictionary, free_dictionary_entry);
-  free(parsedValue->data);
+  free(parsed_dictionary);
 }

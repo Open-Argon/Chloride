@@ -1,19 +1,30 @@
 #include "object.h"
 #include "../../memory.h"
 #include "../runtime.h"
+#include <stdbool.h>
 #include <string.h>
 
-ArgonObject *BASE_OBJECT = NULL;
+ArgonObject *BASE_CLASS = NULL;
 
 void init_base_field() {
-    add_field(BASE_OBJECT, "test", BASE_OBJECT);
+    // add_field(BASE_CLASS, "test", BASE_CLASS);
 }
 
-ArgonObject* init_argon_object() {
+ArgonObject* init_child_argon_object(ArgonObject *cls) {
+    ArgonObject *object = init_argon_class(NULL);
+    object->self = object;
+    object->baseObject = cls;
+    add_field(object, "__call__", NULL);
+    return object;
+}
+
+
+ArgonObject* init_argon_class(char*name) {
     ArgonObject *object = ar_alloc(sizeof(ArgonObject));
+    object->name = name;
     object->type = TYPE_OBJECT;
-    object->typeObject = NULL;
-    object->baseObject = BASE_OBJECT;
+    object->self = NULL;
+    object->baseObject = BASE_CLASS;
     object->fields = createHashmap();
     memset(&object->value, 0, sizeof(object->value));
     return object;

@@ -28,3 +28,16 @@ sets a given register to null.
 this operation takes 1 operand.
 
 1. the register to set to null.
+
+## OP_LOAD_FUNCTION
+
+initilises a function to a given register.
+
+1. the offset of the name of the function.
+2. the length of the name of the function.
+3. the number of arguments.
+4. the offset of the name of the argument.
+5. the length of the name of the argument.
+6. instruction 4 and 5 loop for each argument.
+7. the offset of the bytecode of the function.
+8. the length of the bytecode of the function.

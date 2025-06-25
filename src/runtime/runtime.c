@@ -13,7 +13,7 @@
 #include <unistd.h>
 
 void init_types() {
-  BASE_OBJECT = init_argon_object();
+  BASE_CLASS = init_argon_class("BASE_CLASS");
 
   init_type();
   init_null();
@@ -33,7 +33,7 @@ void load_const(Translated *translated, RuntimeState *state) {
   size_t length = pop_bytecode(translated, state);
   uint64_t offset = pop_bytecode(translated, state);
 
-  void*data = ar_alloc(length);
+  void*data = ar_alloc_atomic(length);
   memcpy(data, arena_get(&translated->constants,offset), length);
   ArgonObject *object = ARGON_NULL;
   switch (type) {
@@ -44,7 +44,7 @@ void load_const(Translated *translated, RuntimeState *state) {
   state->registers[to_register] = object;
 }
 
-void run_instruction(Translated *translated, RuntimeState *state) {
+void run_instruction(Translated *translated, RuntimeState *state, struct Stack stack) {
   OperationType opcode = pop_bytecode(translated, state);
   switch (opcode) {
   case OP_LOAD_NULL:
@@ -59,9 +59,10 @@ void run_instruction(Translated *translated, RuntimeState *state) {
 void runtime(Translated translated) {
   RuntimeState state = {
       checked_malloc(translated.registerCount * sizeof(ArgonObject *)), 0};
+  struct Stack stack = {};
 
   while (state.head < translated.bytecode.size)
-    run_instruction(&translated, &state);
+    run_instruction(&translated, &state,stack);
   free(state.registers);
 }
 

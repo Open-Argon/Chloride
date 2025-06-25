@@ -5,8 +5,6 @@
 
 typedef struct {
   char * name;
-  bool is_function;
-  DArray parameters; // string[]
   ParsedValue * from;
 } ParsedSingleDeclaration;
 

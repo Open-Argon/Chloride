@@ -45,5 +45,5 @@ void free_parsed_list(void *ptr) {
   ParsedValue *parsedValue = ptr;
   DArray *parsed_list = parsedValue->data;
   darray_free(parsed_list, free_parsed);
-  free(parsedValue->data);
+  free(parsed_list);
 }
