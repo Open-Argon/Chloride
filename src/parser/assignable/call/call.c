@@ -49,5 +49,6 @@ void free_parse_call(void *ptr) {
 
   darray_free(&parsedCall->args, free_parsed);
   free_parsed(parsedCall->to_call);
+  free(parsedCall->to_call);
   free(parsedCall);
 }

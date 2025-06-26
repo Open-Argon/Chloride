@@ -1,12 +1,13 @@
 #include "runtime.h"
 #include "../translator/translator.h"
 #include "internals/siphash/siphash.h"
+#include "objects/functions/functions.h"
 #include "objects/null/null.h"
 #include "objects/object.h"
 #include "objects/string/string.h"
 #include "objects/type/type.h"
-#include "objects/functions/functions.h"
 #include <fcntl.h>
+#include <gc/gc.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -35,25 +36,26 @@ void load_const(Translated *translated, RuntimeState *state) {
   size_t length = pop_bytecode(translated, state);
   uint64_t offset = pop_bytecode(translated, state);
 
-  void*data = ar_alloc_atomic(length);
-  memcpy(data, arena_get(&translated->constants,offset), length);
+  void *data = ar_alloc_atomic(length);
+  memcpy(data, arena_get(&translated->constants, offset), length);
   ArgonObject *object = ARGON_NULL;
   switch (type) {
-    case TYPE_OP_STRING:
-      object = init_string_object(data, length);
-      break;
+  case TYPE_OP_STRING:
+    object = init_string_object(data, length);
+    break;
   }
   state->registers[to_register] = object;
 }
 
-void run_instruction(Translated *translated, RuntimeState *state, struct Stack stack) {
+void run_instruction(Translated *translated, RuntimeState *state,
+                     struct Stack stack) {
   OperationType opcode = pop_bytecode(translated, state);
   switch (opcode) {
   case OP_LOAD_NULL:
     state->registers[pop_bytecode(translated, state)] = ARGON_NULL;
     break;
   case OP_LOAD_CONST:
-    load_const(translated,state);
+    load_const(translated, state);
     break;
   case OP_LOAD_FUNCTION:
     load_argon_function(translated, state, stack);
@@ -65,9 +67,10 @@ void runtime(Translated translated) {
   RuntimeState state = {
       checked_malloc(translated.registerCount * sizeof(ArgonObject *)), 0};
   struct Stack stack = {};
-
-  while (state.head < translated.bytecode.size)
-    run_instruction(&translated, &state,stack);
+  state.head = 0;
+  while (state.head < translated.bytecode.size) {
+    run_instruction(&translated, &state, stack);
+  }
   free(state.registers);
 }
 

@@ -23,8 +23,8 @@
 #include <string.h>
 
 const char *ValueTypeNames[] = {
-    "string",  "assign",     "identifier",  "number",    "if statement",
-    "access",  "call",       "declaration", "null",      "boolean",
+    "string",  "assign",     "identifier",  "number",     "if statement",
+    "access",  "call",       "declaration", "null",       "boolean",
     "do wrap", "operations", "list",        "dictionary", "function"};
 
 void error_if_finished(char *file, DArray *tokens, size_t *index) {
@@ -157,7 +157,7 @@ ParsedValue *parse_token_full(char *file, DArray *tokens, size_t *index,
       passed = true;
     }
   }
-  
+
   return output;
 }
 
