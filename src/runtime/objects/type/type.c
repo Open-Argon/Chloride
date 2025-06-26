@@ -6,5 +6,6 @@
 ArgonObject *ARGON_TYPE = NULL;
 
 void init_type() {
-    ARGON_TYPE = init_argon_class("function");
+    ARGON_TYPE = init_argon_class("type");
+    ARGON_TYPE->baseObject = BASE_CLASS;
 }

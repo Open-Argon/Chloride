@@ -5,6 +5,7 @@
 #include "objects/object.h"
 #include "objects/string/string.h"
 #include "objects/type/type.h"
+#include "objects/functions/functions.h"
 #include <fcntl.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -16,6 +17,7 @@ void init_types() {
   BASE_CLASS = init_argon_class("BASE_CLASS");
 
   init_type();
+  init_function_type();
   init_null();
   init_string_type();
 
@@ -52,6 +54,9 @@ void run_instruction(Translated *translated, RuntimeState *state, struct Stack s
     break;
   case OP_LOAD_CONST:
     load_const(translated,state);
+    break;
+  case OP_LOAD_FUNCTION:
+    load_argon_function(translated, state, stack);
     break;
   }
 }

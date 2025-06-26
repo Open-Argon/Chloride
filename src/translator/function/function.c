@@ -12,7 +12,7 @@ size_t translate_parsed_function(Translated *translated,
   translate_parsed(translated, parsedFunction->body);
   size_t function_bytecode_offset =
       arena_push(&translated->constants, translated->bytecode.data,
-                 translated->bytecode.size);
+                 translated->bytecode.size*translated->bytecode.element_size);
   size_t function_bytecode_length = translated->bytecode.size;
   translated->bytecode = main_bytecode;
   darray_free(&temp_bytecode, NULL);
@@ -30,6 +30,6 @@ size_t translate_parsed_function(Translated *translated,
     push_instruction_code(translated, strlen(*parameter_name));
   }
   push_instruction_code(translated, function_bytecode_offset);
-  push_instruction_code(translated, function_bytecode_length);
+  push_instruction_code(translated, function_bytecode_length*translated->bytecode.element_size);
   return start;
 }
