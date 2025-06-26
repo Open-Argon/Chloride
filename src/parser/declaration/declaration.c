@@ -23,6 +23,7 @@ ParsedValue *parse_declaration(char *file, DArray *tokens, size_t *index) {
     darray_push(declarations, &_declaration);
     ParsedSingleDeclaration *declaration =
         darray_get(declarations, declarations->size - 1);
+    bool isFunction=false;
     DArray parameters;
     declaration->from = parse_null();
 
@@ -39,6 +40,7 @@ ParsedValue *parse_declaration(char *file, DArray *tokens, size_t *index) {
       return parsedValue;
     token = darray_get(tokens, *index);
     if (token->type == TOKEN_LPAREN) {
+      isFunction = true;
       darray_init(&parameters, sizeof(char *));
       (*index)++;
       error_if_finished(file, tokens, index);
@@ -98,7 +100,7 @@ ParsedValue *parse_declaration(char *file, DArray *tokens, size_t *index) {
         exit(EXIT_FAILURE);
       }
     }
-    if (parameters.resizable) {
+    if (isFunction) {
       declaration->from = create_parsed_function(declaration->name, parameters,
                                                  declaration->from);
     }
