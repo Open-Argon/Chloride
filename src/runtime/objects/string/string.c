@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdio.h>
+#include "string.h"
 
 ArgonObject *ARGON_STRING_TYPE = NULL;
 

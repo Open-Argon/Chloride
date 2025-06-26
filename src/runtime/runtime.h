@@ -15,6 +15,8 @@ typedef struct Stack {
 
 void init_types();
 
+uint64_t pop_bytecode(Translated *translated, RuntimeState *state);
+
 void run_instruction(Translated *translated, RuntimeState *state, struct Stack stack);
 
 void runtime(Translated translated);

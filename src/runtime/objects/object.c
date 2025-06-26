@@ -3,6 +3,7 @@
 #include "../runtime.h"
 #include <stdbool.h>
 #include <string.h>
+#include "type/type.h"
 
 ArgonObject *BASE_CLASS = NULL;
 
@@ -24,7 +25,7 @@ ArgonObject* init_argon_class(char*name) {
     object->name = name;
     object->type = TYPE_OBJECT;
     object->self = NULL;
-    object->baseObject = BASE_CLASS;
+    object->baseObject = ARGON_TYPE;
     object->fields = createHashmap();
     memset(&object->value, 0, sizeof(object->value));
     return object;
