@@ -3,16 +3,16 @@
 #include "lexer/token.h"
 #include "memory.h"
 #include "parser/parser.h"
-#include "translator/translator.h"
 #include "runtime/runtime.h"
+#include "translator/translator.h"
 
 #include <endian.h>
-#include <string.h>
 #include <locale.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <string.h>
 #include <unistd.h>
 
 const char FILE_IDENTIFIER[] = "ARBI";
@@ -62,7 +62,7 @@ int main(int argc, char *argv[]) {
   regCount = htole64(regCount);
   constantsSize = htole64(constantsSize);
   bytecodeSize = htole64(bytecodeSize);
-  
+
   fwrite(&FILE_IDENTIFIER, sizeof(char), strlen(FILE_IDENTIFIER), file);
   fwrite(&version_number_htole64ed, sizeof(uint64_t), 1, file);
   fwrite(&regCount, sizeof(uint64_t), 1, file);
@@ -77,7 +77,6 @@ int main(int argc, char *argv[]) {
   generate_siphash_key();
 
   init_types();
-
   runtime(translated);
 
   free_translator(&translated);

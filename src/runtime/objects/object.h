@@ -1,7 +1,7 @@
 #ifndef OBJECT_H
 #define OBJECT_H
 #include "../internals/hashmap/hashmap.h"
-#include "../../dynamic_array/darray.h"
+#include "../internals/dynamic_array_armem/darray_armem.h"
 #include <gmp.h>
 #include <stdbool.h>
 #include "../runtime.h"
@@ -13,7 +13,7 @@ struct string_struct {
   size_t length;
 };
 struct argon_function_struct {
-  DArray bytecode;
+  darray_armem bytecode;
   struct Stack stack;
   size_t number_of_parameters;
   char** parameters;

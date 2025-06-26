@@ -1,9 +1,9 @@
 #include "declaration.h"
 #include "../../lexer/token.h"
 #include "../../memory.h"
+#include "../function/function.h"
 #include "../literals/literals.h"
 #include "../parser.h"
-#include "../function/function.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -23,7 +23,6 @@ ParsedValue *parse_declaration(char *file, DArray *tokens, size_t *index) {
     darray_push(declarations, &_declaration);
     ParsedSingleDeclaration *declaration =
         darray_get(declarations, declarations->size - 1);
-    bool isFunction = false;
     DArray parameters;
     declaration->from = parse_null();
 
@@ -40,7 +39,6 @@ ParsedValue *parse_declaration(char *file, DArray *tokens, size_t *index) {
       return parsedValue;
     token = darray_get(tokens, *index);
     if (token->type == TOKEN_LPAREN) {
-      isFunction = true;
       darray_init(&parameters, sizeof(char *));
       (*index)++;
       error_if_finished(file, tokens, index);
@@ -63,8 +61,8 @@ ParsedValue *parse_declaration(char *file, DArray *tokens, size_t *index) {
                     file, token->line, token->column);
             exit(EXIT_FAILURE);
           }
-          char *parameter_name =
-              strcpy(checked_malloc(strlen(token->value) + 1), token->value);
+          char *parameter_name = checked_malloc(strlen(token->value) + 1);
+          strcpy(parameter_name, token->value);
           darray_push(&parameters, &parameter_name);
           (*index)++;
           error_if_finished(file, tokens, index);
@@ -99,13 +97,15 @@ ParsedValue *parse_declaration(char *file, DArray *tokens, size_t *index) {
                 token->column);
         exit(EXIT_FAILURE);
       }
-      if (isFunction) {
-        declaration->from = create_parsed_function(declaration->name, parameters, declaration->from);
-      }
-      if ((*index) >= tokens->size)
-        break;
-      token = darray_get(tokens, *index);
     }
+    if (parameters.resizable) {
+      declaration->from = create_parsed_function(declaration->name, parameters,
+                                                 declaration->from);
+    }
+    if ((*index) >= tokens->size)
+      break;
+    token = darray_get(tokens, *index);
+
     size_t count = skip_newlines_and_indents(tokens, index);
     if ((*index) >= tokens->size)
       break;
