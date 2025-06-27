@@ -14,6 +14,14 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+uint64_t bytes_to_uint64(const uint8_t bytes[8]) {
+  uint64_t value = 0;
+  for (int i = 0; i < 8; i++) {
+    value |= ((uint64_t)bytes[i]) << (i * 8);
+  }
+  return value;
+}
+
 void init_types() {
   BASE_CLASS = init_argon_class("BASE_CLASS");
 
@@ -25,14 +33,22 @@ void init_types() {
   init_base_field();
 }
 
+
+uint8_t pop_byte(Translated *translated, RuntimeState *state) {
+  return *((uint8_t *)darray_get(&translated->bytecode, state->head++));
+}
+
 uint64_t pop_bytecode(Translated *translated, RuntimeState *state) {
-  uint64_t *instruction = darray_get(&translated->bytecode, state->head++);
-  return *instruction;
+  uint8_t bytes[8];
+  for (size_t i = 0; i < sizeof(bytes); i++) {
+    bytes[i] = *((uint8_t *)darray_get(&translated->bytecode, state->head++));
+  }
+  return bytes_to_uint64(bytes);
 }
 
 void load_const(Translated *translated, RuntimeState *state) {
-  uint64_t to_register = pop_bytecode(translated, state);
-  types type = pop_bytecode(translated, state);
+  uint64_t to_register = pop_byte(translated, state);
+  types type = pop_byte(translated, state);
   size_t length = pop_bytecode(translated, state);
   uint64_t offset = pop_bytecode(translated, state);
 
@@ -49,10 +65,10 @@ void load_const(Translated *translated, RuntimeState *state) {
 
 void run_instruction(Translated *translated, RuntimeState *state,
                      struct Stack stack) {
-  OperationType opcode = pop_bytecode(translated, state);
+  OperationType opcode = pop_byte(translated, state);
   switch (opcode) {
   case OP_LOAD_NULL:
-    state->registers[pop_bytecode(translated, state)] = ARGON_NULL;
+    state->registers[pop_byte(translated, state)] = ARGON_NULL;
     break;
   case OP_LOAD_CONST:
     load_const(translated, state);

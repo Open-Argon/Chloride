@@ -17,14 +17,14 @@ size_t translate_parsed_declaration(Translated *translated,
     size_t offset =
         arena_push(&translated->constants, singleDeclaration->name, length);
 
-    push_instruction_code(translated, OP_DECLARE);
+    push_instruction_byte(translated, OP_DECLARE);
     push_instruction_code(translated, length);
     push_instruction_code(translated, offset);
-    push_instruction_code(translated, 0);
+    push_instruction_byte(translated, 0);
   }
   if (delcarations.size != 1) {
-    push_instruction_code(translated, OP_LOAD_NULL);
-    push_instruction_code(translated, 0);
+    push_instruction_byte(translated, OP_LOAD_NULL);
+    push_instruction_byte(translated, 0);
   }
   return first;
 }
