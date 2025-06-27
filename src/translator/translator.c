@@ -9,6 +9,12 @@
 #include <stdlib.h>
 #include <string.h>
 
+void uint64_to_bytes(uint64_t value, uint8_t bytes[8]) {
+  for (int i = 0; i < 8; i++) {
+    bytes[i] = (value >> (i * 8)) & 0xFF;
+  }
+}
+
 void arena_init(ConstantArena *arena) {
   arena->data = checked_malloc(CHUNK_SIZE);
   arena->capacity = CHUNK_SIZE;
@@ -56,25 +62,29 @@ size_t arena_push(ConstantArena *arena, const void *data, size_t length) {
 Translated init_translator() {
   Translated translated;
   translated.registerCount = 0;
-  darray_init(&translated.bytecode, sizeof(uint64_t));
+  darray_init(&translated.bytecode, sizeof(uint8_t));
   arena_init(&translated.constants);
   return translated;
 }
 
-void set_instruction_code(Translated *translator, size_t offset,
-                          uint64_t code) {
-  size_t *ptr = (translator->bytecode.data + offset);
-  *ptr = code;
-}
 
-size_t push_instruction_code(Translated *translator, uint64_t code) {
-  code = htole64(code);
+size_t push_instruction_byte(Translated *translator, uint8_t byte) {
   size_t offset = translator->bytecode.size;
-  darray_push(&translator->bytecode, &code);
+  darray_push(&translator->bytecode, &byte);
   return offset;
 }
 
-void set_registers(Translated *translator, size_t count) {
+size_t push_instruction_code(Translated *translator, uint64_t code) {
+  size_t offset = translator->bytecode.size;
+  uint8_t bytes[8];
+  uint64_to_bytes(code, bytes);
+  for (size_t i = 0; i < sizeof(bytes); i++) {
+    darray_push(&translator->bytecode, &(bytes[i]));
+  }
+  return offset;
+}
+
+void set_registers(Translated *translator, uint8_t count) {
   if (count > translator->registerCount)
     translator->registerCount = count;
 }
@@ -91,8 +101,8 @@ size_t translate_parsed(Translated *translated, ParsedValue *parsedValue) {
     return translate_parsed_number(translated, (char *)parsedValue->data, 0);
   case AST_NULL:
     set_registers(translated, 1);
-    size_t output = push_instruction_code(translated, OP_LOAD_NULL);
-    push_instruction_code(translated, 0);
+    size_t output = push_instruction_byte(translated, OP_LOAD_NULL);
+    push_instruction_byte(translated, 0);
     return output;
   case AST_FUNCTION:
     return translate_parsed_function(translated,

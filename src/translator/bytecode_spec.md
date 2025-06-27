@@ -1,13 +1,15 @@
 # Bytecode Specification
 
+all opcodes are uint8_t, and all operands are uint64_t unless marked with an asterisk (*), where it is marked as uint8_t
+
 ## OP_LOAD_CONST
 
 loads and initialises a value from the constant buffer into the provided register.
 
 this operation 4 operands.
 
-1. the register to write to.
-2. the type of data from the constant buffer.
+1. the register to write to. (*)
+2. the type of data from the constant buffer. (*)
 3. the length of the data in the constant buffer.
 4. the offset in the constant buffer.
 
@@ -19,7 +21,7 @@ this operation takes 3 operands.
 
 1. the length of the variable name.
 2. the offset in the constant buffer of the variable name.
-3. the register of the given value
+3. the register of the given value (*)
 
 ## OP_LOAD_NULL
 
@@ -27,7 +29,7 @@ sets a given register to null.
 
 this operation takes 1 operand.
 
-1. the register to set to null.
+1. the register to set to null. (*)
 
 ## OP_LOAD_FUNCTION
 
