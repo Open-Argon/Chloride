@@ -45,7 +45,7 @@ void *arena_get(ConstantArena *arena, size_t offset) {
 }
 
 size_t arena_push(ConstantArena *arena, const void *data, size_t length) {
-  if (arena->size >= length) {
+  if (arena->size >= length && arena->size<100000) {
     for (size_t i = 0; i <= (arena->size - length); i++) {
       if (memcmp(data, arena->data + i, length) == 0) {
         return i;
