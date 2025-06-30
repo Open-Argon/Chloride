@@ -7,47 +7,47 @@
 #include <stdlib.h>
 #include <string.h>
 
-struct hashmap *createHashmap() {
+struct hashmap_GC *createHashmap_GC() {
   size_t size = 8;
-  struct hashmap *t = (struct hashmap *)ar_alloc(sizeof(struct hashmap));
+  struct hashmap_GC *t = (struct hashmap_GC *)ar_alloc(sizeof(struct hashmap_GC));
   t->size = size;
   t->order = 1;
-  t->list = (struct node **)ar_alloc(sizeof(struct node *) * size);
-  memset(t->list, 0, sizeof(struct node *) * size);
+  t->list = (struct node_GC **)ar_alloc(sizeof(struct node_GC *) * size);
+  memset(t->list, 0, sizeof(struct node_GC *) * size);
   return t;
 }
 
-void resize_hashmap(struct hashmap *t) {
+void resize_hashmap_GC(struct hashmap_GC *t) {
   int old_size = t->size;
   int new_size = old_size * 2;
 
-  struct node **old_list = t->list;
+  struct node_GC **old_list = t->list;
 
   // Create new list
-  t->list = (struct node **)ar_alloc(sizeof(struct node *) * new_size);
-  memset(t->list, 0, sizeof(struct node *) * new_size);
+  t->list = (struct node_GC **)ar_alloc(sizeof(struct node_GC *) * new_size);
+  memset(t->list, 0, sizeof(struct node_GC *) * new_size);
 
   t->size = new_size;
   t->count = 0;
 
   // Rehash old entries into new list
   for (int i = 0; i < old_size; i++) {
-    struct node *temp = old_list[i];
+    struct node_GC *temp = old_list[i];
     while (temp) {
-      hashmap_insert(t, temp->hash, temp->key, temp->val,
+      hashmap_insert_GC(t, temp->hash, temp->key, temp->val,
                      temp->order); // Will increment count
       temp = temp->next;
     }
   }
 }
 
-int hashCode(struct hashmap *t, uint64_t hash) { return hash % t->size; }
+int hashCode_GC(struct hashmap_GC *t, uint64_t hash) { return hash % t->size; }
 
-int hashmap_remove(struct hashmap *t, uint64_t hash) {
-  int pos = hashCode(t, hash);
-  struct node *list = t->list[pos];
-  struct node *temp = list;
-  struct node *prev = NULL;
+int hashmap_remove_GC(struct hashmap_GC *t, uint64_t hash) {
+  int pos = hashCode_GC(t, hash);
+  struct node_GC *list = t->list[pos];
+  struct node_GC *temp = list;
+  struct node_GC *prev = NULL;
   while (temp) {
     if (temp->hash == hash) {
       if (prev)
@@ -65,18 +65,18 @@ int hashmap_remove(struct hashmap *t, uint64_t hash) {
   return 0;
 }
 
-void hashmap_insert(struct hashmap *t, uint64_t hash, void *key,
+void hashmap_insert_GC(struct hashmap_GC *t, uint64_t hash, void *key,
                     void *val, size_t order) {
   if (!order) {
     order = t->order++;
   }
   if ((t->count + 1) > t->size * 0.75) {
-    resize_hashmap(t);
+    resize_hashmap_GC(t);
   }
 
-  int pos = hashCode(t, hash);
-  struct node *list = t->list[pos];
-  struct node *temp = list;
+  int pos = hashCode_GC(t, hash);
+  struct node_GC *list = t->list[pos];
+  struct node_GC *temp = list;
 
   // Check if key exists → overwrite
   while (temp) {
@@ -88,7 +88,7 @@ void hashmap_insert(struct hashmap *t, uint64_t hash, void *key,
   }
 
   // Insert new node
-  struct node *newNode = (struct node *)ar_alloc(sizeof(struct node));
+  struct node_GC *newNode = (struct node_GC *)ar_alloc(sizeof(struct node_GC));
   newNode->hash = hash;
   newNode->key = key;
   newNode->val = val;
@@ -98,10 +98,10 @@ void hashmap_insert(struct hashmap *t, uint64_t hash, void *key,
   t->count++;
 }
 
-void *hashmap_lookup(struct hashmap *t, uint64_t hash) {
-  int pos = hashCode(t, hash);
-  struct node *list = t->list[pos];
-  struct node *temp = list;
+void *hashmap_lookup_GC(struct hashmap_GC *t, uint64_t hash) {
+  int pos = hashCode_GC(t, hash);
+  struct node_GC *list = t->list[pos];
+  struct node_GC *temp = list;
   while (temp) {
     if (temp->hash == hash) {
       return temp->val;

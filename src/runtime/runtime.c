@@ -1,6 +1,5 @@
 #include "runtime.h"
 #include "../translator/translator.h"
-#include "internals/siphash/siphash.h"
 #include "objects/functions/functions.h"
 #include "objects/null/null.h"
 #include "objects/object.h"
@@ -12,6 +11,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 
 uint64_t bytes_to_uint64(const uint8_t bytes[8]) {
@@ -88,26 +88,4 @@ void runtime(Translated translated) {
     run_instruction(&translated, &state, stack);
   }
   free(state.registers);
-}
-
-static uint8_t siphash_key[16];
-
-void generate_siphash_key() {
-  int fd = open("/dev/urandom", O_RDONLY);
-  if (fd < 0 || read(fd, siphash_key, 16) != 16) {
-    // Fallback or abort
-  }
-  close(fd);
-}
-
-uint64_t siphash64_bytes(const void *data, size_t len) {
-  uint8_t out[8];
-  if (siphash(data, len, siphash_key, out, sizeof(out)) != 0)
-    return 0;
-
-  uint64_t hash = 0;
-  for (int i = 0; i < 8; ++i)
-    hash |= ((uint64_t)out[i]) << (8 * i);
-
-  return hash;
 }

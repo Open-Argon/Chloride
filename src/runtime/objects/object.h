@@ -34,7 +34,7 @@ struct ArgonObject {
   char* name;
   ArgonObject *self;
   ArgonObject *baseObject;
-  struct hashmap *fields; // dynamic fields/methods
+  struct hashmap_GC *fields; // dynamic fields/methods
   union {
     mpq_t as_number;
     bool as_bool;

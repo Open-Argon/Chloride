@@ -21,8 +21,4 @@ void run_instruction(Translated *translated, RuntimeState *state, struct Stack s
 
 void runtime(Translated translated);
 
-uint64_t siphash64_bytes(const void *data, size_t len);
-
-void generate_siphash_key();
-
 #endif // RUNTIME_H

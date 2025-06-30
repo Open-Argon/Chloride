@@ -1,6 +1,6 @@
 #include "object.h"
 #include "../../memory.h"
-#include "../runtime.h"
+#include "../../hash_data/hash_data.h"
 #include <stdbool.h>
 #include <string.h>
 #include "type/type.h"
@@ -26,11 +26,11 @@ ArgonObject* init_argon_class(char*name) {
     object->type = TYPE_OBJECT;
     object->self = NULL;
     object->baseObject = ARGON_TYPE;
-    object->fields = createHashmap();
+    object->fields = createHashmap_GC();
     memset(&object->value, 0, sizeof(object->value));
     return object;
 }
 
 void add_field(ArgonObject*target, char* name, ArgonObject *object) {
-    hashmap_insert(target->fields, siphash64_bytes(name, strlen(name)),name, object,  0);
+    hashmap_insert_GC(target->fields, siphash64_bytes(name, strlen(name), siphash_key),name, object,  0);
 }

@@ -15,13 +15,15 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
+#include "hash_data/hash_data.h"
 
 const char FILE_IDENTIFIER[] = "ARBI";
 const uint32_t version_number = 0;
 
 int main(int argc, char *argv[]) {
-  clock_t start,end;
-  double time_spent;
+  generate_siphash_key(siphash_key);
+  clock_t start, end;
+  double time_spent, total_time_spent=0;
   setlocale(LC_ALL, "");
   if (argc <= 1)
     return -1;
@@ -42,6 +44,7 @@ int main(int argc, char *argv[]) {
   lexer(state);
   end = clock();
   time_spent = (double)(end - start) / CLOCKS_PER_SEC;
+  total_time_spent+=time_spent;
   printf("Lexer time taken: %f seconds\n", time_spent);
   fclose(state.file);
 
@@ -49,21 +52,21 @@ int main(int argc, char *argv[]) {
 
   darray_init(&ast, sizeof(ParsedValue));
 
-
   start = clock();
   parser(path, &ast, &tokens, false);
   end = clock();
   time_spent = (double)(end - start) / CLOCKS_PER_SEC;
+  total_time_spent+=time_spent;
   printf("Parser time taken: %f seconds\n", time_spent);
   darray_free(&tokens, free_token);
 
   Translated translated = init_translator();
 
-
   start = clock();
   translate(&translated, &ast);
   end = clock();
   time_spent = (double)(end - start) / CLOCKS_PER_SEC;
+  total_time_spent+=time_spent;
   printf("Translation time taken: %f seconds\n", time_spent);
 
   darray_free(&ast, free_parsed);
@@ -88,8 +91,6 @@ int main(int argc, char *argv[]) {
 
   fclose(file);
 
-  generate_siphash_key();
-
   init_types();
 
   start = clock();
@@ -97,8 +98,9 @@ int main(int argc, char *argv[]) {
 
   end = clock();
   time_spent = (double)(end - start) / CLOCKS_PER_SEC;
-
+  total_time_spent+=time_spent;
   printf("Execution time taken: %f seconds\n", time_spent);
+  printf("total time taken: %f seconds\n", total_time_spent);
 
   free_translator(&translated);
   return 0;
