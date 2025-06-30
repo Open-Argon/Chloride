@@ -1,33 +1,33 @@
-#ifndef HASHMAP_H
-#define HASHMAP_H
+#ifndef HASHMAP_GC_H
+#define HASHMAP_GC_H
 #include <stdint.h>
 #include <stdlib.h>
 
 typedef struct ArgonObject ArgonObject;
 
-struct node {
+struct node_GC {
   uint64_t hash;
   void *key;
   void *val;
   size_t order;
-  struct node *next;
+  struct node_GC *next;
 };
-struct hashmap {
+struct hashmap_GC {
   size_t size;
   size_t count;
   size_t order;
-  struct node **list;
+  struct node_GC **list;
 };
 
-struct hashmap *createHashmap();
+struct hashmap_GC *createHashmap_GC();
 
-int hashCode(struct hashmap *t, uint64_t hash);
+int hashCode_GC(struct hashmap_GC *t, uint64_t hash);
 
-int hashmap_remove(struct hashmap *t, uint64_t hash);
+int hashmap_remove_GC(struct hashmap_GC *t, uint64_t hash);
 
-void hashmap_insert(struct hashmap *t, uint64_t hash, void *key,
+void hashmap_insert_GC(struct hashmap_GC *t, uint64_t hash, void *key,
                     void *val, size_t order);
 
-void *hashmap_lookup(struct hashmap *t, uint64_t hash);
+void *hashmap_lookup_GC(struct hashmap_GC *t, uint64_t hash);
 
-#endif // HASHMAP_H
+#endif // HASHMAP_GC_H

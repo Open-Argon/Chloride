@@ -1,4 +1,6 @@
 #include "translator.h"
+#include "../hash_data/hash_data.h"
+#include "../hashmap/hashmap.h"
 #include "declaration/declaration.h"
 #include "function/function.h"
 #include "number/number.h"
@@ -19,6 +21,7 @@ void arena_init(ConstantArena *arena) {
   arena->data = checked_malloc(CHUNK_SIZE);
   arena->capacity = CHUNK_SIZE;
   arena->size = 0;
+  arena->hashmap = createHashmap();
 }
 
 void arena_resize(ConstantArena *arena, size_t new_size) {
@@ -38,6 +41,7 @@ void arena_free(ConstantArena *arena) {
   free(arena->data);
   arena->capacity = 0;
   arena->size = 0;
+  hashmap_free(arena->hashmap, NULL);
 }
 
 void *arena_get(ConstantArena *arena, size_t offset) {
@@ -45,17 +49,29 @@ void *arena_get(ConstantArena *arena, size_t offset) {
 }
 
 size_t arena_push(ConstantArena *arena, const void *data, size_t length) {
-  if (arena->size >= length && arena->size<100000) {
-    for (size_t i = 0; i <= (arena->size - length); i++) {
-      if (memcmp(data, arena->data + i, length) == 0) {
-        return i;
-      }
+  uint64_t hash = siphash64_bytes(data, length, siphash_key);
+
+  // Look up offset in hashmap
+  void *val = hashmap_lookup(arena->hashmap, hash);
+  if (val != NULL) {
+    size_t offset =
+        (size_t)(uintptr_t)val - 1; // stored as pointer but really offset
+    // Verify to avoid collision false positive
+    if (memcmp(arena->data + offset, data, length) == 0) {
+      return offset;
     }
   }
+
+  // Not found: append data
   arena_resize(arena, arena->size + length);
   size_t offset = arena->size;
   memcpy(arena->data + arena->size, data, length);
   arena->size += length;
+
+  // Insert into hashmap: store offset as pointer-sized integer
+  hashmap_insert(arena->hashmap, hash, (void *)data,
+                 (void *)(uintptr_t)offset + 1, 0);
+
   return offset;
 }
 
@@ -66,7 +82,6 @@ Translated init_translator() {
   arena_init(&translated.constants);
   return translated;
 }
-
 
 size_t push_instruction_byte(Translated *translator, uint8_t byte) {
   size_t offset = translator->bytecode.size;

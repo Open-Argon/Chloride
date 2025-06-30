@@ -4,6 +4,7 @@
 #include "../dynamic_array/darray.h"
 #include "../memory.h"
 #include "../parser/parser.h"
+#include "../hashmap/hashmap.h"
 #include <stddef.h>
 #include <stdint.h>
 
@@ -14,6 +15,7 @@ typedef struct {
   void *data;
   size_t capacity;
   size_t size;
+  struct hashmap * hashmap;
 } ConstantArena;
 
 typedef struct {
