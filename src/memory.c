@@ -1,13 +1,9 @@
 #include "memory.h"
-#include <gc.h>
 #include <gc/gc.h>
 #include <gmp.h>
+#include <stdio.h>
 #include <stdlib.h> // for malloc/free (temp arena fallback)
 #include <string.h>
-#include <stdio.h>
-
-// runtime
-#include "runtime/objects/type/type.h"
 
 void *checked_malloc(size_t size) {
   void *ptr = malloc(size);
@@ -19,15 +15,14 @@ void *checked_malloc(size_t size) {
 }
 
 void *gmp_gc_realloc(void *ptr, size_t old_size, size_t new_size) {
-    (void)old_size;  // Ignore old_size, Boehm doesn't need it
-    return GC_realloc(ptr, new_size);
+  (void)old_size; // Ignore old_size, Boehm doesn't need it
+  return GC_realloc(ptr, new_size);
 }
 
-
 void gmp_gc_free(void *ptr, size_t size) {
-    (void)size;  // Boehm GC manages this itself
-    // No-op — memory will be collected automatically
-    GC_FREE(ptr);
+  (void)size; // Boehm GC manages this itself
+  // No-op — memory will be collected automatically
+  GC_FREE(ptr);
 }
 
 void ar_memory_init() {
@@ -35,8 +30,12 @@ void ar_memory_init() {
   mp_set_memory_functions(GC_malloc, gmp_gc_realloc, gmp_gc_free);
 }
 
-
 void *ar_alloc(size_t size) { return GC_MALLOC(size); }
+
+void ar_finalizer(void *obj, GC_finalization_proc fn, void *client_data,
+                  GC_finalization_proc *old_fn, void **old_client_data) {
+  return GC_register_finalizer_no_order(obj, fn, client_data, old_fn, old_client_data);
+}
 
 void *ar_alloc_atomic(size_t size) { return GC_MALLOC_ATOMIC(size); }
 
