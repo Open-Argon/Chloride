@@ -61,3 +61,4 @@ build
 *.yy.h
 
 out.arbin
+rand_test.ar
