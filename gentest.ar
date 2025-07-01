@@ -1,6 +1,0 @@
-let myfile = file.write("rand_test.ar")
-
-for (i from 0 to 100000) do
-  myfile.text("\"")
-  myfile.text(string(random()))
-  myfile.text("\"\n")
