@@ -24,6 +24,8 @@ typedef struct {
   ConstantArena constants;
 } Translated;
 
+void arena_resize(ConstantArena *arena, size_t new_size);
+
 void *arena_get(ConstantArena *arena, size_t offset);
 
 size_t arena_push(ConstantArena *arena, const void *data, size_t length);

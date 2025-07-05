@@ -1,7 +1,9 @@
 #include "hashmap.h"
+#include "../memory.h"
 
 #include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdlib.h>
@@ -9,10 +11,10 @@
 
 struct hashmap *createHashmap() {
   size_t size = 8;
-  struct hashmap *t = (struct hashmap *)malloc(sizeof(struct hashmap));
+  struct hashmap *t = (struct hashmap *)checked_malloc(sizeof(struct hashmap));
   t->size = size;
   t->order = 1;
-  t->list = (struct node **)malloc(sizeof(struct node *) * size);
+  t->list = (struct node **)checked_malloc(sizeof(struct node *) * size);
   memset(t->list, 0, sizeof(struct node *) * size);
   return t;
 }
@@ -42,7 +44,7 @@ void resize_hashmap(struct hashmap *t) {
   struct node **old_list = t->list;
 
   // Create new list
-  t->list = (struct node **)malloc(sizeof(struct node *) * new_size);
+  t->list = (struct node **)checked_malloc(sizeof(struct node *) * new_size);
   memset(t->list, 0, sizeof(struct node *) * new_size);
 
   t->size = new_size;
@@ -57,6 +59,7 @@ void resize_hashmap(struct hashmap *t) {
       temp = temp->next;
     }
   }
+  free(old_list);
 }
 
 int hashCode(struct hashmap *t, uint64_t hash) { return hash % t->size; }
@@ -106,7 +109,7 @@ void hashmap_insert(struct hashmap *t, uint64_t hash, void *key,
   }
 
   // Insert new node
-  struct node *newNode = (struct node *)malloc(sizeof(struct node));
+  struct node *newNode = (struct node *)checked_malloc(sizeof(struct node));
   newNode->hash = hash;
   newNode->key = key;
   newNode->val = val;
