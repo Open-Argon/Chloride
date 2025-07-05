@@ -3,7 +3,6 @@
 #include "../../memory.h"
 #include "type/type.h"
 #include <stdbool.h>
-#include <stdio.h>
 #include <string.h>
 
 ArgonObject *BASE_CLASS = NULL;

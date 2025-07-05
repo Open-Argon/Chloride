@@ -2,7 +2,7 @@ LEXER_SRC = src/lexer/lex.l
 LEXER_C = src/lexer/lex.yy.c
 LEXER_H = src/lexer/lex.yy.h
 
-CFILES = $(shell find src -name '*.c')
+CFILES = external/xxhash/xxhash.c $(shell find src -name '*.c')
 CFLAGS = $(ARCHFLAGS) -lm -lgc -lgmp -Wall -Wextra -Wno-unused-function
 BINARY = bin/argon
 
