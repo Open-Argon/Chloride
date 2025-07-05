@@ -2,8 +2,8 @@ LEXER_SRC = src/lexer/lex.l
 LEXER_C = src/lexer/lex.yy.c
 LEXER_H = src/lexer/lex.yy.h
 
-CFILES = external/xxhash/xxhash.c $(shell find src -name '*.c')
-CFLAGS = $(ARCHFLAGS) -lm -lgc -lgmp -Wall -Wextra -Wno-unused-function
+CFILES = external/xxhash/xxhash.c external/cwalk/src/cwalk.c $(shell find src -name '*.c')
+CFLAGS = $(ARCHFLAGS) -lm -lgc -lgmp -Wall -Wextra -Wno-unused-function -Iexternal/cwalk/include
 BINARY = bin/argon
 
 all: $(BINARY)
@@ -14,6 +14,10 @@ $(LEXER_C) $(LEXER_H): $(LEXER_SRC)
 $(BINARY): $(CFILES) $(LEXER_C) $(LEXER_H)
 	mkdir -p bin
 	gcc -O3 -o $(BINARY) $(CFILES) $(CFLAGS) -s
+
+native: $(CFILES) $(LEXER_C) $(LEXER_H)
+	mkdir -p bin
+	gcc -O3 -march=native -o $(BINARY) $(CFILES) $(CFLAGS)
 
 debug: $(CFILES) $(LEXER_C) $(LEXER_H)
 	mkdir -p bin

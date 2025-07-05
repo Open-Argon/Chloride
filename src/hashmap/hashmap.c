@@ -6,8 +6,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdlib.h>
-
 
 struct hashmap *createHashmap() {
   size_t size = 8;
@@ -20,21 +18,22 @@ struct hashmap *createHashmap() {
 }
 
 void hashmap_free(struct hashmap *t, free_val_func free_val) {
-    if (!t) return;
+  if (!t)
+    return;
 
-    for (size_t i = 0; i < t->size; i++) {
-        struct node *current = t->list[i];
-        while (current) {
-            struct node *next = current->next;
-            if (free_val && current->val) {
-                free_val(current->val);
-            }
-            free(current);
-            current = next;
-        }
+  for (size_t i = 0; i < t->size; i++) {
+    struct node *current = t->list[i];
+    while (current) {
+      struct node *next = current->next;
+      if (free_val && current->val) {
+        free_val(current->val);
+      }
+      free(current);
+      current = next;
     }
-    free(t->list);
-    free(t);
+  }
+  free(t->list);
+  free(t);
 }
 
 void resize_hashmap(struct hashmap *t) {
@@ -62,7 +61,7 @@ void resize_hashmap(struct hashmap *t) {
   free(old_list);
 }
 
-int hashCode(struct hashmap *t, uint64_t hash) { return hash % t->size; }
+int hashCode(struct hashmap *t, uint64_t hash) { return hash & (t->size - 1); }
 
 int hashmap_remove(struct hashmap *t, uint64_t hash) {
   int pos = hashCode(t, hash);
@@ -86,8 +85,8 @@ int hashmap_remove(struct hashmap *t, uint64_t hash) {
   return 0;
 }
 
-void hashmap_insert(struct hashmap *t, uint64_t hash, void *key,
-                    void *val, size_t order) {
+void hashmap_insert(struct hashmap *t, uint64_t hash, void *key, void *val,
+                    size_t order) {
   if (!order) {
     order = t->order++;
   }
