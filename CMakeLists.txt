@@ -30,7 +30,7 @@ add_custom_command(
 add_custom_target(GenerateLexer DEPENDS ${LEXER_C} ${LEXER_H})
 
 # Step 3: Add executable
-add_executable(argon ${CFILES} ${LEXER_C})
+add_executable(argon external/xxhash/xxhash.c ${CFILES} ${LEXER_C})
 
 # Step 4: Build order
 add_dependencies(argon GenerateLexer)
