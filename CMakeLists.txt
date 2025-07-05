@@ -30,7 +30,7 @@ add_custom_command(
 add_custom_target(GenerateLexer DEPENDS ${LEXER_C} ${LEXER_H})
 
 # Step 3: Add executable
-add_executable(argon external/xxhash/xxhash.c ${CFILES} ${LEXER_C})
+add_executable(argon external/xxhash/xxhash.c external/cwalk/src/cwalk.c ${CFILES} ${LEXER_C})
 
 # Step 4: Build order
 add_dependencies(argon GenerateLexer)
@@ -44,7 +44,7 @@ set_target_properties(argon PROPERTIES
 find_package(BDWgc REQUIRED)
 find_package(gmp REQUIRED)
 
-target_compile_options(argon PRIVATE -O3 -Wall -Wextra -Wno-unused-function -s)
+target_compile_options(argon PRIVATE -O3 -Wall -Wextra -Wno-unused-function -Iexternal/cwalk/include -s)
 target_link_options(argon PRIVATE -static)
 
 target_link_libraries(argon PRIVATE

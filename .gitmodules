@@ -1,3 +1,6 @@
 [submodule "external/xxhash"]
 	path = external/xxhash
 	url = https://github.com/Cyan4973/xxHash.git
+[submodule "external/cwalk"]
+	path = external/cwalk
+	url = https://github.com/likle/cwalk.git

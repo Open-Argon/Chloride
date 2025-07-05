@@ -26,7 +26,43 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #endif
+#include "../external/cwalk/include/cwalk.h"
 #include <string.h>
+
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <limits.h>
+#include <unistd.h>
+#endif
+
+char *get_current_directory() {
+  char *buffer = NULL;
+
+#ifdef _WIN32
+  DWORD size = GetCurrentDirectoryA(0, NULL);
+  buffer = malloc(size);
+  if (buffer == NULL)
+    return NULL;
+  if (GetCurrentDirectoryA(size, buffer) == 0) {
+    free(buffer);
+    return NULL;
+  }
+#else
+  long size = pathconf(".", _PC_PATH_MAX);
+  if (size == -1)
+    size = 4096; // fallback
+  buffer = malloc(size);
+  if (buffer == NULL)
+    return NULL;
+  if (getcwd(buffer, size) == NULL) {
+    free(buffer);
+    return NULL;
+  }
+#endif
+
+  return buffer;
+}
 
 int ensure_dir_exists(const char *path) {
   struct stat st = {0};
@@ -41,112 +77,10 @@ int ensure_dir_exists(const char *path) {
   return 0;
 }
 
-char *normalize_path(char *path) {
-#ifdef _WIN32
-  for (char *p = path; *p; p++) {
-    if (*p == '/') {
-      *p = '\\';
-    }
-  }
-#endif
-  return path;
-}
-
-// Join two paths using '/' as separator, no platform checks here.
-int path_join(char *dest, size_t dest_size, const char *path1,
-              const char *path2) {
-  size_t len1 = strlen(path1);
-  size_t len2 = strlen(path2);
-
-  // Check if buffer is large enough (extra 2 for '/' and '\0')
-  if (len1 + len2 + 2 > dest_size)
-    return -1;
-
-  strcpy(dest, path1);
-
-  // Add '/' if needed
-  if (len1 > 0 && dest[len1 - 1] != '/') {
-    dest[len1] = '/';
-    dest[len1 + 1] = '\0';
-    len1++;
-  }
-
-  // Skip leading '/' in path2 to avoid double separator
-  if (len2 > 0 && path2[0] == '/') {
-    path2++;
-    len2--;
-  }
-
-  strcat(dest, path2);
-
-  return 0;
-}
-
 const char CACHE_FOLDER[] = "__arcache__";
 const char FILE_IDENTIFIER[5] = "ARBI";
 const char BYTECODE_EXTENTION[] = "arbin";
 const uint32_t version_number = 0;
-
-#ifdef _WIN32
-#define PATH_SEP '\\'
-#else
-#define PATH_SEP '/'
-#endif
-
-char *replace_extension(const char *path, const char *new_ext) {
-  // Defensive: if new_ext doesn't start with '.', add it
-  int need_dot = (new_ext[0] != '.');
-
-  // Find last path separator to avoid changing dots in folder names
-  const char *last_sep = strrchr(path, PATH_SEP);
-#ifdef _WIN32
-  // Windows can have '/' too as separator in practice, check it
-  const char *last_alt_sep = strrchr(path, '/');
-  if (last_alt_sep && (!last_sep || last_alt_sep > last_sep)) {
-    last_sep = last_alt_sep;
-  }
-#endif
-
-  // Find last '.' after last_sep (if any)
-  const char *last_dot = strrchr(path, '.');
-  if (last_dot && (!last_sep || last_dot > last_sep)) {
-    // Extension found: copy path up to last_dot, then append new_ext
-    size_t base_len = last_dot - path;
-    size_t ext_len = strlen(new_ext) + (need_dot ? 1 : 0);
-    size_t new_len = base_len + ext_len + 1;
-
-    char *result = malloc(new_len);
-    if (!result)
-      return NULL;
-
-    memcpy(result, path, base_len);
-
-    if (need_dot)
-      result[base_len] = '.';
-
-    strcpy(result + base_len + (need_dot ? 1 : 0), new_ext);
-
-    return result;
-  } else {
-    // No extension found: append '.' + new_ext (if needed)
-    size_t path_len = strlen(path);
-    size_t ext_len = strlen(new_ext) + (need_dot ? 1 : 0);
-    size_t new_len = path_len + ext_len + 1;
-
-    char *result = malloc(new_len);
-    if (!result)
-      return NULL;
-
-    strcpy(result, path);
-
-    if (need_dot)
-      strcat(result, ".");
-
-    strcat(result, new_ext);
-
-    return result;
-  }
-}
 
 int load_cache(Translated *translated_dest, char *joined_paths, uint64_t hash) {
   FILE *bytecode_file = fopen(joined_paths, "rb");
@@ -236,7 +170,34 @@ int main(int argc, char *argv[]) {
   if (argc <= 1)
     return -1;
   ar_memory_init();
-  char *path = argv[1];
+  char *CWD = get_current_directory();
+  char *path_non_absolute = argv[1];
+  char path[FILENAME_MAX];
+  cwk_path_get_absolute(CWD, path_non_absolute, path,
+                        sizeof(path));
+
+  const char *basename_ptr;
+  size_t basename_length;
+  cwk_path_get_basename(path, &basename_ptr, &basename_length);
+
+  if (!basename_ptr) return -1;
+
+  char basename[FILENAME_MAX];
+  memcpy(basename, basename_ptr, basename_length);
+
+  size_t parent_directory_length;
+  cwk_path_get_dirname(path, &parent_directory_length);
+
+  char parent_directory[FILENAME_MAX];
+  memcpy(parent_directory, path, parent_directory_length);
+  parent_directory[parent_directory_length] = '\0';
+
+  char cache_folder_path[FILENAME_MAX];
+  cwk_path_join(parent_directory, CACHE_FOLDER, cache_folder_path, sizeof(cache_folder_path));
+
+  char cache_file_path[FILENAME_MAX];
+  cwk_path_join(cache_folder_path, basename, cache_file_path, sizeof(cache_file_path));
+  cwk_path_change_extension(cache_file_path, BYTECODE_EXTENTION, cache_file_path, sizeof(cache_file_path));
 
   FILE *file = fopen(path, "r");
   if (!file) {
@@ -255,21 +216,9 @@ int main(int argc, char *argv[]) {
   uint64_t hash = XXH3_64bits_digest(hash_state);
   XXH3_freeState(hash_state);
 
-  char *filename_without_extention =
-      replace_extension(path, BYTECODE_EXTENTION);
-
-  size_t joined_paths_length =
-      strlen(CACHE_FOLDER) + strlen(filename_without_extention) + 2;
-  char *joined_paths = checked_malloc(joined_paths_length);
-
-  path_join(joined_paths, joined_paths_length, CACHE_FOLDER,
-            filename_without_extention);
-  free(filename_without_extention);
-  filename_without_extention = NULL;
-
   Translated translated = init_translator();
 
-  if (load_cache(&translated, joined_paths, hash) != 0) {
+  if (load_cache(&translated, cache_file_path, hash) != 0) {
     free_translator(&translated);
     translated = init_translator();
 
@@ -305,9 +254,9 @@ int main(int argc, char *argv[]) {
     printf("Translation time taken: %f seconds\n", time_spent);
 
     darray_free(&ast, free_parsed);
-    ensure_dir_exists(CACHE_FOLDER);
+    ensure_dir_exists(cache_folder_path);
 
-    file = fopen(joined_paths, "wb");
+    file = fopen(cache_file_path, "wb");
 
     uint64_t constantsSize = (uint64_t)translated.constants.size;
     uint64_t bytecodeSize = (uint64_t)translated.bytecode.size;
@@ -342,6 +291,6 @@ int main(int argc, char *argv[]) {
   printf("total time taken: %f seconds\n", total_time_spent);
 
   free_translator(&translated);
-  free(joined_paths);
+  free(CWD);
   return 0;
 }
