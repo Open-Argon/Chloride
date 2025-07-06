@@ -22,7 +22,9 @@ ParsedValue *parse_access(char *file, DArray *tokens, size_t *index,
     ParsedValue *parsedString = parse_string(token, false);
     darray_push(&parsedAccess->access, parsedString);
     free(parsedString);
+    parsedAccess->access_fields = true;
   } else {
+    parsedAccess->access_fields = false;
     while (true) {
       skip_newlines_and_indents(tokens, index);
       error_if_finished(file, tokens, index);

@@ -3,6 +3,7 @@
 #include "../hashmap/hashmap.h"
 #include "declaration/declaration.h"
 #include "function/function.h"
+#include "identifier/identifier.h"
 #include "number/number.h"
 #include "string/string.h"
 #include <stddef.h>
@@ -122,6 +123,8 @@ size_t translate_parsed(Translated *translated, ParsedValue *parsedValue) {
   case AST_FUNCTION:
     return translate_parsed_function(translated,
                                      (ParsedFunction *)parsedValue->data);
+  case AST_IDENTIFIER:
+    return translate_parsed_identifier(translated, (char *)parsedValue->data);
   }
   return 0;
 }

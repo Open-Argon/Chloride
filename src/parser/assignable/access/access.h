@@ -5,6 +5,7 @@
 
 typedef struct {
   ParsedValue to_access;
+  bool access_fields;
   DArray access;
 } ParsedAccess;
 
