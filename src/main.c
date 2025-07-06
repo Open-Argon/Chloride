@@ -86,15 +86,13 @@ int load_cache(Translated *translated_dest, char *joined_paths, uint64_t hash) {
   FILE *bytecode_file = fopen(joined_paths, "rb");
   if (!bytecode_file)
     return 1;
-  char file_identifier_from_cache[sizeof(FILE_IDENTIFIER)];
-  file_identifier_from_cache[strlen(FILE_IDENTIFIER)] = '\0';
+  char file_identifier_from_cache[sizeof(FILE_IDENTIFIER)] = {0};
   if (fread(&file_identifier_from_cache, 1,
             sizeof(file_identifier_from_cache) - 1,
             bytecode_file) != sizeof(file_identifier_from_cache) - 1 ||
       memcmp(file_identifier_from_cache, FILE_IDENTIFIER,
              sizeof(file_identifier_from_cache)) != 0) {
-    fclose(bytecode_file);
-    return 1;
+    goto FAILED;
   }
 
   uint32_t read_version;
