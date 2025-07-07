@@ -79,13 +79,18 @@ void run_instruction(Translated *translated, RuntimeState *state,
   }
 }
 
-void runtime(Translated translated) {
+RuntimeState init_runtime_state(Translated translated) {
   RuntimeState state = {
       checked_malloc(translated.registerCount * sizeof(ArgonObject *)), 0};
-  struct Stack stack = {};
+  return state;
+}
+
+ArgonObject *runtime(Translated translated, RuntimeState state) {
+  struct Stack stack = {NULL,NULL};
   state.head = 0;
   while (state.head < translated.bytecode.size) {
     run_instruction(&translated, &state, stack);
   }
   free(state.registers);
+  return stack.scope;
 }
