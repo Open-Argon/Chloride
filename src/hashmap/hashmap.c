@@ -55,7 +55,9 @@ void resize_hashmap(struct hashmap *t) {
     while (temp) {
       hashmap_insert(t, temp->hash, temp->key, temp->val,
                      temp->order); // Will increment count
+      struct node *temp_temp = temp;
       temp = temp->next;
+      free(temp_temp);
     }
   }
   free(old_list);

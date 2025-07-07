@@ -160,34 +160,24 @@ FAILED:
   return 1;
 }
 
-int main(int argc, char *argv[]) {
-  generate_siphash_key(siphash_key);
+ArgonObject *execute(char*absolute_path) {
   clock_t start, end;
   double time_spent, total_time_spent = 0;
-  setlocale(LC_ALL, "");
-  if (argc <= 1)
-    return -1;
-  ar_memory_init();
-  char *CWD = get_current_directory();
-  char *path_non_absolute = argv[1];
-  char path[FILENAME_MAX];
-  cwk_path_get_absolute(CWD, path_non_absolute, path,
-                        sizeof(path));
 
   const char *basename_ptr;
   size_t basename_length;
-  cwk_path_get_basename(path, &basename_ptr, &basename_length);
+  cwk_path_get_basename(absolute_path, &basename_ptr, &basename_length);
 
-  if (!basename_ptr) return -1;
+  if (!basename_ptr) return NULL;
 
   char basename[FILENAME_MAX];
   memcpy(basename, basename_ptr, basename_length);
 
   size_t parent_directory_length;
-  cwk_path_get_dirname(path, &parent_directory_length);
+  cwk_path_get_dirname(absolute_path, &parent_directory_length);
 
   char parent_directory[FILENAME_MAX];
-  memcpy(parent_directory, path, parent_directory_length);
+  memcpy(parent_directory, absolute_path, parent_directory_length);
   parent_directory[parent_directory_length] = '\0';
 
   char cache_folder_path[FILENAME_MAX];
@@ -197,9 +187,9 @@ int main(int argc, char *argv[]) {
   cwk_path_join(cache_folder_path, basename, cache_file_path, sizeof(cache_file_path));
   cwk_path_change_extension(cache_file_path, BYTECODE_EXTENTION, cache_file_path, sizeof(cache_file_path));
 
-  FILE *file = fopen(path, "r");
+  FILE *file = fopen(absolute_path, "r");
   if (!file) {
-    return -1;
+    return NULL;
   }
 
   XXH3_state_t *hash_state = XXH3_createState();
@@ -223,7 +213,7 @@ int main(int argc, char *argv[]) {
     DArray tokens;
     darray_init(&tokens, sizeof(Token));
 
-    LexerState state = {path, file, 0, 0, &tokens};
+    LexerState state = {absolute_path, file, 0, 0, &tokens};
     start = clock();
     lexer(state);
     end = clock();
@@ -237,7 +227,7 @@ int main(int argc, char *argv[]) {
     darray_init(&ast, sizeof(ParsedValue));
 
     start = clock();
-    parser(path, &ast, &tokens, false);
+    parser(absolute_path, &ast, &tokens, false);
     end = clock();
     time_spent = (double)(end - start) / CLOCKS_PER_SEC;
     total_time_spent += time_spent;
@@ -277,10 +267,9 @@ int main(int argc, char *argv[]) {
     fclose(file);
   }
 
-  init_types();
-
   start = clock();
-  runtime(translated);
+  RuntimeState state = init_runtime_state(translated);
+  ArgonObject *resp = runtime(translated,state);
 
   end = clock();
   time_spent = (double)(end - start) / CLOCKS_PER_SEC;
@@ -289,6 +278,23 @@ int main(int argc, char *argv[]) {
   printf("total time taken: %f seconds\n", total_time_spent);
 
   free_translator(&translated);
+  return resp;
+}
+
+int main(int argc, char *argv[]) {
+  setlocale(LC_ALL, "");
+  ar_memory_init();
+  generate_siphash_key(siphash_key);
+  init_types();
+  char *CWD = get_current_directory();
+  if (argc <= 1)
+    return -1;
+  char *path_non_absolute = argv[1];
+  char path[FILENAME_MAX];
+  cwk_path_get_absolute(CWD, path_non_absolute, path,
+                        sizeof(path));
   free(CWD);
-  return 0;
+  ArgonObject *resp = execute(path);
+  if (resp) return 0;
+  return -1;
 }

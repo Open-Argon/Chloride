@@ -31,6 +31,8 @@ add_custom_target(GenerateLexer DEPENDS ${LEXER_C} ${LEXER_H})
 
 # Step 3: Add executable
 add_executable(argon external/xxhash/xxhash.c external/cwalk/src/cwalk.c ${CFILES} ${LEXER_C})
+set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+target_include_directories(argon PRIVATE ${CMAKE_SOURCE_DIR}/external/cwalk/include)
 
 # Step 4: Build order
 add_dependencies(argon GenerateLexer)
@@ -44,7 +46,7 @@ set_target_properties(argon PROPERTIES
 find_package(BDWgc REQUIRED)
 find_package(gmp REQUIRED)
 
-target_compile_options(argon PRIVATE -O3 -Wall -Wextra -Wno-unused-function -Iexternal/cwalk/include -s)
+target_compile_options(argon PRIVATE -O3 -Wall -Wextra -Wno-unused-function -s)
 target_link_options(argon PRIVATE -static)
 
 target_link_libraries(argon PRIVATE
@@ -56,3 +58,5 @@ target_link_libraries(argon PRIVATE
 target_include_directories(argon PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src/lexer
 )
+
+add_custom_command(TARGET argon POST_BUILD COMMAND ${CMAKE_STRIP} $<TARGET_FILE:argon>)

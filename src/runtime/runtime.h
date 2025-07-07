@@ -19,6 +19,8 @@ uint64_t pop_bytecode(Translated *translated, RuntimeState *state);
 
 void run_instruction(Translated *translated, RuntimeState *state, struct Stack stack);
 
-void runtime(Translated translated);
+RuntimeState init_runtime_state(Translated translated);
+
+ArgonObject *runtime(Translated translated, RuntimeState state);
 
 #endif // RUNTIME_H
