@@ -60,6 +60,4 @@ build
 *.yy.c
 *.yy.h
 
-out.arbin
-rand_test.ar
 __arcache__

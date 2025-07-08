@@ -33,7 +33,6 @@ void init_types() {
   init_base_field();
 }
 
-
 uint8_t pop_byte(Translated *translated, RuntimeState *state) {
   return *((uint8_t *)darray_get(&translated->bytecode, state->head++));
 }
@@ -63,8 +62,20 @@ void load_const(Translated *translated, RuntimeState *state) {
   state->registers[to_register] = object;
 }
 
-void run_instruction(Translated *translated, RuntimeState *state,
-                     struct Stack stack) {
+const ArErr no_err = (ArErr){false};
+
+ArErr create_err(char *path, int64_t line, char *type, char *message) {
+  return (ArErr){
+    false,
+    path,
+    line,
+    type,
+    message
+  };
+}
+
+    ArErr run_instruction(Translated *translated, RuntimeState *state,
+                          struct Stack stack) {
   OperationType opcode = pop_byte(translated, state);
   switch (opcode) {
   case OP_LOAD_NULL:
@@ -76,7 +87,11 @@ void run_instruction(Translated *translated, RuntimeState *state,
   case OP_LOAD_FUNCTION:
     load_argon_function(translated, state, stack);
     break;
+  default:
+    fprintf(stderr, "bytecode invalid\n");
+    exit(EXIT_FAILURE);
   }
+  return no_err;
 }
 
 RuntimeState init_runtime_state(Translated translated) {
@@ -86,7 +101,7 @@ RuntimeState init_runtime_state(Translated translated) {
 }
 
 ArgonObject *runtime(Translated translated, RuntimeState state) {
-  struct Stack stack = {NULL,NULL};
+  struct Stack stack = {NULL, NULL};
   state.head = 0;
   while (state.head < translated.bytecode.size) {
     run_instruction(&translated, &state, stack);
