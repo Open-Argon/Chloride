@@ -41,7 +41,7 @@ void resize_hashmap_GC(struct hashmap_GC *t) {
   }
 }
 
-int hashCode_GC(struct hashmap_GC *t, uint64_t hash) { return hash % t->size; }
+int hashCode_GC(struct hashmap_GC *t, uint64_t hash) { return hash & (t->size - 1); }
 
 int hashmap_remove_GC(struct hashmap_GC *t, uint64_t hash) {
   int pos = hashCode_GC(t, hash);

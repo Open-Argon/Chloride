@@ -1,4 +1,6 @@
 #include "declaration.h"
+#include "../../hashmap/hashmap.h"
+#include "../../hash_data/hash_data.h"
 #include "../../lexer/token.h"
 #include "../../memory.h"
 #include "../function/function.h"
@@ -23,7 +25,7 @@ ParsedValue *parse_declaration(char *file, DArray *tokens, size_t *index) {
     darray_push(declarations, &_declaration);
     ParsedSingleDeclaration *declaration =
         darray_get(declarations, declarations->size - 1);
-    bool isFunction=false;
+    bool isFunction = false;
     DArray parameters;
     declaration->from = parse_null();
 
@@ -41,6 +43,7 @@ ParsedValue *parse_declaration(char *file, DArray *tokens, size_t *index) {
     token = darray_get(tokens, *index);
     if (token->type == TOKEN_LPAREN) {
       isFunction = true;
+      struct hashmap *parameters_hashmap = createHashmap();
       darray_init(&parameters, sizeof(char *));
       (*index)++;
       error_if_finished(file, tokens, index);
@@ -63,8 +66,16 @@ ParsedValue *parse_declaration(char *file, DArray *tokens, size_t *index) {
                     file, token->line, token->column);
             exit(EXIT_FAILURE);
           }
-          char *parameter_name = checked_malloc(strlen(token->value) + 1);
+          uint64_t hash = siphash64_bytes(token->value, token->length, siphash_key);
+          if (hashmap_lookup(parameters_hashmap, hash) != NULL) {
+            fprintf(stderr,
+                    "%s:%zu:%zu error: duplicate argument '%.*s' in function definition\n",
+                    file, token->line, token->column, (int)token->length, token->value);
+            exit(EXIT_FAILURE);
+          }
+          char *parameter_name = checked_malloc(token->length + 1);
           strcpy(parameter_name, token->value);
+          hashmap_insert(parameters_hashmap, hash, parameter_name, (void*)1, 0);
           darray_push(&parameters, &parameter_name);
           (*index)++;
           error_if_finished(file, tokens, index);

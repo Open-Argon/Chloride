@@ -8,16 +8,25 @@ typedef struct {
   size_t head;
 } RuntimeState;
 
+typedef struct {
+  bool exists;
+  char *path;
+  int64_t line;
+  char *type;
+  char *message;
+} ArErr;
+
 typedef struct Stack {
-    ArgonObject *scope;
-    struct Stack *prev;
+  ArgonObject *scope;
+  struct Stack *prev;
 } Stack;
 
 void init_types();
 
 uint64_t pop_bytecode(Translated *translated, RuntimeState *state);
 
-void run_instruction(Translated *translated, RuntimeState *state, struct Stack stack);
+ArErr run_instruction(Translated *translated, RuntimeState *state,
+                      struct Stack stack);
 
 RuntimeState init_runtime_state(Translated translated);
 

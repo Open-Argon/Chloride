@@ -1,7 +1,7 @@
 import random
-myfile = open("rand_test.ar","w")
+import sys
 
-for i in range(10000000):
-  myfile.write("\"")
-  myfile.write(str(random.random())[2::])
-  myfile.write("\"\n")
+for i in range(100000000):
+  sys.stdout.write("\"")
+  sys.stdout.write(str(random.random()))
+  sys.stdout.write("\"\n")
