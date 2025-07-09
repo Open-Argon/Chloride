@@ -1,4 +1,5 @@
 #include "runtime.h"
+#include "../err.h"
 #include "../translator/translator.h"
 #include "objects/functions/functions.h"
 #include "objects/null/null.h"
@@ -62,20 +63,8 @@ void load_const(Translated *translated, RuntimeState *state) {
   state->registers[to_register] = object;
 }
 
-const ArErr no_err = (ArErr){false};
-
-ArErr create_err(char *path, int64_t line, char *type, char *message) {
-  return (ArErr){
-    false,
-    path,
-    line,
-    type,
-    message
-  };
-}
-
-    ArErr run_instruction(Translated *translated, RuntimeState *state,
-                          struct Stack stack) {
+ArErr run_instruction(Translated *translated, RuntimeState *state,
+                      struct Stack stack) {
   OperationType opcode = pop_byte(translated, state);
   switch (opcode) {
   case OP_LOAD_NULL:
@@ -88,24 +77,26 @@ ArErr create_err(char *path, int64_t line, char *type, char *message) {
     load_argon_function(translated, state, stack);
     break;
   default:
-    fprintf(stderr, "bytecode invalid\n");
-    exit(EXIT_FAILURE);
+    return create_err(0, 0, 0, NULL, "Runtime Error", "Invalid Opcode %#x", opcode);
   }
   return no_err;
 }
 
 RuntimeState init_runtime_state(Translated translated) {
-  RuntimeState state = {
+  return (RuntimeState){
       checked_malloc(translated.registerCount * sizeof(ArgonObject *)), 0};
-  return state;
 }
 
-ArgonObject *runtime(Translated translated, RuntimeState state) {
-  struct Stack stack = {NULL, NULL};
+Stack create_scope(Stack *prev) { return (Stack){NULL, prev}; }
+
+ArErr runtime(Translated translated, RuntimeState state, Stack stack) {
   state.head = 0;
   while (state.head < translated.bytecode.size) {
-    run_instruction(&translated, &state, stack);
+    ArErr err = run_instruction(&translated, &state, stack);
+    if (err.exists) {
+      return err;
+    }
   }
   free(state.registers);
-  return stack.scope;
+  return no_err;
 }

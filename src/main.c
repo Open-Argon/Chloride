@@ -35,6 +35,7 @@
 #include <limits.h>
 #include <unistd.h>
 #endif
+#include "err.h"
 
 char *get_current_directory() {
   char *buffer = NULL;
@@ -160,7 +161,7 @@ FAILED:
   return 1;
 }
 
-ArgonObject *execute(char*absolute_path) {
+Execution execute(char *absolute_path) {
   clock_t start, end;
   double time_spent, total_time_spent = 0;
 
@@ -168,7 +169,10 @@ ArgonObject *execute(char*absolute_path) {
   size_t basename_length;
   cwk_path_get_basename(absolute_path, &basename_ptr, &basename_length);
 
-  if (!basename_ptr) return NULL;
+  if (!basename_ptr)
+    return (Execution){create_err(0, 0 ,0 , NULL, "Path Error",
+                                  "path has no basename '%s'", absolute_path),
+                       (Stack){NULL, NULL}};
 
   char basename[FILENAME_MAX];
   memcpy(basename, basename_ptr, basename_length);
@@ -181,15 +185,20 @@ ArgonObject *execute(char*absolute_path) {
   parent_directory[parent_directory_length] = '\0';
 
   char cache_folder_path[FILENAME_MAX];
-  cwk_path_join(parent_directory, CACHE_FOLDER, cache_folder_path, sizeof(cache_folder_path));
+  cwk_path_join(parent_directory, CACHE_FOLDER, cache_folder_path,
+                sizeof(cache_folder_path));
 
   char cache_file_path[FILENAME_MAX];
-  cwk_path_join(cache_folder_path, basename, cache_file_path, sizeof(cache_file_path));
-  cwk_path_change_extension(cache_file_path, BYTECODE_EXTENTION, cache_file_path, sizeof(cache_file_path));
+  cwk_path_join(cache_folder_path, basename, cache_file_path,
+                sizeof(cache_file_path));
+  cwk_path_change_extension(cache_file_path, BYTECODE_EXTENTION,
+                            cache_file_path, sizeof(cache_file_path));
 
   FILE *file = fopen(absolute_path, "r");
   if (!file) {
-    return NULL;
+    return (Execution){create_err(0, 0, 0, NULL, "File Error", "Unable to open file '%s'",
+                                  absolute_path),
+                       (Stack){NULL, NULL}};
   }
 
   XXH3_state_t *hash_state = XXH3_createState();
@@ -215,7 +224,13 @@ ArgonObject *execute(char*absolute_path) {
 
     LexerState state = {absolute_path, file, 0, 0, &tokens};
     start = clock();
-    lexer(state);
+    ArErr err = lexer(state);
+    if (err.exists) {
+      free_translator(&translated);
+      darray_free(&tokens, free_token);
+      return (Execution){err,
+                       (Stack){NULL, NULL}};
+    }
     end = clock();
     time_spent = (double)(end - start) / CLOCKS_PER_SEC;
     total_time_spent += time_spent;
@@ -269,7 +284,8 @@ ArgonObject *execute(char*absolute_path) {
 
   start = clock();
   RuntimeState state = init_runtime_state(translated);
-  ArgonObject *resp = runtime(translated,state);
+  Stack main_scope = create_scope(NULL);
+  ArErr err = runtime(translated, state, main_scope);
 
   end = clock();
   time_spent = (double)(end - start) / CLOCKS_PER_SEC;
@@ -278,7 +294,7 @@ ArgonObject *execute(char*absolute_path) {
   printf("total time taken: %f seconds\n", total_time_spent);
 
   free_translator(&translated);
-  return resp;
+  return (Execution){err, main_scope};
 }
 
 int main(int argc, char *argv[]) {
@@ -291,10 +307,12 @@ int main(int argc, char *argv[]) {
     return -1;
   char *path_non_absolute = argv[1];
   char path[FILENAME_MAX];
-  cwk_path_get_absolute(CWD, path_non_absolute, path,
-                        sizeof(path));
+  cwk_path_get_absolute(CWD, path_non_absolute, path, sizeof(path));
   free(CWD);
-  ArgonObject *resp = execute(path);
-  if (resp) return 0;
-  return -1;
+  Execution resp = execute(path);
+  if (resp.err.exists){
+    output_err(resp.err);
+    return -1;
+  }
+  return 0;
 }

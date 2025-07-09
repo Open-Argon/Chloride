@@ -4,9 +4,10 @@
 #include "../dynamic_array/darray.h"
 #include "token.h"
 #include <stdio.h>
+#include "../err.h"
 
 typedef struct {
-  const char *path;
+  char *path;
   FILE *file;
   size_t current_line;
   size_t current_column;
@@ -14,6 +15,6 @@ typedef struct {
   // add more fields as needed
 } LexerState;
 
-void lexer(LexerState state);
+ArErr lexer(LexerState state);
 
 #endif // LEXER_H

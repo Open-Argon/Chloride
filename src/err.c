@@ -1,0 +1,134 @@
+#include "err.h"
+#include "../external/libdye/include/dye.h"
+#include <ctype.h>
+#include <stdarg.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+const ArErr no_err = (ArErr){false};
+
+ArErr create_err(int64_t line, int64_t column, int length, char *path,
+                 const char *type, const char *fmt, ...) {
+  ArErr err;
+  err.exists = true;
+  err.path = path;
+  err.line = line;
+  err.column = column;
+  err.length = length;
+
+  // Copy error type safely
+  strncpy(err.type, type, sizeof(err.type) - 1);
+  err.type[sizeof(err.type) - 1] = '\0';
+
+  // Format error message
+  va_list args;
+  va_start(args, fmt);
+  vsnprintf(err.message, sizeof(err.message), fmt, args);
+  va_end(args);
+
+  return err;
+}
+
+void output_err(ArErr err) {
+  if (!err.exists)
+    return;
+  dye(stderr, DYE_WHITE, DYE_RED);
+  fprintf(stderr, "ERROR!");
+  dye(stderr, DYE_RESET, DYE_RESET);
+  fprintf(stderr, " ");
+  dyefg(stderr, DYE_RED);
+  dye_style(stderr, DYE_STYLE_BOLD);
+  fprintf(stderr, "%s", err.type);
+  dye_style(stderr, DYE_STYLE_RESET);
+  dyefg(stderr, DYE_RESET);
+  fprintf(stderr, ": ");
+  dyefg(stderr, DYE_RED);
+  fprintf(stderr, "%s", err.message);
+  dye_style(stderr, DYE_STYLE_RESET);
+  dyefg(stderr, DYE_RESET);
+  fprintf(stderr, "\n");
+
+  if (err.path && err.line) {
+    dyefg(stderr, DYE_GRAY);
+    fprintf(stderr, "  --> ");
+    dyefg(stderr, DYE_CYAN);
+    fprintf(stderr, "%s", err.path);
+    dyefg(stderr, DYE_GRAY);
+    fprintf(stderr, ":");
+    dyefg(stderr, DYE_YELLOW);
+    fprintf(stderr, "%zu", err.line);
+    dyefg(stderr, DYE_GRAY);
+    fprintf(stderr, ":");
+    dyefg(stderr, DYE_YELLOW);
+    fprintf(stderr, "%zu", err.column);
+    dye_style(stderr, DYE_STYLE_RESET);
+    dyefg(stderr, DYE_RESET);
+    fprintf(stderr, "\n");
+    FILE *file = fopen(err.path, "r");
+    if (file) {
+      dye_style(stderr, DYE_STYLE_RESET);
+      dyefg(stderr, DYE_RESET);
+      int line_number_width = snprintf(NULL, 0, "%zu", err.line);
+      char *buffer = NULL;
+      size_t size = 0;
+      int current_line = 1;
+      ssize_t len;
+
+      while ((len = getline(&buffer, &size, file)) != -1) {
+        if (current_line == err.line) {
+          break;
+        }
+        current_line++;
+      }
+      fprintf(stderr, "  ");
+      for (int i = 0; i < line_number_width; i++) {
+        fprintf(stderr, " ");
+      }
+      fprintf(stderr, "|\n");
+      getline(&buffer, &size, file);
+
+      char *line_starts = buffer;
+      while (*line_starts && isspace((unsigned char)*line_starts)) {
+        line_starts++;
+        err.column--;
+      }
+      fprintf(stderr, " %zu | ", err.line);
+      if (err.length) {
+        fprintf(stderr, "%.*s", (int)err.column - 1, line_starts);
+        dyefg(stderr, DYE_RED);
+        dye_style(stderr, DYE_STYLE_BOLD);
+        fprintf(stderr, "%.*s", err.length, line_starts + err.column - 1);
+        dye_style(stderr, DYE_STYLE_RESET);
+        dyefg(stderr, DYE_RESET);
+        fprintf(stderr, "%s", line_starts + (int)err.column + err.length - 1);
+        for (int64_t i = 0; i < err.column - 1; i++) {
+          fprintf(stderr, " ");
+        }
+      } else {
+        fprintf(stderr, "%s", line_starts);
+      }
+      free(buffer);
+      fprintf(stderr, "\n  ");
+      for (int i = 0; i < line_number_width; i++) {
+        fprintf(stderr, " ");
+      }
+      fprintf(stderr, "| ");
+
+      for (int i = 1; i < err.column; i++) {
+        fprintf(stderr, " ");
+      }
+      dyefg(stderr, DYE_RED);
+      dye_style(stderr, DYE_STYLE_BOLD);
+      for (int i = 0; i < err.length; i++) {
+        fprintf(stderr, "^");
+      }
+      dye_style(stderr, DYE_STYLE_RESET);
+      dyefg(stderr, DYE_RESET);
+      fprintf(stderr, "\n");
+    }
+  }
+}

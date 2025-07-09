@@ -72,6 +72,7 @@ typedef enum {
   TOKEN_COMMA,
   TOKEN_COLON,
   TOKEN_EXCLAMATION,
+  TOKEN_INVALID,
 } TokenType;
 
 typedef struct {

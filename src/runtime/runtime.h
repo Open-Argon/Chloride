@@ -2,24 +2,12 @@
 #define RUNTIME_H
 #include "../translator/translator.h"
 #include "internals/hashmap/hashmap.h"
+#include "../returnTypes.h"
 
 typedef struct {
   ArgonObject **registers;
   size_t head;
 } RuntimeState;
-
-typedef struct {
-  bool exists;
-  char *path;
-  int64_t line;
-  char *type;
-  char *message;
-} ArErr;
-
-typedef struct Stack {
-  ArgonObject *scope;
-  struct Stack *prev;
-} Stack;
 
 void init_types();
 
@@ -30,6 +18,8 @@ ArErr run_instruction(Translated *translated, RuntimeState *state,
 
 RuntimeState init_runtime_state(Translated translated);
 
-ArgonObject *runtime(Translated translated, RuntimeState state);
+Stack create_scope(Stack *prev);
+
+ArErr runtime(Translated translated, RuntimeState state, Stack stack);
 
 #endif // RUNTIME_H
