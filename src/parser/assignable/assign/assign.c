@@ -18,20 +18,26 @@ ParsedValueReturn parse_assign(char *file, DArray *tokens,
     ParsedCall *call = assign_to->data;
     for (size_t i = 0; i < call->args.size; i++) {
       if (((ParsedValue *)darray_get(&call->args, i))->type != AST_IDENTIFIER) {
-        fprintf(stderr,
-                "%s:%zu:%zu error: parameter names need to start with a letter "
+        free_parsed(assign_to);
+        free(assign_to);
+        return (ParsedValueReturn){
+            create_err(
+                token->line, token->column, token->length, file, "Syntax Error",
+                "parameter names need to start with a letter "
                 "or _, "
-                "only use letters, digits, or _, and can't be keywords.\n",
-                file, token->line, token->column);
-        exit(EXIT_FAILURE);
-        
+                "only use letters, digits, or _, and can't be keywords."),
+            NULL};
       }
     }
     break;
   default:
-    fprintf(stderr, "%s:%zu:%zu error: can't assign to %s\n", file, token->line,
-            token->column, ValueTypeNames[assign_to->type]);
-    exit(EXIT_FAILURE);
+    free_parsed(assign_to);
+    free(assign_to);
+    return (ParsedValueReturn){create_err(token->line, token->column,
+                                          token->length, file, "Syntax Error",
+                                          "can't assign to %s",
+                                          ValueTypeNames[assign_to->type]),
+                               NULL};
   }
   ParsedAssign *assign = checked_malloc(sizeof(ParsedAssign));
   assign->to = assign_to;
@@ -50,9 +56,12 @@ ParsedValueReturn parse_assign(char *file, DArray *tokens,
   }
   assign->from = from.value;
   if (!assign->from) {
-    fprintf(stderr, "%s:%zu:%zu error: syntax error\n", file, token->line,
-            token->column);
-    exit(EXIT_FAILURE);
+    free_parsed(parsedValue);
+    free(parsedValue);
+    return (ParsedValueReturn){create_err(token->line, token->column,
+                                          token->length, file, "Syntax Error",
+                                          "expected body"),
+                               NULL};
   }
   return (ParsedValueReturn){no_err, parsedValue};
 }
@@ -62,7 +71,9 @@ void free_parse_assign(void *ptr) {
   ParsedAssign *parsedAssign = parsedValue->data;
   free_parsed(parsedAssign->to);
   free(parsedAssign->to);
-  free_parsed(parsedAssign->from);
-  free(parsedAssign->from);
+  if (parsedAssign->from) {
+    free_parsed(parsedAssign->from);
+    free(parsedAssign->from);
+  }
   free(parsedAssign);
 }
