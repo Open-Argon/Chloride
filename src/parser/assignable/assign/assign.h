@@ -9,8 +9,8 @@ typedef struct {
   ParsedValue * from;
 } ParsedAssign;
 
-ParsedValue *parse_assign(char*file, DArray *tokens,
-                          ParsedValue *assign_to, size_t *index);
+ParsedValueReturn parse_assign(char *file, DArray *tokens, ParsedValue *assign_to,
+                          size_t *index);
 
 void free_parse_assign(void*ptr);
 

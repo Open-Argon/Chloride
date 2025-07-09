@@ -4,6 +4,6 @@
 #include "../../../lexer/token.h"  // for Token
 
 // Function declaration for parsing an identifier
-ParsedValue * parse_identifier(Token * token);
+ParsedValueReturn parse_identifier(Token *token);
 
 #endif // IDENTIFIER_H

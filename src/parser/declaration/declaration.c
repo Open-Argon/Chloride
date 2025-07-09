@@ -1,6 +1,6 @@
 #include "declaration.h"
-#include "../../hashmap/hashmap.h"
 #include "../../hash_data/hash_data.h"
+#include "../../hashmap/hashmap.h"
 #include "../../lexer/token.h"
 #include "../../memory.h"
 #include "../function/function.h"
@@ -10,7 +10,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-ParsedValue *parse_declaration(char *file, DArray *tokens, size_t *index) {
+ParsedValueReturn parse_declaration(char *file, DArray *tokens, size_t *index) {
   (*index)++;
   error_if_finished(file, tokens, index);
   Token *token = darray_get(tokens, *index);
@@ -30,16 +30,19 @@ ParsedValue *parse_declaration(char *file, DArray *tokens, size_t *index) {
     declaration->from = parse_null();
 
     if (token->type != TOKEN_IDENTIFIER) {
-      fprintf(stderr, "%s:%zu:%zu error: declaration requires an identifier\n",
-              file, token->line, token->column);
-      exit(EXIT_FAILURE);
+      free_parsed(parsedValue);
+      free(parsedValue);
+      return (ParsedValueReturn){
+          create_err(token->line, token->column, token->length, file,
+                     "Syntax Error", "declaration requires an identifier"),
+          NULL};
     }
     declaration->name =
         strcpy(checked_malloc(strlen(token->value) + 1), token->value);
 
     (*index)++;
     if ((*index) >= tokens->size)
-      return parsedValue;
+      return (ParsedValueReturn){no_err, parsedValue};
     token = darray_get(tokens, *index);
     if (token->type == TOKEN_LPAREN) {
       isFunction = true;
@@ -51,7 +54,7 @@ ParsedValue *parse_declaration(char *file, DArray *tokens, size_t *index) {
       if (token->type == TOKEN_RPAREN) {
         (*index)++;
         if ((*index) >= tokens->size)
-          return parsedValue;
+          return (ParsedValueReturn){no_err, parsedValue};
         token = darray_get(tokens, *index);
       } else {
         while ((*index) < tokens->size) {
@@ -59,23 +62,32 @@ ParsedValue *parse_declaration(char *file, DArray *tokens, size_t *index) {
           error_if_finished(file, tokens, index);
           token = darray_get(tokens, *index);
           if (token->type != TOKEN_IDENTIFIER) {
-            fprintf(stderr,
-                    "%s:%zu:%zu error: parameter names need to start with a "
-                    "letter or _, only use letters, digits, or _, and can't be "
-                    "keywords.\n",
-                    file, token->line, token->column);
-            exit(EXIT_FAILURE);
+            free_parsed(parsedValue);
+            free(parsedValue);
+            return (ParsedValueReturn){
+                create_err(
+                    token->line, token->column, token->length, file,
+                    "Syntax Error",
+                    "parameter names need to start with a letter or _, only "
+                    "use letters, digits, or _, and can't be keywords."),
+                NULL};
           }
-          uint64_t hash = siphash64_bytes(token->value, token->length, siphash_key);
+          uint64_t hash =
+              siphash64_bytes(token->value, token->length, siphash_key);
           if (hashmap_lookup(parameters_hashmap, hash) != NULL) {
-            fprintf(stderr,
-                    "%s:%zu:%zu error: duplicate argument '%.*s' in function definition\n",
-                    file, token->line, token->column, (int)token->length, token->value);
-            exit(EXIT_FAILURE);
+            free_parsed(parsedValue);
+            free(parsedValue);
+            return (ParsedValueReturn){
+                create_err(token->line, token->column, token->length, file,
+                           "Syntax Error",
+                           "duplicate argument in function "
+                           "definition"),
+                NULL};
           }
           char *parameter_name = checked_malloc(token->length + 1);
           strcpy(parameter_name, token->value);
-          hashmap_insert(parameters_hashmap, hash, parameter_name, (void*)1, 0);
+          hashmap_insert(parameters_hashmap, hash, parameter_name, (void *)1,
+                         0);
           darray_push(&parameters, &parameter_name);
           (*index)++;
           error_if_finished(file, tokens, index);
@@ -85,18 +97,22 @@ ParsedValue *parse_declaration(char *file, DArray *tokens, size_t *index) {
           if (token->type == TOKEN_RPAREN) {
             (*index)++;
             if ((*index) >= tokens->size)
-              return parsedValue;
+              return (ParsedValueReturn){no_err, parsedValue};
             token = darray_get(tokens, *index);
             break;
           } else if (token->type != TOKEN_COMMA) {
-            fprintf(stderr, "%s:%zu:%zu error: expected comma\n", file,
-                    token->line, token->column);
-            exit(EXIT_FAILURE);
+            free_parsed(parsedValue);
+            free(parsedValue);
+            return (ParsedValueReturn){
+                create_err(token->line, token->column, token->length, file,
+                           "Syntax Error", "expected comma"),
+                NULL};
           }
           (*index)++;
           error_if_finished(file, tokens, index);
         }
       }
+      hashmap_free(parameters_hashmap, NULL);
     }
     if (token->type == TOKEN_ASSIGN) {
       (*index)++;
@@ -104,11 +120,20 @@ ParsedValue *parse_declaration(char *file, DArray *tokens, size_t *index) {
 
       free(declaration->from);
 
-      declaration->from = parse_token(file, tokens, index, true);
+      ParsedValueReturn from = parse_token(file, tokens, index, true);
+      if (from.err.exists) {
+        free_parsed(parsedValue);
+        free(parsedValue);
+        return from;
+      }
+      declaration->from = from.value;
       if (!declaration->from) {
-        fprintf(stderr, "%s:%zu:%zu error: syntax error\n", file, token->line,
-                token->column);
-        exit(EXIT_FAILURE);
+        free_parsed(parsedValue);
+        free(parsedValue);
+        return (ParsedValueReturn){create_err(token->line, token->column,
+                                              token->length, file,
+                                              "Syntax Error", "expected body"),
+                                   NULL};
       }
     }
     if (isFunction) {
@@ -133,7 +158,7 @@ ParsedValue *parse_declaration(char *file, DArray *tokens, size_t *index) {
     error_if_finished(file, tokens, index);
     token = darray_get(tokens, *index);
   }
-  return parsedValue;
+  return (ParsedValueReturn){no_err, parsedValue};
 }
 
 void free_string(void *ptr) {
@@ -144,9 +169,12 @@ void free_string(void *ptr) {
 
 void free_single_declaration(void *ptr) {
   ParsedSingleDeclaration *declaration = ptr;
-  free(declaration->name);
-  free_parsed(declaration->from);
-  free(declaration->from);
+  if (declaration->name)
+    free(declaration->name);
+  if (declaration->from) {
+    free_parsed(declaration->from);
+    free(declaration->from);
+  }
 }
 
 void free_declaration(void *ptr) {

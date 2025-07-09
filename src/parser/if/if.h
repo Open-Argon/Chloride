@@ -8,8 +8,7 @@ typedef struct {
   ParsedValue *content;
 } ParsedConditional;
 
-ParsedValue *parse_if(char *file, DArray *tokens,
-                      size_t *index);
+ParsedValueReturn parse_if(char *file, DArray *tokens, size_t *index);
 
 void free_parsed_if(void *ptr);
 

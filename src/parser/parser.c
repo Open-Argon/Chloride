@@ -54,11 +54,11 @@ size_t skip_newlines_and_indents(DArray *tokens, size_t *index) {
   return count;
 }
 
-ParsedValue *parse_token_full(char *file, DArray *tokens, size_t *index,
-                              bool inline_flag, bool process_operations) {
+ParsedValueReturn parse_token_full(char *file, DArray *tokens, size_t *index,
+                                   bool inline_flag, bool process_operations) {
   Token *token = darray_get(tokens, *index);
 
-  ParsedValue *output = NULL;
+  ParsedValueReturn output;
 
   if (!inline_flag) {
     switch (token->type) {
@@ -71,15 +71,15 @@ ParsedValue *parse_token_full(char *file, DArray *tokens, size_t *index,
   switch (token->type) {
   case TOKEN_TRUE:
     (*index)++;
-    output = parse_true();
+    output = (ParsedValueReturn){no_err, parse_true()};
     break;
   case TOKEN_FALSE:
     (*index)++;
-    output = parse_false();
+    output = (ParsedValueReturn){no_err, parse_false()};
     break;
   case TOKEN_NULL:
     (*index)++;
-    output = parse_null();
+    output = (ParsedValueReturn){no_err, parse_null()};
     break;
   case TOKEN_STRING:
     (*index)++;
@@ -87,18 +87,19 @@ ParsedValue *parse_token_full(char *file, DArray *tokens, size_t *index,
     break;
   case TOKEN_NEW_LINE:
     (*index)++;
-    return NULL;
+    return (ParsedValueReturn){no_err, NULL};
   case TOKEN_INDENT:
     if (strlen(token->value) > 0 && (*index + 1) < tokens->size) {
       token = darray_get(tokens, (*index) + 1);
       if (token->type != TOKEN_NEW_LINE) {
-        fprintf(stderr, "%s:%zu:%zu error: invalid indentation\n", file,
-                token->line, token->column);
-        exit(EXIT_FAILURE);
+        return (ParsedValueReturn){
+            create_err(token->line, token->column, token->length, file,
+                       "Syntax Error", "unexpected indent"),
+            NULL};
       }
     }
     (*index)++;
-    return NULL;
+    return (ParsedValueReturn){no_err, NULL};
   case TOKEN_IDENTIFIER:
     (*index)++;
     output = parse_identifier(token);
@@ -128,6 +129,9 @@ ParsedValue *parse_token_full(char *file, DArray *tokens, size_t *index,
   // LHS required
   bool passed = false;
   while (!passed && (*index) < tokens->size) {
+    if (output.err.exists) {
+      return output;
+    }
     token = darray_get(tokens, *index);
     switch (token->type) {
     case TOKEN_ASSIGN:
@@ -138,18 +142,18 @@ ParsedValue *parse_token_full(char *file, DArray *tokens, size_t *index,
     case TOKEN_ASSIGN_PLUS:
     case TOKEN_ASSIGN_SLASH:
     case TOKEN_ASSIGN_STAR:
-      output = parse_assign(file, tokens, output, index);
+      output = parse_assign(file, tokens, output.value, index);
       break;
     case TOKEN_LPAREN:
-      output = parse_call(file, tokens, index, output);
+      output = parse_call(file, tokens, index, output.value);
       break;
     case TOKEN_DOT:
     case TOKEN_LBRACKET:
-      output = parse_access(file, tokens, index, output);
+      output = parse_access(file, tokens, index, output.value);
       break;
       SWITCH_OPERATIONS
       if (process_operations) {
-        output = parse_operations(file, tokens, index, output);
+        output = parse_operations(file, tokens, index, output.value);
         break;
       }
       /* fall through */
@@ -161,18 +165,21 @@ ParsedValue *parse_token_full(char *file, DArray *tokens, size_t *index,
   return output;
 }
 
-ParsedValue *parse_token(char *file, DArray *tokens, size_t *index,
-                         bool inline_flag) {
+ParsedValueReturn parse_token(char *file, DArray *tokens, size_t *index,
+                              bool inline_flag) {
   return parse_token_full(file, tokens, index, inline_flag, true);
 }
 
-void parser(char *file, DArray *parsed, DArray *tokens, bool inline_flag) {
+ArErr parser(char *file, DArray *parsed, DArray *tokens, bool inline_flag) {
   size_t index = 0;
   bool expecting_new_line = false;
   while (index < tokens->size) {
     size_t old_index = index;
-    ParsedValue *parsed_code = parse_token(file, tokens, &index, inline_flag);
-    if (parsed_code) {
+    ParsedValueReturn parsed_code =
+        parse_token(file, tokens, &index, inline_flag);
+    if (parsed_code.err.exists)
+      return parsed_code.err;
+    else if (parsed_code.value) {
       if (expecting_new_line) {
         Token *token = darray_get(tokens, old_index);
         fprintf(stderr, "%s:%zu:%zu error: expected a new line\n", file,
@@ -180,8 +187,8 @@ void parser(char *file, DArray *parsed, DArray *tokens, bool inline_flag) {
         exit(EXIT_FAILURE);
       }
       expecting_new_line = true;
-      darray_push(parsed, parsed_code);
-      free(parsed_code);
+      darray_push(parsed, parsed_code.value);
+      free(parsed_code.value);
     } else {
       expecting_new_line = false;
     }

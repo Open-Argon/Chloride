@@ -8,8 +8,7 @@ typedef struct {
   ParsedValue * value;
 } ParsedDictionaryEntry;
 
-ParsedValue *parse_dictionary(char *file, DArray *tokens,
-                      size_t *index);
+ParsedValueReturn parse_dictionary(char *file, DArray *tokens, size_t *index);
 
 void free_parsed_dictionary(void *ptr);
 
