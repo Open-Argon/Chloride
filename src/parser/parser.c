@@ -88,12 +88,13 @@ ParsedValueReturn parse_token_full(char *file, DArray *tokens, size_t *index,
   case TOKEN_NEW_LINE:
     (*index)++;
     return (ParsedValueReturn){no_err, NULL};
-  case TOKEN_INDENT:
+  case TOKEN_INDENT:;
+    Token *token_indent = token;
     if (strlen(token->value) > 0 && (*index + 1) < tokens->size) {
       token = darray_get(tokens, (*index) + 1);
       if (token->type != TOKEN_NEW_LINE) {
         return (ParsedValueReturn){
-            create_err(token->line, token->column, token->length, file,
+            create_err(token_indent->line, token_indent->column, token_indent->length, file,
                        "Syntax Error", "unexpected indent"),
             NULL};
       }
