@@ -8,7 +8,8 @@ typedef struct {
   DArray to_operate_on; // ParsedValue[]
 } ParsedOperation;
 
-ParsedValue *parse_operations(char*file,DArray *tokens, size_t * index, ParsedValue * first_parsed_value);
+ParsedValueReturn parse_operations(char *file, DArray *tokens, size_t *index,
+                              ParsedValue *first_parsed_value);
 
 void free_operation(void *ptr);
 

@@ -177,9 +177,9 @@ ArErr parser(char *file, DArray *parsed, DArray *tokens, bool inline_flag) {
     size_t old_index = index;
     ParsedValueReturn parsed_code =
         parse_token(file, tokens, &index, inline_flag);
-    if (parsed_code.err.exists)
+    if (parsed_code.err.exists) {
       return parsed_code.err;
-    else if (parsed_code.value) {
+    } else if (parsed_code.value) {
       if (expecting_new_line) {
         Token *token = darray_get(tokens, old_index);
         fprintf(stderr, "%s:%zu:%zu error: expected a new line\n", file,

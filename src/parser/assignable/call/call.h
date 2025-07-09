@@ -9,7 +9,7 @@ typedef struct {
 } ParsedCall;
 
 // Function declaration for parsing an identifier
-ParsedValue *parse_call(char *file, DArray *tokens, size_t *index,
+ParsedValueReturn parse_call(char *file, DArray *tokens, size_t *index,
                         ParsedValue *to_call);
 void free_parse_call(void *ptr);
 

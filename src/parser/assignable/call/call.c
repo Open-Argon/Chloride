@@ -6,8 +6,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-ParsedValue *parse_call(char *file, DArray *tokens, size_t *index,
-                        ParsedValue *to_call) {
+ParsedValueReturn parse_call(char *file, DArray *tokens, size_t *index,
+                             ParsedValue *to_call) {
   ParsedValue *parsedValue = checked_malloc(sizeof(ParsedValue));
   ParsedCall *call = checked_malloc(sizeof(ParsedCall));
   call->to_call = to_call;
@@ -21,9 +21,26 @@ ParsedValue *parse_call(char *file, DArray *tokens, size_t *index,
     while ((*index) < tokens->size) {
       skip_newlines_and_indents(tokens, index);
       error_if_finished(file, tokens, index);
-      ParsedValue *parsedArg = parse_token(file, tokens, index, true);
-      darray_push(&call->args, parsedArg);
-      free(parsedArg);
+      ParsedValueReturn parsedArg = parse_token(file, tokens, index, true);
+      if (parsedArg.err.exists) {
+        free_parsed(to_call);
+        free(to_call);
+        free_parsed(parsedValue);
+        free(parsedValue);
+        return parsedArg;
+      } else if (!parsedArg.value) {
+        free_parsed(to_call);
+        free(to_call);
+        free_parsed(parsedValue);
+        free(parsedValue);
+
+        return (ParsedValueReturn){
+            create_err(token->line, token->column, token->length, file,
+                       "Syntax Error", "expected argument"),
+            NULL};
+      }
+      darray_push(&call->args, parsedArg.value);
+      free(parsedArg.value);
       error_if_finished(file, tokens, index);
       skip_newlines_and_indents(tokens, index);
       error_if_finished(file, tokens, index);
@@ -40,7 +57,7 @@ ParsedValue *parse_call(char *file, DArray *tokens, size_t *index,
     }
   }
   (*index)++;
-  return parsedValue;
+  return (ParsedValueReturn){no_err, parsedValue};
 }
 
 void free_parse_call(void *ptr) {

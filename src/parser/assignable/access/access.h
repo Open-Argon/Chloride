@@ -10,7 +10,8 @@ typedef struct {
 } ParsedAccess;
 
 // Function declaration for parsing an identifier
-ParsedValue *parse_access(char*file,DArray *tokens, size_t * index, ParsedValue * to_access);
+ParsedValueReturn parse_access(char *file, DArray *tokens, size_t *index,
+                          ParsedValue *to_access);
 
 void free_parse_access(void *ptr);
 
