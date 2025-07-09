@@ -170,7 +170,7 @@ Execution execute(char *absolute_path) {
   cwk_path_get_basename(absolute_path, &basename_ptr, &basename_length);
 
   if (!basename_ptr)
-    return (Execution){create_err(0, 0 ,0 , NULL, "Path Error",
+    return (Execution){create_err(0, 0, 0, NULL, "Path Error",
                                   "path has no basename '%s'", absolute_path),
                        (Stack){NULL, NULL}};
 
@@ -196,8 +196,8 @@ Execution execute(char *absolute_path) {
 
   FILE *file = fopen(absolute_path, "r");
   if (!file) {
-    return (Execution){create_err(0, 0, 0, NULL, "File Error", "Unable to open file '%s'",
-                                  absolute_path),
+    return (Execution){create_err(0, 0, 0, NULL, "File Error",
+                                  "Unable to open file '%s'", absolute_path),
                        (Stack){NULL, NULL}};
   }
 
@@ -228,8 +228,7 @@ Execution execute(char *absolute_path) {
     if (err.exists) {
       free_translator(&translated);
       darray_free(&tokens, free_token);
-      return (Execution){err,
-                       (Stack){NULL, NULL}};
+      return (Execution){err, (Stack){NULL, NULL}};
     }
     end = clock();
     time_spent = (double)(end - start) / CLOCKS_PER_SEC;
@@ -242,7 +241,13 @@ Execution execute(char *absolute_path) {
     darray_init(&ast, sizeof(ParsedValue));
 
     start = clock();
-    parser(absolute_path, &ast, &tokens, false);
+    err = parser(absolute_path, &ast, &tokens, false);
+    if (err.exists) {
+      free_translator(&translated);
+      darray_free(&tokens, free_token);
+      darray_free(&ast, free_parsed);
+      return (Execution){err, (Stack){NULL, NULL}};
+    }
     end = clock();
     time_spent = (double)(end - start) / CLOCKS_PER_SEC;
     total_time_spent += time_spent;
@@ -310,7 +315,7 @@ int main(int argc, char *argv[]) {
   cwk_path_get_absolute(CWD, path_non_absolute, path, sizeof(path));
   free(CWD);
   Execution resp = execute(path);
-  if (resp.err.exists){
+  if (resp.err.exists) {
     output_err(resp.err);
     return -1;
   }

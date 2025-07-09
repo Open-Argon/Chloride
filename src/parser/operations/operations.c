@@ -8,7 +8,7 @@
 
 ParsedValue convert_to_operation(DArray *to_operate_on, DArray *operations) {
   if (to_operate_on->size == 1) {
-    return *((ParsedValue*)darray_get(to_operate_on, 0));
+    return *((ParsedValue *)darray_get(to_operate_on, 0));
   }
   TokenType operation = 0;
   DArray positions;
@@ -37,23 +37,24 @@ ParsedValue convert_to_operation(DArray *to_operate_on, DArray *operations) {
         to_operate_on, to_operate_on_last_position, (*position) + 1);
     DArray operations_slice =
         darray_slice(operations, last_position, *position);
-    ParsedValue result =  convert_to_operation(&to_operate_on_slice, &operations_slice);
-    darray_push(&operationStruct->to_operate_on,
-                &result);
+    ParsedValue result =
+        convert_to_operation(&to_operate_on_slice, &operations_slice);
+    darray_push(&operationStruct->to_operate_on, &result);
     last_position = (*position);
     to_operate_on_last_position = (*position) + 1;
   }
-  DArray to_operate_on_slice =
-      darray_slice(to_operate_on, to_operate_on_last_position, to_operate_on->size);
-  DArray operations_slice = darray_slice(operations, last_position, operations->size);
-  ParsedValue result =convert_to_operation(&to_operate_on_slice, &operations_slice);
-  darray_push(&operationStruct->to_operate_on,
-              &result);
+  DArray to_operate_on_slice = darray_slice(
+      to_operate_on, to_operate_on_last_position, to_operate_on->size);
+  DArray operations_slice =
+      darray_slice(operations, last_position, operations->size);
+  ParsedValue result =
+      convert_to_operation(&to_operate_on_slice, &operations_slice);
+  darray_push(&operationStruct->to_operate_on, &result);
   darray_free(&positions, NULL);
   return parsedValue;
 }
 
-ParsedValue *parse_operations(char *file, DArray *tokens, size_t *index,
+ParsedValueReturn parse_operations(char *file, DArray *tokens, size_t *index,
                               ParsedValue *first_parsed_value) {
   DArray to_operate_on;
   darray_init(&to_operate_on, sizeof(ParsedValue));
@@ -77,17 +78,29 @@ ParsedValue *parse_operations(char *file, DArray *tokens, size_t *index,
     darray_push(&operations, &token->type);
     (*index)++;
     error_if_finished(file, tokens, index);
-    ParsedValue *parsedValue =
+    ParsedValueReturn parsedValue =
         parse_token_full(file, tokens, index, true, false);
-    darray_push(&to_operate_on, parsedValue);
-    free(parsedValue);
+    if (parsedValue.err.exists) {
+      darray_free(&to_operate_on, free_parsed);
+      darray_free(&operations, NULL);
+      return parsedValue;
+    } else if (!parsedValue.value) {
+      darray_free(&to_operate_on, free_parsed);
+      darray_free(&operations, NULL);
+      return (ParsedValueReturn){
+            create_err(token->line, token->column, token->length, file,
+                       "Syntax Error", "expected value"),
+            NULL};
+    }
+    darray_push(&to_operate_on, parsedValue.value);
+    free(parsedValue.value);
   }
   ParsedValue *parsedValue = checked_malloc(sizeof(ParsedValue));
   ParsedValue output = convert_to_operation(&to_operate_on, &operations);
-  memcpy(parsedValue, &output,sizeof(ParsedValue));
+  memcpy(parsedValue, &output, sizeof(ParsedValue));
   darray_free(&to_operate_on, NULL);
   darray_free(&operations, NULL);
-  return parsedValue;
+  return (ParsedValueReturn){no_err,parsedValue};
 }
 
 void free_operation(void *ptr) {

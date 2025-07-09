@@ -30,13 +30,14 @@ ParsedValueReturn parse_assign(char *file, DArray *tokens,
       }
     }
     break;
-  default:
-    free_parsed(assign_to);
-    free(assign_to);
-    return (ParsedValueReturn){create_err(token->line, token->column,
+  default:;
+    ArErr err = create_err(token->line, token->column,
                                           token->length, file, "Syntax Error",
                                           "can't assign to %s",
-                                          ValueTypeNames[assign_to->type]),
+                                          ValueTypeNames[assign_to->type]);
+    free_parsed(assign_to);
+    free(assign_to);
+    return (ParsedValueReturn){err,
                                NULL};
   }
   ParsedAssign *assign = checked_malloc(sizeof(ParsedAssign));
