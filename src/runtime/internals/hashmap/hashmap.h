@@ -3,8 +3,6 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-typedef struct ArgonObject ArgonObject;
-
 struct node_GC {
   uint64_t hash;
   void *key;

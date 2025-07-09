@@ -3,8 +3,6 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-typedef struct ArgonObject ArgonObject;
-
 typedef void (*free_val_func)(void *val);
 
 struct node {

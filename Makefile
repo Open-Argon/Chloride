@@ -2,8 +2,8 @@ LEXER_SRC = src/lexer/lex.l
 LEXER_C = src/lexer/lex.yy.c
 LEXER_H = src/lexer/lex.yy.h
 
-CFILES = external/xxhash/xxhash.c external/cwalk/src/cwalk.c $(shell find src -name '*.c')
-CFLAGS = $(ARCHFLAGS) -lm -lgc -lgmp -Wall -Wextra -Wno-unused-function -Iexternal/cwalk/include
+CFILES = external/xxhash/xxhash.c external/cwalk/src/cwalk.c external/libdye/src/dye.c $(shell find src -name '*.c')
+CFLAGS = $(ARCHFLAGS) -lm -lgc -lgmp -Wall -Wextra -Wno-unused-function -Iexternal/cwalk/include -Iexternal/libdye/include
 BINARY = bin/argon
 
 all: $(BINARY)

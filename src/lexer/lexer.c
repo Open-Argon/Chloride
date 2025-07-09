@@ -1,8 +1,8 @@
 #include "lexer.h"
-#include "lex.yy.h"
 #include "../string/string.h"
+#include "lex.yy.h"
 
-void lexer(LexerState state) {
+ArErr lexer(LexerState state) {
   size_t line = 1;
   size_t column = 1;
   int ch;
@@ -32,13 +32,16 @@ void lexer(LexerState state) {
 
   int token;
   while ((token = yylex(scanner)) != 0) {
-    Token token_struct = (Token){
-      token,
-      state.current_line+1,
-      state.current_column+1,
-      yyget_leng(scanner),
-      cloneString(yyget_text(scanner))
-    };
+    if (token == TOKEN_INVALID) {
+      ArErr err = create_err(state.current_line + 1, state.current_column + 1,
+                        yyget_leng(scanner), state.path, "Syntax Error",
+                        "Invalid Token '%s'", yyget_text(scanner));
+      yylex_destroy(scanner);
+      return err;
+    }
+    Token token_struct =
+        (Token){token, state.current_line + 1, state.current_column + 1,
+                yyget_leng(scanner), cloneString(yyget_text(scanner))};
     darray_push(state.tokens, &token_struct);
     if (token == TOKEN_NEW_LINE) {
       state.current_line += 1;
@@ -48,4 +51,5 @@ void lexer(LexerState state) {
     }
   }
   yylex_destroy(scanner);
+  return no_err;
 }

@@ -108,8 +108,6 @@ int yywrap(void * unused_param) {
 #[^\n]*        { /* skip comment */ }
 
 .   {
-    GET_STATE
-    fprintf(stderr, "%s:%zu:%zu error: unexpected character '%s'\n", state->path, state->current_line+1, COLUMN_NO+1, yytext);
-    exit(1);
+    return TOKEN_INVALID;
 }
 %%
