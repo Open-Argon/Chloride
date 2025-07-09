@@ -291,7 +291,7 @@ Execution execute(char *absolute_path) {
   RuntimeState state = init_runtime_state(translated);
   Stack main_scope = create_scope(NULL);
   ArErr err = runtime(translated, state, main_scope);
-
+  free(state.registers);
   end = clock();
   time_spent = (double)(end - start) / CLOCKS_PER_SEC;
   total_time_spent += time_spent;

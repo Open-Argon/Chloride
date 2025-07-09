@@ -92,21 +92,20 @@ void output_err(ArErr err) {
       getline(&buffer, &size, file);
 
       char *line_starts = buffer;
-      char line_column = err.column;
-      while (*line_starts && isspace((unsigned char)*line_starts) && line_starts-buffer < err.column) {
+      while (*line_starts && isspace((unsigned char)*line_starts) && line_starts-buffer < err.column-1) {
         line_starts++;
-        line_column--;
+        err.column--;
       }
       fprintf(stderr, " %zu | ", err.line);
       if (err.length) {
-        fprintf(stderr, "%.*s", (int)line_column - 1, line_starts);
+        fprintf(stderr, "%.*s", (int)err.column-1, line_starts);
         dyefg(stderr, DYE_RED);
         dye_style(stderr, DYE_STYLE_BOLD);
-        fprintf(stderr, "%.*s", err.length, line_starts + line_column - 1);
+        fprintf(stderr, "%.*s", err.length, line_starts + err.column - 1);
         dye_style(stderr, DYE_STYLE_RESET);
         dyefg(stderr, DYE_RESET);
-        fprintf(stderr, "%s", line_starts + (int)line_column + err.length - 1);
-        for (int64_t i = 0; i < line_column - 1; i++) {
+        fprintf(stderr, "%s", line_starts + (int)err.column + err.length - 1);
+        for (int64_t i = 0; i < err.column - 1; i++) {
           fprintf(stderr, " ");
         }
       } else {
@@ -119,7 +118,7 @@ void output_err(ArErr err) {
       }
       fprintf(stderr, "| ");
 
-      for (int i = 1; i < line_column; i++) {
+      for (int i = 1; i < err.column; i++) {
         fprintf(stderr, " ");
       }
       dyefg(stderr, DYE_RED);
