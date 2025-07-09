@@ -4,3 +4,6 @@
 [submodule "external/cwalk"]
 	path = external/cwalk
 	url = https://github.com/likle/cwalk.git
+[submodule "external/libdye"]
+	path = external/libdye
+	url = https://github.com/kuzalekon/libdye.git
