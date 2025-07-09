@@ -24,7 +24,7 @@ void free_string_dowrap(void *ptr) {
   free(str);
 }
 
-ParsedValue *parse_dowrap(char *file, DArray *tokens, size_t *index) {
+ParsedValueReturn parse_dowrap(char *file, DArray *tokens, size_t *index) {
   ParsedValue *parsedValue = checked_malloc(sizeof(ParsedValue));
   parsedValue->type = AST_DOWRAP;
   DArray *dowrap_parsed = checked_malloc(sizeof(DArray));
@@ -32,9 +32,13 @@ ParsedValue *parse_dowrap(char *file, DArray *tokens, size_t *index) {
   parsedValue->data = dowrap_parsed;
   (*index)++;
   if ((*index) >= tokens->size)
-    return parsedValue;
+    return (ParsedValueReturn){no_err, parsedValue};
   Token *token = darray_get(tokens, *index);
   if (token->type != TOKEN_NEW_LINE) {
+    return (ParsedValueReturn){create_err(token->line, token->column,
+                                          token->length, file, "Syntax Error",
+                                          "expected body"),
+                               NULL};
     fprintf(stderr, "%s:%zu:%zu error: syntax error\n", file, token->line,
             token->column);
     exit(EXIT_FAILURE);
@@ -74,7 +78,7 @@ ParsedValue *parse_dowrap(char *file, DArray *tokens, size_t *index) {
         break;
       }
       if (temp_indent_depth > indent_depth) {
-        size_t indent_amount = temp_indent_depth-indent_depth;
+        size_t indent_amount = temp_indent_depth - indent_depth;
         Token indent_token;
         indent_token.line = token->line;
         indent_token.column = token->column;
@@ -85,21 +89,27 @@ ParsedValue *parse_dowrap(char *file, DArray *tokens, size_t *index) {
       }
       temp_indent_depth_toggle = false;
       temp_indent_depth = 0;
-      temp_index_count=0;
+      temp_index_count = 0;
       darray_push(&dowrap_tokens, token);
     }
   }
-  (*index)-=temp_index_count;
-  for (size_t i = 0; i<temp_index_count;i++) {
+  (*index) -= temp_index_count;
+  for (size_t i = 0; i < temp_index_count; i++) {
     darray_pop(&dowrap_tokens, NULL);
   }
-  parser(file, dowrap_parsed, &dowrap_tokens, false);
+  ArErr err = parser(file, dowrap_parsed, &dowrap_tokens, false);
 
   darray_free(&dowrap_tokens, NULL);
 
   darray_free(&to_free, free_string_dowrap);
 
-  return parsedValue;
+  if (err.exists) {
+    free_parsed(parsedValue);
+    free(parsedValue);
+    return (ParsedValueReturn){err, NULL};
+  }
+
+  return (ParsedValueReturn){no_err, parsedValue};
 }
 
 void free_dowrap(void *ptr) {

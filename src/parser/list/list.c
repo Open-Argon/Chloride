@@ -6,7 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-ParsedValue *parse_list(char *file, DArray *tokens, size_t *index) {
+ParsedValueReturn parse_list(char *file, DArray *tokens, size_t *index) {
   ParsedValue *parsedValue = checked_malloc(sizeof(ParsedValue));
   parsedValue->type = AST_LIST;
   DArray *list = checked_malloc(sizeof(DArray));
@@ -19,9 +19,14 @@ ParsedValue *parse_list(char *file, DArray *tokens, size_t *index) {
   if (token->type != TOKEN_RBRACKET) {
     while (true) {
       skip_newlines_and_indents(tokens, index);
-      ParsedValue *parsedValue = parse_token(file, tokens, index, true);
-      darray_push(list, parsedValue);
-      free(parsedValue);
+      ParsedValueReturn parsedItem = parse_token(file, tokens, index, true);
+      if (parsedItem.err.exists) {
+        free_parsed(parsedValue);
+        free(parsedValue);
+        return parsedItem;
+      }
+      darray_push(list, parsedItem.value);
+      free(parsedItem.value);
       error_if_finished(file, tokens, index);
       skip_newlines_and_indents(tokens, index);
       error_if_finished(file, tokens, index);
@@ -38,7 +43,7 @@ ParsedValue *parse_list(char *file, DArray *tokens, size_t *index) {
     }
   }
   (*index)++;
-  return parsedValue;
+  return (ParsedValueReturn){no_err, parsedValue};
 }
 
 void free_parsed_list(void *ptr) {

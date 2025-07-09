@@ -7,7 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-ParsedValue *parse_dictionary(char *file, DArray *tokens, size_t *index) {
+ParsedValueReturn parse_dictionary(char *file, DArray *tokens, size_t *index) {
   ParsedValue *parsedValue = checked_malloc(sizeof(ParsedValue));
   parsedValue->type = AST_DICTIONARY;
   DArray *dictionary = checked_malloc(sizeof(DArray));
@@ -23,17 +23,29 @@ ParsedValue *parse_dictionary(char *file, DArray *tokens, size_t *index) {
       error_if_finished(file, tokens, index);
       size_t keyIndex = *index;
       Token *keyToken = darray_get(tokens, *index);
-      ParsedValue *key;
+      ParsedValueReturn key;
       if (keyToken->type == TOKEN_IDENTIFIER) {
         (*index)++;
         key = parse_string(keyToken, false);
       } else {
         key = parse_token(file, tokens, index, true);
       }
+      if (key.err.exists) {
+        free_parsed(parsedValue);
+        free(parsedValue);
+        return key;
+      } else if (!key.value) {
+        free_parsed(parsedValue);
+        free(parsedValue);
+        return (ParsedValueReturn){create_err(token->line, token->column,
+                                              token->length, file,
+                                              "Syntax Error", "expected key"),
+                                   NULL};
+      }
       skip_newlines_and_indents(tokens, index);
       error_if_finished(file, tokens, index);
       token = darray_get(tokens, *index);
-      ParsedValue *value;
+      ParsedValueReturn value;
       bool tobreak = false;
       switch (token->type) {
       case TOKEN_COLON:
@@ -41,6 +53,22 @@ ParsedValue *parse_dictionary(char *file, DArray *tokens, size_t *index) {
         skip_newlines_and_indents(tokens, index);
         error_if_finished(file, tokens, index);
         value = parse_token(file, tokens, index, true);
+        if (value.err.exists) {
+          free_parsed(parsedValue);
+          free(parsedValue);
+          free_parsed(key.value);
+          free(key.value);
+          return value;
+        } else if (!value.value) {
+          free_parsed(parsedValue);
+          free(parsedValue);
+          free_parsed(key.value);
+          free(key.value);
+          return (ParsedValueReturn){
+              create_err(token->line, token->column, token->length, file,
+                         "Syntax Error", "expected value"),
+              NULL};
+        }
         skip_newlines_and_indents(tokens, index);
         error_if_finished(file, tokens, index);
         token = darray_get(tokens, *index);
@@ -63,7 +91,7 @@ ParsedValue *parse_dictionary(char *file, DArray *tokens, size_t *index) {
                 token->column);
         exit(EXIT_FAILURE);
       }
-      ParsedDictionaryEntry entry = {key, value};
+      ParsedDictionaryEntry entry = {key.value, value.value};
       darray_push(dictionary, &entry);
       if (tobreak) {
         break;
@@ -73,7 +101,7 @@ ParsedValue *parse_dictionary(char *file, DArray *tokens, size_t *index) {
     }
   }
   (*index)++;
-  return parsedValue;
+  return (ParsedValueReturn){no_err, parsedValue};
 }
 
 void free_dictionary_entry(void *ptr) {

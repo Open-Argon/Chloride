@@ -245,7 +245,7 @@ char *unquote(char *str, size_t *decoded_len) {
   return unescaped;
 }
 
-ParsedValue *parse_string(Token* token, bool to_unquote) {
+ParsedValueReturn parse_string(Token* token, bool to_unquote) {
   ParsedValue *parsedValue = checked_malloc(sizeof(ParsedValue));
   parsedValue->type = AST_STRING;
   ParsedString *parsedString = checked_malloc(sizeof(ParsedString));
@@ -253,11 +253,19 @@ ParsedValue *parse_string(Token* token, bool to_unquote) {
   if (to_unquote) {
     parsedString->length = 0;
     parsedString->string = unquote(token->value, &parsedString->length);
+    if (!parsedString->string) {
+      free(parsedValue);
+      free(parsedString);
+      return (ParsedValueReturn){create_err(token->line, token->column,
+                                            token->length, NULL, "String Error",
+                                            "failed to unquote string %s", token->value),
+                                 NULL};
+    }
   } else {
     parsedString->string = strdup(token->value);
     parsedString->length = token->length;
   }
-  return parsedValue;
+  return (ParsedValueReturn){no_err,parsedValue};
 }
 
 void free_parsed_string(void *ptr) {

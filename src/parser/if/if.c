@@ -6,7 +6,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-ParsedValue *parse_if(char *file, DArray *tokens, size_t *index) {
+void free_conditional(void *ptr) {
+  ParsedConditional *conditional = ptr;
+  if (conditional->condition) {
+    free_parsed(conditional->condition);
+    free(conditional->condition);
+  }
+  free_parsed(conditional->content);
+  free(conditional->content);
+}
+
+ParsedValueReturn parse_if(char *file, DArray *tokens, size_t *index) {
   (*index)++;
   error_if_finished(file, tokens, index);
 
@@ -35,28 +45,50 @@ ParsedValue *parse_if(char *file, DArray *tokens, size_t *index) {
       }
     }
 
-    ParsedValue *condition = NULL;
+    ParsedValueReturn condition = {no_err, NULL};
 
     if (token->type != TOKEN_ELSE) {
       // Parse ( condition )
       token = darray_get(tokens, *index);
       if (token->type != TOKEN_LPAREN) {
-        fprintf(stderr, "%s:%zu:%zu error: expected '(' after if\n", file,
-                token->line, token->column);
-        exit(EXIT_FAILURE);
+        darray_free(parsed_if, free_conditional);
+        free(parsed_if);
+        return (ParsedValueReturn){
+            create_err(token->line, token->column, token->length, file,
+                       "Syntax Error", "expected '(' after if"),
+            NULL};
       }
 
       (*index)++;
       error_if_finished(file, tokens, index);
       skip_newlines_and_indents(tokens, index);
       condition = parse_token(file, tokens, index, true);
+      if (condition.err.exists) {
+        darray_free(parsed_if, free_conditional);
+        free(parsed_if);
+        return condition;
+      } else if (!condition.value) {
+        darray_free(parsed_if, free_conditional);
+        free(parsed_if);
+        return (ParsedValueReturn){
+            create_err(token->line, token->column, token->length, file,
+                       "Syntax Error", "expected condition"),
+            NULL};
+      }
       skip_newlines_and_indents(tokens, index);
 
       token = darray_get(tokens, *index);
       if (token->type != TOKEN_RPAREN) {
-        fprintf(stderr, "%s:%zu:%zu error: missing closing ')' in condition\n",
-                file, token->line, token->column);
-        exit(EXIT_FAILURE);
+        if (condition.value) {
+          free_parsed(condition.value);
+          free(condition.value);
+        }
+        darray_free(parsed_if, free_conditional);
+        free(parsed_if);
+        return (ParsedValueReturn){
+            create_err(token->line, token->column, token->length, file,
+                       "Syntax Error", "missing closing ')' in condition"),
+            NULL};
       }
 
       (*index)++;
@@ -64,15 +96,32 @@ ParsedValue *parse_if(char *file, DArray *tokens, size_t *index) {
     }
 
     // Parse the body
-    ParsedValue *parsed_content = parse_token(file, tokens, index, false);
+    ParsedValueReturn parsed_content = parse_token(file, tokens, index, false);
 
-    if (!parsed_content) {
-      fprintf(stderr, "%s:%zu:%zu error: expected body after condition\n", file,
-              token->line, token->column);
-      exit(EXIT_FAILURE);
+    if (parsed_content.err.exists) {
+      if (condition.value) {
+        free_parsed(condition.value);
+        free(condition.value);
+      }
+      darray_free(parsed_if, free_conditional);
+      free(parsed_if);
+      return parsed_content;
     }
 
-    ParsedConditional conditional = {condition, parsed_content};
+    if (!parsed_content.value) {
+      if (condition.value) {
+        free_parsed(condition.value);
+        free(condition.value);
+      }
+      darray_free(parsed_if, free_conditional);
+      free(parsed_if);
+      return (ParsedValueReturn){create_err(token->line, token->column,
+                                            token->length, file, "Syntax Error",
+                                            "expected body"),
+                                 NULL};
+    }
+
+    ParsedConditional conditional = {condition.value, parsed_content.value};
     darray_push(parsed_if, &conditional);
 
     expect_conditional =
@@ -98,17 +147,7 @@ ParsedValue *parse_if(char *file, DArray *tokens, size_t *index) {
   //   printf("    - content value type: %d\n", cond->content->type);
   // }
 
-  return parsedValue;
-}
-
-void free_conditional(void *ptr) {
-  ParsedConditional *conditional = ptr;
-  if (conditional->condition) {
-    free_parsed(conditional->condition);
-    free(conditional->condition);
-  }
-  free_parsed(conditional->content);
-  free(conditional->content);
+  return (ParsedValueReturn){no_err, parsedValue};
 }
 
 void free_parsed_if(void *ptr) {

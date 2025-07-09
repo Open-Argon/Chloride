@@ -9,8 +9,7 @@ typedef struct {
 } ParsedSingleDeclaration;
 
 // Function declaration for parsing an identifier
-ParsedValue *parse_declaration(char *file, DArray *tokens,
-                              size_t *index);
+ParsedValueReturn parse_declaration(char *file, DArray *tokens, size_t *index);
 
 void free_declaration(void *ptr);
 

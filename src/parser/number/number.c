@@ -150,9 +150,9 @@
 //     return 0;
 // }
 
-ParsedValue *parse_number(Token *token) {
+ParsedValueReturn parse_number(Token *token) {
   ParsedValue *parsedValue = checked_malloc(sizeof(ParsedValue));
   parsedValue->type = AST_NUMBER;
   parsedValue->data = strdup(token->value);
-  return parsedValue;
+  return (ParsedValueReturn){no_err, parsedValue};
 }
