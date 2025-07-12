@@ -179,6 +179,7 @@ ArErr parser(char *file, DArray *parsed, DArray *tokens, bool inline_flag) {
     ParsedValueReturn parsed_code =
         parse_token(file, tokens, &index, inline_flag);
     if (parsed_code.err.exists) {
+      printf("%zu\n", old_index);
       return parsed_code.err;
     } else if (parsed_code.value) {
       if (expecting_new_line) {
@@ -194,6 +195,7 @@ ArErr parser(char *file, DArray *parsed, DArray *tokens, bool inline_flag) {
       expecting_new_line = false;
     }
   }
+  return no_err;
 }
 
 void free_parsed(void *ptr) {
@@ -205,6 +207,8 @@ void free_parsed(void *ptr) {
   ParsedValue *parsed = ptr;
   switch (parsed->type) {
   case AST_IDENTIFIER:
+    free_identifier(parsed);
+    break;
   case AST_NUMBER:
     free(parsed->data);
     break;

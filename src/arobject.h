@@ -3,6 +3,7 @@
 
 #include <gmp.h>
 #include "runtime/internals/dynamic_array_armem/darray_armem.h"
+#include "runtime/internals/hashmap/hashmap.h"
 
 typedef struct ArgonObject ArgonObject;  // forward declaration
 
@@ -22,7 +23,7 @@ struct string_struct {
 };
 
 typedef struct Stack {
-  ArgonObject *scope;
+  struct hashmap_GC *scope;
   struct Stack *prev;
 } Stack;
 

@@ -4,9 +4,22 @@
 #include <string.h>
 #include "../../../memory.h"
 
+
+
 ParsedValueReturn parse_identifier(Token *token) {
   ParsedValue *parsedValue = checked_malloc(sizeof(ParsedValue));
+  ParsedIdentifier *parsedIdentifier = checked_malloc(sizeof(ParsedIdentifier));
+  parsedIdentifier->name = strcpy(checked_malloc(token->length + 1), token->value);
+  parsedIdentifier->line = token->line;
+  parsedIdentifier->column = token->column;
   parsedValue->type = AST_IDENTIFIER;
-  parsedValue->data = strcpy(checked_malloc(strlen(token->value) + 1), token->value);
+  parsedValue->data = parsedIdentifier;
   return (ParsedValueReturn){no_err, parsedValue};
+}
+
+void free_identifier(void *ptr) {
+  ParsedValue *parsedValue = ptr;
+  ParsedIdentifier *parsed = parsedValue->data;
+  free(parsed->name);
+  free(parsed);
 }

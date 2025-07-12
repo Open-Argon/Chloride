@@ -80,6 +80,7 @@ Translated init_translator() {
   Translated translated;
   translated.registerCount = 0;
   darray_init(&translated.bytecode, sizeof(uint8_t));
+  darray_init(&translated.source_locations, sizeof(SourceLocation));
   arena_init(&translated.constants);
   return translated;
 }
@@ -124,7 +125,7 @@ size_t translate_parsed(Translated *translated, ParsedValue *parsedValue) {
     return translate_parsed_function(translated,
                                      (ParsedFunction *)parsedValue->data);
   case AST_IDENTIFIER:
-    return translate_parsed_identifier(translated, (char *)parsedValue->data);
+    return translate_parsed_identifier(translated, (ParsedIdentifier *)parsedValue->data);
   }
   return 0;
 }
@@ -138,5 +139,6 @@ void translate(Translated *translated, DArray *ast) {
 
 void free_translator(Translated *translated) {
   darray_free(&translated->bytecode, NULL);
+  darray_free(&translated->source_locations, NULL);
   arena_free(&translated->constants);
 }

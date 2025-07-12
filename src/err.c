@@ -80,6 +80,7 @@ void output_err(ArErr err) {
 
       while ((len = getline(&buffer, &size, file)) != -1) {
         if (current_line == err.line) {
+          printf("bruh\n");
           break;
         }
         current_line++;
@@ -89,12 +90,13 @@ void output_err(ArErr err) {
         fprintf(stderr, " ");
       }
       fprintf(stderr, "|\n");
-      getline(&buffer, &size, file);
 
       char *line_starts = buffer;
+      size_t skipped_chars = 0;
       while (*line_starts && isspace((unsigned char)*line_starts) && line_starts-buffer < err.column-1) {
         line_starts++;
         err.column--;
+        skipped_chars++;
       }
       fprintf(stderr, " %zu | ", err.line);
       if (err.length) {
@@ -104,7 +106,7 @@ void output_err(ArErr err) {
         fprintf(stderr, "%.*s", err.length, line_starts + err.column - 1);
         dye_style(stderr, DYE_STYLE_RESET);
         dyefg(stderr, DYE_RESET);
-        fprintf(stderr, "%s", line_starts + (int)err.column + err.length - 1);
+        fprintf(stderr, "%.*s", (int)len - (int)skipped_chars-(int)err.column-(int)err.length, line_starts + (int)err.column + err.length - 1);
         for (int64_t i = 0; i < err.column - 1; i++) {
           fprintf(stderr, " ");
         }
