@@ -3,6 +3,6 @@
 #include "../translator.h"
 #include "../../parser/assignable/identifier/identifier.h"
 
-size_t translate_parsed_identifier(Translated *translated, char* identifier);
+size_t translate_parsed_identifier(Translated *translated, ParsedIdentifier *parsedIdentifier);
 
 #endif

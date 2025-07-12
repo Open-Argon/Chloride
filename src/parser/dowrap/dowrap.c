@@ -35,13 +35,12 @@ ParsedValueReturn parse_dowrap(char *file, DArray *tokens, size_t *index) {
     return (ParsedValueReturn){no_err, parsedValue};
   Token *token = darray_get(tokens, *index);
   if (token->type != TOKEN_NEW_LINE) {
+    free_parsed(parsedValue);
+    free(parsedValue);
     return (ParsedValueReturn){create_err(token->line, token->column,
                                           token->length, file, "Syntax Error",
                                           "expected body"),
                                NULL};
-    fprintf(stderr, "%s:%zu:%zu error: syntax error\n", file, token->line,
-            token->column);
-    exit(EXIT_FAILURE);
   }
   size_t indent_depth = 0;
   bool temp_indent_depth_toggle = false;

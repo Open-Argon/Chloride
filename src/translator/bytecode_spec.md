@@ -43,3 +43,11 @@ initilises a function to a given register.
 6. instruction 4 and 5 loop for each argument.
 7. the offset of the bytecode of the function.
 8. the length of the bytecode of the function.
+
+## OP_IDENTIFIER
+
+initilises a function to a given register.
+
+1. the length of the identifer.
+2. the offset of the identifier.
+3. the index of the source location.

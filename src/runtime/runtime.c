@@ -1,5 +1,6 @@
 #include "runtime.h"
 #include "../err.h"
+#include "../hash_data/hash_data.h"
 #include "../translator/translator.h"
 #include "objects/functions/functions.h"
 #include "objects/null/null.h"
@@ -63,6 +64,31 @@ void load_const(Translated *translated, RuntimeState *state) {
   state->registers[to_register] = object;
 }
 
+ArErr load_variable(Translated *translated, RuntimeState *state,
+                    struct Stack stack) {
+  int64_t length = pop_bytecode(translated, state);
+  int64_t offset = pop_bytecode(translated, state);
+  int64_t source_location_index = pop_bytecode(translated, state);
+  char *name = checked_malloc(length);
+  memcpy(name, arena_get(&translated->constants, offset), length);
+  uint64_t hash = siphash64_bytes(name, length, siphash_key);
+  struct Stack *current_stack = &stack;
+  while (current_stack) {
+    ArgonObject *result = hashmap_lookup_GC(current_stack->scope, hash);
+    if (result) {
+      state->registers[0] = result;
+      free(name);
+      return no_err;
+    }
+    current_stack = current_stack->prev;
+  }
+  SourceLocation *source_location = darray_get(&translated->source_locations, source_location_index);
+  ArErr err = create_err(source_location->line, source_location->column, length, state->path, "Name Error", "name '%.*s' is not defined",
+                    (int)length, name);
+  free(name);
+  return err;
+}
+
 ArErr run_instruction(Translated *translated, RuntimeState *state,
                       struct Stack stack) {
   OperationType opcode = pop_byte(translated, state);
@@ -76,18 +102,25 @@ ArErr run_instruction(Translated *translated, RuntimeState *state,
   case OP_LOAD_FUNCTION:
     load_argon_function(translated, state, stack);
     break;
+  case OP_IDENTIFIER:
+    return load_variable(translated, state, stack);
   default:
-    return create_err(0, 0, 0, NULL, "Runtime Error", "Invalid Opcode %#x", opcode);
+    return create_err(0, 0, 0, NULL, "Runtime Error", "Invalid Opcode %#x",
+                      opcode);
   }
   return no_err;
 }
 
-RuntimeState init_runtime_state(Translated translated) {
+RuntimeState init_runtime_state(Translated translated, char *path) {
   return (RuntimeState){
-      checked_malloc(translated.registerCount * sizeof(ArgonObject *)), 0};
+      checked_malloc(translated.registerCount * sizeof(ArgonObject *)), 0,
+      path};
 }
 
-Stack create_scope(Stack *prev) { return (Stack){NULL, prev}; }
+Stack create_scope(Stack *prev) {
+  struct hashmap_GC *scope = createHashmap_GC();
+  return (Stack){scope, prev};
+}
 
 ArErr runtime(Translated translated, RuntimeState state, Stack stack) {
   state.head = 0;
@@ -97,6 +130,5 @@ ArErr runtime(Translated translated, RuntimeState state, Stack stack) {
       return err;
     }
   }
-  free(state.registers);
   return no_err;
 }

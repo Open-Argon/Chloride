@@ -21,8 +21,15 @@ typedef struct {
 typedef struct {
   uint8_t registerCount;
   DArray bytecode;
+  DArray source_locations;
   ConstantArena constants;
 } Translated;
+
+typedef struct {
+  uint64_t line;
+  uint64_t column;
+  uint64_t length;
+} SourceLocation;
 
 void arena_resize(ConstantArena *arena, size_t new_size);
 
@@ -38,9 +45,9 @@ void set_registers(Translated *translator, uint8_t count);
 
 Translated init_translator();
 
-size_t translate_parsed(Translated * translator, ParsedValue * parsedValue);
+size_t translate_parsed(Translated *translated, ParsedValue *parsedValue);
 
-void translate(Translated *translator, DArray *ast);
+void translate(Translated *translated, DArray *ast);
 
 void free_translator(Translated *translated);
 

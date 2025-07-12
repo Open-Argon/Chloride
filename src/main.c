@@ -84,6 +84,7 @@ const char BYTECODE_EXTENTION[] = "arbin";
 const uint32_t version_number = 0;
 
 int load_cache(Translated *translated_dest, char *joined_paths, uint64_t hash) {
+  bool translated_inited = false;
   FILE *bytecode_file = fopen(joined_paths, "rb");
   if (!bytecode_file)
     return 1;
@@ -138,6 +139,16 @@ int load_cache(Translated *translated_dest, char *joined_paths, uint64_t hash) {
   }
   bytecodeSize = le64toh(bytecodeSize);
 
+  uint64_t sourceLocationSize;
+  if (fread(&sourceLocationSize, 1, sizeof(sourceLocationSize),
+            bytecode_file) != sizeof(sourceLocationSize)) {
+    goto FAILED;
+  }
+  sourceLocationSize = le64toh(sourceLocationSize);
+
+  *translated_dest = init_translator();
+  translated_inited = true;
+
   arena_resize(&translated_dest->constants, constantsSize);
 
   if (fread(translated_dest->constants.data, 1, constantsSize, bytecode_file) !=
@@ -152,16 +163,24 @@ int load_cache(Translated *translated_dest, char *joined_paths, uint64_t hash) {
     goto FAILED;
   }
 
+  darray_resize(&translated_dest->source_locations, sourceLocationSize);
+
+  if (fread(translated_dest->source_locations.data, sizeof(SourceLocation), sourceLocationSize, bytecode_file) !=
+      sourceLocationSize) {
+    goto FAILED;
+  }
+
   translated_dest->registerCount = register_count;
 
   fclose(bytecode_file);
   return 0;
 FAILED:
+  if (translated_inited) free_translator(translated_dest);
   fclose(bytecode_file);
   return 1;
 }
 
-Execution execute(char *absolute_path) {
+Execution execute(char *absolute_path, Stack *stack) {
   clock_t start, end;
   double time_spent, total_time_spent = 0;
 
@@ -213,10 +232,9 @@ Execution execute(char *absolute_path) {
   uint64_t hash = XXH3_64bits_digest(hash_state);
   XXH3_freeState(hash_state);
 
-  Translated translated = init_translator();
+  Translated translated;
 
   if (load_cache(&translated, cache_file_path, hash) != 0) {
-    free_translator(&translated);
     translated = init_translator();
 
     DArray tokens;
@@ -266,13 +284,15 @@ Execution execute(char *absolute_path) {
 
     file = fopen(cache_file_path, "wb");
 
-    uint64_t constantsSize = (uint64_t)translated.constants.size;
-    uint64_t bytecodeSize = (uint64_t)translated.bytecode.size;
+    uint64_t constantsSize = translated.constants.size;
+    uint64_t bytecodeSize = translated.bytecode.size;
+    uint64_t sourceLocationSize = translated.source_locations.size;
 
     uint32_t version_number_htole32ed = htole32(version_number);
     uint64_t net_hash = htole64(hash);
     constantsSize = htole64(constantsSize);
     bytecodeSize = htole64(bytecodeSize);
+    sourceLocationSize = htole64(sourceLocationSize);
 
     fwrite(&FILE_IDENTIFIER, sizeof(char), strlen(FILE_IDENTIFIER), file);
     fwrite(&version_number_htole32ed, sizeof(uint32_t), 1, file);
@@ -280,16 +300,20 @@ Execution execute(char *absolute_path) {
     fwrite(&translated.registerCount, sizeof(uint8_t), 1, file);
     fwrite(&constantsSize, sizeof(uint64_t), 1, file);
     fwrite(&bytecodeSize, sizeof(uint64_t), 1, file);
+    fwrite(&sourceLocationSize, sizeof(uint64_t), 1, file);
     fwrite(translated.constants.data, 1, translated.constants.size, file);
     fwrite(translated.bytecode.data, translated.bytecode.element_size,
            translated.bytecode.size, file);
+    fwrite(translated.source_locations.data,
+           translated.source_locations.element_size,
+           translated.source_locations.size, file);
 
     fclose(file);
   }
 
   start = clock();
-  RuntimeState state = init_runtime_state(translated);
-  Stack main_scope = create_scope(NULL);
+  RuntimeState state = init_runtime_state(translated, absolute_path);
+  Stack main_scope = create_scope(stack);
   ArErr err = runtime(translated, state, main_scope);
   free(state.registers);
   end = clock();
@@ -314,7 +338,7 @@ int main(int argc, char *argv[]) {
   char path[FILENAME_MAX];
   cwk_path_get_absolute(CWD, path_non_absolute, path, sizeof(path));
   free(CWD);
-  Execution resp = execute(path);
+  Execution resp = execute(path, NULL);
   if (resp.err.exists) {
     output_err(resp.err);
     return -1;

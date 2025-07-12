@@ -50,8 +50,8 @@ ParsedValueReturn parse_access(char *file, DArray *tokens, size_t *index,
                        "Syntax Error", "expected value"),
             NULL};
       }
-      darray_push(&parsedAccess->access, parsedValue);
-      free(parsedValue);
+      darray_push(&parsedAccess->access, parsedAccessValue.value);
+      free(parsedAccessValue.value);
       skip_newlines_and_indents(tokens, index);
       error_if_finished(file, tokens, index);
       token = darray_get(tokens, *index);

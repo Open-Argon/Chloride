@@ -7,6 +7,7 @@
 typedef struct {
   ArgonObject **registers;
   size_t head;
+  char*path;
 } RuntimeState;
 
 void init_types();
@@ -16,7 +17,7 @@ uint64_t pop_bytecode(Translated *translated, RuntimeState *state);
 ArErr run_instruction(Translated *translated, RuntimeState *state,
                       struct Stack stack);
 
-RuntimeState init_runtime_state(Translated translated);
+RuntimeState init_runtime_state(Translated translated, char *path);
 
 Stack create_scope(Stack *prev);
 
