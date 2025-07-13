@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: 2025 William Bell
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
 #ifndef STRING_UTILS_H
 #define STRING_UTILS_H
 

@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2025 William Bell
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 from conan import ConanFile
 from conan.tools.cmake import CMake, CMakeToolchain, CMakeDeps, cmake_layout
 from shutil import which

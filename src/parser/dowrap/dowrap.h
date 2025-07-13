@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: 2025 William Bell
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
 #ifndef DOWRAP_H
 #define DOWRAP_H
 #include "../parser.h"

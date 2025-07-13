@@ -1,3 +1,4 @@
 let y = 1
-if (let x = let z = y, a=null) z
+let term = y
+if (let x = let z = y) do
 else x

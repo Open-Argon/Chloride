@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2025 William Bell
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 import struct
 from enum import Enum, EnumMeta, auto
 

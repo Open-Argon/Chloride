@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: 2025 William Bell
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
 #include "declaration.h"
 #include "../../parser/declaration/declaration.h"
 #include "../translator.h"

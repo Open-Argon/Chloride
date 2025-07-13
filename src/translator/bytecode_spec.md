@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2025 William Bell
+
+SPDX-License-Identifier: GPL-3.0-or-later
+-->
+
 # Bytecode Specification
 
 all opcodes are uint8_t, and all operands are uint64_t unless marked with an asterisk (*), where it is marked as uint8_t
