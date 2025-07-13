@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: 2025 William Bell
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
 #include "../../parser/if/if.h"
 #include "../translator.h"
 #include <stddef.h>

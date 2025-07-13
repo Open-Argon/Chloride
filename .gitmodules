@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2025 William Bell
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 [submodule "external/xxhash"]
 	path = external/xxhash
 	url = https://github.com/Cyan4973/xxHash.git

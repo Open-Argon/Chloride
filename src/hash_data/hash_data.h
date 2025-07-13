@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: 2025 William Bell
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
 #ifndef HASH_DATA_H
 #define HASH_DATA_H
 #include <stdlib.h>

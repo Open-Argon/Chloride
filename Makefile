@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2025 William Bell
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 LEXER_SRC = src/lexer/lex.l
 LEXER_C = src/lexer/lex.yy.c
 LEXER_H = src/lexer/lex.yy.h

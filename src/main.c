@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: 2025 William Bell
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
 #include "dynamic_array/darray.h"
 #include "lexer/lexer.h"
 #include "lexer/token.h"
