@@ -1,6 +1,7 @@
 #include "declaration.h"
 #include "../../parser/declaration/declaration.h"
 #include "../translator.h"
+#include "../../hash_data/hash_data.h"
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
@@ -20,11 +21,12 @@ size_t translate_parsed_declaration(Translated *translated,
     push_instruction_byte(translated, OP_DECLARE);
     push_instruction_code(translated, length);
     push_instruction_code(translated, offset);
+    push_instruction_code(translated, siphash64_bytes(singleDeclaration->name, length, siphash_key_fixed_for_translator));
     push_instruction_byte(translated, 0);
-  }
-  if (delcarations.size != 1) {
-    push_instruction_byte(translated, OP_LOAD_NULL);
-    push_instruction_byte(translated, 0);
+    SourceLocation source_locations = {singleDeclaration->line,
+                                       singleDeclaration->column, length};
+    push_instruction_code(translated, translated->source_locations.size);
+    darray_push(&translated->source_locations, &source_locations);
   }
   return first;
 }

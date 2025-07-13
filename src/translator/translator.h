@@ -8,7 +8,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-typedef enum { OP_LOAD_CONST, OP_DECLARE, OP_LOAD_NULL, OP_LOAD_FUNCTION, OP_IDENTIFIER } OperationType;
+typedef enum { OP_LOAD_CONST, OP_DECLARE, OP_LOAD_NULL, OP_LOAD_FUNCTION, OP_IDENTIFIER, OP_BOOL, OP_JUMP_IF_FALSE, OP_JUMP, OP_NEW_SCOPE, OP_POP_SCOPE } OperationType;
 typedef enum { TYPE_OP_STRING, TYPE_OP_NUMBER } types;
 
 typedef struct {
@@ -39,7 +39,11 @@ size_t arena_push(ConstantArena *arena, const void *data, size_t length);
 
 size_t push_instruction_byte(Translated *translator, uint8_t byte);
 
+void set_instruction_byte(Translated *translator, size_t index, uint8_t byte);
+
 size_t push_instruction_code(Translated *translator, uint64_t code);
+
+void set_instruction_code(Translated *translator, size_t index, uint64_t code);
 
 void set_registers(Translated *translator, uint8_t count);
 

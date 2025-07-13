@@ -10,6 +10,7 @@ size_t translate_parsed_function(Translated *translated,
   DArray main_bytecode = translated->bytecode;
   DArray _temp_bytecode;
   darray_init(&_temp_bytecode, sizeof(uint8_t));
+  set_registers(translated, 1);
   translated->bytecode = _temp_bytecode;
   translate_parsed(translated, parsedFunction->body);
   size_t function_bytecode_offset =

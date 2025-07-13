@@ -86,8 +86,10 @@ const uint32_t version_number = 0;
 int load_cache(Translated *translated_dest, char *joined_paths, uint64_t hash) {
   bool translated_inited = false;
   FILE *bytecode_file = fopen(joined_paths, "rb");
-  if (!bytecode_file)
+  if (!bytecode_file) {
+    printf("cache doesnt exist... compiling from source.\n");
     return 1;
+  }
   char file_identifier_from_cache[sizeof(FILE_IDENTIFIER)] = {0};
   if (fread(&file_identifier_from_cache, 1,
             sizeof(file_identifier_from_cache) - 1,
@@ -165,42 +167,45 @@ int load_cache(Translated *translated_dest, char *joined_paths, uint64_t hash) {
 
   darray_resize(&translated_dest->source_locations, sourceLocationSize);
 
-  if (fread(translated_dest->source_locations.data, sizeof(SourceLocation), sourceLocationSize, bytecode_file) !=
-      sourceLocationSize) {
+  if (fread(translated_dest->source_locations.data, sizeof(SourceLocation),
+            sourceLocationSize, bytecode_file) != sourceLocationSize) {
     goto FAILED;
   }
 
   translated_dest->registerCount = register_count;
 
+  printf("cache exists and is valid, so will be used.\n");
   fclose(bytecode_file);
   return 0;
 FAILED:
-  if (translated_inited) free_translator(translated_dest);
+  printf("cache is invalid... compiling from source.\n");
+  if (translated_inited)
+    free_translator(translated_dest);
   fclose(bytecode_file);
   return 1;
 }
 
-Execution execute(char *absolute_path, Stack *stack) {
+Execution execute(char *path, Stack *stack) {
   clock_t start, end;
   double time_spent, total_time_spent = 0;
 
   const char *basename_ptr;
   size_t basename_length;
-  cwk_path_get_basename(absolute_path, &basename_ptr, &basename_length);
+  cwk_path_get_basename(path, &basename_ptr, &basename_length);
 
   if (!basename_ptr)
     return (Execution){create_err(0, 0, 0, NULL, "Path Error",
-                                  "path has no basename '%s'", absolute_path),
+                                  "path has no basename '%s'", path),
                        (Stack){NULL, NULL}};
 
   char basename[FILENAME_MAX];
   memcpy(basename, basename_ptr, basename_length);
 
   size_t parent_directory_length;
-  cwk_path_get_dirname(absolute_path, &parent_directory_length);
+  cwk_path_get_dirname(path, &parent_directory_length);
 
   char parent_directory[FILENAME_MAX];
-  memcpy(parent_directory, absolute_path, parent_directory_length);
+  memcpy(parent_directory, path, parent_directory_length);
   parent_directory[parent_directory_length] = '\0';
 
   char cache_folder_path[FILENAME_MAX];
@@ -213,10 +218,10 @@ Execution execute(char *absolute_path, Stack *stack) {
   cwk_path_change_extension(cache_file_path, BYTECODE_EXTENTION,
                             cache_file_path, sizeof(cache_file_path));
 
-  FILE *file = fopen(absolute_path, "r");
+  FILE *file = fopen(path, "r");
   if (!file) {
     return (Execution){create_err(0, 0, 0, NULL, "File Error",
-                                  "Unable to open file '%s'", absolute_path),
+                                  "Unable to open file '%s'", path),
                        (Stack){NULL, NULL}};
   }
 
@@ -240,7 +245,7 @@ Execution execute(char *absolute_path, Stack *stack) {
     DArray tokens;
     darray_init(&tokens, sizeof(Token));
 
-    LexerState state = {absolute_path, file, 0, 0, &tokens};
+    LexerState state = {path, file, 0, 0, &tokens};
     start = clock();
     ArErr err = lexer(state);
     if (err.exists) {
@@ -259,7 +264,7 @@ Execution execute(char *absolute_path, Stack *stack) {
     darray_init(&ast, sizeof(ParsedValue));
 
     start = clock();
-    err = parser(absolute_path, &ast, &tokens, false);
+    err = parser(path, &ast, &tokens, false);
     if (err.exists) {
       free_translator(&translated);
       darray_free(&tokens, free_token);
@@ -312,8 +317,8 @@ Execution execute(char *absolute_path, Stack *stack) {
   }
 
   start = clock();
-  RuntimeState state = init_runtime_state(translated, absolute_path);
-  Stack main_scope = create_scope(stack);
+  RuntimeState state = init_runtime_state(translated, path);
+  Stack *main_scope = create_scope(stack);
   ArErr err = runtime(translated, state, main_scope);
   free(state.registers);
   end = clock();
@@ -323,7 +328,7 @@ Execution execute(char *absolute_path, Stack *stack) {
   printf("total time taken: %f seconds\n", total_time_spent);
 
   free_translator(&translated);
-  return (Execution){err, main_scope};
+  return (Execution){err, *main_scope};
 }
 
 int main(int argc, char *argv[]) {
@@ -339,9 +344,11 @@ int main(int argc, char *argv[]) {
   cwk_path_get_absolute(CWD, path_non_absolute, path, sizeof(path));
   free(CWD);
   Execution resp = execute(path, NULL);
+  if (runtime_hash_table)
+    hashmap_free(runtime_hash_table, NULL);
   if (resp.err.exists) {
     output_err(resp.err);
-    return -1;
+    return 1;
   }
   return 0;
 }

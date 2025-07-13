@@ -14,4 +14,6 @@ ParsedValue *create_parsed_function(char *name, DArray parameters,
 
 void free_function(void *ptr);
 
+void free_parameter(void *ptr);
+
 #endif // FUNCTION_H

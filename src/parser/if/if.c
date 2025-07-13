@@ -3,6 +3,7 @@
 #include "../../memory.h"
 #include "../parser.h"
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -18,7 +19,10 @@ void free_conditional(void *ptr) {
 
 ParsedValueReturn parse_if(char *file, DArray *tokens, size_t *index) {
   (*index)++;
-  error_if_finished(file, tokens, index);
+  ArErr err = error_if_finished(file, tokens, index);
+  if (err.exists) {
+    return (ParsedValueReturn){err, NULL};
+  }
 
   DArray *parsed_if = checked_malloc(sizeof(DArray));
   darray_init(parsed_if, sizeof(ParsedConditional));
@@ -32,15 +36,22 @@ ParsedValueReturn parse_if(char *file, DArray *tokens, size_t *index) {
     if (!expect_conditional) {
       if (token->type != TOKEN_NEW_LINE)
         break; // no more branches
-      (*index)++;
+      size_t current_index = *index;
+      skip_newlines_and_indents(tokens, index);
       if ((*index) >= tokens->size)
         break;
       token = darray_get(tokens, *index);
 
       if (token->type == TOKEN_ELSE || token->type == TOKEN_ELSE_IF) {
         (*index)++;
-        error_if_finished(file, tokens, index);
+        ArErr err = error_if_finished(file, tokens, index);
+        if (err.exists) {
+          darray_free(parsed_if, free_conditional);
+          free(parsed_if);
+          return (ParsedValueReturn){err, NULL};
+        }
       } else {
+        *index = current_index;
         break; // no more branches
       }
     }
@@ -60,7 +71,12 @@ ParsedValueReturn parse_if(char *file, DArray *tokens, size_t *index) {
       }
 
       (*index)++;
-      error_if_finished(file, tokens, index);
+      ArErr err = error_if_finished(file, tokens, index);
+      if (err.exists) {
+        darray_free(parsed_if, free_conditional);
+        free(parsed_if);
+        return (ParsedValueReturn){err, NULL};
+      }
       skip_newlines_and_indents(tokens, index);
       condition = parse_token(file, tokens, index, true);
       if (condition.err.exists) {
@@ -92,7 +108,16 @@ ParsedValueReturn parse_if(char *file, DArray *tokens, size_t *index) {
       }
 
       (*index)++;
-      error_if_finished(file, tokens, index);
+      err = error_if_finished(file, tokens, index);
+      if (err.exists) {
+        if (condition.value) {
+          free_parsed(condition.value);
+          free(condition.value);
+        }
+        darray_free(parsed_if, free_conditional);
+        free(parsed_if);
+        return (ParsedValueReturn){err, NULL};
+      }
     }
 
     // Parse the body

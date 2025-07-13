@@ -31,14 +31,12 @@ ParsedValueReturn parse_assign(char *file, DArray *tokens,
     }
     break;
   default:;
-    ArErr err = create_err(token->line, token->column,
-                                          token->length, file, "Syntax Error",
-                                          "can't assign to %s",
-                                          ValueTypeNames[assign_to->type]);
+    ArErr err = create_err(token->line, token->column, token->length, file,
+                           "Syntax Error", "can't assign to %s",
+                           ValueTypeNames[assign_to->type]);
     free_parsed(assign_to);
     free(assign_to);
-    return (ParsedValueReturn){err,
-                               NULL};
+    return (ParsedValueReturn){err, NULL};
   }
   ParsedAssign *assign = checked_malloc(sizeof(ParsedAssign));
   assign->to = assign_to;
@@ -47,7 +45,12 @@ ParsedValueReturn parse_assign(char *file, DArray *tokens,
   parsedValue->type = AST_ASSIGN;
   parsedValue->data = assign;
   (*index)++;
-  error_if_finished(file, tokens, index);
+  ArErr err = error_if_finished(file, tokens, index);
+  if (err.exists) {
+    free_parsed(parsedValue);
+    free(parsedValue);
+    return (ParsedValueReturn){err, NULL};
+  }
   token = darray_get(tokens, *index);
   ParsedValueReturn from = parse_token(file, tokens, index, true);
   if (from.err.exists) {

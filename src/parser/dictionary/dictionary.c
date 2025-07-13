@@ -15,12 +15,22 @@ ParsedValueReturn parse_dictionary(char *file, DArray *tokens, size_t *index) {
   darray_init(dictionary, sizeof(ParsedValue));
   (*index)++;
   skip_newlines_and_indents(tokens, index);
-  error_if_finished(file, tokens, index);
+  ArErr err = error_if_finished(file, tokens, index);
+  if (err.exists) {
+    free_parsed(parsedValue);
+    free(parsedValue);
+    return (ParsedValueReturn){err, NULL};
+  }
   Token *token = darray_get(tokens, *index);
   if (token->type != TOKEN_RBRACE) {
     while (true) {
       skip_newlines_and_indents(tokens, index);
-      error_if_finished(file, tokens, index);
+      ArErr err = error_if_finished(file, tokens, index);
+      if (err.exists) {
+        free_parsed(parsedValue);
+        free(parsedValue);
+        return (ParsedValueReturn){err, NULL};
+      }
       size_t keyIndex = *index;
       Token *keyToken = darray_get(tokens, *index);
       ParsedValueReturn key;
@@ -43,7 +53,12 @@ ParsedValueReturn parse_dictionary(char *file, DArray *tokens, size_t *index) {
                                    NULL};
       }
       skip_newlines_and_indents(tokens, index);
-      error_if_finished(file, tokens, index);
+      err = error_if_finished(file, tokens, index);
+      if (err.exists) {
+        free_parsed(parsedValue);
+        free(parsedValue);
+        return (ParsedValueReturn){err, NULL};
+      }
       token = darray_get(tokens, *index);
       ParsedValueReturn value;
       bool tobreak = false;
@@ -51,7 +66,12 @@ ParsedValueReturn parse_dictionary(char *file, DArray *tokens, size_t *index) {
       case TOKEN_COLON:
         (*index)++;
         skip_newlines_and_indents(tokens, index);
-        error_if_finished(file, tokens, index);
+        ArErr err = error_if_finished(file, tokens, index);
+        if (err.exists) {
+          free_parsed(parsedValue);
+          free(parsedValue);
+          return (ParsedValueReturn){err, NULL};
+        }
         value = parse_token(file, tokens, index, true);
         if (value.err.exists) {
           free_parsed(parsedValue);
@@ -70,14 +90,30 @@ ParsedValueReturn parse_dictionary(char *file, DArray *tokens, size_t *index) {
               NULL};
         }
         skip_newlines_and_indents(tokens, index);
-        error_if_finished(file, tokens, index);
+        err = error_if_finished(file, tokens, index);
+        if (err.exists) {
+          free_parsed(parsedValue);
+          free(parsedValue);
+          free_parsed(key.value);
+          free(key.value);
+          free_parsed(value.value);
+          free(value.value);
+          return (ParsedValueReturn){err, NULL};
+        }
         token = darray_get(tokens, *index);
         if (token->type == TOKEN_RBRACE) {
           tobreak = true;
         } else if (token->type != TOKEN_COMMA) {
-          fprintf(stderr, "%s:%zu:%zu error: syntax error\n", file, token->line,
-                  token->column);
-          exit(EXIT_FAILURE);
+          free_parsed(parsedValue);
+          free(parsedValue);
+          free_parsed(key.value);
+          free(key.value);
+          free_parsed(value.value);
+          free(value.value);
+          return (ParsedValueReturn){
+              create_err(token->line, token->column, token->length, file,
+                         "Syntax Error", "expected comma"),
+              NULL};
         }
         break;
       case TOKEN_RBRACE:
@@ -87,9 +123,14 @@ ParsedValueReturn parse_dictionary(char *file, DArray *tokens, size_t *index) {
         value = parse_token(file, tokens, &keyIndex, true);
         break;
       default:
-        fprintf(stderr, "%s:%zu:%zu error: syntax error\n", file, token->line,
-                token->column);
-        exit(EXIT_FAILURE);
+        free_parsed(parsedValue);
+        free(parsedValue);
+        free_parsed(key.value);
+        free(key.value);
+        return (ParsedValueReturn){create_err(token->line, token->column,
+                                              token->length, file,
+                                              "Syntax Error", "unexpected token"),
+                                   NULL};
       }
       ParsedDictionaryEntry entry = {key.value, value.value};
       darray_push(dictionary, &entry);
@@ -97,7 +138,12 @@ ParsedValueReturn parse_dictionary(char *file, DArray *tokens, size_t *index) {
         break;
       }
       (*index)++;
-      error_if_finished(file, tokens, index);
+      err = error_if_finished(file, tokens, index);
+      if (err.exists) {
+        free_parsed(parsedValue);
+        free(parsedValue);
+        return (ParsedValueReturn){err, NULL};
+      }
     }
   }
   (*index)++;

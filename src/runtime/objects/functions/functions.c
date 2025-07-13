@@ -12,7 +12,7 @@ void init_function_type() {
 }
 
 void load_argon_function(Translated *translated, RuntimeState *state,
-                                 struct Stack stack) {
+                                 struct Stack *stack) {
   ArgonObject *object = init_child_argon_object(ARGON_FUNCTION_TYPE);
   object->type = TYPE_FUNCTION;
   uint64_t offset = pop_bytecode(translated, state);
@@ -35,6 +35,6 @@ void load_argon_function(Translated *translated, RuntimeState *state,
   darray_armem_init(&object->value.argon_fn.bytecode, sizeof(uint64_t));
   darray_armem_resize(&object->value.argon_fn.bytecode, length/object->value.argon_fn.bytecode.element_size);
   memcpy(object->value.argon_fn.bytecode.data, arena_get(&translated->constants, offset), length);
-  object->value.argon_fn.stack = stack;
+  object->value.argon_fn.stack = *stack;
   state->registers[0]=object;
 }
