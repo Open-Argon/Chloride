@@ -4,6 +4,6 @@
 
 void init_function_type();
 
-ArgonObject *load_argon_function(Translated *translated, RuntimeState *state, struct Stack stack);
+ArgonObject *load_argon_function(Translated *translated, RuntimeState *state, struct Stack *stack);
 
 #endif // FUNCTION_H

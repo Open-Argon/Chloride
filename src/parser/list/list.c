@@ -14,7 +14,12 @@ ParsedValueReturn parse_list(char *file, DArray *tokens, size_t *index) {
   darray_init(list, sizeof(ParsedValue));
   (*index)++;
   skip_newlines_and_indents(tokens, index);
-  error_if_finished(file, tokens, index);
+  ArErr err = error_if_finished(file, tokens, index);
+  if (err.exists) {
+    free_parsed(parsedValue);
+    free(parsedValue);
+    return (ParsedValueReturn){err, NULL};
+  }
   Token *token = darray_get(tokens, *index);
   if (token->type != TOKEN_RBRACKET) {
     while (true) {
@@ -27,19 +32,34 @@ ParsedValueReturn parse_list(char *file, DArray *tokens, size_t *index) {
       }
       darray_push(list, parsedItem.value);
       free(parsedItem.value);
-      error_if_finished(file, tokens, index);
+      ArErr err = error_if_finished(file, tokens, index);
+      if (err.exists) {
+        free_parsed(parsedValue);
+        free(parsedValue);
+        return (ParsedValueReturn){err, NULL};
+      }
       skip_newlines_and_indents(tokens, index);
-      error_if_finished(file, tokens, index);
+      err = error_if_finished(file, tokens, index);
+      if (err.exists) {
+        free_parsed(parsedValue);
+        free(parsedValue);
+        return (ParsedValueReturn){err, NULL};
+      }
       token = darray_get(tokens, *index);
       if (token->type == TOKEN_RBRACKET) {
         break;
       } else if (token->type != TOKEN_COMMA) {
-        fprintf(stderr, "%s:%zu:%zu error: syntax error\n", file, token->line,
-                token->column);
-        exit(EXIT_FAILURE);
+        free_parsed(parsedValue);
+        free(parsedValue);
+        return (ParsedValueReturn){create_err(token->line, token->column, token->length, file, "Syntax Error", "expected comma"), NULL};
       }
       (*index)++;
-      error_if_finished(file, tokens, index);
+      err = error_if_finished(file, tokens, index);
+      if (err.exists) {
+        free_parsed(parsedValue);
+        free(parsedValue);
+        return (ParsedValueReturn){err, NULL};
+      }
     }
   }
   (*index)++;

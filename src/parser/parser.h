@@ -67,7 +67,7 @@ ParsedValueReturn parse_token(char *file, DArray *tokens, size_t *index,
 
 void free_parsed(void *ptr);
 
-void error_if_finished(char *file, DArray *tokens, size_t *index);
+__attribute__((warn_unused_result)) ArErr error_if_finished(char *file, DArray *tokens, size_t *index);
 
 size_t skip_newlines_and_indents(DArray *tokens, size_t *index);
 

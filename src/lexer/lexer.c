@@ -8,9 +8,7 @@ ArErr lexer(LexerState state) {
   int ch;
   while ((ch = fgetc(state.file)) != EOF) {
     if (ch == 0 || (ch < 0x20 && ch != '\n' && ch != '\r' && ch != '\t')) {
-      fprintf(stderr, "%s:%zu:%zu error: disallowed character\n", state.path,
-              line, column);
-      exit(1);
+      return create_err(line, column, 1, state.path, "Syntax Error", "disallowed character");
     }
 
     if (ch == '\n') {

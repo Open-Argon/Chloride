@@ -6,6 +6,8 @@
 typedef struct {
   char * name;
   ParsedValue * from;
+  uint64_t line;
+  uint64_t column;
 } ParsedSingleDeclaration;
 
 // Function declaration for parsing an identifier

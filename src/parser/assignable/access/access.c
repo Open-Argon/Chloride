@@ -19,7 +19,12 @@ ParsedValueReturn parse_access(char *file, DArray *tokens, size_t *index,
   free(to_access);
   darray_init(&parsedAccess->access, sizeof(ParsedValue));
   if (first_token->type == TOKEN_DOT) {
-    error_if_finished(file, tokens, index);
+    ArErr err = error_if_finished(file, tokens, index);
+    if (err.exists) {
+      free_parsed(parsedValue);
+      free(parsedValue);
+      return (ParsedValueReturn){err, NULL};
+    }
     Token *token = darray_get(tokens, *index);
     ParsedValueReturn parsedString = parse_string(token, false);
     if (parsedString.err.exists) {
@@ -35,7 +40,12 @@ ParsedValueReturn parse_access(char *file, DArray *tokens, size_t *index,
     Token *token = first_token;
     while (true) {
       skip_newlines_and_indents(tokens, index);
-      error_if_finished(file, tokens, index);
+      ArErr err = error_if_finished(file, tokens, index);
+      if (err.exists) {
+        free_parsed(parsedValue);
+        free(parsedValue);
+        return (ParsedValueReturn){err, NULL};
+      }
       ParsedValueReturn parsedAccessValue =
           parse_token(file, tokens, index, true);
       if (parsedAccessValue.err.exists) {
@@ -45,22 +55,30 @@ ParsedValueReturn parse_access(char *file, DArray *tokens, size_t *index,
       } else if (!parsedAccessValue.value) {
         free_parsed(parsedValue);
         free(parsedValue);
-        return (ParsedValueReturn){
-            create_err(token->line, token->column, token->length, file,
-                       "Syntax Error", "expected value"),
-            NULL};
+        return (ParsedValueReturn){create_err(token->line, token->column,
+                                              token->length, file,
+                                              "Syntax Error", "expected value"),
+                                   NULL};
       }
       darray_push(&parsedAccess->access, parsedAccessValue.value);
       free(parsedAccessValue.value);
       skip_newlines_and_indents(tokens, index);
-      error_if_finished(file, tokens, index);
+      err = error_if_finished(file, tokens, index);
+      if (err.exists) {
+        free_parsed(parsedValue);
+        free(parsedValue);
+        return (ParsedValueReturn){err, NULL};
+      }
       token = darray_get(tokens, *index);
       if (token->type == TOKEN_RBRACKET) {
         break;
       } else if (token->type != TOKEN_COLON) {
-        fprintf(stderr, "%s:%zu:%zu error: syntax error\n", file, token->line,
-                token->column);
-        exit(EXIT_FAILURE);
+        free_parsed(parsedValue);
+        free(parsedValue);
+        return (ParsedValueReturn){create_err(token->line, token->column,
+                                              token->length, file,
+                                              "Syntax Error", "expected colon"),
+                                   NULL};
       }
       (*index)++;
     }

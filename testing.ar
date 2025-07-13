@@ -1,0 +1,3 @@
+let y = 1
+if (let x = let z = y, a=null) z
+else x

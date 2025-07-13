@@ -3,6 +3,7 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
+#include "../../hash_data/hash_data.h"
 
 size_t translate_parsed_identifier(Translated *translated, ParsedIdentifier *parsedIdentifier) {
   size_t length = strlen(parsedIdentifier->name);
@@ -11,6 +12,7 @@ size_t translate_parsed_identifier(Translated *translated, ParsedIdentifier *par
   size_t start = push_instruction_byte(translated, OP_IDENTIFIER);
   push_instruction_code(translated,length);
   push_instruction_code(translated, identifier_pos);
+    push_instruction_code(translated, siphash64_bytes(parsedIdentifier->name, length, siphash_key_fixed_for_translator));
   SourceLocation source_locations = {
     parsedIdentifier->line,
     parsedIdentifier->column,

@@ -55,7 +55,7 @@ ParsedValue convert_to_operation(DArray *to_operate_on, DArray *operations) {
 }
 
 ParsedValueReturn parse_operations(char *file, DArray *tokens, size_t *index,
-                              ParsedValue *first_parsed_value) {
+                                   ParsedValue *first_parsed_value) {
   DArray to_operate_on;
   darray_init(&to_operate_on, sizeof(ParsedValue));
   darray_push(&to_operate_on, first_parsed_value);
@@ -77,7 +77,12 @@ ParsedValueReturn parse_operations(char *file, DArray *tokens, size_t *index,
       break;
     darray_push(&operations, &token->type);
     (*index)++;
-    error_if_finished(file, tokens, index);
+    ArErr err = error_if_finished(file, tokens, index);
+    if (err.exists) {
+      darray_free(&to_operate_on, free_parsed);
+      darray_free(&operations, NULL);
+      return (ParsedValueReturn){err, NULL};
+    }
     ParsedValueReturn parsedValue =
         parse_token_full(file, tokens, index, true, false);
     if (parsedValue.err.exists) {
@@ -87,10 +92,10 @@ ParsedValueReturn parse_operations(char *file, DArray *tokens, size_t *index,
     } else if (!parsedValue.value) {
       darray_free(&to_operate_on, free_parsed);
       darray_free(&operations, NULL);
-      return (ParsedValueReturn){
-            create_err(token->line, token->column, token->length, file,
-                       "Syntax Error", "expected value"),
-            NULL};
+      return (ParsedValueReturn){create_err(token->line, token->column,
+                                            token->length, file, "Syntax Error",
+                                            "expected value"),
+                                 NULL};
     }
     darray_push(&to_operate_on, parsedValue.value);
     free(parsedValue.value);
@@ -100,7 +105,7 @@ ParsedValueReturn parse_operations(char *file, DArray *tokens, size_t *index,
   memcpy(parsedValue, &output, sizeof(ParsedValue));
   darray_free(&to_operate_on, NULL);
   darray_free(&operations, NULL);
-  return (ParsedValueReturn){no_err,parsedValue};
+  return (ParsedValueReturn){no_err, parsedValue};
 }
 
 void free_operation(void *ptr) {

@@ -4,6 +4,7 @@
 #include "declaration/declaration.h"
 #include "function/function.h"
 #include "identifier/identifier.h"
+#include "if/if.h"
 #include "number/number.h"
 #include "string/string.h"
 #include <stddef.h>
@@ -91,6 +92,10 @@ size_t push_instruction_byte(Translated *translator, uint8_t byte) {
   return offset;
 }
 
+void set_instruction_byte(Translated *translator, size_t index, uint8_t byte) {
+  memcpy(translator->bytecode.data + index, &byte, sizeof(byte));
+}
+
 size_t push_instruction_code(Translated *translator, uint64_t code) {
   size_t offset = translator->bytecode.size;
   uint8_t bytes[8];
@@ -99,6 +104,10 @@ size_t push_instruction_code(Translated *translator, uint64_t code) {
     darray_push(&translator->bytecode, &(bytes[i]));
   }
   return offset;
+}
+
+void set_instruction_code(Translated *translator, size_t index, uint64_t code) {
+  memcpy(translator->bytecode.data + index, &code, sizeof(code));
 }
 
 void set_registers(Translated *translator, uint8_t count) {
@@ -125,7 +134,10 @@ size_t translate_parsed(Translated *translated, ParsedValue *parsedValue) {
     return translate_parsed_function(translated,
                                      (ParsedFunction *)parsedValue->data);
   case AST_IDENTIFIER:
-    return translate_parsed_identifier(translated, (ParsedIdentifier *)parsedValue->data);
+    return translate_parsed_identifier(translated,
+                                       (ParsedIdentifier *)parsedValue->data);
+  case AST_IF:
+    return translate_parsed_if(translated, (DArray *)parsedValue->data);
   }
   return 0;
 }

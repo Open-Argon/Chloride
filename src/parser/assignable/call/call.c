@@ -15,12 +15,26 @@ ParsedValueReturn parse_call(char *file, DArray *tokens, size_t *index,
   parsedValue->type = AST_CALL;
   darray_init(&call->args, sizeof(ParsedValue));
   (*index)++;
-  error_if_finished(file, tokens, index);
+  ArErr err = error_if_finished(file, tokens, index);
+  if (err.exists) {
+    free_parsed(to_call);
+    free(to_call);
+    free_parsed(parsedValue);
+    free(parsedValue);
+    return (ParsedValueReturn){err, NULL};
+  }
   Token *token = darray_get(tokens, *index);
   if (token->type != TOKEN_RPAREN) {
     while ((*index) < tokens->size) {
       skip_newlines_and_indents(tokens, index);
-      error_if_finished(file, tokens, index);
+      ArErr err = error_if_finished(file, tokens, index);
+      if (err.exists) {
+        free_parsed(to_call);
+        free(to_call);
+        free_parsed(parsedValue);
+        free(parsedValue);
+        return (ParsedValueReturn){err, NULL};
+      }
       ParsedValueReturn parsedArg = parse_token(file, tokens, index, true);
       if (parsedArg.err.exists) {
         free_parsed(to_call);
@@ -41,19 +55,46 @@ ParsedValueReturn parse_call(char *file, DArray *tokens, size_t *index,
       }
       darray_push(&call->args, parsedArg.value);
       free(parsedArg.value);
-      error_if_finished(file, tokens, index);
+      err = error_if_finished(file, tokens, index);
+      if (err.exists) {
+        free_parsed(to_call);
+        free(to_call);
+        free_parsed(parsedValue);
+        free(parsedValue);
+        return (ParsedValueReturn){err, NULL};
+      }
       skip_newlines_and_indents(tokens, index);
-      error_if_finished(file, tokens, index);
+      err = error_if_finished(file, tokens, index);
+      if (err.exists) {
+        free_parsed(to_call);
+        free(to_call);
+        free_parsed(parsedValue);
+        free(parsedValue);
+        return (ParsedValueReturn){err, NULL};
+      }
       token = darray_get(tokens, *index);
       if (token->type == TOKEN_RPAREN) {
         break;
       } else if (token->type != TOKEN_COMMA) {
-        fprintf(stderr, "%s:%zu:%zu error: expected comma\n", file, token->line,
-                token->column);
-        exit(EXIT_FAILURE);
+        free_parsed(to_call);
+        free(to_call);
+        free_parsed(parsedValue);
+        free(parsedValue);
+
+        return (ParsedValueReturn){create_err(token->line, token->column,
+                                              token->length, file,
+                                              "Syntax Error", "expected comma"),
+                                   NULL};
       }
       (*index)++;
-      error_if_finished(file, tokens, index);
+      err = error_if_finished(file, tokens, index);
+      if (err.exists) {
+        free_parsed(to_call);
+        free(to_call);
+        free_parsed(parsedValue);
+        free(parsedValue);
+        return (ParsedValueReturn){err, NULL};
+      }
     }
   }
   (*index)++;

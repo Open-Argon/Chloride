@@ -27,13 +27,13 @@ const char *ValueTypeNames[] = {
     "access",  "call",       "declaration", "null",       "boolean",
     "do wrap", "operations", "list",        "dictionary", "function"};
 
-void error_if_finished(char *file, DArray *tokens, size_t *index) {
+ArErr error_if_finished(char *file, DArray *tokens, size_t *index) {
   if ((*index) >= tokens->size) {
     Token *token = darray_get(tokens, tokens->size - 1);
-    fprintf(stderr, "%s:%zu:%zu error: syntax error\n", file, token->line,
-            token->column);
-    exit(EXIT_FAILURE);
+    return create_err(token->line, token->column, token->length, file,
+                      "Syntax Error", "more code was expected");
   }
+  return no_err;
 }
 
 size_t skip_newlines_and_indents(DArray *tokens, size_t *index) {
@@ -94,8 +94,9 @@ ParsedValueReturn parse_token_full(char *file, DArray *tokens, size_t *index,
       token = darray_get(tokens, (*index) + 1);
       if (token->type != TOKEN_NEW_LINE) {
         return (ParsedValueReturn){
-            create_err(token_indent->line, token_indent->column, token_indent->length, file,
-                       "Syntax Error", "unexpected indent"),
+            create_err(token_indent->line, token_indent->column,
+                       token_indent->length, file, "Syntax Error",
+                       "unexpected indent"),
             NULL};
       }
     }
@@ -122,9 +123,11 @@ ParsedValueReturn parse_token_full(char *file, DArray *tokens, size_t *index,
     output = parse_dictionary(file, tokens, index);
     break;
   default:
-    fprintf(stderr, "%s:%zu:%zu error: syntax error\n", file, token->line,
-            token->column);
-    exit(EXIT_FAILURE);
+    return (ParsedValueReturn){create_err(token->line,
+                                          token->column,
+                                          token->length, file,
+                                          "Syntax Error", "unexpected token"),
+                               NULL};
   }
 
   // LHS required
@@ -179,14 +182,12 @@ ArErr parser(char *file, DArray *parsed, DArray *tokens, bool inline_flag) {
     ParsedValueReturn parsed_code =
         parse_token(file, tokens, &index, inline_flag);
     if (parsed_code.err.exists) {
-      printf("%zu\n", old_index);
       return parsed_code.err;
     } else if (parsed_code.value) {
       if (expecting_new_line) {
         Token *token = darray_get(tokens, old_index);
-        fprintf(stderr, "%s:%zu:%zu error: expected a new line\n", file,
-                token->line, token->column);
-        exit(EXIT_FAILURE);
+        return create_err(token->line, token->column, token->length, file,
+                          "Syntax Error", "expected new line");
       }
       expecting_new_line = true;
       darray_push(parsed, parsed_code.value);

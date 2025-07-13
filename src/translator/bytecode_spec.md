@@ -21,7 +21,9 @@ this operation takes 3 operands.
 
 1. the length of the variable name.
 2. the offset in the constant buffer of the variable name.
-3. the register of the given value (*)
+3. the fixed hash of the variable name.
+4. the register of the given value (*)
+5. the index of the source location.
 
 ## OP_LOAD_NULL
 
@@ -50,4 +52,33 @@ initilises a function to a given register.
 
 1. the length of the identifer.
 2. the offset of the identifier.
-3. the index of the source location.
+3. the fixed hash of the variable name.
+4. the index of the source location.
+
+## OP_BOOL
+
+converts a value in a given register into true or false depending on the result from \_\_bool\_\_
+
+1. the register to read and write to. (*)
+
+## OP_JUMP_IF_FALSE
+
+jumps when a the value in the given register is false.
+
+1. the register to read. (*)
+1. the index to jump to.
+
+## OP_JUMP_IF_FALSE
+
+jumps unconditionally to an index.
+
+1. the index to jump to.
+
+
+## OP_NEW_SCOPE
+
+creates a new stack
+
+## OP_POP_SCOPE
+
+pops the top scope off the current
