@@ -10,7 +10,7 @@
 #include "../../lexer/token.h"  // for Token
 
 typedef struct {
-  TokenType operation;
+  ArTokenType operation;
   DArray to_operate_on; // ParsedValue[]
 } ParsedOperation;
 

@@ -26,6 +26,7 @@ typedef struct {
 
 typedef struct {
   uint8_t registerCount;
+  DArray *return_jumps;
   DArray bytecode;
   DArray source_locations;
   ConstantArena constants;

@@ -5,4 +5,5 @@
 let y = 1
 let term = y
 if (let x = let z = y) do
-else x
+    do
+        x

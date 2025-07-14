@@ -16,10 +16,10 @@ ParsedValue convert_to_operation(DArray *to_operate_on, DArray *operations) {
   if (to_operate_on->size == 1) {
     return *((ParsedValue *)darray_get(to_operate_on, 0));
   }
-  TokenType operation = 0;
+  ArTokenType operation = 0;
   DArray positions;
   for (size_t i = 0; i < operations->size; i++) {
-    TokenType *current_operation = darray_get(operations, i);
+    ArTokenType *current_operation = darray_get(operations, i);
     if (operation < *current_operation) {
       if (operation != 0) {
         darray_free(&positions, NULL);
@@ -68,7 +68,7 @@ ParsedValueReturn parse_operations(char *file, DArray *tokens, size_t *index,
   free(first_parsed_value);
 
   DArray operations;
-  darray_init(&operations, sizeof(TokenType));
+  darray_init(&operations, sizeof(ArTokenType));
 
   while (tokens->size > *index) {
     bool to_break = false;
