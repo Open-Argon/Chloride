@@ -43,7 +43,8 @@ ParsedValueReturn parse_return(char *file, DArray *tokens, size_t *index) {
 
 void free_parsed_return(void *ptr) {
   ParsedValue *parsedValue = ptr;
-  DArray *parsed_return = parsedValue->data;
-  free_parsed(parsed_return);
+  ParsedReturn *parsed_return = parsedValue->data;
+  free_parsed(parsed_return->value);
+  free(parsed_return->value);
   free(parsed_return);
 }
