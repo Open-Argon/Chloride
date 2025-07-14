@@ -6,4 +6,5 @@ let y = 1
 let term = y
 
 let x = do
-    return x
+    y
+    return term
