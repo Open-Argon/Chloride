@@ -8,7 +8,7 @@
 #include "dowrap.h"
 #include <stddef.h>
 
-size_t translate_parsed_dowrap(Translated *translated, DArray *parsedDowrap) {
+size_t translate_parsed_dowrap(Translated *translated, DArray *parsedDowrap, ArErr *err) {
   set_registers(translated, 1);
 
   size_t first = translated->bytecode.size;
@@ -19,10 +19,8 @@ size_t translate_parsed_dowrap(Translated *translated, DArray *parsedDowrap) {
     darray_init(&return_jumps, sizeof(size_t));
     DArray *old_return_jumps = translated->return_jumps;
     translated->return_jumps = &return_jumps;
-    for (size_t i = 0; i < parsedDowrap->size; i++) {
-      ParsedValue *parsedValue = darray_get(parsedDowrap, i);
-      translate_parsed(translated, parsedValue);
-    }
+    *err = translate(translated, parsedDowrap);
+    if (err->exists) return first;
     push_instruction_byte(translated, OP_LOAD_NULL);
     push_instruction_byte(translated, 0);
     if (!old_return_jumps) {

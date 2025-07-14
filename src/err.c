@@ -140,7 +140,12 @@ void output_err(ArErr err) {
         fprintf(stderr, " ");
       }
       fprintf(stderr, "|\n");
-
+      for (size_t i = 0;i<len;i++) {
+        if (buffer[i] == '\n') {
+          buffer[i] = '\0';
+          break;
+        }
+      }
       char *line_starts = buffer;
       size_t skipped_chars = 0;
       while (*line_starts && isspace((unsigned char)*line_starts) &&
@@ -159,7 +164,7 @@ void output_err(ArErr err) {
         dyefg(stderr, DYE_RESET);
         fprintf(stderr, "%.*s",
                 (int)len - (int)skipped_chars - (int)err.column -
-                    (int)err.length,
+                    (int)err.length+1,
                 line_starts + (int)err.column + err.length - 1);
         for (int64_t i = 0; i < err.column - 1; i++) {
           fprintf(stderr, " ");

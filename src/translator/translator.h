@@ -30,6 +30,7 @@ typedef struct {
   DArray bytecode;
   DArray source_locations;
   ConstantArena constants;
+  char* path;
 } Translated;
 
 typedef struct {
@@ -54,11 +55,11 @@ void set_instruction_code(Translated *translator, size_t index, uint64_t code);
 
 void set_registers(Translated *translator, uint8_t count);
 
-Translated init_translator();
+Translated init_translator(char* path);
 
-size_t translate_parsed(Translated *translated, ParsedValue *parsedValue);
+size_t translate_parsed(Translated *translated, ParsedValue *parsedValue, ArErr*err);
 
-void translate(Translated *translated, DArray *ast);
+ArErr translate(Translated *translated, DArray *ast);
 
 void free_translator(Translated *translated);
 

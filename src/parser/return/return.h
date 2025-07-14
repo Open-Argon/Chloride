@@ -11,6 +11,9 @@
 
 typedef struct {
   ParsedValue * value;
+  int64_t line;
+  int64_t column;
+  int64_t length;
 } ParsedReturn;
 
 ParsedValueReturn parse_return(char *file, DArray *tokens, size_t *index);

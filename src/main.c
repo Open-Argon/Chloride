@@ -192,7 +192,7 @@ int load_cache(Translated *translated_dest, char *joined_paths, uint64_t hash) {
   }
   sourceLocationSize = le64toh(sourceLocationSize);
 
-  *translated_dest = init_translator();
+  *translated_dest = init_translator("");
   translated_inited = true;
 
   arena_resize(&translated_dest->constants, constantsSize);
@@ -284,7 +284,7 @@ Execution execute(char *path, Stack *stack) {
   Translated translated;
 
   if (load_cache(&translated, cache_file_path, hash) != 0) {
-    translated = init_translator();
+    translated = init_translator(path);
 
     DArray tokens;
     darray_init(&tokens, sizeof(Token));
@@ -322,7 +322,12 @@ Execution execute(char *path, Stack *stack) {
     darray_free(&tokens, free_token);
 
     start = clock();
-    translate(&translated, &ast);
+    err = translate(&translated, &ast);
+    if (err.exists) {
+      free_translator(&translated);
+      darray_free(&ast, free_parsed);
+      return (Execution){err, (Stack){NULL, NULL}};
+    }
     end = clock();
     time_spent = (double)(end - start) / CLOCKS_PER_SEC;
     total_time_spent += time_spent;

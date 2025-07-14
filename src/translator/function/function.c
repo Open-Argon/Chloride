@@ -12,13 +12,13 @@
 #include <stdlib.h>
 #include <string.h>
 size_t translate_parsed_function(Translated *translated,
-                                 ParsedFunction *parsedFunction) {
+                                 ParsedFunction *parsedFunction, ArErr *err) {
   DArray main_bytecode = translated->bytecode;
   DArray _temp_bytecode;
   darray_init(&_temp_bytecode, sizeof(uint8_t));
   set_registers(translated, 1);
   translated->bytecode = _temp_bytecode;
-  translate_parsed(translated, parsedFunction->body);
+  translate_parsed(translated, parsedFunction->body, err);
   size_t function_bytecode_offset =
       arena_push(&translated->constants, translated->bytecode.data,
                  translated->bytecode.size*translated->bytecode.element_size);
