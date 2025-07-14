@@ -15,6 +15,51 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef _WIN32
+ssize_t getline(char **lineptr, size_t *n, FILE *stream) {
+  if (lineptr == NULL || n == NULL || stream == NULL) {
+    return -1;
+  }
+
+  size_t pos = 0;
+  int c;
+
+  if (*lineptr == NULL || *n == 0) {
+    *n = 128; // initial buffer size
+    *lineptr = malloc(*n);
+    if (*lineptr == NULL) {
+      return -1;
+    }
+  }
+
+  while ((c = fgetc(stream)) != EOF) {
+    // Resize buffer if needed
+    if (pos + 1 >= *n) {
+      size_t new_size = *n * 2;
+      char *new_ptr = realloc(*lineptr, new_size);
+      if (new_ptr == NULL) {
+        return -1;
+      }
+      *lineptr = new_ptr;
+      *n = new_size;
+    }
+
+    (*lineptr)[pos++] = (char)c;
+
+    if (c == '\n') {
+      break;
+    }
+  }
+
+  if (pos == 0 && c == EOF) {
+    return -1; // EOF and no data read
+  }
+
+  (*lineptr)[pos] = '\0';
+  return (ssize_t)pos;
+}
+#endif
+
 const ArErr no_err = (ArErr){false};
 
 ArErr create_err(int64_t line, int64_t column, int length, char *path,
@@ -86,7 +131,6 @@ void output_err(ArErr err) {
 
       while ((len = getline(&buffer, &size, file)) != -1) {
         if (current_line == err.line) {
-          printf("bruh\n");
           break;
         }
         current_line++;
@@ -99,20 +143,24 @@ void output_err(ArErr err) {
 
       char *line_starts = buffer;
       size_t skipped_chars = 0;
-      while (*line_starts && isspace((unsigned char)*line_starts) && line_starts-buffer < err.column-1) {
+      while (*line_starts && isspace((unsigned char)*line_starts) &&
+             line_starts - buffer < err.column - 1) {
         line_starts++;
         err.column--;
         skipped_chars++;
       }
       fprintf(stderr, " %zu | ", err.line);
       if (err.length) {
-        fprintf(stderr, "%.*s", (int)err.column-1, line_starts);
+        fprintf(stderr, "%.*s", (int)err.column - 1, line_starts);
         dyefg(stderr, DYE_RED);
         dye_style(stderr, DYE_STYLE_BOLD);
         fprintf(stderr, "%.*s", err.length, line_starts + err.column - 1);
         dye_style(stderr, DYE_STYLE_RESET);
         dyefg(stderr, DYE_RESET);
-        fprintf(stderr, "%.*s", (int)len - (int)skipped_chars-(int)err.column-(int)err.length, line_starts + (int)err.column + err.length - 1);
+        fprintf(stderr, "%.*s",
+                (int)len - (int)skipped_chars - (int)err.column -
+                    (int)err.length,
+                line_starts + (int)err.column + err.length - 1);
         for (int64_t i = 0; i < err.column - 1; i++) {
           fprintf(stderr, " ");
         }

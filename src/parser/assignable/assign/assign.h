@@ -11,7 +11,7 @@
 
 typedef struct {
   ParsedValue * to;
-  TokenType type;
+  ArTokenType type;
   ParsedValue * from;
 } ParsedAssign;
 

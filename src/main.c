@@ -14,8 +14,6 @@
 
 #include "../external/xxhash/xxhash.h"
 #include "hash_data/hash_data.h"
-#include <arpa/inet.h>
-#include <endian.h>
 #include <locale.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -26,11 +24,13 @@
 #include <time.h>
 #include <unistd.h>
 #ifdef _WIN32
-#include <direct.h>
-#define mkdir(path, mode) _mkdir(path)
+  #include <windows.h>
+  #include <direct.h>   // for _mkdir
+  #include <sys/stat.h> // for _stat
 #else
-#include <sys/stat.h>
-#include <sys/types.h>
+  #include <sys/stat.h>
+  #include <sys/types.h>
+  #include <unistd.h>
 #endif
 #include "../external/cwalk/include/cwalk.h"
 #include <string.h>
@@ -42,6 +42,28 @@
 #include <unistd.h>
 #endif
 #include "err.h"
+
+#if defined(_WIN32) || defined(_WIN64)
+
+// Windows / MinGW usually uses little-endian, so these can be no-ops
+// But define them explicitly to avoid implicit declaration warnings
+
+static inline uint32_t le32toh(uint32_t x) {
+    return x;
+}
+static inline uint64_t le64toh(uint64_t x) {
+    return x;
+}
+static inline uint32_t htole32(uint32_t x) {
+    return x;
+}
+static inline uint64_t htole64(uint64_t x) {
+    return x;
+}
+
+#else
+#include <endian.h> // On Linux/BSD
+#endif
 
 char *get_current_directory() {
   char *buffer = NULL;
@@ -72,16 +94,32 @@ char *get_current_directory() {
 }
 
 int ensure_dir_exists(const char *path) {
-  struct stat st = {0};
-
-  if (stat(path, &st) == -1) {
-    // Directory does not exist, create it
-    if (mkdir(path, 0755) != 0) {
-      perror("mkdir failed");
-      return -1;
+#ifdef _WIN32
+    struct _stat st;
+    if (_stat(path, &st) != 0) {
+        // Directory does not exist, create it
+        if (_mkdir(path) != 0) {
+            perror("_mkdir failed");
+            return -1;
+        }
+    } else if (!(st.st_mode & _S_IFDIR)) {
+        fprintf(stderr, "Path exists but is not a directory\n");
+        return -1;
     }
-  }
-  return 0;
+#else
+    struct stat st;
+    if (stat(path, &st) != 0) {
+        // Directory does not exist, create it
+        if (mkdir(path, 0755) != 0) {
+            perror("mkdir failed");
+            return -1;
+        }
+    } else if (!S_ISDIR(st.st_mode)) {
+        fprintf(stderr, "Path exists but is not a directory\n");
+        return -1;
+    }
+#endif
+    return 0;
 }
 
 const char CACHE_FOLDER[] = "__arcache__";

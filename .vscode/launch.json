@@ -9,7 +9,7 @@
       "type": "cppdbg",
       "request": "launch",
       "program": "${workspaceFolder}/bin/argon",
-      "args": ["test.ar"],
+      "args": ["testing.ar"],
       "stopAtEntry": true,
       "cwd": "${workspaceFolder}",
       "environment": [],

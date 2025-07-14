@@ -49,59 +49,57 @@ ParsedValueReturn parse_dowrap(char *file, DArray *tokens, size_t *index) {
                                NULL};
   }
   size_t indent_depth = 0;
-  bool temp_indent_depth_toggle = false;
-  size_t temp_indent_depth = 0;
+  bool has_body_started = false;
+  bool inside_body = false;
   bool pass = false;
+
   DArray dowrap_tokens;
   darray_init(&dowrap_tokens, sizeof(Token));
   DArray to_free;
   darray_init(&to_free, sizeof(char *));
 
-  size_t temp_index_count = 0;
+  size_t dowrap_index = *index;
+  size_t last_normal_token = dowrap_index-1;
 
-  while (!pass && ++(*index) < tokens->size) {
-    token = darray_get(tokens, *index);
+  while (!pass && ++dowrap_index < tokens->size) {
+    token = darray_get(tokens, dowrap_index);
     switch (token->type) {
-    case TOKEN_INDENT:
-      temp_indent_depth_toggle = true;
-      if (dowrap_tokens.size == 0) {
-        indent_depth = strlen(token->value);
-        temp_indent_depth = indent_depth;
-      } else {
-        temp_indent_depth = strlen(token->value);
-      }
-      break;
     case TOKEN_NEW_LINE:
-      temp_indent_depth = 0;
-      temp_indent_depth_toggle = true;
       darray_push(&dowrap_tokens, token);
-      temp_index_count++;
+      inside_body = false;
       break;
-    default:
-      if (temp_indent_depth < indent_depth && temp_indent_depth_toggle) {
-        pass = true;
-        break;
-      }
-      if (temp_indent_depth > indent_depth) {
-        size_t indent_amount = temp_indent_depth - indent_depth;
+    case TOKEN_INDENT:
+      if (!inside_body && !has_body_started) {
+        indent_depth = token->length;
+        inside_body = true;
+      } else if (indent_depth < token->length) {
+        size_t indent_amount = token->length - indent_depth;
         Token indent_token;
         indent_token.line = token->line;
         indent_token.column = token->column;
+        indent_token.length = indent_amount;
         indent_token.type = TOKEN_INDENT;
         indent_token.value = repeat_space(indent_amount);
         darray_push(&dowrap_tokens, &indent_token);
         darray_push(&to_free, &indent_token.value);
+        inside_body = true;
+      } else if (indent_depth == token->length) {
+        inside_body = true;
+      } else if (indent_depth > token->length) {
+        inside_body = false;
       }
-      temp_indent_depth_toggle = false;
-      temp_indent_depth = 0;
-      temp_index_count = 0;
+      break;
+    default:
+      if (!inside_body) {
+        pass = true;
+        break;
+      }
+      last_normal_token = dowrap_index;
+      has_body_started = true;
       darray_push(&dowrap_tokens, token);
     }
   }
-  (*index) -= temp_index_count;
-  for (size_t i = 0; i < temp_index_count; i++) {
-    darray_pop(&dowrap_tokens, NULL);
-  }
+  *index = last_normal_token + 1;
   ArErr err = parser(file, dowrap_parsed, &dowrap_tokens, false);
 
   darray_free(&dowrap_tokens, NULL);

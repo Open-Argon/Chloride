@@ -79,10 +79,10 @@ typedef enum {
   TOKEN_COLON,
   TOKEN_EXCLAMATION,
   TOKEN_INVALID,
-} TokenType;
+} ArTokenType;
 
 typedef struct {
-  TokenType type;
+  ArTokenType type;
   size_t line;
   size_t column;
   size_t length;

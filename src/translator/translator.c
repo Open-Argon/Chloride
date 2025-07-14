@@ -8,6 +8,7 @@
 #include "../hash_data/hash_data.h"
 #include "../hashmap/hashmap.h"
 #include "declaration/declaration.h"
+#include "dowrap/dowrap.h"
 #include "function/function.h"
 #include "identifier/identifier.h"
 #include "if/if.h"
@@ -85,7 +86,8 @@ size_t arena_push(ConstantArena *arena, const void *data, size_t length) {
 
 Translated init_translator() {
   Translated translated;
-  translated.registerCount = 0;
+  translated.registerCount = 1;
+  translated.return_jumps=NULL;
   darray_init(&translated.bytecode, sizeof(uint8_t));
   darray_init(&translated.source_locations, sizeof(SourceLocation));
   arena_init(&translated.constants);
@@ -144,6 +146,8 @@ size_t translate_parsed(Translated *translated, ParsedValue *parsedValue) {
                                        (ParsedIdentifier *)parsedValue->data);
   case AST_IF:
     return translate_parsed_if(translated, (DArray *)parsedValue->data);
+  case AST_DOWRAP:
+    return translate_parsed_dowrap(translated, (DArray *)parsedValue->data);
   }
   return 0;
 }
