@@ -1,10 +1,10 @@
 # SPDX-FileCopyrightText: 2025 William Bell
 
 # SPDX-License-Identifier: GPL-3.0-or-later
-
 let y = 1
-let term = y
 
 let x = do
-    y
-    return term
+    do
+        return y
+    x
+return y
