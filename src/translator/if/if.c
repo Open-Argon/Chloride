@@ -38,12 +38,12 @@ size_t translate_parsed_if(Translated *translated, DArray *parsedIf) {
     } else {
       translate_parsed(translated, condition->content);
       push_instruction_byte(translated, OP_POP_SCOPE);
-      jump_after_body_positions[i] = 0;
+      push_instruction_byte(translated, OP_JUMP);
+      jump_after_body_positions[i] = push_instruction_code(translated, 0);
     }
   }
   for (uint64_t i = 0; i < parsedIf->size; i++) {
-    if (jump_after_body_positions[i])
-      set_instruction_code(translated, jump_after_body_positions[i],
+    set_instruction_code(translated, jump_after_body_positions[i],
                            translated->bytecode.size);
   }
   free(jump_after_body_positions);
