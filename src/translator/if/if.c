@@ -5,12 +5,12 @@
  */
 
 #include "../../parser/if/if.h"
-#include "../translator.h"
+#include "if.h"
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 
-size_t translate_parsed_if(Translated *translated, DArray *parsedIf) {
+size_t translate_parsed_if(Translated *translated, DArray *parsedIf, ArErr * err) {
   size_t *jump_after_body_positions =
       checked_malloc(parsedIf->size * sizeof(size_t));
 
@@ -22,13 +22,13 @@ size_t translate_parsed_if(Translated *translated, DArray *parsedIf) {
     ParsedConditional *condition = darray_get(parsedIf, i);
     push_instruction_byte(translated, OP_NEW_SCOPE);
     if (condition->condition) {
-      translate_parsed(translated, condition->condition);
+      translate_parsed(translated, condition->condition, err);
       push_instruction_byte(translated, OP_BOOL);
       push_instruction_byte(translated, 0);
       push_instruction_byte(translated, OP_JUMP_IF_FALSE);
       push_instruction_byte(translated, 0);
       uint64_t last_jump_index = push_instruction_code(translated, 0);
-      translate_parsed(translated, condition->content);
+      translate_parsed(translated, condition->content, err);
       push_instruction_byte(translated, OP_POP_SCOPE);
       push_instruction_byte(translated, OP_JUMP);
       jump_after_body_positions[i] = push_instruction_code(translated, 0);
@@ -36,7 +36,7 @@ size_t translate_parsed_if(Translated *translated, DArray *parsedIf) {
                            translated->bytecode.size);
       push_instruction_byte(translated, OP_POP_SCOPE);
     } else {
-      translate_parsed(translated, condition->content);
+      translate_parsed(translated, condition->content, err);
       push_instruction_byte(translated, OP_POP_SCOPE);
       push_instruction_byte(translated, OP_JUMP);
       jump_after_body_positions[i] = push_instruction_code(translated, 0);

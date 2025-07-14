@@ -9,6 +9,6 @@
 #include "../translator.h"
 
 
-size_t translate_parsed_dowrap(Translated *translated, DArray *parsedDowrap);
+size_t translate_parsed_dowrap(Translated *translated, DArray *parsedDowrap, ArErr *err);
 
 #endif // TRANSLATE_DO_WRAP_H

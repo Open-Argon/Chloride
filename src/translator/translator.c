@@ -85,8 +85,9 @@ size_t arena_push(ConstantArena *arena, const void *data, size_t length) {
   return offset;
 }
 
-Translated init_translator() {
+Translated init_translator(char* path) {
   Translated translated;
+  translated.path = path;
   translated.registerCount = 1;
   translated.return_jumps=NULL;
   darray_init(&translated.bytecode, sizeof(uint8_t));
@@ -124,14 +125,14 @@ void set_registers(Translated *translator, uint8_t count) {
     translator->registerCount = count;
 }
 
-size_t translate_parsed(Translated *translated, ParsedValue *parsedValue) {
+size_t translate_parsed(Translated *translated, ParsedValue *parsedValue, ArErr*err) {
   switch (parsedValue->type) {
   case AST_STRING:
     return translate_parsed_string(translated,
                                    *((ParsedString *)parsedValue->data));
   case AST_DECLARATION:
     return translate_parsed_declaration(translated,
-                                        *((DArray *)parsedValue->data));
+                                        *((DArray *)parsedValue->data), err);
   case AST_NUMBER:
     return translate_parsed_number(translated, (char *)parsedValue->data, 0);
   case AST_NULL:
@@ -141,25 +142,30 @@ size_t translate_parsed(Translated *translated, ParsedValue *parsedValue) {
     return output;
   case AST_FUNCTION:
     return translate_parsed_function(translated,
-                                     (ParsedFunction *)parsedValue->data);
+                                     (ParsedFunction *)parsedValue->data, err);
   case AST_IDENTIFIER:
     return translate_parsed_identifier(translated,
                                        (ParsedIdentifier *)parsedValue->data);
   case AST_IF:
-    return translate_parsed_if(translated, (DArray *)parsedValue->data);
+    return translate_parsed_if(translated, (DArray *)parsedValue->data, err);
   case AST_DOWRAP:
-    return translate_parsed_dowrap(translated, (DArray *)parsedValue->data);
+    return translate_parsed_dowrap(translated, (DArray *)parsedValue->data, err);
   case AST_RETURN:
-    return translate_parsed_return(translated, (ParsedReturn *)parsedValue->data);
+    return translate_parsed_return(translated, (ParsedReturn *)parsedValue->data, err);
   }
   return 0;
 }
 
-void translate(Translated *translated, DArray *ast) {
+ArErr translate(Translated *translated, DArray *ast) {
+  ArErr err = no_err;
   for (size_t i = 0; i < ast->size; i++) {
     ParsedValue *parsedValue = darray_get(ast, i);
-    translate_parsed(translated, parsedValue);
+    translate_parsed(translated, parsedValue, &err);
+    if (err.exists) {
+      break;
+    }
   }
+  return err;
 }
 
 void free_translator(Translated *translated) {

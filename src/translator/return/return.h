@@ -10,6 +10,7 @@
 #include "../../parser/return/return.h"
 
 
-size_t translate_parsed_return(Translated *translated, ParsedReturn *parsedReturn);
+size_t translate_parsed_return(Translated *translated,
+                               ParsedReturn *parsedReturn, ArErr * err);
 
 #endif // TRANSLATE_RETURN_H

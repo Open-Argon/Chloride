@@ -10,6 +10,6 @@
 #include "../translator.h"
 
 size_t translate_parsed_function(Translated *translated,
-                                 ParsedFunction *parsedFunction);
+                                 ParsedFunction *parsedFunction, ArErr *err);
 
 #endif

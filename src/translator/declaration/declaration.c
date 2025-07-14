@@ -11,15 +11,17 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
+
 size_t translate_parsed_declaration(Translated *translated,
-                                    DArray delcarations) {
+                                    DArray delcarations, ArErr *err) {
   set_registers(translated, 1);
   size_t first = 0;
   for (size_t i = 0; i < delcarations.size; i++) {
     DArray* old_return_jumps = translated->return_jumps;
     translated->return_jumps = NULL;
     ParsedSingleDeclaration *singleDeclaration = darray_get(&delcarations, i);
-    size_t temp = translate_parsed(translated, singleDeclaration->from);
+    size_t temp = translate_parsed(translated, singleDeclaration->from, err);
+    if (err->exists) return first;
     if (i == 0)
       first = temp;
     size_t length = strlen(singleDeclaration->name);

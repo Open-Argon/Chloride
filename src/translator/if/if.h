@@ -8,6 +8,6 @@
 #define TRANSLATE_iF_H
 #include "../translator.h"
 
-size_t translate_parsed_if(Translated *translated, DArray *parsedIf);
+size_t translate_parsed_if(Translated *translated, DArray *parsedIf, ArErr * err);
 
 #endif // TRANSLATE_iF_H
