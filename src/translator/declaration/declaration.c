@@ -16,6 +16,8 @@ size_t translate_parsed_declaration(Translated *translated,
   set_registers(translated, 1);
   size_t first = 0;
   for (size_t i = 0; i < delcarations.size; i++) {
+    DArray* old_return_jumps = translated->return_jumps;
+    translated->return_jumps = NULL;
     ParsedSingleDeclaration *singleDeclaration = darray_get(&delcarations, i);
     size_t temp = translate_parsed(translated, singleDeclaration->from);
     if (i == 0)
@@ -33,6 +35,7 @@ size_t translate_parsed_declaration(Translated *translated,
                                        singleDeclaration->column, length};
     push_instruction_code(translated, translated->source_locations.size);
     darray_push(&translated->source_locations, &source_locations);
+    translated->return_jumps = old_return_jumps;
   }
   return first;
 }

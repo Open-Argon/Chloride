@@ -14,6 +14,7 @@
 #include "if/if.h"
 #include "number/number.h"
 #include "string/string.h"
+#include "return/return.h"
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -148,6 +149,8 @@ size_t translate_parsed(Translated *translated, ParsedValue *parsedValue) {
     return translate_parsed_if(translated, (DArray *)parsedValue->data);
   case AST_DOWRAP:
     return translate_parsed_dowrap(translated, (DArray *)parsedValue->data);
+  case AST_RETURN:
+    return translate_parsed_return(translated, (ParsedReturn *)parsedValue->data);
   }
   return 0;
 }

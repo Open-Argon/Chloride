@@ -13,6 +13,7 @@
 #include "assignable/identifier/identifier.h"
 #include "declaration/declaration.h"
 #include "dictionary/dictionary.h"
+#include "return/return.h"
 #include "dowrap/dowrap.h"
 #include "function/function.h"
 #include "if/if.h"
@@ -31,7 +32,7 @@
 const char *ValueTypeNames[] = {
     "string",  "assign",     "identifier",  "number",     "if statement",
     "access",  "call",       "declaration", "null",       "boolean",
-    "do wrap", "operations", "list",        "dictionary", "function"};
+    "do wrap", "operations", "list",        "dictionary", "function", "return"};
 
 ArErr error_if_finished(char *file, DArray *tokens, size_t *index) {
   if ((*index) >= tokens->size) {
@@ -70,6 +71,8 @@ ParsedValueReturn parse_token_full(char *file, DArray *tokens, size_t *index,
     switch (token->type) {
     case TOKEN_IF:
       return parse_if(file, tokens, index);
+    case TOKEN_RETURN:
+      return parse_return(file, tokens, index);
     default:
       break;
     };
@@ -254,5 +257,9 @@ void free_parsed(void *ptr) {
     break;
   case AST_FUNCTION:
     free_function(parsed);
+    break;
+  case AST_RETURN:
+    free_parsed_return(parsed);
+    break;
   }
 }
