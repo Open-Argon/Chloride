@@ -7,11 +7,11 @@
 #ifndef AROBJECT_H
 #define AROBJECT_H
 
-#include <gmp.h>
 #include "runtime/internals/dynamic_array_armem/darray_armem.h"
 #include "runtime/internals/hashmap/hashmap.h"
+#include <gmp.h>
 
-typedef struct ArgonObject ArgonObject;  // forward declaration
+typedef struct ArgonObject ArgonObject; // forward declaration
 
 typedef enum ArgonType {
   TYPE_NULL,
@@ -40,13 +40,12 @@ struct argon_function_struct {
   char **parameters;
 };
 
+
+
 // full definition of ArgonObject (no typedef again!)
 struct ArgonObject {
   ArgonType type;
-  char *name;
-  ArgonObject *self;
-  ArgonObject *baseObject;
-  struct hashmap_GC *fields;
+  struct hashmap_GC *dict;
   union {
     mpq_t as_number;
     bool as_bool;

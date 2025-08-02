@@ -23,14 +23,6 @@
 #include <string.h>
 #include <unistd.h>
 
-uint64_t bytes_to_uint64(const uint8_t bytes[8]) {
-  uint64_t value = 0;
-  for (int i = 0; i < 8; i++) {
-    value |= ((uint64_t)bytes[i]) << (i * 8);
-  }
-  return value;
-}
-
 void init_types() {
   BASE_CLASS = init_argon_class("BASE_CLASS");
 
@@ -40,6 +32,13 @@ void init_types() {
   init_string_type();
 
   init_base_field();
+  BASE_CLASS->baseObject = ARGON_NULL;
+}
+
+int compare_by_order(const void *a, const void *b) {
+  const struct node_GC *itemA = (const struct node_GC *)a;
+  const struct node_GC *itemB = (const struct node_GC *)b;
+  return itemA->order - itemB->order;
 }
 
 uint8_t pop_byte(Translated *translated, RuntimeState *state) {
@@ -47,11 +46,11 @@ uint8_t pop_byte(Translated *translated, RuntimeState *state) {
 }
 
 uint64_t pop_bytecode(Translated *translated, RuntimeState *state) {
-  uint8_t bytes[8];
-  for (size_t i = 0; i < sizeof(bytes); i++) {
-    bytes[i] = *((uint8_t *)darray_get(&translated->bytecode, state->head++));
+  uint64_t value = 0;
+  for (int i = 0; i < 8; i++) {
+    value |= ((uint64_t)pop_byte(translated, state)) << (i * 8);
   }
-  return bytes_to_uint64(bytes);
+  return value;
 }
 
 void load_const(Translated *translated, RuntimeState *state) {
@@ -147,7 +146,28 @@ ArErr run_instruction(Translated *translated, RuntimeState *state,
   case OP_NEW_SCOPE:
     *stack = create_scope(*stack);
     break;
-  case OP_POP_SCOPE:
+  case OP_POP_SCOPE:;
+    // struct node_GC *array =
+    //     checked_malloc(sizeof(struct node_GC) * (*stack)->scope->count);
+    // size_t j = 0;
+    // for (size_t i = 0; i < (*stack)->scope->size; i++) {
+    //   struct node_GC *temp = (*stack)->scope->list[i];
+    //   while (temp) {
+    //     array[j++] = *temp;
+    //     temp = temp->next;
+    //   }
+    // }
+    // qsort(array, (*stack)->scope->count, sizeof(struct node_GC),
+    //       compare_by_order);
+    // for (size_t i = 0; i < (*stack)->scope->count; i++) {
+    //   struct node_GC temp = array[i];
+    //   printf("%.*s = %.*s\n",
+    //            (int)((ArgonObject *)temp.key)->value.as_str.length,
+    //            ((ArgonObject *)temp.key)->value.as_str.data,
+    //            (int)((ArgonObject *)temp.val)->value.as_str.length,
+    //            ((ArgonObject *)temp.val)->value.as_str.data);
+    // }
+    // free(array);
     *stack = (*stack)->prev;
     break;
   default:
@@ -160,7 +180,7 @@ ArErr run_instruction(Translated *translated, RuntimeState *state,
 RuntimeState init_runtime_state(Translated translated, char *path) {
   return (RuntimeState){
       checked_malloc(translated.registerCount * sizeof(ArgonObject *)), 0, path,
-      ARGON_NULL};
+      ARGON_NULL, NULL, NULL};
 }
 
 Stack *create_scope(Stack *prev) {
@@ -172,11 +192,21 @@ Stack *create_scope(Stack *prev) {
 
 ArErr runtime(Translated translated, RuntimeState state, Stack *stack) {
   state.head = 0;
-  while (state.head < translated.bytecode.size) {
-    ArErr err = run_instruction(&translated, &state, &stack);
-    if (err.exists) {
-      return err;
+  StackFrame *currentStackFrame = checked_malloc(sizeof(StackFrame));
+  *currentStackFrame = (StackFrame){translated, state, stack, NULL};
+  state.currentStackFramePointer = &currentStackFrame;
+  ArErr err = no_err;
+  while (currentStackFrame) {
+    while (currentStackFrame->state.head <
+               currentStackFrame->translated.bytecode.size &&
+           !err.exists) {
+      err =
+          run_instruction(&currentStackFrame->translated,
+                          &currentStackFrame->state, &currentStackFrame->stack);
     }
+    StackFrame *tempStackFrame = currentStackFrame;
+    currentStackFrame = currentStackFrame->previousStackFrame;
+    free(tempStackFrame);
   }
-  return no_err;
+  return err;
 }

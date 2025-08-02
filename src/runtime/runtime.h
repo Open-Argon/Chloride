@@ -6,20 +6,35 @@
 
 #ifndef RUNTIME_H
 #define RUNTIME_H
+#include "../returnTypes.h"
 #include "../translator/translator.h"
 #include "internals/hashmap/hashmap.h"
-#include "../returnTypes.h"
 
-typedef struct {
+typedef struct StackFrame StackFrame;
+typedef struct RuntimeState RuntimeState;
+
+typedef ArErr (*error_result)(ArErr, Translated *translated,
+                              RuntimeState *state, struct Stack **stack);
+
+typedef struct RuntimeState {
   ArgonObject **registers;
   size_t head;
-  char*path;
-  ArgonObject * return_value;
+  char *path;
+  ArgonObject *return_value;
+  StackFrame **currentStackFramePointer;
+  error_result result;
 } RuntimeState;
+
+typedef struct StackFrame {
+  Translated translated;
+  RuntimeState state;
+  Stack *stack;
+  StackFrame *previousStackFrame;
+} StackFrame;
 
 void init_types();
 
-extern struct hashmap * runtime_hash_table;
+extern struct hashmap *runtime_hash_table;
 
 uint64_t runtime_hash(const void *data, size_t len, uint64_t prehash);
 

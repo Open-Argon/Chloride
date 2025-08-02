@@ -5,7 +5,6 @@
 import random
 import sys
 
-for i in range(10000):
-  sys.stdout.write("\"")
-  sys.stdout.write(str(random.random()))
-  sys.stdout.write("\"\n")
+for i in range(10000000):
+  sys.stdout.write("\"hello world\"\n")
+

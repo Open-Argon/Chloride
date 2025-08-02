@@ -1,11 +1,16 @@
 # SPDX-FileCopyrightText: 2025 William Bell
 
 # SPDX-License-Identifier: GPL-3.0-or-later
-
-let y = 1
-
-let x = do
+do
+    let x = "hello world"
+    let i = "hell"
     do
-        return y
-    x
-let z = x
+        let x = "hello world"
+        let i = "hell"
+        let z = "hello world"
+        let a = "hello world"
+        let b = "hello world"
+        x
+    let z = "hello world"
+    let a = "hello world"
+    let b = "hello world"

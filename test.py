@@ -10,7 +10,7 @@ def generate_names(max_width, skip_keywords=None):
     if skip_keywords is None:
         skip_keywords = {"if", "else", "while", "forever", "for", "break", "continue",
                          "return", "let", "import", "from", "do", "true", "false", "null",
-                         "delete", "not", "try", "catch", "in"}
+                         "delete", "not", "try", "catch", "in", "or", "and", "elif"}
     else:
         skip_keywords = set(skip_keywords)
 
@@ -25,15 +25,14 @@ def generate_names(max_width, skip_keywords=None):
             name = ''.join(p)
             if name in skip_keywords:
                 continue
-            if not first:
-                write('\n')
+            write('let ')
             write(name)
+            write(' = null\n')
             first = False
             if i>10000000:
                 break
             i+=1
 
 # Example usage:
-max_width = 15
-# sys.stdout.write("let ")
+max_width = 5
 generate_names(max_width)
