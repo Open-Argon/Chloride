@@ -29,8 +29,9 @@ ArgonObject *init_argon_class(char *name) {
   ArgonObject *object = ar_alloc(sizeof(ArgonObject));
   object->name = name;
   object->type = TYPE_OBJECT;
-  object->self = NULL;
-  object->baseObject = ARGON_TYPE;
+  object->self = object;
+  object->classObject = ;
+  object->baseObject = BASE_CLASS;
   object->fields = createHashmap_GC();
   memset(&object->value, 0, sizeof(object->value));
   return object;

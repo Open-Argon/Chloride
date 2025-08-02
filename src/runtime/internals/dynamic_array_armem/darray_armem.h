@@ -10,7 +10,7 @@
 #include <stdbool.h>
 #include <stddef.h> // for size_t
 
-#define CHUNK_SIZE 1048576
+#define CHUNK_SIZE 4096
 
 typedef struct {
   void *data;

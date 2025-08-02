@@ -12,11 +12,17 @@
 #include <string.h>
 
 void darray_armem_init(darray_armem *arr, size_t element_size) {
+  if (element_size > CHUNK_SIZE) {
+    fprintf(stderr, "darray_armem_init: element size larger than chunk size\n");
+    exit(EXIT_FAILURE);
+  }
+
   arr->element_size = element_size;
   arr->size = 0;
-  arr->capacity = CHUNK_SIZE;
-  arr->data = ar_alloc(CHUNK_SIZE * element_size);
+  arr->capacity = CHUNK_SIZE / element_size;
+  arr->data = ar_alloc(CHUNK_SIZE); // fixed-size byte allocation
   arr->resizable = true;
+
   if (!arr->data) {
     fprintf(stderr, "darray_armem_init: allocation failed\n");
     exit(EXIT_FAILURE);
@@ -28,15 +34,23 @@ void darray_armem_resize(darray_armem *arr, size_t new_size) {
     fprintf(stderr, "darray_armem_resize: unresizable darray_armem\n");
     exit(EXIT_FAILURE);
   }
-  size_t new_capacity = ((new_size + CHUNK_SIZE) / CHUNK_SIZE) * CHUNK_SIZE;
+
+  size_t required_bytes = new_size * arr->element_size;
+  size_t new_capacity_bytes =
+      ((required_bytes + CHUNK_SIZE - 1) / CHUNK_SIZE) * CHUNK_SIZE;
+  size_t new_capacity = new_capacity_bytes / arr->element_size;
+
+  if (!new_capacity) {
+    return;
+  }
+
   if (new_capacity != arr->capacity) {
-    void *new_data = ar_alloc(new_capacity * arr->element_size);
-    memccpy(new_data,arr->data, arr->element_size, arr->capacity);
-    if (!new_data) {
+    printf("%zu\n", new_capacity_bytes);
+    arr->data = ar_realloc(arr->data, new_capacity_bytes);
+    if (!arr->data) {
       fprintf(stderr, "darray_armem_resize: reallocation failed\n");
       exit(EXIT_FAILURE);
     }
-    arr->data = new_data;
     arr->capacity = new_capacity;
   }
 
@@ -67,11 +81,11 @@ void darray_armem_pop(darray_armem *arr, void (*free_data)(void *)) {
     return;
 
   if (free_data) {
-    void *target = (char *)arr->data + (arr->size-1) * arr->element_size;
+    void *target = (char *)arr->data + (arr->size - 1) * arr->element_size;
     free_data(target);
   }
-  
-  darray_armem_resize(arr, arr->size-1);
+
+  darray_armem_resize(arr, arr->size - 1);
 }
 
 void *darray_armem_get(darray_armem *arr, size_t index) {

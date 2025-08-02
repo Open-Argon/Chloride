@@ -140,7 +140,7 @@ void output_err(ArErr err) {
         fprintf(stderr, " ");
       }
       fprintf(stderr, "|\n");
-      for (size_t i = 0;i<len;i++) {
+      for (ssize_t i = 0;i<len;i++) {
         if (buffer[i] == '\n') {
           buffer[i] = '\0';
           break;

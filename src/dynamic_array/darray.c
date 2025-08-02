@@ -8,17 +8,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "../memory.h"
 
 void darray_init(DArray *arr, size_t element_size) {
   arr->element_size = element_size;
   arr->size = 0;
-  arr->capacity = CHUNK_SIZE;
-  arr->data = malloc(CHUNK_SIZE * element_size);
+  arr->capacity = CHUNK_SIZE / element_size;
+  arr->data = checked_malloc(CHUNK_SIZE);  // fixed byte allocation
   arr->resizable = true;
-  if (!arr->data) {
-    fprintf(stderr, "darray_init: allocation failed\n");
-    exit(EXIT_FAILURE);
-  }
 }
 
 void darray_resize(DArray *arr, size_t new_size) {
@@ -26,9 +23,17 @@ void darray_resize(DArray *arr, size_t new_size) {
     fprintf(stderr, "darray_resize: unresizable darray\n");
     exit(EXIT_FAILURE);
   }
-  size_t new_capacity = ((new_size + CHUNK_SIZE) / CHUNK_SIZE) * CHUNK_SIZE;
+
+  // Determine number of full chunks needed to store new_size elements
+  size_t required_bytes = new_size * arr->element_size;
+  size_t new_capacity_bytes = ((required_bytes + CHUNK_SIZE - 1) / CHUNK_SIZE) * CHUNK_SIZE;
+  size_t new_capacity = new_capacity_bytes / arr->element_size;
+  if (!new_capacity) {
+    return;
+  }
+
   if (new_capacity != arr->capacity) {
-    void *new_data = realloc(arr->data, new_capacity * arr->element_size);
+    void *new_data = realloc(arr->data, new_capacity_bytes);
     if (!new_data) {
       fprintf(stderr, "darray_resize: reallocation failed\n");
       exit(EXIT_FAILURE);
