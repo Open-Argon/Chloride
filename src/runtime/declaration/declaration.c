@@ -19,7 +19,7 @@ ArErr runtime_declaration(Translated *translated, RuntimeState *state,
     SourceLocation *source_location = darray_get(&translated->source_locations, source_location_index);
     return create_err(source_location->line, source_location->column, source_location->length, state->path, "Runtime Error", "Identifier '%.*s' has already been declared in the current scope", length, arena_get(&translated->constants, offset));
   }
-  ArgonObject * key = init_string_object(arena_get(&translated->constants, offset), length);
+  ArgonObject * key = new_string_object(arena_get(&translated->constants, offset), length);
   hashmap_insert_GC(stack->scope, hash, key, state->registers[from_register], 0);
   return no_err;
 }

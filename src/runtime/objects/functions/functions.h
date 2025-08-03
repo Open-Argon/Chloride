@@ -8,7 +8,7 @@
 #define FUNCTION_H
 #include "../object.h"
 
-void init_function_type();
+extern ArgonObject *ARGON_FUNCTION_TYPE;
 
 ArgonObject *load_argon_function(Translated *translated, RuntimeState *state, struct Stack *stack);
 

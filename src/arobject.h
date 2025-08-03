@@ -34,10 +34,11 @@ typedef struct Stack {
 } Stack;
 
 struct argon_function_struct {
-  darray_armem bytecode;
+  uint8_t* bytecode;
+  size_t bytecode_length;
   Stack stack;
   size_t number_of_parameters;
-  char **parameters;
+  struct string_struct *parameters;
 };
 
 
