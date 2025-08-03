@@ -23,16 +23,38 @@
 #include <string.h>
 #include <unistd.h>
 
-void init_types() {
-  BASE_CLASS = init_argon_class("BASE_CLASS");
+void bootstrap_types() {
+  BASE_CLASS = new_object();
+  ARGON_TYPE_TYPE = new_object();
+  add_field(ARGON_TYPE_TYPE, "__base__", BASE_CLASS);
+  add_field(ARGON_TYPE_TYPE, "__class__", ARGON_TYPE_TYPE);
 
-  init_type();
-  init_function_type();
-  init_literals();
-  init_string_type();
+  ARGON_NULL_TYPE = new_object();
+  add_field(ARGON_NULL_TYPE, "__base__", BASE_CLASS);
+  ARGON_NULL = new_object();
+  add_field(ARGON_NULL, "__class__", ARGON_NULL_TYPE);
 
-  init_base_field();
-  BASE_CLASS->baseObject = ARGON_NULL;
+  add_field(BASE_CLASS, "__base__", ARGON_NULL);
+
+  ARGON_BOOL_TYPE = new_object();
+  add_field(ARGON_BOOL_TYPE, "__base__", BASE_CLASS);
+  ARGON_TRUE = new_object();
+  add_field(ARGON_NULL, "__class__", ARGON_BOOL_TYPE);
+  ARGON_FALSE = new_object();
+  add_field(ARGON_NULL, "__class__", ARGON_BOOL_TYPE);
+
+  ARGON_STRING_TYPE = new_object();
+  add_field(ARGON_STRING_TYPE, "__base__", BASE_CLASS);
+
+
+  add_field(BASE_CLASS, "__name__", new_string_object_null_terminated("object"));
+  add_field(ARGON_TYPE_TYPE, "__name__", new_string_object_null_terminated("type"));
+  add_field(ARGON_NULL_TYPE, "__name__", new_string_object_null_terminated("NullType"));
+  add_field(ARGON_BOOL_TYPE, "__name__", new_string_object_null_terminated("boolean"));
+
+  ARGON_FUNCTION_TYPE = new_object();
+  add_field(ARGON_FUNCTION_TYPE, "__base__", BASE_CLASS);
+  add_field(ARGON_FUNCTION_TYPE, "__name__", new_string_object_null_terminated("function"));
 }
 
 int compare_by_order(const void *a, const void *b) {
@@ -64,7 +86,7 @@ void load_const(Translated *translated, RuntimeState *state) {
   ArgonObject *object = ARGON_NULL;
   switch (type) {
   case TYPE_OP_STRING:
-    object = init_string_object(data, length);
+    object = new_string_object(data, length);
     break;
   }
   state->registers[to_register] = object;

@@ -32,7 +32,7 @@ typedef struct StackFrame {
   StackFrame *previousStackFrame;
 } StackFrame;
 
-void init_types();
+void bootstrap_types();
 
 extern struct hashmap *runtime_hash_table;
 

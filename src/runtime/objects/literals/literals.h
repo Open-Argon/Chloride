@@ -8,8 +8,12 @@
 #define RUNTIME_LITERALS_H
 #include "../object.h"
 
+extern ArgonObject *ARGON_NULL_TYPE;
 extern ArgonObject *ARGON_NULL;
+
+extern ArgonObject *ARGON_BOOL_TYPE;
 extern ArgonObject *ARGON_FALSE;
+
 extern ArgonObject *ARGON_TRUE;
 
 void init_literals();

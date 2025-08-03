@@ -13,9 +13,7 @@
 extern ArgonObject *BASE_CLASS;
 
 typedef struct ArgonObject ArgonObject;
-void init_base_field();
-ArgonObject *init_child_argon_object(ArgonObject *cls);
-ArgonObject *init_argon_class(char *name);
+ArgonObject *new_object();
 
 void add_field(ArgonObject *target, char *name, ArgonObject *object);
 #endif // OBJECT_H

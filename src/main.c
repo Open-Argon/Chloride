@@ -384,7 +384,7 @@ int main(int argc, char *argv[]) {
   setlocale(LC_ALL, "");
   ar_memory_init();
   generate_siphash_key(siphash_key);
-  init_types();
+  bootstrap_types();
   char *CWD = get_current_directory();
   if (argc <= 1)
     return -1;
