@@ -8,6 +8,7 @@
 #include "../hash_data/hash_data.h"
 #include "../hashmap/hashmap.h"
 #include "declaration/declaration.h"
+#include "call/call.h"
 #include "dowrap/dowrap.h"
 #include "function/function.h"
 #include "identifier/identifier.h"
@@ -152,6 +153,8 @@ size_t translate_parsed(Translated *translated, ParsedValue *parsedValue, ArErr*
     return translate_parsed_dowrap(translated, (DArray *)parsedValue->data, err);
   case AST_RETURN:
     return translate_parsed_return(translated, (ParsedReturn *)parsedValue->data, err);
+  case AST_CALL:
+    return translate_parsed_call(translated, (ParsedCall*)parsedValue->data, err);
   }
   return 0;
 }

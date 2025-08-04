@@ -8,6 +8,7 @@
 #define RUNTIME_H
 #include "../returnTypes.h"
 #include "../translator/translator.h"
+#include "internals/dynamic_array_armem/darray_armem.h"
 #include "internals/hashmap/hashmap.h"
 
 typedef struct StackFrame StackFrame;
@@ -23,6 +24,7 @@ typedef struct RuntimeState {
   ArgonObject *return_value;
   StackFrame **currentStackFramePointer;
   error_result result;
+  ArgonObject** call_args;
 } RuntimeState;
 
 typedef struct StackFrame {
@@ -30,6 +32,7 @@ typedef struct StackFrame {
   RuntimeState state;
   Stack *stack;
   StackFrame *previousStackFrame;
+  ArErr err;
 } StackFrame;
 
 void bootstrap_types();
@@ -46,6 +49,8 @@ ArErr run_instruction(Translated *translated, RuntimeState *state,
                       struct Stack **stack);
 
 RuntimeState init_runtime_state(Translated translated, char *path);
+
+void free_runtime_state(RuntimeState runtime_state);
 
 Stack *create_scope(Stack *prev);
 
