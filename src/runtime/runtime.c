@@ -9,6 +9,7 @@
 #include "../hash_data/hash_data.h"
 #include "../translator/translator.h"
 #include "declaration/declaration.h"
+#include "call/call.h"
 #include "internals/hashmap/hashmap.h"
 #include "objects/functions/functions.h"
 #include "objects/literals/literals.h"
@@ -212,26 +213,27 @@ ArErr run_instruction(Translated *translated, RuntimeState *state,
     state->call_args[pop_bytecode(translated, state)] =
         state->registers[to_register];
     break;
-  case OP_RESET_ARGS:;
-    free(state->call_args);
-    state->call_args = NULL;
-    break;
   case OP_CALL:
-    from_register = pop_byte(translated, state);
-    ArgonObject *object = state->registers[from_register];
-    char *field = "__class__";
-    uint64_t hash = siphash64_bytes(field, strlen(field), siphash_key);
-    ArgonObject *class = hashmap_lookup_GC(object->dict, hash);
-    field = "__name__";
-    hash = siphash64_bytes(field, strlen(field), siphash_key);
-    ArgonObject *class_name = hashmap_lookup_GC(class->dict, hash);
-    hash = siphash64_bytes(field, strlen(field), siphash_key);
-    ArgonObject *object_name = hashmap_lookup_GC(object->dict, hash);
-    if (object_name) {
-      printf("call <%.*s %.*s at %p>\n", (int)class_name->value.as_str.length, class_name->value.as_str.data,(int)object_name->value.as_str.length, object_name->value.as_str.data, object);
-    } else {
-      printf("call <%.*s object at %p>\n", (int)class_name->value.as_str.length, class_name->value.as_str.data, object);
-    }
+    run_call(translated, state);
+    // ArgonObject *object = state->registers[from_register];
+    // char *field = "__class__";
+    // uint64_t hash = siphash64_bytes(field, strlen(field), siphash_key);
+    // ArgonObject *class = hashmap_lookup_GC(object->dict, hash);
+    // field = "__name__";
+    // hash = siphash64_bytes(field, strlen(field), siphash_key);
+    // ArgonObject *class_name = hashmap_lookup_GC(class->dict, hash);
+    // hash = siphash64_bytes(field, strlen(field), siphash_key);
+    // ArgonObject *object_name = hashmap_lookup_GC(object->dict, hash);
+    // if (object_name) {
+    //   printf("call <%.*s %.*s at %p>\n",
+    //   (int)class_name->value.as_str.length,
+    //   class_name->value.as_str.data,(int)object_name->value.as_str.length,
+    //   object_name->value.as_str.data, object);
+    // } else {
+    //   printf("call <%.*s object at %p>\n",
+    //   (int)class_name->value.as_str.length, class_name->value.as_str.data,
+    //   object);
+    // }
     break;
   default:
     return create_err(0, 0, 0, NULL, "Runtime Error", "Invalid Opcode %#x",
@@ -245,10 +247,9 @@ RuntimeState init_runtime_state(Translated translated, char *path) {
       checked_malloc(translated.registerCount * sizeof(ArgonObject *)),
       0,
       path,
-      ARGON_NULL,
       NULL,
       NULL,
-      NULL};
+      0};
   return runtime;
 }
 
@@ -267,9 +268,10 @@ Stack *create_scope(Stack *prev) {
 
 ArErr runtime(Translated translated, RuntimeState state, Stack *stack) {
   state.head = 0;
+
   StackFrame *currentStackFrame = checked_malloc(sizeof(StackFrame));
   *currentStackFrame = (StackFrame){translated, state, stack, NULL, no_err};
-  state.currentStackFramePointer = &currentStackFrame;
+  currentStackFrame->state.currentStackFramePointer = &currentStackFrame;
   ArErr err = no_err;
   while (currentStackFrame) {
     while (currentStackFrame->state.head <
@@ -282,9 +284,8 @@ ArErr runtime(Translated translated, RuntimeState state, Stack *stack) {
     StackFrame *tempStackFrame = currentStackFrame;
     err = currentStackFrame->err;
     currentStackFrame = currentStackFrame->previousStackFrame;
-    if (currentStackFrame)
-      free_runtime_state(tempStackFrame->state);
     free(tempStackFrame);
   }
+
   return err;
 }

@@ -16,6 +16,9 @@ ParsedValueReturn parse_call(char *file, DArray *tokens, size_t *index,
                              ParsedValue *to_call) {
   ParsedValue *parsedValue = checked_malloc(sizeof(ParsedValue));
   ParsedCall *call = checked_malloc(sizeof(ParsedCall));
+  Token *token = darray_get(tokens, *index);
+  call->line = token->line;
+  call->column = token->column;
   call->to_call = to_call;
   parsedValue->data = call;
   parsedValue->type = AST_CALL;
@@ -29,7 +32,7 @@ ParsedValueReturn parse_call(char *file, DArray *tokens, size_t *index,
     free(parsedValue);
     return (ParsedValueReturn){err, NULL};
   }
-  Token *token = darray_get(tokens, *index);
+  token = darray_get(tokens, *index);
   if (token->type != TOKEN_RPAREN) {
     while ((*index) < tokens->size) {
       skip_newlines_and_indents(tokens, index);

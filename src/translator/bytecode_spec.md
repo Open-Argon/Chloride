@@ -109,6 +109,7 @@ resets the arguments buffer to NULL
 call a function with args
 
 1. the register containing the function to call. (*)
+4. the index of the source location.
 
 ## OP_SWAP_REGISTERS
 

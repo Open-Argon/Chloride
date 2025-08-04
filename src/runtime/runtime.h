@@ -14,17 +14,13 @@
 typedef struct StackFrame StackFrame;
 typedef struct RuntimeState RuntimeState;
 
-typedef ArErr (*error_result)(ArErr, Translated *translated,
-                              RuntimeState *state, struct Stack **stack);
-
 typedef struct RuntimeState {
   ArgonObject **registers;
   size_t head;
   char *path;
-  ArgonObject *return_value;
   StackFrame **currentStackFramePointer;
-  error_result result;
   ArgonObject** call_args;
+  size_t call_args_length;
 } RuntimeState;
 
 typedef struct StackFrame {
@@ -33,6 +29,7 @@ typedef struct StackFrame {
   Stack *stack;
   StackFrame *previousStackFrame;
   ArErr err;
+  uint64_t depth;
 } StackFrame;
 
 void bootstrap_types();
