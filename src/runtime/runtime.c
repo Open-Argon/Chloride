@@ -9,6 +9,7 @@
 #include "../hash_data/hash_data.h"
 #include "../translator/translator.h"
 #include "declaration/declaration.h"
+#include "internals/hashmap/hashmap.h"
 #include "objects/functions/functions.h"
 #include "objects/literals/literals.h"
 #include "objects/object.h"
@@ -39,22 +40,28 @@ void bootstrap_types() {
   ARGON_BOOL_TYPE = new_object();
   add_field(ARGON_BOOL_TYPE, "__base__", BASE_CLASS);
   ARGON_TRUE = new_object();
-  add_field(ARGON_NULL, "__class__", ARGON_BOOL_TYPE);
+  add_field(ARGON_TRUE, "__class__", ARGON_BOOL_TYPE);
   ARGON_FALSE = new_object();
-  add_field(ARGON_NULL, "__class__", ARGON_BOOL_TYPE);
+  add_field(ARGON_FALSE, "__class__", ARGON_BOOL_TYPE);
 
   ARGON_STRING_TYPE = new_object();
   add_field(ARGON_STRING_TYPE, "__base__", BASE_CLASS);
 
-
-  add_field(BASE_CLASS, "__name__", new_string_object_null_terminated("object"));
-  add_field(ARGON_TYPE_TYPE, "__name__", new_string_object_null_terminated("type"));
-  add_field(ARGON_NULL_TYPE, "__name__", new_string_object_null_terminated("NullType"));
-  add_field(ARGON_BOOL_TYPE, "__name__", new_string_object_null_terminated("boolean"));
+  add_field(ARGON_STRING_TYPE, "__name__",
+            new_string_object_null_terminated("string"));
+  add_field(BASE_CLASS, "__name__",
+            new_string_object_null_terminated("object"));
+  add_field(ARGON_TYPE_TYPE, "__name__",
+            new_string_object_null_terminated("type"));
+  add_field(ARGON_NULL_TYPE, "__name__",
+            new_string_object_null_terminated("null_type"));
+  add_field(ARGON_BOOL_TYPE, "__name__",
+            new_string_object_null_terminated("boolean"));
 
   ARGON_FUNCTION_TYPE = new_object();
   add_field(ARGON_FUNCTION_TYPE, "__base__", BASE_CLASS);
-  add_field(ARGON_FUNCTION_TYPE, "__name__", new_string_object_null_terminated("function"));
+  add_field(ARGON_FUNCTION_TYPE, "__name__",
+            new_string_object_null_terminated("function"));
 }
 
 int compare_by_order(const void *a, const void *b) {
@@ -192,6 +199,40 @@ ArErr run_instruction(Translated *translated, RuntimeState *state,
     // free(array);
     *stack = (*stack)->prev;
     break;
+  case OP_INIT_ARGS:;
+    size_t size = pop_bytecode(translated, state) * sizeof(ArgonObject *);
+    if (state->call_args) {
+      state->call_args = realloc(state->call_args, size);
+    } else {
+      state->call_args = checked_malloc(size);
+    }
+    break;
+  case OP_INSERT_ARG:;
+    to_register = pop_byte(translated, state);
+    state->call_args[pop_bytecode(translated, state)] =
+        state->registers[to_register];
+    break;
+  case OP_RESET_ARGS:;
+    free(state->call_args);
+    state->call_args = NULL;
+    break;
+  case OP_CALL:
+    from_register = pop_byte(translated, state);
+    ArgonObject *object = state->registers[from_register];
+    char *field = "__class__";
+    uint64_t hash = siphash64_bytes(field, strlen(field), siphash_key);
+    ArgonObject *class = hashmap_lookup_GC(object->dict, hash);
+    field = "__name__";
+    hash = siphash64_bytes(field, strlen(field), siphash_key);
+    ArgonObject *class_name = hashmap_lookup_GC(class->dict, hash);
+    hash = siphash64_bytes(field, strlen(field), siphash_key);
+    ArgonObject *object_name = hashmap_lookup_GC(object->dict, hash);
+    if (object_name) {
+      printf("call <%.*s %.*s at %p>\n", (int)class_name->value.as_str.length, class_name->value.as_str.data,(int)object_name->value.as_str.length, object_name->value.as_str.data, object);
+    } else {
+      printf("call <%.*s object at %p>\n", (int)class_name->value.as_str.length, class_name->value.as_str.data, object);
+    }
+    break;
   default:
     return create_err(0, 0, 0, NULL, "Runtime Error", "Invalid Opcode %#x",
                       opcode);
@@ -200,9 +241,21 @@ ArErr run_instruction(Translated *translated, RuntimeState *state,
 }
 
 RuntimeState init_runtime_state(Translated translated, char *path) {
-  return (RuntimeState){
-      checked_malloc(translated.registerCount * sizeof(ArgonObject *)), 0, path,
-      ARGON_NULL, NULL, NULL};
+  RuntimeState runtime = (RuntimeState){
+      checked_malloc(translated.registerCount * sizeof(ArgonObject *)),
+      0,
+      path,
+      ARGON_NULL,
+      NULL,
+      NULL,
+      NULL};
+  return runtime;
+}
+
+void free_runtime_state(RuntimeState runtime_state) {
+  free(runtime_state.registers);
+  if (runtime_state.call_args)
+    free(runtime_state.call_args);
 }
 
 Stack *create_scope(Stack *prev) {
@@ -215,19 +268,22 @@ Stack *create_scope(Stack *prev) {
 ArErr runtime(Translated translated, RuntimeState state, Stack *stack) {
   state.head = 0;
   StackFrame *currentStackFrame = checked_malloc(sizeof(StackFrame));
-  *currentStackFrame = (StackFrame){translated, state, stack, NULL};
+  *currentStackFrame = (StackFrame){translated, state, stack, NULL, no_err};
   state.currentStackFramePointer = &currentStackFrame;
   ArErr err = no_err;
   while (currentStackFrame) {
     while (currentStackFrame->state.head <
                currentStackFrame->translated.bytecode.size &&
-           !err.exists) {
-      err =
+           !currentStackFrame->err.exists) {
+      currentStackFrame->err =
           run_instruction(&currentStackFrame->translated,
                           &currentStackFrame->state, &currentStackFrame->stack);
     }
     StackFrame *tempStackFrame = currentStackFrame;
+    err = currentStackFrame->err;
     currentStackFrame = currentStackFrame->previousStackFrame;
+    if (currentStackFrame)
+      free_runtime_state(tempStackFrame->state);
     free(tempStackFrame);
   }
   return err;

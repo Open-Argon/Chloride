@@ -17,7 +17,8 @@ ArgonObject *new_string_object(char*data, size_t length) {
   ArgonObject * object = new_object();
   add_field(object, "__class__", ARGON_STRING_TYPE);
   object->type = TYPE_STRING;
-  object->value.as_str.data = data;
+  object->value.as_str.data = ar_alloc_atomic(length);
+  memcpy(object->value.as_str.data, data, length);
   object->value.as_str.length = length;
   return object;
 }

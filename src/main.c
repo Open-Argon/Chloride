@@ -369,7 +369,7 @@ Execution execute(char *path, Stack *stack) {
   RuntimeState state = init_runtime_state(translated, path);
   Stack *main_scope = create_scope(stack);
   ArErr err = runtime(translated, state, main_scope);
-  free(state.registers);
+  free_runtime_state(state);
   end = clock();
   time_spent = (double)(end - start) / CLOCKS_PER_SEC;
   total_time_spent += time_spent;

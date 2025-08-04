@@ -21,7 +21,7 @@ void load_argon_function(Translated *translated, RuntimeState *state,
   object->type = TYPE_FUNCTION;
   uint64_t offset = pop_bytecode(translated, state);
   uint64_t length = pop_bytecode(translated, state);
-  add_field(object, "__class__", new_string_object(arena_get(&translated->constants, offset), length));
+  add_field(object, "__name__", new_string_object(arena_get(&translated->constants, offset), length));
   object->value.argon_fn.number_of_parameters = pop_bytecode(translated, state);
   object->value.argon_fn.parameters =
       ar_alloc(object->value.argon_fn.number_of_parameters * sizeof(struct string_struct));
