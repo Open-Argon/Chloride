@@ -88,3 +88,31 @@ creates a new stack
 ## OP_POP_SCOPE
 
 pops the top scope off the current
+
+## OP_INIT_ARGS
+
+initialises the arguments buffer with a fixed number of objects on the current state
+
+1. the number of objects for the arguments buffer
+
+## OP_INSERT_ARG
+
+1. the register to take the object from. (*)
+1. index of the argument in the arguments buffer to write the object from the register into.
+
+## OP_RESET_ARGS
+
+resets the arguments buffer to NULL
+
+## OP_CALL
+
+call a function with args
+
+1. the register containing the function to call. (*)
+
+## OP_SWAP_REGISTERS
+
+swap the contents in two registers
+
+1. register a (*)
+2. register b (*)
