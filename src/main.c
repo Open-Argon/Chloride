@@ -61,8 +61,17 @@ static inline uint64_t htole64(uint64_t x) {
     return x;
 }
 
+#elif defined(__linux__)
+  #include <endian.h>
+#elif defined(__APPLE__)
+  #include <libkern/OSByteOrder.h>
+  #define htole32(x) OSSwapHostToLittleInt32(x)
+  #define le32toh(x) OSSwapLittleToHostInt32(x)
+  #define htole64(x) OSSwapHostToLittleInt64(x)
+  #define le64toh(x) OSSwapLittleToHostInt64(x)
+  // Add others as needed
 #else
-#include <endian.h> // On Linux/BSD
+  #error "Unsupported platform"
 #endif
 
 char *get_current_directory() {
