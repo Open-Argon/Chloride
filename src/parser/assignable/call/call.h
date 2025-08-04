@@ -12,6 +12,8 @@
 typedef struct {
   ParsedValue * to_call;
   DArray args;
+  uint64_t line;
+  uint64_t column;
 } ParsedCall;
 
 // Function declaration for parsing an identifier

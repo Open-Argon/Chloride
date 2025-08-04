@@ -22,6 +22,12 @@ size_t translate_parsed_call(Translated *translated, ParsedCall* call, ArErr *er
     return first;
   push_instruction_byte(translated, OP_CALL);
   push_instruction_byte(translated, 0);
-  push_instruction_byte(translated, OP_RESET_ARGS);
+  SourceLocation source_locations = {
+    call->line,
+    call->column,
+    1
+  };
+  push_instruction_code(translated, translated->source_locations.size);
+  darray_push(&translated->source_locations, &source_locations);
   return first;
 }

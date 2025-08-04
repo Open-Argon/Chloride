@@ -36,9 +36,12 @@ typedef struct Stack {
 struct argon_function_struct {
   uint8_t* bytecode;
   size_t bytecode_length;
-  Stack stack;
+  Stack *stack;
   size_t number_of_parameters;
   struct string_struct *parameters;
+  char* path;
+  uint64_t line;
+  uint64_t column;
 };
 
 
