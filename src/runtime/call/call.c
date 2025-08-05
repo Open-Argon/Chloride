@@ -99,10 +99,17 @@ void run_call(Translated *translated, RuntimeState *state) {
       if (floor(logval) == logval) {
         SourceLocation *source_location =
             darray_get(&translated->source_locations, source_location_index);
+        double memoryUsage = get_memory_usage_mb();
         fprintf(stderr,
-                "Warning: %s:%zu:%zu the call stack depth has exceeded %zu\n",
+                "Warning: %s:%llu:%llu the call stack depth has exceeded %llu",
                 state->path, source_location->line, source_location->column,
                 (*state->currentStackFramePointer)->depth);
+        if (memoryUsage) {
+          fprintf(stderr, ", memory usage at %f MB\n", memoryUsage);
+
+        } else {
+          fprintf(stderr, "\n");
+        }
       }
     };
     *state->currentStackFramePointer = checked_malloc(sizeof(StackFrame));
