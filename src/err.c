@@ -14,6 +14,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <inttypes.h>
 
 #ifdef _WIN32
 ssize_t getline(char **lineptr, size_t *n, FILE *stream) {
@@ -111,11 +112,11 @@ void output_err(ArErr err) {
     dyefg(stderr, DYE_GRAY);
     fprintf(stderr, ":");
     dyefg(stderr, DYE_YELLOW);
-    fprintf(stderr, "%lld", err.line);
+    fprintf(stderr, "%" PRIu64 , err.line);
     dyefg(stderr, DYE_GRAY);
     fprintf(stderr, ":");
     dyefg(stderr, DYE_YELLOW);
-    fprintf(stderr, "%lld", err.column);
+    fprintf(stderr, "%" PRIu64, err.column);
     dye_style(stderr, DYE_STYLE_RESET);
     dyefg(stderr, DYE_RESET);
     fprintf(stderr, "\n");
@@ -123,7 +124,7 @@ void output_err(ArErr err) {
     if (file) {
       dye_style(stderr, DYE_STYLE_RESET);
       dyefg(stderr, DYE_RESET);
-      int line_number_width = snprintf(NULL, 0, "%lld", err.line);
+      int line_number_width = snprintf(NULL, 0, "%" PRIu64, err.line);
       char *buffer = NULL;
       size_t size = 0;
       int current_line = 1;
@@ -154,7 +155,7 @@ void output_err(ArErr err) {
         err.column--;
         skipped_chars++;
       }
-      fprintf(stderr, " %lld | ", err.line);
+      fprintf(stderr, " %" PRIu64 " | ", err.line);
       if (err.length) {
         fprintf(stderr, "%.*s", (int)err.column - 1, line_starts);
         dyefg(stderr, DYE_RED);

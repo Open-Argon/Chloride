@@ -7,6 +7,7 @@
 #include "call.h"
 #include "../../hash_data/hash_data.h"
 #include "../objects/string/string.h"
+#include <inttypes.h>
 #include <math.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -73,9 +74,9 @@ void run_call(Translated *translated, RuntimeState *state) {
   ArgonObject *object = state->registers[from_register];
   if (object->type == TYPE_FUNCTION) {
     Stack *scope = create_scope(object->value.argon_fn.stack);
-    for (size_t i = 0; i < state->call_args_length; i++) {
+    for (size_t i = 0; i < *state->call_args_length; i++) {
       struct string_struct key = object->value.argon_fn.parameters[i];
-      ArgonObject *value = state->call_args[i];
+      ArgonObject *value = (*state->call_args)[i];
       uint64_t hash = siphash64_bytes(key.data, key.length, siphash_key);
       hashmap_insert_GC(scope->scope, hash,
                         new_string_object(key.data, key.length), value, 0);
@@ -94,6 +95,12 @@ void run_call(Translated *translated, RuntimeState *state) {
         *state->currentStackFramePointer,
         no_err,
         (*state->currentStackFramePointer)->depth + 1};
+    if (((*state->currentStackFramePointer)->depth+1) % STACKFRAME_CHUNKS == 0) {
+      *state->currentStackFramePointer = checked_malloc(sizeof(StackFrame) * STACKFRAME_CHUNKS);
+    } else {
+      *state->currentStackFramePointer = *state->currentStackFramePointer + 1;
+    }
+      **state->currentStackFramePointer = new_stackFrame;
     if ((*state->currentStackFramePointer)->depth >= 10000) {
       double logval = log10((double)(*state->currentStackFramePointer)->depth);
       if (floor(logval) == logval) {
@@ -101,7 +108,8 @@ void run_call(Translated *translated, RuntimeState *state) {
             darray_get(&translated->source_locations, source_location_index);
         double memoryUsage = get_memory_usage_mb();
         fprintf(stderr,
-                "Warning: %s:%llu:%llu the call stack depth has exceeded %llu",
+                "Warning: %s:%" PRIu64 ":%" PRIu64
+                " the call stack depth has exceeded %" PRIu64,
                 state->path, source_location->line, source_location->column,
                 (*state->currentStackFramePointer)->depth);
         if (memoryUsage) {
@@ -112,7 +120,5 @@ void run_call(Translated *translated, RuntimeState *state) {
         }
       }
     };
-    *state->currentStackFramePointer = checked_malloc(sizeof(StackFrame));
-    **state->currentStackFramePointer = new_stackFrame;
   }
 }

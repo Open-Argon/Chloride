@@ -19,8 +19,8 @@ typedef struct RuntimeState {
   size_t head;
   char *path;
   StackFrame **currentStackFramePointer;
-  ArgonObject** call_args;
-  size_t call_args_length;
+  ArgonObject*** call_args;
+  size_t* call_args_length;
 } RuntimeState;
 
 typedef struct StackFrame {
@@ -31,6 +31,8 @@ typedef struct StackFrame {
   ArErr err;
   uint64_t depth;
 } StackFrame;
+
+#define STACKFRAME_CHUNKS 64
 
 void bootstrap_types();
 

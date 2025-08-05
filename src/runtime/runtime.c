@@ -8,8 +8,8 @@
 #include "../err.h"
 #include "../hash_data/hash_data.h"
 #include "../translator/translator.h"
-#include "declaration/declaration.h"
 #include "call/call.h"
+#include "declaration/declaration.h"
 #include "internals/hashmap/hashmap.h"
 #include "objects/functions/functions.h"
 #include "objects/literals/literals.h"
@@ -202,15 +202,15 @@ ArErr run_instruction(Translated *translated, RuntimeState *state,
     break;
   case OP_INIT_ARGS:;
     size_t size = pop_bytecode(translated, state) * sizeof(ArgonObject *);
-    if (state->call_args) {
-      state->call_args = realloc(state->call_args, size);
+    if (*state->call_args) {
+      *state->call_args = realloc(*state->call_args, size);
     } else {
-      state->call_args = checked_malloc(size);
+      *state->call_args = checked_malloc(size);
     }
     break;
   case OP_INSERT_ARG:;
     to_register = pop_byte(translated, state);
-    state->call_args[pop_bytecode(translated, state)] =
+    (*state->call_args)[pop_bytecode(translated, state)] =
         state->registers[to_register];
     break;
   case OP_CALL:
@@ -249,14 +249,12 @@ RuntimeState init_runtime_state(Translated translated, char *path) {
       path,
       NULL,
       NULL,
-      0};
+      NULL};
   return runtime;
 }
 
 void free_runtime_state(RuntimeState runtime_state) {
   free(runtime_state.registers);
-  if (runtime_state.call_args)
-    free(runtime_state.call_args);
 }
 
 Stack *create_scope(Stack *prev) {
@@ -269,8 +267,15 @@ Stack *create_scope(Stack *prev) {
 ArErr runtime(Translated translated, RuntimeState state, Stack *stack) {
   state.head = 0;
 
-  StackFrame *currentStackFrame = checked_malloc(sizeof(StackFrame));
-  *currentStackFrame = (StackFrame){translated, state, stack, NULL, no_err};
+  ArgonObject **call_args = NULL;
+  size_t call_args_length = 0;
+
+  state.call_args = &call_args;
+  state.call_args_length = &call_args_length;
+
+  StackFrame *currentStackFrame =
+      checked_malloc(sizeof(StackFrame) * STACKFRAME_CHUNKS);
+  *currentStackFrame = (StackFrame){translated, state, stack, NULL, no_err, 0};
   currentStackFrame->state.currentStackFramePointer = &currentStackFrame;
   ArErr err = no_err;
   while (currentStackFrame) {
@@ -284,8 +289,18 @@ ArErr runtime(Translated translated, RuntimeState state, Stack *stack) {
     StackFrame *tempStackFrame = currentStackFrame;
     err = currentStackFrame->err;
     currentStackFrame = currentStackFrame->previousStackFrame;
-    free(tempStackFrame);
+    if (tempStackFrame->depth % STACKFRAME_CHUNKS == 0) {
+      free(tempStackFrame);
+    }
   }
+
+  if (call_args)
+    free(call_args);
+  call_args = NULL;
+  call_args_length = 0;
+
+  state.call_args = NULL;
+  state.call_args_length = NULL;
 
   return err;
 }
