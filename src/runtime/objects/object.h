@@ -16,4 +16,7 @@ typedef struct ArgonObject ArgonObject;
 ArgonObject *new_object();
 
 void add_field(ArgonObject *target, char *name, ArgonObject *object);
+
+ArgonObject *get_field(ArgonObject *target, char *name);
+
 #endif // OBJECT_H

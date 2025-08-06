@@ -25,3 +25,8 @@ void add_field(ArgonObject *target, char *name, ArgonObject *object) {
                     siphash64_bytes(name, strlen(name), siphash_key), name,
                     object, 0);
 }
+
+ArgonObject *get_field(ArgonObject *target, char *name) {
+  uint64_t hash = siphash64_bytes(name, strlen(name), siphash_key);
+  return hashmap_lookup_GC(target->dict, hash);
+}
