@@ -12,6 +12,8 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
+
 
 #if defined(_WIN32)
 #include <psapi.h>
@@ -72,6 +74,23 @@ void run_call(Translated *translated, RuntimeState *state) {
   uint8_t from_register = pop_byte(translated, state);
   uint8_t source_location_index = pop_bytecode(translated, state);
   ArgonObject *object = state->registers[from_register];
+  if (object->type != TYPE_FUNCTION) {
+    ArgonObject *to_call = get_field(object,"__class__");
+    while (to_call) {
+      ArgonObject *call_object = get_field(to_call,"__call__");
+      if (call_object) {
+        ArgonObject** new_call_args = malloc(sizeof(ArgonObject*)*(*state->call_args_length+1));
+        memcpy(new_call_args+1, *state->call_args, *state->call_args_length);
+        free(*state->call_args);
+        new_call_args[0] = object;
+        *state->call_args = new_call_args;
+        (*state->call_args_length)++;
+        object = call_object;
+        break;
+      }
+      to_call = get_field(to_call,"__base__");
+    };
+  }
   if (object->type == TYPE_FUNCTION) {
     Stack *scope = create_scope(object->value.argon_fn.stack);
     for (size_t i = 0; i < *state->call_args_length; i++) {
