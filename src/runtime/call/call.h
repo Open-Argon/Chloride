@@ -8,6 +8,6 @@
 #define runtime_call_H
 #include "../runtime.h"
 
-void run_call(Translated *translated, RuntimeState *state);
+ArErr run_call(Translated *translated, RuntimeState *state);
 
 #endif // runtime_call_H

@@ -17,6 +17,8 @@ ArgonObject *new_object();
 
 void add_field(ArgonObject *target, char *name, ArgonObject *object);
 
-ArgonObject *get_field(ArgonObject *target, char *name);
+ArgonObject *get_field_for_class(ArgonObject *target, char *name);
+
+ArgonObject *get_field(ArgonObject *target, char *name, bool recursive);
 
 #endif // OBJECT_H

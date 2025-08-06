@@ -14,6 +14,12 @@
 typedef struct StackFrame StackFrame;
 typedef struct RuntimeState RuntimeState;
 
+typedef struct ErrorCatch {
+  size_t jump_to;
+  Stack *stack;
+  StackFrame *stackFrame;
+} ErrorCatch; 
+
 typedef struct RuntimeState {
   ArgonObject **registers;
   size_t head;
@@ -21,6 +27,7 @@ typedef struct RuntimeState {
   StackFrame **currentStackFramePointer;
   ArgonObject*** call_args;
   size_t* call_args_length;
+  DArray catch_errors; // ErrorCatch[]
 } RuntimeState;
 
 typedef struct StackFrame {
@@ -28,7 +35,6 @@ typedef struct StackFrame {
   RuntimeState state;
   Stack *stack;
   StackFrame *previousStackFrame;
-  ArErr err;
   uint64_t depth;
 } StackFrame;
 
