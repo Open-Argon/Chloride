@@ -11,9 +11,8 @@
 #include <math.h>
 #include <stdbool.h>
 #include <stdio.h>
-#include <string.h>
 #include <stdlib.h>
-
+#include <string.h>
 
 #if defined(_WIN32)
 #include <psapi.h>
@@ -70,26 +69,29 @@ double get_memory_usage_mb() {
 }
 #endif
 
-void run_call(Translated *translated, RuntimeState *state) {
+ArErr run_call(Translated *translated, RuntimeState *state) {
   uint8_t from_register = pop_byte(translated, state);
   uint8_t source_location_index = pop_bytecode(translated, state);
-  ArgonObject *object = state->registers[from_register];
-  if (object->type != TYPE_FUNCTION) {
-    ArgonObject *to_call = get_field(object,"__class__");
-    while (to_call) {
-      ArgonObject *call_object = get_field(to_call,"__call__");
-      if (call_object) {
-        ArgonObject** new_call_args = malloc(sizeof(ArgonObject*)*(*state->call_args_length+1));
-        memcpy(new_call_args+1, *state->call_args, *state->call_args_length);
-        free(*state->call_args);
-        new_call_args[0] = object;
-        *state->call_args = new_call_args;
-        (*state->call_args_length)++;
-        object = call_object;
-        break;
+  ArgonObject *original_object = state->registers[from_register];
+  ArgonObject *object = original_object;
+  if (object->type != TYPE_FUNCTION && object->type != TYPE_NATIVE_FUNCTION) {
+    ArgonObject *call_method =
+        get_field_for_class(get_field(object, "__class__", false), "__call__");
+    if (call_method) {
+      // Prepend the original object as first argument (self)
+      ArgonObject **new_call_args =
+          malloc(sizeof(ArgonObject *) * (*state->call_args_length + 1));
+      new_call_args[0] = object;
+      if (*state->call_args_length > 0) {
+        memcpy(new_call_args + 1, *state->call_args, *state->call_args_length);
       }
-      to_call = get_field(to_call,"__base__");
-    };
+      if (*state->call_args) {
+        free(*state->call_args);
+      }
+      *state->call_args = new_call_args;
+      (*state->call_args_length)++;
+      object = call_method;
+    }
   }
   if (object->type == TYPE_FUNCTION) {
     Stack *scope = create_scope(object->value.argon_fn.stack);
@@ -104,22 +106,23 @@ void run_call(Translated *translated, RuntimeState *state) {
                               object->value.argon_fn.bytecode_length,
                               object->value.argon_fn.bytecode_length, false};
     StackFrame new_stackFrame = {
-        (Translated){translated->registerCount, NULL, bytecode_darray,
-                     translated->source_locations, translated->constants,
+        {translated->registerCount, NULL, bytecode_darray,
+                     object->value.argon_fn.source_locations, translated->constants,
                      object->value.argon_fn.path},
-        (RuntimeState){state->registers, 0, state->path,
+        {state->registers, 0, state->path,
                        state->currentStackFramePointer, state->call_args,
-                       state->call_args_length},
+                       state->call_args_length, {}},
         scope,
         *state->currentStackFramePointer,
-        no_err,
         (*state->currentStackFramePointer)->depth + 1};
-    if (((*state->currentStackFramePointer)->depth+1) % STACKFRAME_CHUNKS == 0) {
-      *state->currentStackFramePointer = checked_malloc(sizeof(StackFrame) * STACKFRAME_CHUNKS);
+    if (((*state->currentStackFramePointer)->depth + 1) % STACKFRAME_CHUNKS ==
+        0) {
+      *state->currentStackFramePointer =
+          checked_malloc(sizeof(StackFrame) * STACKFRAME_CHUNKS);
     } else {
       *state->currentStackFramePointer = *state->currentStackFramePointer + 1;
     }
-      **state->currentStackFramePointer = new_stackFrame;
+    **state->currentStackFramePointer = new_stackFrame;
     if ((*state->currentStackFramePointer)->depth >= 10000) {
       double logval = log10((double)(*state->currentStackFramePointer)->depth);
       if (floor(logval) == logval) {
@@ -133,11 +136,21 @@ void run_call(Translated *translated, RuntimeState *state) {
                 (*state->currentStackFramePointer)->depth);
         if (memoryUsage) {
           fprintf(stderr, ", memory usage at %f MB\n", memoryUsage);
-
         } else {
           fprintf(stderr, "\n");
         }
       }
     };
+    return no_err;
+  } else if (object->type == TYPE_NATIVE_FUNCTION) {
+    ArErr err = no_err;
+    state->registers[0] =
+        object->value.native_fn(*state->call_args_length, *state->call_args,
+                                &err);
+    return err;
   }
+  SourceLocation *source_location =
+      darray_get(&translated->source_locations, source_location_index);
+  ArgonObject *type_object_name = get_field_for_class(get_field(object, "__class__", false), "__name__");
+  return create_err(source_location->line, source_location->column, source_location->length, state->path, "Type Error", "'%.*s' object is not callable", (int)type_object_name->value.as_str.length, type_object_name->value.as_str.data);
 }

@@ -7,9 +7,12 @@
 #ifndef AROBJECT_H
 #define AROBJECT_H
 
+#include "dynamic_array/darray.h"
 #include "runtime/internals/dynamic_array_armem/darray_armem.h"
 #include "runtime/internals/hashmap/hashmap.h"
 #include <gmp.h>
+
+typedef struct ArErr ArErr; 
 
 typedef struct ArgonObject ArgonObject; // forward declaration
 
@@ -40,6 +43,7 @@ struct argon_function_struct {
   size_t number_of_parameters;
   struct string_struct *parameters;
   char* path;
+  DArray source_locations;
   uint64_t line;
   uint64_t column;
 };
@@ -54,7 +58,7 @@ struct ArgonObject {
     mpq_t as_number;
     bool as_bool;
     struct string_struct as_str;
-    void *native_fn;
+    ArgonObject* (*native_fn)(size_t argc, ArgonObject**argv, ArErr*err);
     struct argon_function_struct argon_fn;
   } value;
 };

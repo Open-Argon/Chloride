@@ -214,7 +214,7 @@ ArErr run_instruction(Translated *translated, RuntimeState *state,
         state->registers[to_register];
     break;
   case OP_CALL:
-    run_call(translated, state);
+    return run_call(translated, state);
     // ArgonObject *object = state->registers[from_register];
     // char *field = "__class__";
     // uint64_t hash = siphash64_bytes(field, strlen(field), siphash_key);
@@ -234,7 +234,6 @@ ArErr run_instruction(Translated *translated, RuntimeState *state,
     //   (int)class_name->value.as_str.length, class_name->value.as_str.data,
     //   object);
     // }
-    break;
   default:
     return create_err(0, 0, 0, NULL, "Runtime Error", "Invalid Opcode %#x",
                       opcode);
@@ -249,7 +248,8 @@ RuntimeState init_runtime_state(Translated translated, char *path) {
       path,
       NULL,
       NULL,
-      NULL};
+      0,
+      {}};
   return runtime;
 }
 
@@ -275,19 +275,18 @@ ArErr runtime(Translated translated, RuntimeState state, Stack *stack) {
 
   StackFrame *currentStackFrame =
       checked_malloc(sizeof(StackFrame) * STACKFRAME_CHUNKS);
-  *currentStackFrame = (StackFrame){translated, state, stack, NULL, no_err, 0};
+  *currentStackFrame = (StackFrame){translated, state, stack, NULL, 0};
   currentStackFrame->state.currentStackFramePointer = &currentStackFrame;
   ArErr err = no_err;
   while (currentStackFrame) {
     while (currentStackFrame->state.head <
                currentStackFrame->translated.bytecode.size &&
-           !currentStackFrame->err.exists) {
-      currentStackFrame->err =
+           !err.exists) {
+      err =
           run_instruction(&currentStackFrame->translated,
                           &currentStackFrame->state, &currentStackFrame->stack);
     }
     StackFrame *tempStackFrame = currentStackFrame;
-    err = currentStackFrame->err;
     currentStackFrame = currentStackFrame->previousStackFrame;
     if (tempStackFrame->depth % STACKFRAME_CHUNKS == 0) {
       free(tempStackFrame);
