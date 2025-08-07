@@ -23,7 +23,6 @@ ParsedValueReturn parse_declaration(char *file, DArray *tokens, size_t *index) {
     return (ParsedValueReturn){err, NULL};
   }
   Token *token = darray_get(tokens, *index);
-
   ParsedValue *parsedValue = checked_malloc(sizeof(ParsedValue));
   parsedValue->type = AST_DECLARATION;
   DArray *declarations = checked_malloc(sizeof(DArray));
@@ -171,7 +170,7 @@ ParsedValueReturn parse_declaration(char *file, DArray *tokens, size_t *index) {
 
       ParsedValueReturn from = parse_token(file, tokens, index, true);
       if (from.err.exists) {
-        darray_free(&parameters, free_parameter);
+        if (isFunction) darray_free(&parameters, free_parameter);
         free_parsed(parsedValue);
         free(parsedValue);
         return from;
@@ -179,7 +178,7 @@ ParsedValueReturn parse_declaration(char *file, DArray *tokens, size_t *index) {
       free(declaration->from);
       declaration->from = from.value;
       if (!declaration->from) {
-        darray_free(&parameters, free_parameter);
+        if (isFunction) darray_free(&parameters, free_parameter);
         free_parsed(parsedValue);
         free(parsedValue);
         return (ParsedValueReturn){create_err(token->line, token->column,
