@@ -201,7 +201,8 @@ ArErr run_instruction(Translated *translated, RuntimeState *state,
     *stack = (*stack)->prev;
     break;
   case OP_INIT_ARGS:;
-    size_t size = pop_bytecode(translated, state) * sizeof(ArgonObject *);
+    *state->call_args_length = pop_bytecode(translated, state);
+    size_t size = *state->call_args_length * sizeof(ArgonObject *);
     if (*state->call_args) {
       *state->call_args = realloc(*state->call_args, size);
     } else {

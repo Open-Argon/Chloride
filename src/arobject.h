@@ -23,6 +23,8 @@ typedef enum ArgonType {
   TYPE_STRING,
   TYPE_FUNCTION,
   TYPE_NATIVE_FUNCTION,
+  TYPE_METHOD,
+  TYPE_NATIVE_METHOD,
   TYPE_OBJECT,
 } ArgonType;
 
