@@ -28,10 +28,10 @@ void uint64_to_bytes(uint64_t value, uint8_t bytes[8]) {
 }
 
 void arena_init(ConstantArena *arena) {
-  arena->data = ar_alloc(CHUNK_SIZE);
+  arena->data = malloc(CHUNK_SIZE);
   arena->capacity = CHUNK_SIZE;
   arena->size = 0;
-  arena->hashmap = createHashmap_GC();
+  arena->hashmap = createHashmap();
 }
 
 void arena_resize(ConstantArena *arena, size_t new_size) {
@@ -55,7 +55,7 @@ size_t arena_push(ConstantArena *arena, const void *data, size_t length) {
   uint64_t hash = siphash64_bytes(data, length, siphash_key);
 
   // Look up offset in hashmap
-  void *val = hashmap_lookup_GC(arena->hashmap, hash);
+  void *val = hashmap_lookup(arena->hashmap, hash);
   if (val != NULL) {
     size_t offset =
         (size_t)(uintptr_t)val - 1; // stored as pointer but really offset
@@ -72,7 +72,7 @@ size_t arena_push(ConstantArena *arena, const void *data, size_t length) {
   arena->size += length;
 
   // Insert into hashmap: store offset as pointer-sized integer
-  hashmap_insert_GC(arena->hashmap, hash, (void *)data,
+  hashmap_insert(arena->hashmap, hash, (void *)data,
                  (void *)(uintptr_t)offset + 1, 0);
 
   return offset;
@@ -83,14 +83,14 @@ Translated init_translator(char* path) {
   translated.path = path;
   translated.registerCount = 1;
   translated.return_jumps=NULL;
-  darray_armem_init(&translated.bytecode, sizeof(uint8_t));
+  darray_init(&translated.bytecode, sizeof(uint8_t));
   arena_init(&translated.constants);
   return translated;
 }
 
 size_t push_instruction_byte(Translated *translator, uint8_t byte) {
   size_t offset = translator->bytecode.size;
-  darray_armem_push(&translator->bytecode, &byte);
+  darray_push(&translator->bytecode, &byte);
   return offset;
 }
 
@@ -103,7 +103,7 @@ size_t push_instruction_code(Translated *translator, uint64_t code) {
   uint8_t bytes[8];
   uint64_to_bytes(code, bytes);
   for (size_t i = 0; i < sizeof(bytes); i++) {
-    darray_armem_push(&translator->bytecode, &(bytes[i]));
+    darray_push(&translator->bytecode, &(bytes[i]));
   }
   return offset;
 }

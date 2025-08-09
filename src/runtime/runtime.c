@@ -55,12 +55,13 @@ ArgonObject *ARGON_TYPE_TYPE___call__(size_t argc, ArgonObject **argv,
     return ARGON_NULL;
   }
 
-  ArgonObject *cls___new___args[] = {cls};
-  ArgonObject *new_object = argon_call(cls___new__, sizeof(cls___new___args)/sizeof(ArgonObject *), cls___new___args, err, state);
+  ArgonObject *new_object = argon_call(cls___new__, argc, argv, err, state);
   if (err->exists)
     return ARGON_NULL;
   ArgonObject *ARGON_TYPE_TYPE___call___args[] = {ARGON_TYPE_TYPE, new_object};
-  ArgonObject *new_object_class = ARGON_TYPE_TYPE___call__(sizeof(ARGON_TYPE_TYPE___call___args)/sizeof(ArgonObject *), ARGON_TYPE_TYPE___call___args, err, state);
+  ArgonObject *new_object_class = ARGON_TYPE_TYPE___call__(
+      sizeof(ARGON_TYPE_TYPE___call___args) / sizeof(ArgonObject *),
+      ARGON_TYPE_TYPE___call___args, err, state);
   if (new_object_class != ARGON_NULL && new_object_class == cls) {
     ArgonObject *cls___init__ =
         get_field_for_class(argv[0], "__init__", new_object);
@@ -83,9 +84,10 @@ ArgonObject *ARGON_TYPE_TYPE___call__(size_t argc, ArgonObject **argv,
 ArgonObject *BASE_CLASS___new__(size_t argc, ArgonObject **argv, ArErr *err,
                                 RuntimeState *state) {
   (void)state;
-  if (argc != 1) {
-    *err = create_err(0, 0, 0, "", "Runtime Error",
-                      "__new__ expects 1 argument, got %" PRIu64, argc);
+  if (argc < 1) {
+    *err =
+        create_err(0, 0, 0, "", "Runtime Error",
+                   "__new__ expects at least 1 argument, got %" PRIu64, argc);
     return ARGON_NULL;
   }
   ArgonObject *new_obj = new_object();
@@ -96,6 +98,7 @@ ArgonObject *BASE_CLASS___new__(size_t argc, ArgonObject **argv, ArErr *err,
 ArgonObject *BASE_CLASS___init__(size_t argc, ArgonObject **argv, ArErr *err,
                                  RuntimeState *state) {
   (void)state;
+  (void)argv;
   if (argc != 1) {
     *err = create_err(0, 0, 0, "", "Runtime Error",
                       "__init__ expects 1 argument, got %" PRIu64, argc);
@@ -123,16 +126,41 @@ ArgonObject *ARGON_STRING_TYPE___init__(size_t argc, ArgonObject **argv,
         argon_call(string_convert_method, 0, NULL, err, state);
     if (err->exists)
       return ARGON_NULL;
-    object->value.as_str.data = ar_alloc_atomic(string_object->value.as_str.length);
-    memcpy(object->value.as_str.data, string_object->value.as_str.data, string_object->value.as_str.length);
+    object->value.as_str.data =
+        ar_alloc_atomic(string_object->value.as_str.length);
+    memcpy(object->value.as_str.data, string_object->value.as_str.data,
+           string_object->value.as_str.length);
     object->value.as_str.length = string_object->value.as_str.length;
   }
   return ARGON_NULL;
 }
 
+ArgonObject *ARGON_BOOL_TYPE___new__(size_t argc, ArgonObject **argv,
+                                     ArErr *err, RuntimeState *state) {
+  if (argc != 2) {
+    *err = create_err(0, 0, 0, "", "Runtime Error",
+                      "__init__ expects 2 arguments, got %" PRIu64, argc);
+    return ARGON_NULL;
+  }
+  ArgonObject *self = argv[0];
+  ArgonObject *object = argv[1];
+
+  self->type = TYPE_STRING;
+  ArgonObject *boolean_convert_method = get_field_for_class(
+      get_field(object, "__class__", false, false), "__boolean__", object);
+  if (boolean_convert_method) {
+    ArgonObject *boolean_object =
+        argon_call(boolean_convert_method, 0, NULL, err, state);
+    if (err->exists)
+      return ARGON_NULL;
+    return boolean_object;
+  }
+  return ARGON_TRUE;
+}
 
 ArgonObject *ARGON_STRING_TYPE___string__(size_t argc, ArgonObject **argv,
-                                        ArErr *err, RuntimeState *state) {
+                                          ArErr *err, RuntimeState *state) {
+  (void)state;
   if (argc != 1) {
     *err = create_err(0, 0, 0, "", "Runtime Error",
                       "__init__ expects 1 arguments, got %" PRIu64, argc);
@@ -190,10 +218,14 @@ void bootstrap_types() {
             create_argon_native_function("__init__", BASE_CLASS___new__));
   add_field(ARGON_TYPE_TYPE, "__call__",
             create_argon_native_function("__call__", ARGON_TYPE_TYPE___call__));
-  add_field(ARGON_STRING_TYPE, "__init__",
-            create_argon_native_function("__init__", ARGON_STRING_TYPE___init__));
-  add_field(ARGON_STRING_TYPE, "__string__",
-            create_argon_native_function("__string__", ARGON_STRING_TYPE___string__));
+  add_field(
+      ARGON_STRING_TYPE, "__init__",
+      create_argon_native_function("__init__", ARGON_STRING_TYPE___init__));
+  add_field(
+      ARGON_STRING_TYPE, "__string__",
+      create_argon_native_function("__string__", ARGON_STRING_TYPE___string__));
+  add_field(ARGON_BOOL_TYPE, "__new__",
+            create_argon_native_function("__new__", ARGON_BOOL_TYPE___new__));
 }
 
 void add_to_scope(Stack *stack, char *name, ArgonObject *value) {
@@ -207,6 +239,7 @@ void bootstrap_globals() {
   Global_Scope = create_scope(NULL);
   add_to_scope(Global_Scope, "string", ARGON_STRING_TYPE);
   add_to_scope(Global_Scope, "type", ARGON_TYPE_TYPE);
+  add_to_scope(Global_Scope, "boolean", ARGON_BOOL_TYPE);
 }
 
 int compare_by_order(const void *a, const void *b) {
@@ -216,7 +249,7 @@ int compare_by_order(const void *a, const void *b) {
 }
 
 uint8_t pop_byte(Translated *translated, RuntimeState *state) {
-  return *((uint8_t *)darray_armem_get(&translated->bytecode, state->head++));
+  return *((uint8_t *)darray_get(&translated->bytecode, state->head++));
 }
 
 uint64_t pop_bytecode(Translated *translated, RuntimeState *state) {
@@ -357,7 +390,7 @@ ArErr run_instruction(Translated *translated, RuntimeState *state,
   case OP_CALL:;
     ArErr err = run_call(state->call_instance->to_call,
                          state->call_instance->args_length,
-                         state->call_instance->args, state);
+                         state->call_instance->args, state, false);
     free(state->call_instance->args);
     call_instance = *state->call_instance;
     free(state->call_instance);

@@ -4,7 +4,9 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+#include "arobject.h"
 #include "dynamic_array/darray.h"
+#include "hashmap/hashmap.h"
 #include "lexer/lexer.h"
 #include "lexer/token.h"
 #include "memory.h"
@@ -256,7 +258,7 @@ int load_cache(Translated *translated_dest, char *joined_paths, uint64_t hash, c
     goto FAILED;
   }
 
-  darray_armem_resize(&translated_dest->bytecode, bytecodeSize);
+  darray_resize(&translated_dest->bytecode, bytecodeSize);
 
   if (fread(translated_dest->bytecode.data, 1, bytecodeSize, bytecode_file) !=
       bytecodeSize) {
@@ -413,11 +415,31 @@ Execution execute(char *path, Stack *stack) {
 
     fclose(file);
   }
+  hashmap_free(translated.constants.hashmap, NULL);
+  Translated gc_translated = {
+    translated.registerCount,
+    NULL,
+    {},
+    {},
+    translated.path
+  };
+  gc_translated.bytecode.data = ar_alloc(translated.bytecode.capacity);
+  memcpy(gc_translated.bytecode.data, translated.bytecode.data, translated.bytecode.capacity);
+  gc_translated.bytecode.element_size = translated.bytecode.element_size;
+  gc_translated.bytecode.size = translated.bytecode.size;
+  gc_translated.bytecode.resizable = false;
+  gc_translated.bytecode.capacity = translated.bytecode.size*translated.bytecode.element_size;
+  gc_translated.constants.data = ar_alloc(translated.constants.capacity);
+  memcpy(gc_translated.constants.data, translated.constants.data, translated.constants.capacity);
+  gc_translated.constants.size = translated.constants.size;
+  gc_translated.constants.capacity = translated.constants.capacity;
+  darray_free(&translated.bytecode, NULL);
+  free(translated.constants.data);
 
   start = clock();
-  RuntimeState state = init_runtime_state(translated, path);
+  RuntimeState state = init_runtime_state(gc_translated, path);
   Stack *main_scope = create_scope(stack);
-  ArErr err = runtime(translated, state, main_scope);
+  ArErr err = runtime(gc_translated, state, main_scope);
   free_runtime_state(state);
   end = clock();
   time_spent = (double)(end - start) / CLOCKS_PER_SEC;

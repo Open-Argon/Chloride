@@ -72,12 +72,12 @@ double get_memory_usage_mb() {
 
 ArgonObject *argon_call(ArgonObject *original_object, size_t argc,
                         ArgonObject **argv, ArErr *err, RuntimeState *state) {
-  *err = run_call(original_object, argc, argv, state);
+  *err = run_call(original_object, argc, argv, state, true);
   return state->registers[0];
 }
 
 ArErr run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
-               RuntimeState *state) {
+               RuntimeState *state, bool CStackFrame) {
   ArgonObject *object = original_object;
   if (object->type != TYPE_FUNCTION && object->type != TYPE_NATIVE_FUNCTION &&
       object->type != TYPE_METHOD) {
@@ -151,32 +151,37 @@ ArErr run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
         scope,
         *state->currentStackFramePointer,
         (*state->currentStackFramePointer)->depth + 1};
-    if (((*state->currentStackFramePointer)->depth + 1) % STACKFRAME_CHUNKS ==
-        0) {
-      *state->currentStackFramePointer =
-          checked_malloc(sizeof(StackFrame) * STACKFRAME_CHUNKS);
+    if (CStackFrame) {
+      return runtime(new_stackFrame.translated, new_stackFrame.state, new_stackFrame.stack);
     } else {
-      *state->currentStackFramePointer = *state->currentStackFramePointer + 1;
-    }
-    **state->currentStackFramePointer = new_stackFrame;
-    if ((*state->currentStackFramePointer)->depth >= 10000) {
-      double logval = log10((double)(*state->currentStackFramePointer)->depth);
-      if (floor(logval) == logval) {
-        double memoryUsage = get_memory_usage_mb();
-        fprintf(stderr,
-                "Warning: %s:%" PRIu64 ":%" PRIu64
-                " the call stack depth has exceeded %" PRIu64,
-                state->path, state->source_location.line,
-                state->source_location.column,
-                (*state->currentStackFramePointer)->depth);
-        if (memoryUsage) {
-          fprintf(stderr, ", memory usage at %f MB\n", memoryUsage);
-        } else {
-          fprintf(stderr, "\n");
-        }
+      if (((*state->currentStackFramePointer)->depth + 1) % STACKFRAME_CHUNKS ==
+          0) {
+        *state->currentStackFramePointer =
+            checked_malloc(sizeof(StackFrame) * STACKFRAME_CHUNKS);
+      } else {
+        *state->currentStackFramePointer = *state->currentStackFramePointer + 1;
       }
-    };
-    return no_err;
+      **state->currentStackFramePointer = new_stackFrame;
+      if ((*state->currentStackFramePointer)->depth >= 10000) {
+        double logval =
+            log10((double)(*state->currentStackFramePointer)->depth);
+        if (floor(logval) == logval) {
+          double memoryUsage = get_memory_usage_mb();
+          fprintf(stderr,
+                  "Warning: %s:%" PRIu64 ":%" PRIu64
+                  " the call stack depth has exceeded %" PRIu64,
+                  state->path, state->source_location.line,
+                  state->source_location.column,
+                  (*state->currentStackFramePointer)->depth);
+          if (memoryUsage) {
+            fprintf(stderr, ", memory usage at %f MB\n", memoryUsage);
+          } else {
+            fprintf(stderr, "\n");
+          }
+        }
+      };
+      return no_err;
+    }
   } else if (object->type == TYPE_NATIVE_FUNCTION) {
     ArErr err = no_err;
     state->registers[0] = object->value.native_fn(argc, argv, &err, state);
