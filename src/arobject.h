@@ -35,13 +35,13 @@ typedef struct {
   void *data;
   size_t capacity;
   size_t size;
-  struct hashmap_GC *hashmap;
+  struct hashmap *hashmap;
 } ConstantArena;
 
 typedef struct {
   uint8_t registerCount;
   DArray *return_jumps;
-  darray_armem bytecode;
+  DArray bytecode;
   ConstantArena constants;
   char *path;
 } Translated;
