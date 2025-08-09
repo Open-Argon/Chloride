@@ -8,6 +8,10 @@
 #define runtime_call_H
 #include "../runtime.h"
 
-ArErr run_call(Translated *translated, RuntimeState *state);
+ArgonObject *argon_call(ArgonObject *original_object, size_t argc,
+                        ArgonObject **argv, ArErr *err, RuntimeState *state);
+
+ArErr run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
+               RuntimeState *state);
 
 #endif // runtime_call_H

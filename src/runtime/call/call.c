@@ -70,41 +70,50 @@ double get_memory_usage_mb() {
 }
 #endif
 
-ArErr run_call(Translated *translated, RuntimeState *state) {
-  ArgonObject *original_object = state->call_instance->to_call;
+ArgonObject *argon_call(ArgonObject *original_object, size_t argc,
+                        ArgonObject **argv, ArErr *err, RuntimeState *state) {
+  *err = run_call(original_object, argc, argv, state);
+  return state->registers[0];
+}
+
+ArErr run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
+               RuntimeState *state) {
   ArgonObject *object = original_object;
   if (object->type != TYPE_FUNCTION && object->type != TYPE_NATIVE_FUNCTION &&
       object->type != TYPE_METHOD) {
-    ArgonObject *call_method = get_field_for_class(
-        get_field(object, "__class__", false), "__call__", original_object);
+    ArgonObject *call_method =
+        get_field_for_class(get_field(object, "__class__", false, false),
+                            "__call__", original_object);
     if (call_method) {
       object = call_method;
     }
   }
+  bool to_free_args = false;
   if (object->type == TYPE_METHOD) {
-    ArgonObject *binding_object = get_field(object, "__binding__", false);
+    ArgonObject *binding_object =
+        get_field(object, "__binding__", false, false);
     if (binding_object) {
-      ArgonObject **new_call_args = malloc(
-          sizeof(ArgonObject *) * (state->call_instance->args_length + 1));
+      ArgonObject **new_call_args = malloc(sizeof(ArgonObject *) * (argc + 1));
       new_call_args[0] = binding_object;
-      if (state->call_instance->args_length > 0) {
-        memcpy(new_call_args + 1, state->call_instance->args,
-               state->call_instance->args_length);
+      if (argc > 0) {
+        memcpy(new_call_args + 1, argv, argc * sizeof(ArgonObject *));
       }
-      free(state->call_instance->args);
-      state->call_instance->args = new_call_args;
-      state->call_instance->args_length++;
+      argv = new_call_args;
+      argc++;
+      to_free_args = true;
     }
-    ArgonObject *function_object = get_field(object, "__function__", false);
+    ArgonObject *function_object =
+        get_field(object, "__function__", false, false);
     if (function_object)
       object = function_object;
   }
   if (object->type == TYPE_FUNCTION) {
-    if (state->call_instance->args_length !=
-        object->value.argon_fn.number_of_parameters) {
-      ArgonObject *type_object_name = get_field_for_class(
-          get_field(object, "__class__", false), "__name__", original_object);
-      ArgonObject *object_name = get_field_for_class(object, "__name__", original_object);
+    if (argc != object->value.argon_fn.number_of_parameters) {
+      ArgonObject *type_object_name =
+          get_field_for_class(get_field(object, "__class__", false, false),
+                              "__name__", original_object);
+      ArgonObject *object_name =
+          get_field_for_class(object, "__name__", original_object);
       return create_err(
           state->source_location.line, state->source_location.column,
           state->source_location.length, state->path, "Type Error",
@@ -112,19 +121,20 @@ ArErr run_call(Translated *translated, RuntimeState *state) {
           (int)type_object_name->value.as_str.length,
           type_object_name->value.as_str.data,
           (int)object_name->value.as_str.length, object_name->value.as_str.data,
-          object->value.argon_fn.number_of_parameters,
-          state->call_instance->args_length);
+          object->value.argon_fn.number_of_parameters, argc);
     }
     Stack *scope = create_scope(object->value.argon_fn.stack);
-    for (size_t i = 0; i < state->call_instance->args_length; i++) {
+    for (size_t i = 0; i < argc; i++) {
       struct string_struct key = object->value.argon_fn.parameters[i];
-      ArgonObject *value = (state->call_instance->args)[i];
+      ArgonObject *value = argv[i];
       uint64_t hash = siphash64_bytes(key.data, key.length, siphash_key);
       hashmap_insert_GC(scope->scope, hash,
                         new_string_object(key.data, key.length), value, 0);
     }
+    if (to_free_args)
+      free(argv);
     StackFrame new_stackFrame = {
-        {translated->registerCount,
+        {object->value.argon_fn.translated.registerCount,
          NULL,
          {object->value.argon_fn.bytecode, sizeof(uint8_t),
           object->value.argon_fn.bytecode_length,
@@ -169,8 +179,9 @@ ArErr run_call(Translated *translated, RuntimeState *state) {
     return no_err;
   } else if (object->type == TYPE_NATIVE_FUNCTION) {
     ArErr err = no_err;
-    state->registers[0] = object->value.native_fn(
-        state->call_instance->args_length, state->call_instance->args, &err);
+    state->registers[0] = object->value.native_fn(argc, argv, &err, state);
+    if (to_free_args)
+      free(argv);
     if (err.exists) {
       err.line = state->source_location.line;
       err.column = state->source_location.column;
@@ -179,8 +190,11 @@ ArErr run_call(Translated *translated, RuntimeState *state) {
     }
     return err;
   }
-  ArgonObject *type_object_name = get_field_for_class(
-      get_field(original_object, "__class__", false), "__name__", original_object);
+  if (to_free_args)
+    free(argv);
+  ArgonObject *type_object_name =
+      get_field_for_class(get_field(original_object, "__class__", false, false),
+                          "__name__", original_object);
   return create_err(state->source_location.line, state->source_location.column,
                     state->source_location.length, state->path, "Type Error",
                     "'%.*s' object is not callable",
