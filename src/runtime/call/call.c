@@ -71,73 +71,72 @@ double get_memory_usage_mb() {
 #endif
 
 ArErr run_call(Translated *translated, RuntimeState *state) {
-  uint8_t from_register = pop_byte(translated, state);
-  uint8_t source_location_index = pop_bytecode(translated, state);
-  ArgonObject *original_object = state->registers[from_register];
+  ArgonObject *original_object = state->call_instance->to_call;
   ArgonObject *object = original_object;
-  int is_method =
-      object->type == TYPE_METHOD || object->type == TYPE_NATIVE_METHOD;
-  if (object->type != TYPE_FUNCTION && object->type != TYPE_NATIVE_FUNCTION && !is_method) {
-    ArgonObject *call_method =
-        get_field_for_class(get_field(object, "__class__", false), "__call__");
+  if (object->type != TYPE_FUNCTION && object->type != TYPE_NATIVE_FUNCTION &&
+      object->type != TYPE_METHOD) {
+    ArgonObject *call_method = get_field_for_class(
+        get_field(object, "__class__", false), "__call__", original_object);
     if (call_method) {
       object = call_method;
-      is_method =
-          object->type == TYPE_METHOD && object->type == TYPE_NATIVE_METHOD;
     }
   }
-  if (is_method) {
-    ArgonObject **new_call_args =
-        malloc(sizeof(ArgonObject *) * (*state->call_args_length + 1));
-    new_call_args[0] = original_object;
-    if (*state->call_args_length > 0) {
-      memcpy(new_call_args + 1, *state->call_args, *state->call_args_length);
+  if (object->type == TYPE_METHOD) {
+    ArgonObject *binding_object = get_field(object, "__binding__", false);
+    if (binding_object) {
+      ArgonObject **new_call_args = malloc(
+          sizeof(ArgonObject *) * (state->call_instance->args_length + 1));
+      new_call_args[0] = binding_object;
+      if (state->call_instance->args_length > 0) {
+        memcpy(new_call_args + 1, state->call_instance->args,
+               state->call_instance->args_length);
+      }
+      free(state->call_instance->args);
+      state->call_instance->args = new_call_args;
+      state->call_instance->args_length++;
     }
-    if (*state->call_args) {
-      free(*state->call_args);
-    }
-    *state->call_args = new_call_args;
-    (*state->call_args_length)++;
+    ArgonObject *function_object = get_field(object, "__function__", false);
+    if (function_object)
+      object = function_object;
   }
-  if (object->type == TYPE_FUNCTION || object->type == TYPE_METHOD) {
-    SourceLocation *source_location =
-        darray_get(&translated->source_locations, source_location_index);
-    if (*state->call_args_length !=
+  if (object->type == TYPE_FUNCTION) {
+    if (state->call_instance->args_length !=
         object->value.argon_fn.number_of_parameters) {
       ArgonObject *type_object_name = get_field_for_class(
-          get_field(object, "__class__", false), "__name__");
-      ArgonObject *object_name = get_field_for_class(object, "__name__");
+          get_field(object, "__class__", false), "__name__", original_object);
+      ArgonObject *object_name = get_field_for_class(object, "__name__", original_object);
       return create_err(
-          source_location->line, source_location->column,
-          source_location->length, state->path, "Type Error",
+          state->source_location.line, state->source_location.column,
+          state->source_location.length, state->path, "Type Error",
           "%.*s %.*s takes %" PRIu64 " argument(s) but %" PRIu64 " was given",
           (int)type_object_name->value.as_str.length,
           type_object_name->value.as_str.data,
           (int)object_name->value.as_str.length, object_name->value.as_str.data,
           object->value.argon_fn.number_of_parameters,
-          *state->call_args_length);
+          state->call_instance->args_length);
     }
     Stack *scope = create_scope(object->value.argon_fn.stack);
-    for (size_t i = 0; i < *state->call_args_length; i++) {
+    for (size_t i = 0; i < state->call_instance->args_length; i++) {
       struct string_struct key = object->value.argon_fn.parameters[i];
-      ArgonObject *value = (*state->call_args)[i];
+      ArgonObject *value = (state->call_instance->args)[i];
       uint64_t hash = siphash64_bytes(key.data, key.length, siphash_key);
       hashmap_insert_GC(scope->scope, hash,
                         new_string_object(key.data, key.length), value, 0);
     }
-    DArray bytecode_darray = {object->value.argon_fn.bytecode, sizeof(uint8_t),
-                              object->value.argon_fn.bytecode_length,
-                              object->value.argon_fn.bytecode_length, false};
     StackFrame new_stackFrame = {
-        {translated->registerCount, NULL, bytecode_darray,
-         object->value.argon_fn.source_locations, translated->constants,
-         object->value.argon_fn.path},
+        {translated->registerCount,
+         NULL,
+         {object->value.argon_fn.bytecode, sizeof(uint8_t),
+          object->value.argon_fn.bytecode_length,
+          object->value.argon_fn.bytecode_length, false},
+         object->value.argon_fn.translated.constants,
+         object->value.argon_fn.translated.path},
         {state->registers,
          0,
-         state->path,
+         object->value.argon_fn.translated.path,
+         NULL,
          state->currentStackFramePointer,
-         state->call_args,
-         state->call_args_length,
+         {},
          {}},
         scope,
         *state->currentStackFramePointer,
@@ -153,13 +152,12 @@ ArErr run_call(Translated *translated, RuntimeState *state) {
     if ((*state->currentStackFramePointer)->depth >= 10000) {
       double logval = log10((double)(*state->currentStackFramePointer)->depth);
       if (floor(logval) == logval) {
-        SourceLocation *source_location =
-            darray_get(&translated->source_locations, source_location_index);
         double memoryUsage = get_memory_usage_mb();
         fprintf(stderr,
                 "Warning: %s:%" PRIu64 ":%" PRIu64
                 " the call stack depth has exceeded %" PRIu64,
-                state->path, source_location->line, source_location->column,
+                state->path, state->source_location.line,
+                state->source_location.column,
                 (*state->currentStackFramePointer)->depth);
         if (memoryUsage) {
           fprintf(stderr, ", memory usage at %f MB\n", memoryUsage);
@@ -169,18 +167,22 @@ ArErr run_call(Translated *translated, RuntimeState *state) {
       }
     };
     return no_err;
-  } else if (object->type == TYPE_NATIVE_FUNCTION || object->type == TYPE_NATIVE_METHOD) {
+  } else if (object->type == TYPE_NATIVE_FUNCTION) {
     ArErr err = no_err;
-    state->registers[0] = object->value.native_fn(*state->call_args_length,
-                                                  *state->call_args, &err);
+    state->registers[0] = object->value.native_fn(
+        state->call_instance->args_length, state->call_instance->args, &err);
+    if (err.exists) {
+      err.line = state->source_location.line;
+      err.column = state->source_location.column;
+      err.length = state->source_location.length;
+      err.path = state->path;
+    }
     return err;
   }
-  SourceLocation *source_location =
-      darray_get(&translated->source_locations, source_location_index);
   ArgonObject *type_object_name = get_field_for_class(
-      get_field(original_object, "__class__", false), "__name__");
-  return create_err(source_location->line, source_location->column,
-                    source_location->length, state->path, "Type Error",
+      get_field(original_object, "__class__", false), "__name__", original_object);
+  return create_err(state->source_location.line, state->source_location.column,
+                    state->source_location.length, state->path, "Type Error",
                     "'%.*s' object is not callable",
                     (int)type_object_name->value.as_str.length,
                     type_object_name->value.as_str.data);

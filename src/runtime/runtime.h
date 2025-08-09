@@ -11,22 +11,38 @@
 #include "internals/dynamic_array_armem/darray_armem.h"
 #include "internals/hashmap/hashmap.h"
 
+extern ArgonObject *ARGON_METHOD_TYPE;
+extern Stack *Global_Scope;
+
 typedef struct StackFrame StackFrame;
 typedef struct RuntimeState RuntimeState;
+
+typedef struct SourceLocation {
+  uint64_t line;
+  uint64_t column;
+  uint64_t length;
+} SourceLocation;
+
+typedef struct call_instance {
+  struct call_instance *previous;
+  ArgonObject *to_call;
+  ArgonObject **args;
+  size_t args_length;
+} call_instance;
 
 typedef struct ErrorCatch {
   size_t jump_to;
   Stack *stack;
   StackFrame *stackFrame;
-} ErrorCatch; 
+} ErrorCatch;
 
 typedef struct RuntimeState {
   ArgonObject **registers;
   size_t head;
   char *path;
+  call_instance *call_instance;
   StackFrame **currentStackFramePointer;
-  ArgonObject*** call_args;
-  size_t* call_args_length;
+  SourceLocation source_location;
   DArray catch_errors; // ErrorCatch[]
 } RuntimeState;
 
@@ -45,6 +61,8 @@ void bootstrap_types();
 extern struct hashmap *runtime_hash_table;
 
 uint64_t runtime_hash(const void *data, size_t len, uint64_t prehash);
+
+void bootstrap_globals();
 
 uint8_t pop_byte(Translated *translated, RuntimeState *state);
 

@@ -14,30 +14,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
-typedef enum { OP_LOAD_CONST, OP_DECLARE, OP_LOAD_NULL, OP_LOAD_FUNCTION, OP_IDENTIFIER, OP_BOOL, OP_JUMP_IF_FALSE, OP_JUMP, OP_NEW_SCOPE, OP_POP_SCOPE, OP_INIT_ARGS, OP_INSERT_ARG, OP_RESET_ARGS, OP_CALL } OperationType;
+typedef enum { OP_LOAD_CONST, OP_DECLARE, OP_LOAD_NULL, OP_LOAD_FUNCTION, OP_IDENTIFIER, OP_BOOL, OP_JUMP_IF_FALSE, OP_JUMP, OP_NEW_SCOPE, OP_POP_SCOPE, OP_INIT_CALL, OP_INSERT_ARG, OP_CALL, OP_SOURCE_LOCATION } OperationType;
 typedef enum { TYPE_OP_STRING, TYPE_OP_NUMBER } types;
-
-typedef struct {
-  void *data;
-  size_t capacity;
-  size_t size;
-  struct hashmap * hashmap;
-} ConstantArena;
-
-typedef struct {
-  uint8_t registerCount;
-  DArray *return_jumps;
-  DArray bytecode;
-  DArray source_locations;
-  ConstantArena constants;
-  char* path;
-} Translated;
-
-typedef struct {
-  uint64_t line;
-  uint64_t column;
-  uint64_t length;
-} SourceLocation;
 
 void arena_resize(ConstantArena *arena, size_t new_size);
 
@@ -60,7 +38,5 @@ Translated init_translator(char* path);
 size_t translate_parsed(Translated *translated, ParsedValue *parsedValue, ArErr*err);
 
 ArErr translate(Translated *translated, DArray *ast);
-
-void free_translator(Translated *translated);
 
 #endif

@@ -29,7 +29,6 @@ this operation takes 3 operands.
 2. the offset in the constant buffer of the variable name.
 3. the fixed hash of the variable name.
 4. the register of the given value (*)
-5. the index of the source location.
 
 ## OP_LOAD_NULL
 
@@ -59,7 +58,6 @@ initilises a function to a given register.
 1. the length of the identifer.
 2. the offset of the identifier.
 3. the fixed hash of the variable name.
-4. the index of the source location.
 
 ## OP_BOOL
 
@@ -89,27 +87,27 @@ creates a new stack
 
 pops the top scope off the current
 
-## OP_INIT_ARGS
+## OP_INIT_CALL
 
-initialises the arguments buffer with a fixed number of objects on the current state
+initialises a call instance struct and arguments buffer.
 
 1. the number of objects for the arguments buffer
 
 ## OP_INSERT_ARG
 
-1. the register to take the object from. (*)
 1. index of the argument in the arguments buffer to write the object from the register into.
-
-## OP_RESET_ARGS
-
-resets the arguments buffer to NULL
 
 ## OP_CALL
 
 call a function with args
 
-1. the register containing the function to call. (*)
-4. the index of the source location.
+## OP_SOURCE_LOCATION
+
+sets the source location onto the runtime
+
+3. the line
+4. the column
+5. the length
 
 ## OP_SWAP_REGISTERS
 

@@ -14,6 +14,15 @@
 
 ArgonObject *ARGON_FUNCTION_TYPE = NULL;
 
+ArgonObject *create_argon_native_function(char*name, native_fn native_fn) {
+  ArgonObject *object = new_object();
+  add_field(object, "__class__", ARGON_FUNCTION_TYPE);
+  object->type = TYPE_NATIVE_FUNCTION;
+  add_field(object, "__name__", new_string_object(name, strlen(name)));
+  object->value.native_fn = native_fn;
+  return object;
+}
+
 void load_argon_function(Translated *translated, RuntimeState *state,
                                  struct Stack *stack) {
   ArgonObject *object = new_object();
@@ -22,8 +31,7 @@ void load_argon_function(Translated *translated, RuntimeState *state,
   uint64_t offset = pop_bytecode(translated, state);
   uint64_t length = pop_bytecode(translated, state);
   add_field(object, "__name__", new_string_object(arena_get(&translated->constants, offset), length));
-  object->value.argon_fn.path = translated->path;
-  object->value.argon_fn.source_locations = translated->source_locations;
+  object->value.argon_fn.translated = *translated;
   object->value.argon_fn.number_of_parameters = pop_bytecode(translated, state);
   object->value.argon_fn.parameters =
       ar_alloc(object->value.argon_fn.number_of_parameters * sizeof(struct string_struct));
