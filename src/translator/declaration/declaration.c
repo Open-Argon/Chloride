@@ -27,16 +27,17 @@ size_t translate_parsed_declaration(Translated *translated,
     size_t length = strlen(singleDeclaration->name);
     size_t offset =
         arena_push(&translated->constants, singleDeclaration->name, length);
-
+    
+    push_instruction_byte(translated, OP_SOURCE_LOCATION);
+    push_instruction_code(translated, singleDeclaration->line);
+    push_instruction_code(translated, singleDeclaration->column);
+    push_instruction_code(translated, length);
+    
     push_instruction_byte(translated, OP_DECLARE);
     push_instruction_code(translated, length);
     push_instruction_code(translated, offset);
     push_instruction_code(translated, siphash64_bytes(singleDeclaration->name, length, siphash_key_fixed_for_translator));
     push_instruction_byte(translated, 0);
-    SourceLocation source_locations = {singleDeclaration->line,
-                                       singleDeclaration->column, length};
-    push_instruction_code(translated, translated->source_locations.size);
-    darray_push(&translated->source_locations, &source_locations);
     translated->return_jumps = old_return_jumps;
   }
   return first;

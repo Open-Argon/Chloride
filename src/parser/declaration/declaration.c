@@ -61,6 +61,7 @@ ParsedValueReturn parse_declaration(char *file, DArray *tokens, size_t *index) {
       (*index)++;
       ArErr err = error_if_finished(file, tokens, index);
       if (err.exists) {
+        hashmap_free(parameters_hashmap, NULL);
         darray_free(&parameters, free_parameter);
         free_parsed(parsedValue);
         free(parsedValue);
@@ -70,6 +71,7 @@ ParsedValueReturn parse_declaration(char *file, DArray *tokens, size_t *index) {
       if (token->type == TOKEN_RPAREN) {
         (*index)++;
         if ((*index) >= tokens->size) {
+          hashmap_free(parameters_hashmap, NULL);
           declaration->from = create_parsed_function(
               declaration->name, parameters, declaration->from);
           return (ParsedValueReturn){no_err, parsedValue};
@@ -118,6 +120,7 @@ ParsedValueReturn parse_declaration(char *file, DArray *tokens, size_t *index) {
           (*index)++;
           err = error_if_finished(file, tokens, index);
           if (err.exists) {
+            hashmap_free(parameters_hashmap, NULL);
             darray_free(&parameters, free_parameter);
             free_parsed(parsedValue);
             free(parsedValue);
@@ -126,6 +129,7 @@ ParsedValueReturn parse_declaration(char *file, DArray *tokens, size_t *index) {
           skip_newlines_and_indents(tokens, index);
           err = error_if_finished(file, tokens, index);
           if (err.exists) {
+            hashmap_free(parameters_hashmap, NULL);
             darray_free(&parameters, free_parameter);
             free_parsed(parsedValue);
             free(parsedValue);
@@ -150,6 +154,7 @@ ParsedValueReturn parse_declaration(char *file, DArray *tokens, size_t *index) {
           (*index)++;
           err = error_if_finished(file, tokens, index);
           if (err.exists) {
+            hashmap_free(parameters_hashmap, NULL);
             darray_free(&parameters, free_parameter);
             free_parsed(parsedValue);
             free(parsedValue);

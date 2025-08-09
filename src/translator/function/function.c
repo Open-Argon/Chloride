@@ -13,9 +13,9 @@
 #include <string.h>
 size_t translate_parsed_function(Translated *translated,
                                  ParsedFunction *parsedFunction, ArErr *err) {
-  DArray main_bytecode = translated->bytecode;
-  DArray _temp_bytecode;
-  darray_init(&_temp_bytecode, sizeof(uint8_t));
+  darray_armem main_bytecode = translated->bytecode;
+  darray_armem _temp_bytecode;
+  darray_armem_init(&_temp_bytecode, sizeof(uint8_t));
   set_registers(translated, 1);
   translated->bytecode = _temp_bytecode;
   translate_parsed(translated, parsedFunction->body, err);
@@ -23,7 +23,6 @@ size_t translate_parsed_function(Translated *translated,
       arena_push(&translated->constants, translated->bytecode.data,
                  translated->bytecode.size*translated->bytecode.element_size);
   size_t function_bytecode_length = translated->bytecode.size;
-  darray_free(&translated->bytecode, NULL);
   translated->bytecode = main_bytecode;
   size_t start = push_instruction_byte(translated, OP_LOAD_FUNCTION);
   size_t offset = arena_push(&translated->constants, parsedFunction->name,

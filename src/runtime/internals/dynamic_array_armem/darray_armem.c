@@ -45,7 +45,6 @@ void darray_armem_resize(darray_armem *arr, size_t new_size) {
   }
 
   if (new_capacity != arr->capacity) {
-    printf("%zu\n", new_capacity_bytes);
     arr->data = ar_realloc(arr->data, new_capacity_bytes);
     if (!arr->data) {
       fprintf(stderr, "darray_armem_resize: reallocation failed\n");

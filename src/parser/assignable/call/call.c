@@ -26,8 +26,6 @@ ParsedValueReturn parse_call(char *file, DArray *tokens, size_t *index,
   (*index)++;
   ArErr err = error_if_finished(file, tokens, index);
   if (err.exists) {
-    free_parsed(to_call);
-    free(to_call);
     free_parsed(parsedValue);
     free(parsedValue);
     return (ParsedValueReturn){err, NULL};
@@ -38,22 +36,16 @@ ParsedValueReturn parse_call(char *file, DArray *tokens, size_t *index,
       skip_newlines_and_indents(tokens, index);
       ArErr err = error_if_finished(file, tokens, index);
       if (err.exists) {
-        free_parsed(to_call);
-        free(to_call);
         free_parsed(parsedValue);
         free(parsedValue);
         return (ParsedValueReturn){err, NULL};
       }
       ParsedValueReturn parsedArg = parse_token(file, tokens, index, true);
       if (parsedArg.err.exists) {
-        free_parsed(to_call);
-        free(to_call);
         free_parsed(parsedValue);
         free(parsedValue);
         return parsedArg;
       } else if (!parsedArg.value) {
-        free_parsed(to_call);
-        free(to_call);
         free_parsed(parsedValue);
         free(parsedValue);
 
@@ -66,8 +58,6 @@ ParsedValueReturn parse_call(char *file, DArray *tokens, size_t *index,
       free(parsedArg.value);
       err = error_if_finished(file, tokens, index);
       if (err.exists) {
-        free_parsed(to_call);
-        free(to_call);
         free_parsed(parsedValue);
         free(parsedValue);
         return (ParsedValueReturn){err, NULL};
@@ -75,8 +65,6 @@ ParsedValueReturn parse_call(char *file, DArray *tokens, size_t *index,
       skip_newlines_and_indents(tokens, index);
       err = error_if_finished(file, tokens, index);
       if (err.exists) {
-        free_parsed(to_call);
-        free(to_call);
         free_parsed(parsedValue);
         free(parsedValue);
         return (ParsedValueReturn){err, NULL};
@@ -85,8 +73,6 @@ ParsedValueReturn parse_call(char *file, DArray *tokens, size_t *index,
       if (token->type == TOKEN_RPAREN) {
         break;
       } else if (token->type != TOKEN_COMMA) {
-        free_parsed(to_call);
-        free(to_call);
         free_parsed(parsedValue);
         free(parsedValue);
 
@@ -98,8 +84,6 @@ ParsedValueReturn parse_call(char *file, DArray *tokens, size_t *index,
       (*index)++;
       err = error_if_finished(file, tokens, index);
       if (err.exists) {
-        free_parsed(to_call);
-        free(to_call);
         free_parsed(parsedValue);
         free(parsedValue);
         return (ParsedValueReturn){err, NULL};
