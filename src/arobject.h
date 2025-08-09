@@ -12,11 +12,13 @@
 #include "runtime/internals/hashmap/hashmap.h"
 #include <gmp.h>
 
-typedef struct ArErr ArErr; 
+typedef struct ArErr ArErr;
+typedef struct RuntimeState RuntimeState;
 
 typedef struct ArgonObject ArgonObject; // forward declaration
 
-typedef ArgonObject* (*native_fn)(size_t argc, ArgonObject**argv, ArErr*err);
+typedef ArgonObject *(*native_fn)(size_t argc, ArgonObject **argv, ArErr *err,
+                                  RuntimeState *state);
 
 typedef enum ArgonType {
   TYPE_NULL,
@@ -29,12 +31,11 @@ typedef enum ArgonType {
   TYPE_OBJECT,
 } ArgonType;
 
-
 typedef struct {
   void *data;
   size_t capacity;
   size_t size;
-  struct hashmap_GC * hashmap;
+  struct hashmap_GC *hashmap;
 } ConstantArena;
 
 typedef struct {
@@ -42,7 +43,7 @@ typedef struct {
   DArray *return_jumps;
   darray_armem bytecode;
   ConstantArena constants;
-  char* path;
+  char *path;
 } Translated;
 
 struct string_struct {
@@ -57,7 +58,7 @@ typedef struct Stack {
 
 struct argon_function_struct {
   Translated translated;
-  uint8_t* bytecode;
+  uint8_t *bytecode;
   size_t bytecode_length;
   Stack *stack;
   size_t number_of_parameters;
@@ -66,11 +67,10 @@ struct argon_function_struct {
   uint64_t column;
 };
 
-
-
 // full definition of ArgonObject (no typedef again!)
 struct ArgonObject {
   ArgonType type;
+  ArgonType child_type;
   struct hashmap_GC *dict;
   union {
     mpq_t as_number;

@@ -17,8 +17,10 @@ ArgonObject *new_object();
 
 void add_field(ArgonObject *target, char *name, ArgonObject *object);
 
-ArgonObject *get_field_for_class(ArgonObject *target, char *name, ArgonObject *binding_object);
+ArgonObject *get_field_for_class(ArgonObject *target, char *name,
+                                 ArgonObject *binding_object);
 
-ArgonObject *get_field(ArgonObject *target, char *name, bool recursive);
+ArgonObject *get_field(ArgonObject *target, char *name, bool recursive,
+                       bool disable_method_wrapper);
 
 #endif // OBJECT_H

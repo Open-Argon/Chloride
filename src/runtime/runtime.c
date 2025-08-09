@@ -29,16 +29,52 @@ ArgonObject *ARGON_METHOD_TYPE;
 Stack *Global_Scope = NULL;
 
 ArgonObject *ARGON_TYPE_TYPE___call__(size_t argc, ArgonObject **argv,
-                                      ArErr *err) {
-  if (argc<1) {
-    *err = create_err(0, 0, 0, "", "Runtime Error", "call missing self object.");
+                                      ArErr *err, RuntimeState *state) {
+  if (argc < 1) {
+    *err = create_err(0, 0, 0, "", "Runtime Error",
+                      "__call__ expects at least 1 argument, got 0");
     return ARGON_NULL;
   }
-  ArgonObject *self = argv[0];
-  ArgonObject *self_name = get_field(argv[0], "__name__", true);
+  ArgonObject *cls = argv[0];
+  if (cls == ARGON_TYPE_TYPE && argc == 2) {
+    ArgonObject *cls_class = get_field(argv[1], "__class__", true, false);
+    if (cls_class)
+      return cls_class;
+    return ARGON_NULL;
+  }
+  ArgonObject *cls___new__ = get_field_for_class(argv[0], "__new__", NULL);
+  if (!cls___new__) {
+    ArgonObject *cls___name__ = get_field(argv[0], "__name__", true, false);
+    *err = create_err(
+        0, 0, 0, "", "Runtime Error",
+        "Object '%.*s' is missing __new__ method, so cannot be initialised",
+        (int)cls___name__->value.as_str.length,
+        cls___name__->value.as_str.data);
+    return ARGON_NULL;
+  }
 
-  printf("type: %.*s\n", (int)self_name->value.as_str.length, self_name->value.as_str.data);
-  return ARGON_NULL;
+  ArgonObject *new_object = argon_call(cls___new__, argc, argv, err, state);
+  if (err->exists)
+    return ARGON_NULL;
+  ArgonObject *args[] = {ARGON_TYPE_TYPE, new_object};
+  ArgonObject *new_object_class = ARGON_TYPE_TYPE___call__(2, args, err, state);
+  if (new_object_class != ARGON_NULL && new_object_class == cls) {
+    ArgonObject *cls___init__ =
+        get_field_for_class(argv[0], "__init__", new_object);
+    if (!cls___init__) {
+      ArgonObject *cls___name__ = get_field(argv[0], "__name__", true, false);
+      *err = create_err(
+          0, 0, 0, "", "Runtime Error",
+          "Object '%.*s' is missing __init__ method, so cannot be initialised",
+          (int)cls___name__->value.as_str.length,
+          cls___name__->value.as_str.data);
+    }
+    argon_call(cls___init__, argc - 1, argv + 1, err, state);
+    if (err->exists)
+      return ARGON_NULL;
+  }
+
+  return new_object;
 }
 
 void bootstrap_types() {
@@ -47,8 +83,7 @@ void bootstrap_types() {
   add_field(ARGON_TYPE_TYPE, "__base__", BASE_CLASS);
   add_field(ARGON_TYPE_TYPE, "__class__", ARGON_TYPE_TYPE);
   add_field(ARGON_TYPE_TYPE, "__call__",
-            create_argon_native_function(
-                "__call__", ARGON_TYPE_TYPE___call__));
+            create_argon_native_function("__call__", ARGON_TYPE_TYPE___call__));
 
   ARGON_NULL_TYPE = new_object();
   add_field(ARGON_NULL_TYPE, "__base__", BASE_CLASS);
@@ -91,8 +126,7 @@ void bootstrap_types() {
 
 void add_to_scope(Stack *stack, char *name, ArgonObject *value) {
   size_t length = strlen(name);
-  uint64_t hash =
-      siphash64_bytes(name, length, siphash_key);
+  uint64_t hash = siphash64_bytes(name, length, siphash_key);
   ArgonObject *key = new_string_object(name, length);
   hashmap_insert_GC(stack->scope, hash, key, value, 0);
 }
@@ -249,7 +283,9 @@ ArErr run_instruction(Translated *translated, RuntimeState *state,
     (state->call_instance->args)[index] = state->registers[0];
     break;
   case OP_CALL:;
-    ArErr err = run_call(translated, state);
+    ArErr err = run_call(state->call_instance->to_call,
+                         state->call_instance->args_length,
+                         state->call_instance->args, state);
     free(state->call_instance->args);
     call_instance = *state->call_instance;
     free(state->call_instance);
