@@ -18,6 +18,7 @@
 #include "objects/type/type.h"
 #include <fcntl.h>
 #include <gc/gc.h>
+#include <inttypes.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -30,6 +31,7 @@ Stack *Global_Scope = NULL;
 
 ArgonObject *ARGON_TYPE_TYPE___call__(size_t argc, ArgonObject **argv,
                                       ArErr *err, RuntimeState *state) {
+  (void)state;
   if (argc < 1) {
     *err = create_err(0, 0, 0, "", "Runtime Error",
                       "__call__ expects at least 1 argument, got 0");
@@ -53,11 +55,12 @@ ArgonObject *ARGON_TYPE_TYPE___call__(size_t argc, ArgonObject **argv,
     return ARGON_NULL;
   }
 
-  ArgonObject *new_object = argon_call(cls___new__, argc, argv, err, state);
+  ArgonObject *cls___new___args[] = {cls};
+  ArgonObject *new_object = argon_call(cls___new__, sizeof(cls___new___args)/sizeof(ArgonObject *), cls___new___args, err, state);
   if (err->exists)
     return ARGON_NULL;
-  ArgonObject *args[] = {ARGON_TYPE_TYPE, new_object};
-  ArgonObject *new_object_class = ARGON_TYPE_TYPE___call__(2, args, err, state);
+  ArgonObject *ARGON_TYPE_TYPE___call___args[] = {ARGON_TYPE_TYPE, new_object};
+  ArgonObject *new_object_class = ARGON_TYPE_TYPE___call__(sizeof(ARGON_TYPE_TYPE___call___args)/sizeof(ArgonObject *), ARGON_TYPE_TYPE___call___args, err, state);
   if (new_object_class != ARGON_NULL && new_object_class == cls) {
     ArgonObject *cls___init__ =
         get_field_for_class(argv[0], "__init__", new_object);
@@ -77,13 +80,71 @@ ArgonObject *ARGON_TYPE_TYPE___call__(size_t argc, ArgonObject **argv,
   return new_object;
 }
 
+ArgonObject *BASE_CLASS___new__(size_t argc, ArgonObject **argv, ArErr *err,
+                                RuntimeState *state) {
+  (void)state;
+  if (argc != 1) {
+    *err = create_err(0, 0, 0, "", "Runtime Error",
+                      "__new__ expects 1 argument, got %" PRIu64, argc);
+    return ARGON_NULL;
+  }
+  ArgonObject *new_obj = new_object();
+  add_field(new_obj, "__class__", argv[0]);
+  return new_obj;
+}
+
+ArgonObject *BASE_CLASS___init__(size_t argc, ArgonObject **argv, ArErr *err,
+                                 RuntimeState *state) {
+  (void)state;
+  if (argc != 1) {
+    *err = create_err(0, 0, 0, "", "Runtime Error",
+                      "__init__ expects 1 argument, got %" PRIu64, argc);
+  }
+  return ARGON_NULL;
+}
+
+ArgonObject *ARGON_STRING_TYPE___init__(size_t argc, ArgonObject **argv,
+                                        ArErr *err, RuntimeState *state) {
+  if (argc != 2) {
+    *err = create_err(0, 0, 0, "", "Runtime Error",
+                      "__init__ expects 2 arguments, got %" PRIu64, argc);
+    return ARGON_NULL;
+  }
+  ArgonObject *self = argv[0];
+  ArgonObject *object = argv[1];
+
+  self->value.as_str.data = NULL;
+  self->value.as_str.length = 0;
+  self->type = TYPE_STRING;
+  ArgonObject *string_convert_method = get_field_for_class(
+      get_field(object, "__class__", false, false), "__string__", object);
+  if (string_convert_method) {
+    ArgonObject *string_object =
+        argon_call(string_convert_method, 0, NULL, err, state);
+    if (err->exists)
+      return ARGON_NULL;
+    object->value.as_str.data = ar_alloc_atomic(string_object->value.as_str.length);
+    memcpy(object->value.as_str.data, string_object->value.as_str.data, string_object->value.as_str.length);
+    object->value.as_str.length = string_object->value.as_str.length;
+  }
+  return ARGON_NULL;
+}
+
+
+ArgonObject *ARGON_STRING_TYPE___string__(size_t argc, ArgonObject **argv,
+                                        ArErr *err, RuntimeState *state) {
+  if (argc != 1) {
+    *err = create_err(0, 0, 0, "", "Runtime Error",
+                      "__init__ expects 1 arguments, got %" PRIu64, argc);
+  }
+  return argv[0];
+}
+
 void bootstrap_types() {
   BASE_CLASS = new_object();
   ARGON_TYPE_TYPE = new_object();
   add_field(ARGON_TYPE_TYPE, "__base__", BASE_CLASS);
   add_field(ARGON_TYPE_TYPE, "__class__", ARGON_TYPE_TYPE);
-  add_field(ARGON_TYPE_TYPE, "__call__",
-            create_argon_native_function("__call__", ARGON_TYPE_TYPE___call__));
 
   ARGON_NULL_TYPE = new_object();
   add_field(ARGON_NULL_TYPE, "__base__", BASE_CLASS);
@@ -122,6 +183,17 @@ void bootstrap_types() {
   add_field(ARGON_METHOD_TYPE, "__base__", BASE_CLASS);
   add_field(ARGON_METHOD_TYPE, "__name__",
             new_string_object_null_terminated("method"));
+
+  add_field(BASE_CLASS, "__new__",
+            create_argon_native_function("__new__", BASE_CLASS___new__));
+  add_field(BASE_CLASS, "__init__",
+            create_argon_native_function("__init__", BASE_CLASS___new__));
+  add_field(ARGON_TYPE_TYPE, "__call__",
+            create_argon_native_function("__call__", ARGON_TYPE_TYPE___call__));
+  add_field(ARGON_STRING_TYPE, "__init__",
+            create_argon_native_function("__init__", ARGON_STRING_TYPE___init__));
+  add_field(ARGON_STRING_TYPE, "__string__",
+            create_argon_native_function("__string__", ARGON_STRING_TYPE___string__));
 }
 
 void add_to_scope(Stack *stack, char *name, ArgonObject *value) {

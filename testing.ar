@@ -1,4 +1,6 @@
 # SPDX-FileCopyrightText: 2025 William Bell
 
 # SPDX-License-Identifier: GPL-3.0-or-later
-type.__call__()
+let f = "hello world"
+let x = string(f)
+let the_type = type(x)
