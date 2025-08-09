@@ -182,7 +182,7 @@ ArErr run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
     state->registers[0] = object->value.native_fn(argc, argv, &err, state);
     if (to_free_args)
       free(argv);
-    if (err.exists) {
+    if (err.exists && strlen(err.path) == 0) {
       err.line = state->source_location.line;
       err.column = state->source_location.column;
       err.length = state->source_location.length;
