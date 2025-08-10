@@ -332,7 +332,6 @@ Execution execute(char *path, Stack *stack) {
   Translated translated;
 
   if (load_cache(&translated, cache_file_path, hash, path) != 0) {
-    translated = init_translator(path);
 
     DArray tokens;
     darray_init(&tokens, sizeof(Token));
@@ -368,8 +367,13 @@ Execution execute(char *path, Stack *stack) {
     darray_free(&tokens, free_token);
 
     start = clock();
+
+    translated = init_translator(path);
     err = translate(&translated, &ast);
     if (err.exists) {
+      darray_free(&translated.bytecode, NULL);
+      free(translated.constants.data);
+      hashmap_free(translated.constants.hashmap, NULL);
       darray_free(&ast, free_parsed);
       return (Execution){err, (Stack){NULL, NULL}};
     }
@@ -381,7 +385,7 @@ Execution execute(char *path, Stack *stack) {
     darray_free(&ast, free_parsed);
 
     malloc_trim(0);
-    
+
     ensure_dir_exists(cache_folder_path);
 
     file = fopen(cache_file_path, "wb");

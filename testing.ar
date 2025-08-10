@@ -1,4 +1,3 @@
-let split(url) = do
-    let split = url.splitN("?", 2)
-    if (split.length != 2) return {path: split[0], query: {}}
-    else return {path: split[0], query: decodeURLQuery(split[1])}
+let x = "hello"
+if (x) term.log('bruh')
+else term.log('not bruh')

@@ -122,7 +122,10 @@ ArgonObject *BASE_CLASS___string__(size_t argc, ArgonObject **argv, ArErr *err,
       get_field(argv[0], "__class__", false, false), "__name__", NULL);
 
   char buffer[100];
-  snprintf(buffer, sizeof(buffer), "<%.*s %.*s at %p>", (int)class_name->value.as_str.length, class_name->value.as_str.data, (int)object_name->value.as_str.length, object_name->value.as_str.data,argv[0]);
+  snprintf(buffer, sizeof(buffer), "<%.*s %.*s at %p>",
+           (int)class_name->value.as_str.length, class_name->value.as_str.data,
+           (int)object_name->value.as_str.length,
+           object_name->value.as_str.data, argv[0]);
   return new_string_object_null_terminated(buffer);
 }
 
@@ -188,6 +191,26 @@ ArgonObject *ARGON_STRING_TYPE___string__(size_t argc, ArgonObject **argv,
   return argv[0];
 }
 
+ArgonObject *ARGON_STRING_TYPE___boolean__(size_t argc, ArgonObject **argv,
+                                           ArErr *err, RuntimeState *state) {
+  (void)state;
+  if (argc != 1) {
+    *err = create_err(0, 0, 0, "", "Runtime Error",
+                      "__boolean__ expects 1 arguments, got %" PRIu64, argc);
+  }
+  return argv[0]->value.as_str.length == 0 ? ARGON_FALSE : ARGON_TRUE;
+}
+
+ArgonObject *ARGON_BOOL_TYPE___boolean__(size_t argc, ArgonObject **argv,
+                                         ArErr *err, RuntimeState *state) {
+  (void)state;
+  if (argc != 1) {
+    *err = create_err(0, 0, 0, "", "Runtime Error",
+                      "__boolean__ expects 1 arguments, got %" PRIu64, argc);
+  }
+  return argv[0];
+}
+
 void bootstrap_types() {
   BASE_CLASS = new_object();
   ARGON_TYPE_TYPE = new_object();
@@ -248,6 +271,12 @@ void bootstrap_types() {
       create_argon_native_function("__string__", ARGON_STRING_TYPE___string__));
   add_field(ARGON_BOOL_TYPE, "__new__",
             create_argon_native_function("__new__", ARGON_BOOL_TYPE___new__));
+  add_field(
+      ARGON_BOOL_TYPE, "__boolean__",
+      create_argon_native_function("__boolean__", ARGON_BOOL_TYPE___boolean__));
+  add_field(ARGON_STRING_TYPE, "__boolean__",
+            create_argon_native_function("__boolean__",
+                                         ARGON_STRING_TYPE___boolean__));
   ACCESS_FUNCTION = create_argon_native_function("ACCESS_FUNCTION",
                                                  ARGON_TYPE_TYPE___get_attr__);
 }
@@ -409,9 +438,9 @@ ArErr run_instruction(Translated *translated, RuntimeState *state,
     break;
   case OP_INIT_CALL:;
     size_t length = pop_bytecode(translated, state);
-    call_instance call_instance = {
-        state->call_instance, state->registers[0],
-        ar_alloc(length * sizeof(ArgonObject *)), length};
+    call_instance call_instance = {state->call_instance, state->registers[0],
+                                   ar_alloc(length * sizeof(ArgonObject *)),
+                                   length};
     state->call_instance = ar_alloc(sizeof(call_instance));
     *state->call_instance = call_instance;
     break;
