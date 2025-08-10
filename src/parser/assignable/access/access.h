@@ -13,6 +13,9 @@ typedef struct {
   ParsedValue to_access;
   bool access_fields;
   DArray access;
+  size_t line;
+  size_t column;
+  size_t length;
 } ParsedAccess;
 
 // Function declaration for parsing an identifier

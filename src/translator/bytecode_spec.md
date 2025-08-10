@@ -109,6 +109,16 @@ sets the source location onto the runtime
 4. the column
 5. the length
 
+## OP_LOAD_ACCESS_FUNCTION
+
+loads the access function into register 1
+
+## OP_LOAD_BOOL
+
+loads a boolean into register 1
+
+1. byte representing true or false (1 or 0) *
+
 ## OP_SWAP_REGISTERS
 
 swap the contents in two registers

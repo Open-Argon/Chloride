@@ -268,7 +268,8 @@ ParsedValueReturn parse_string(Token* token, bool to_unquote) {
                                  NULL};
     }
   } else {
-    parsedString->string = strdup(token->value);
+    parsedString->string = checked_malloc(token->length);
+    memcpy(parsedString->string, token->value, token->length);
     parsedString->length = token->length;
   }
   return (ParsedValueReturn){no_err,parsedValue};

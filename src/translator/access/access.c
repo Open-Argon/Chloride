@@ -1,0 +1,32 @@
+/*
+ * SPDX-FileCopyrightText: 2025 William Bell
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+#include "access.h"
+
+size_t translate_access(Translated *translated, ParsedAccess *access,
+                        ArErr *err) {
+  set_registers(translated, 1);
+  uint64_t first = push_instruction_byte(translated, OP_LOAD_ACCESS_FUNCTION);
+  push_instruction_byte(translated, OP_INIT_CALL);
+  push_instruction_code(translated, 3);
+
+  translate_parsed(translated, &access->to_access, err);
+  push_instruction_byte(translated, OP_INSERT_ARG);
+  push_instruction_code(translated, 0);
+  translate_parsed(translated, darray_get(&access->access, 0), err);
+  push_instruction_byte(translated, OP_INSERT_ARG);
+  push_instruction_code(translated, 1);
+  
+  push_instruction_byte(translated, OP_LOAD_BOOL);
+  push_instruction_byte(translated, access->access_fields);
+  push_instruction_byte(translated, OP_INSERT_ARG);
+  push_instruction_code(translated, 2);
+  push_instruction_byte(translated, OP_SOURCE_LOCATION);
+  push_instruction_code(translated, access->line);
+  push_instruction_code(translated, access->column);
+  push_instruction_code(translated, access->length);
+  push_instruction_byte(translated, OP_CALL);
+  return first;
+}

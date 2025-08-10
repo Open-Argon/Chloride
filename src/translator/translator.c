@@ -15,6 +15,7 @@
 #include "number/number.h"
 #include "string/string.h"
 #include "return/return.h"
+#include "access/access.h"
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -146,6 +147,8 @@ size_t translate_parsed(Translated *translated, ParsedValue *parsedValue, ArErr*
     return translate_parsed_return(translated, (ParsedReturn *)parsedValue->data, err);
   case AST_CALL:
     return translate_parsed_call(translated, (ParsedCall*)parsedValue->data, err);
+  case AST_ACCESS:
+    return translate_access(translated,(ParsedAccess*)parsedValue->data, err);
   }
   return 0;
 }
