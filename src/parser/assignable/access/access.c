@@ -32,6 +32,9 @@ ParsedValueReturn parse_access(char *file, DArray *tokens, size_t *index,
       return (ParsedValueReturn){err, NULL};
     }
     Token *token = darray_get(tokens, *index);
+    parsedAccess->line = token->line;
+    parsedAccess->column = token->column;
+    parsedAccess->length = token->length;
     ParsedValueReturn parsedString = parse_string(token, false);
     if (parsedString.err.exists) {
       free_parsed(parsedValue);
@@ -42,6 +45,9 @@ ParsedValueReturn parse_access(char *file, DArray *tokens, size_t *index,
     free(parsedString.value);
     parsedAccess->access_fields = true;
   } else {
+    parsedAccess->line = first_token->line;
+    parsedAccess->column = first_token->column;
+    parsedAccess->length = first_token->length;
     parsedAccess->access_fields = false;
     Token *token = first_token;
     while (true) {

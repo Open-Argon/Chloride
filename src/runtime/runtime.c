@@ -16,6 +16,7 @@
 #include "objects/object.h"
 #include "objects/string/string.h"
 #include "objects/type/type.h"
+#include "access/access.h"
 #include <fcntl.h>
 #include <gc/gc.h>
 #include <inttypes.h>
@@ -28,6 +29,7 @@
 
 ArgonObject *ARGON_METHOD_TYPE;
 Stack *Global_Scope = NULL;
+ArgonObject*ACCESS_FUNCTION;
 
 ArgonObject *ARGON_TYPE_TYPE___call__(size_t argc, ArgonObject **argv,
                                       ArErr *err, RuntimeState *state) {
@@ -226,6 +228,7 @@ void bootstrap_types() {
       create_argon_native_function("__string__", ARGON_STRING_TYPE___string__));
   add_field(ARGON_BOOL_TYPE, "__new__",
             create_argon_native_function("__new__", ARGON_BOOL_TYPE___new__));
+  ACCESS_FUNCTION = create_argon_native_function("ACCESS_FUNCTION", ARGON_TYPE_TYPE___get_attr__);
 }
 
 void add_to_scope(Stack *stack, char *name, ArgonObject *value) {
@@ -335,9 +338,11 @@ ArErr run_instruction(Translated *translated, RuntimeState *state,
   case OP_DECLARE:
     return runtime_declaration(translated, state, *stack);
   case OP_BOOL:;
+    ArErr err = no_err;
     uint8_t to_register = pop_byte(translated, state);
-    state->registers[to_register] = ARGON_TRUE;
-    break;
+    ArgonObject* args[] = {ARGON_BOOL_TYPE, state->registers[0]};
+    state->registers[to_register] = ARGON_BOOL_TYPE___new__(2, args, &err, state);
+    return err;
   case OP_JUMP_IF_FALSE:;
     uint8_t from_register = pop_byte(translated, state);
     uint64_t to = pop_bytecode(translated, state);
@@ -388,7 +393,7 @@ ArErr run_instruction(Translated *translated, RuntimeState *state,
     (state->call_instance->args)[index] = state->registers[0];
     break;
   case OP_CALL:;
-    ArErr err = run_call(state->call_instance->to_call,
+    err = run_call(state->call_instance->to_call,
                          state->call_instance->args_length,
                          state->call_instance->args, state, false);
     free(state->call_instance->args);
@@ -419,6 +424,12 @@ ArErr run_instruction(Translated *translated, RuntimeState *state,
     state->source_location = (SourceLocation){pop_bytecode(translated, state),
                                               pop_bytecode(translated, state),
                                               pop_bytecode(translated, state)};
+    break;
+  case OP_LOAD_BOOL:
+    state->registers[0] = pop_byte(translated, state)?ARGON_TRUE:ARGON_FALSE;
+    break;
+  case OP_LOAD_ACCESS_FUNCTION:
+    state->registers[0] = ACCESS_FUNCTION;
     break;
   default:
     return create_err(0, 0, 0, NULL, "Runtime Error", "Invalid Opcode %#x",
