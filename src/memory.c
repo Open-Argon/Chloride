@@ -5,7 +5,7 @@
  */
 
 #include "memory.h"
-#include <gc/gc.h>
+#include <gc.h>
 #include <gmp.h>
 #include <stdio.h>
 #include <stdlib.h> // for malloc/free (temp arena fallback)
@@ -38,11 +38,12 @@ void ar_memory_init() {
 
 void *ar_alloc(size_t size) { return GC_MALLOC(size); }
 
-void *ar_realloc(void * old,size_t size) { return GC_REALLOC(old, size); }
+void *ar_realloc(void *old, size_t size) { return GC_REALLOC(old, size); }
 
 void ar_finalizer(void *obj, GC_finalization_proc fn, void *client_data,
                   GC_finalization_proc *old_fn, void **old_client_data) {
-  return GC_register_finalizer_no_order(obj, fn, client_data, old_fn, old_client_data);
+  return GC_register_finalizer_no_order(obj, fn, client_data, old_fn,
+                                        old_client_data);
 }
 
 void *ar_alloc_atomic(size_t size) { return GC_MALLOC_ATOMIC(size); }

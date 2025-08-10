@@ -15,7 +15,8 @@
 
 struct hashmap_GC *createHashmap_GC() {
   size_t size = 8;
-  struct hashmap_GC *t = (struct hashmap_GC *)ar_alloc(sizeof(struct hashmap_GC));
+  struct hashmap_GC *t =
+      (struct hashmap_GC *)ar_alloc(sizeof(struct hashmap_GC));
   t->size = size;
   t->order = 1;
   t->list = (struct node_GC **)ar_alloc(sizeof(struct node_GC *) * size);
@@ -41,13 +42,15 @@ void resize_hashmap_GC(struct hashmap_GC *t) {
     struct node_GC *temp = old_list[i];
     while (temp) {
       hashmap_insert_GC(t, temp->hash, temp->key, temp->val,
-                     temp->order); // Will increment count
+                        temp->order); // Will increment count
       temp = temp->next;
     }
   }
 }
 
-int hashCode_GC(struct hashmap_GC *t, uint64_t hash) { return hash & (t->size - 1); }
+int hashCode_GC(struct hashmap_GC *t, uint64_t hash) {
+  return hash & (t->size - 1);
+}
 
 int hashmap_remove_GC(struct hashmap_GC *t, uint64_t hash) {
   int pos = hashCode_GC(t, hash);
@@ -72,7 +75,7 @@ int hashmap_remove_GC(struct hashmap_GC *t, uint64_t hash) {
 }
 
 void hashmap_insert_GC(struct hashmap_GC *t, uint64_t hash, void *key,
-                    void *val, size_t order) {
+                       void *val, size_t order) {
   if (!order) {
     order = t->order++;
   }

@@ -63,6 +63,7 @@ ArgonObject *get_field_for_class_l(ArgonObject *target, char *name,
 
 ArgonObject *get_field_l(ArgonObject *target, char *name, size_t length,
                          bool recursive, bool disable_method_wrapper) {
+  if(!target|| !target->dict) return NULL;
   char *field = "__class__";
   size_t field_size = strlen(field);
   ArgonObject *object = hashmap_lookup_GC(

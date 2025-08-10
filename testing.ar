@@ -1,6 +1,4 @@
-# SPDX-FileCopyrightText: 2025 William Bell
-#
-# SPDX-License-Identifier: GPL-3.0-or-later
-
-let f()="hello world"
-type(string(f()))(10)
+let split(url) = do
+    let split = url.splitN("?", 2)
+    if (split.length != 2) return {path: split[0], query: {}}
+    else return {path: split[0], query: decodeURLQuery(split[1])}

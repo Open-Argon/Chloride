@@ -44,6 +44,8 @@
 #include <unistd.h>
 #endif
 #include "err.h"
+#include <malloc.h>
+#include <pthread.h>
 
 #if defined(_WIN32) || defined(_WIN64)
 
@@ -152,7 +154,8 @@ const char FILE_IDENTIFIER[5] = "ARBI";
 const char BYTECODE_EXTENTION[] = "arbin";
 const uint32_t version_number = 0;
 
-int load_cache(Translated *translated_dest, char *joined_paths, uint64_t hash, char*source_path) {
+int load_cache(Translated *translated_dest, char *joined_paths, uint64_t hash,
+               char *source_path) {
   FILE *bytecode_file = fopen(joined_paths, "rb");
   if (!bytecode_file) {
     printf("cache doesnt exist... compiling from source.\n");
@@ -376,6 +379,9 @@ Execution execute(char *path, Stack *stack) {
     printf("Translation time taken: %f seconds\n", time_spent);
 
     darray_free(&ast, free_parsed);
+
+    malloc_trim(0);
+    
     ensure_dir_exists(cache_folder_path);
 
     file = fopen(cache_file_path, "wb");
@@ -417,20 +423,18 @@ Execution execute(char *path, Stack *stack) {
   }
   hashmap_free(translated.constants.hashmap, NULL);
   Translated gc_translated = {
-    translated.registerCount,
-    NULL,
-    {},
-    {},
-    translated.path
-  };
+      translated.registerCount, NULL, {}, {}, translated.path};
   gc_translated.bytecode.data = ar_alloc(translated.bytecode.capacity);
-  memcpy(gc_translated.bytecode.data, translated.bytecode.data, translated.bytecode.capacity);
+  memcpy(gc_translated.bytecode.data, translated.bytecode.data,
+         translated.bytecode.capacity);
   gc_translated.bytecode.element_size = translated.bytecode.element_size;
   gc_translated.bytecode.size = translated.bytecode.size;
   gc_translated.bytecode.resizable = false;
-  gc_translated.bytecode.capacity = translated.bytecode.size*translated.bytecode.element_size;
+  gc_translated.bytecode.capacity =
+      translated.bytecode.size * translated.bytecode.element_size;
   gc_translated.constants.data = ar_alloc(translated.constants.capacity);
-  memcpy(gc_translated.constants.data, translated.constants.data, translated.constants.capacity);
+  memcpy(gc_translated.constants.data, translated.constants.data,
+         translated.constants.capacity);
   gc_translated.constants.size = translated.constants.size;
   gc_translated.constants.capacity = translated.constants.capacity;
   darray_free(&translated.bytecode, NULL);
@@ -440,7 +444,6 @@ Execution execute(char *path, Stack *stack) {
   RuntimeState state = init_runtime_state(gc_translated, path);
   Stack *main_scope = create_scope(stack);
   ArErr err = runtime(gc_translated, state, main_scope);
-  free_runtime_state(state);
   end = clock();
   time_spent = (double)(end - start) / CLOCKS_PER_SEC;
   total_time_spent += time_spent;
@@ -453,6 +456,7 @@ Execution execute(char *path, Stack *stack) {
 int main(int argc, char *argv[]) {
   setlocale(LC_ALL, "");
   ar_memory_init();
+
   generate_siphash_key(siphash_key);
   bootstrap_types();
   bootstrap_globals();
@@ -470,5 +474,6 @@ int main(int argc, char *argv[]) {
     output_err(resp.err);
     return 1;
   }
+  // Your main thread code
   return 0;
 }
