@@ -73,8 +73,6 @@ ArErr run_instruction(Translated *translated, RuntimeState *state,
 
 RuntimeState init_runtime_state(Translated translated, char *path);
 
-void free_runtime_state(RuntimeState runtime_state);
-
 Stack *create_scope(Stack *prev);
 
 ArErr runtime(Translated translated, RuntimeState state, Stack *stack);

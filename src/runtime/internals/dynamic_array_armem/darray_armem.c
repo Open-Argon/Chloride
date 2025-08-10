@@ -123,7 +123,6 @@ void darray_armem_free(darray_armem *arr, void (*free_data)(void *)) {
       free_data(element);
     }
   }
-  free(arr->data);
   arr->data = NULL;
   arr->size = 0;
   arr->capacity = 0;

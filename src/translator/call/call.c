@@ -11,6 +11,8 @@ size_t translate_parsed_call(Translated *translated, ParsedCall *call,
   translate_parsed(translated, call->to_call, err);
   size_t first = push_instruction_byte(translated, OP_INIT_CALL);
   push_instruction_code(translated, call->args.size);
+
+  push_instruction_byte(translated, OP_NEW_SCOPE);
   for (size_t i = 0; i < call->args.size; i++) {
     translate_parsed(translated, darray_get(&call->args, i), err);
     if (err->exists)
@@ -27,5 +29,6 @@ size_t translate_parsed_call(Translated *translated, ParsedCall *call,
   push_instruction_code(translated, 1);
 
   push_instruction_byte(translated, OP_CALL);
+  push_instruction_byte(translated, OP_POP_SCOPE);
   return first;
 }

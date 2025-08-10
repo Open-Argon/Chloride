@@ -88,19 +88,17 @@ ArErr run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
       object = call_method;
     }
   }
-  bool to_free_args = false;
   if (object->type == TYPE_METHOD) {
     ArgonObject *binding_object =
         get_field(object, "__binding__", false, false);
     if (binding_object) {
-      ArgonObject **new_call_args = malloc(sizeof(ArgonObject *) * (argc + 1));
+      ArgonObject **new_call_args = ar_alloc(sizeof(ArgonObject *) * (argc + 1));
       new_call_args[0] = binding_object;
       if (argc > 0) {
         memcpy(new_call_args + 1, argv, argc * sizeof(ArgonObject *));
       }
       argv = new_call_args;
       argc++;
-      to_free_args = true;
     }
     ArgonObject *function_object =
         get_field(object, "__function__", false, false);
@@ -131,8 +129,6 @@ ArErr run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
       hashmap_insert_GC(scope->scope, hash,
                         new_string_object(key.data, key.length), value, 0);
     }
-    if (to_free_args)
-      free(argv);
     StackFrame new_stackFrame = {
         {object->value.argon_fn.translated.registerCount,
          NULL,
@@ -157,7 +153,7 @@ ArErr run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
       if (((*state->currentStackFramePointer)->depth + 1) % STACKFRAME_CHUNKS ==
           0) {
         *state->currentStackFramePointer =
-            checked_malloc(sizeof(StackFrame) * STACKFRAME_CHUNKS);
+            ar_alloc(sizeof(StackFrame) * STACKFRAME_CHUNKS);
       } else {
         *state->currentStackFramePointer = *state->currentStackFramePointer + 1;
       }
@@ -185,8 +181,6 @@ ArErr run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
   } else if (object->type == TYPE_NATIVE_FUNCTION) {
     ArErr err = no_err;
     state->registers[0] = object->value.native_fn(argc, argv, &err, state);
-    if (to_free_args)
-      free(argv);
     if (err.exists && strlen(err.path) == 0) {
       err.line = state->source_location.line;
       err.column = state->source_location.column;
@@ -195,8 +189,6 @@ ArErr run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
     }
     return err;
   }
-  if (to_free_args)
-    free(argv);
   ArgonObject *type_object_name =
       get_field_for_class(get_field(original_object, "__class__", false, false),
                           "__name__", original_object);
