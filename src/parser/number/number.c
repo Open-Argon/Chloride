@@ -7,6 +7,7 @@
 #include "number.h"
 #include "../../memory.h"
 #include <ctype.h>
+#include <gmp-x86_64.h>
 #include <gmp.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -102,6 +103,11 @@ int mpq_set_decimal_str_exp(mpq_t r, const char *str) {
       free(buf);
       return -1;
     }
+
+    if (endptr-exp_str>11) {
+      free(buf);
+      return -1;
+    }
     if (exp_negative)
       exp_val = -exp_val;
   }
@@ -145,18 +151,13 @@ int mpq_set_decimal_str_exp(mpq_t r, const char *str) {
   if (denom_exp >= 0) {
     mpz_ui_pow_ui(denominator, 10, (unsigned long)denom_exp);
   } else {
-    // denom_exp < 0 means multiply numerator by 10^(-denom_exp)
-    mpz_ui_pow_ui(denominator, 10, 0);
-    mpz_ui_pow_ui(numerator, 10, (unsigned long)(-denom_exp));
-  }
+    mpz_set_ui(denominator, 1);
 
-  if (denom_exp < 0) {
     mpz_t temp;
     mpz_init(temp);
     mpz_ui_pow_ui(temp, 10, (unsigned long)(-denom_exp));
     mpz_mul(numerator, numerator, temp);
     mpz_clear(temp);
-    mpz_set_ui(denominator, 1);
   }
 
   mpq_set_num(r, numerator);
@@ -172,7 +173,7 @@ int mpq_set_decimal_str_exp(mpq_t r, const char *str) {
   return 0;
 }
 
-ParsedValueReturn parse_number(Token *token, char*path) {
+ParsedValueReturn parse_number(Token *token, char *path) {
   ParsedValue *parsedValue = checked_malloc(sizeof(ParsedValue));
   parsedValue->type = AST_NUMBER;
   mpq_t r;
@@ -180,12 +181,14 @@ ParsedValueReturn parse_number(Token *token, char*path) {
   int err = mpq_set_decimal_str_exp(r, token->value);
   if (err) {
     free(parsedValue);
-    return (ParsedValueReturn){
-      create_err(token->length, token->column, token->length, path, "Parsing Error", "Unable to parse number"),
-      NULL
-    };
+    mpq_clear(r);
+    return (ParsedValueReturn){create_err(token->line, token->column,
+                                          token->length, path, "Parsing Error",
+                                          "Unable to parse number"),
+                               NULL};
   }
   char *s = mpq_get_str(NULL, 62, r);
-  parsedValue->data = strdup(s);
+  mpq_clear(r);
+  parsedValue->data = s;
   return (ParsedValueReturn){no_err, parsedValue};
 }
