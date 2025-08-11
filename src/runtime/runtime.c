@@ -14,11 +14,11 @@
 #include "internals/hashmap/hashmap.h"
 #include "objects/functions/functions.h"
 #include "objects/literals/literals.h"
+#include "objects/number/number.h"
 #include "objects/object.h"
 #include "objects/string/string.h"
 #include "objects/term/term.h"
 #include "objects/type/type.h"
-#include "objects/number/number.h"
 #include <fcntl.h>
 #include <gc/gc.h>
 #include <inttypes.h>
@@ -327,20 +327,12 @@ uint64_t pop_bytecode(Translated *translated, RuntimeState *state) {
 
 void load_const(Translated *translated, RuntimeState *state) {
   uint64_t to_register = pop_byte(translated, state);
-  types type = pop_byte(translated, state);
   size_t length = pop_bytecode(translated, state);
   uint64_t offset = pop_bytecode(translated, state);
 
   void *data = ar_alloc_atomic(length);
   memcpy(data, arena_get(&translated->constants, offset), length);
-  ArgonObject *object = ARGON_NULL;
-  switch (type) {
-  case TYPE_OP_STRING:
-    object = new_string_object(data, length);
-    break;
-  case TYPE_OP_NUMBER:
-    object = new_number_object(data);
-  }
+  ArgonObject *object = new_string_object(data, length);
   state->registers[to_register] = object;
 }
 
@@ -391,8 +383,11 @@ ArErr run_instruction(Translated *translated, RuntimeState *state,
   case OP_LOAD_NULL:
     state->registers[pop_byte(translated, state)] = ARGON_NULL;
     break;
-  case OP_LOAD_CONST:
+  case OP_LOAD_STRING:
     load_const(translated, state);
+    break;
+  case OP_LOAD_NUMBER:
+    load_number(translated,state);
     break;
   case OP_LOAD_FUNCTION:
     load_argon_function(translated, state, *stack);

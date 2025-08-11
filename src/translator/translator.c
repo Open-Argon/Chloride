@@ -127,7 +127,7 @@ size_t translate_parsed(Translated *translated, ParsedValue *parsedValue, ArErr*
     return translate_parsed_declaration(translated,
                                         *((DArray *)parsedValue->data), err);
   case AST_NUMBER:
-    return translate_parsed_number(translated, (char *)parsedValue->data, 0);
+    return translate_parsed_number(translated, (mpq_t*)parsedValue->data, 0);
   case AST_NULL:
     set_registers(translated, 1);
     size_t output = push_instruction_byte(translated, OP_LOAD_NULL);

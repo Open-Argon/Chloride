@@ -12,6 +12,8 @@ extern ArgonObject *ARGON_NUMBER_TYPE;
 
 void create_ARGON_NUMBER_TYPE();
 
-ArgonObject *new_number_object(char *data);
+ArgonObject *new_number_object(mpq_t number);
+
+void load_number(Translated *translated, RuntimeState *state);
 
 #endif // RUNTIME_NUMBER_H
