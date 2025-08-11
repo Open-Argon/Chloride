@@ -13,7 +13,6 @@
 #include "assignable/identifier/identifier.h"
 #include "declaration/declaration.h"
 #include "dictionary/dictionary.h"
-#include "return/return.h"
 #include "dowrap/dowrap.h"
 #include "function/function.h"
 #include "if/if.h"
@@ -21,6 +20,7 @@
 #include "literals/literals.h"
 #include "number/number.h"
 #include "operations/operations.h"
+#include "return/return.h"
 #include "string/string.h"
 #include <gmp.h>
 #include <stdbool.h>
@@ -30,9 +30,10 @@
 #include <string.h>
 
 const char *ValueTypeNames[] = {
-    "string",  "assign",     "identifier",  "number",     "if statement",
-    "access",  "call",       "declaration", "null",       "boolean",
-    "do wrap", "operations", "list",        "dictionary", "function", "return"};
+    "string",       "assign",     "identifier", "number",
+    "if statement", "access",     "call",       "declaration",
+    "null",         "boolean",    "do wrap",    "operations",
+    "list",         "dictionary", "function",   "return"};
 
 ArErr error_if_finished(char *file, DArray *tokens, size_t *index) {
   if ((*index) >= tokens->size) {
@@ -117,7 +118,7 @@ ParsedValueReturn parse_token_full(char *file, DArray *tokens, size_t *index,
     break;
   case TOKEN_NUMBER:
     (*index)++;
-    output = parse_number(token);
+    output = parse_number(token, file);
     break;
   case TOKEN_LET:
     output = parse_declaration(file, tokens, index);
@@ -132,10 +133,9 @@ ParsedValueReturn parse_token_full(char *file, DArray *tokens, size_t *index,
     output = parse_dictionary(file, tokens, index);
     break;
   default:
-    return (ParsedValueReturn){create_err(token->line,
-                                          token->column,
-                                          token->length, file,
-                                          "Syntax Error", "unexpected token"),
+    return (ParsedValueReturn){create_err(token->line, token->column,
+                                          token->length, file, "Syntax Error",
+                                          "unexpected token"),
                                NULL};
   }
 

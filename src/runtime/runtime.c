@@ -18,6 +18,7 @@
 #include "objects/string/string.h"
 #include "objects/term/term.h"
 #include "objects/type/type.h"
+#include "objects/number/number.h"
 #include <fcntl.h>
 #include <gc/gc.h>
 #include <inttypes.h>
@@ -122,10 +123,14 @@ ArgonObject *BASE_CLASS___string__(size_t argc, ArgonObject **argv, ArErr *err,
       get_field(argv[0], "__class__", false, false), "__name__", NULL);
 
   char buffer[100];
-  snprintf(buffer, sizeof(buffer), "<%.*s %.*s at %p>",
-           (int)class_name->value.as_str.length, class_name->value.as_str.data,
-           (int)object_name->value.as_str.length,
-           object_name->value.as_str.data, argv[0]);
+  if (class_name && object_name)
+    snprintf(buffer, sizeof(buffer), "<%.*s %.*s at %p>",
+             (int)class_name->value.as_str.length,
+             class_name->value.as_str.data,
+             (int)object_name->value.as_str.length,
+             object_name->value.as_str.data, argv[0]);
+  else
+    snprintf(buffer, sizeof(buffer), "<object at %p>", argv[0]);
   return new_string_object_null_terminated(buffer);
 }
 
@@ -222,7 +227,8 @@ void bootstrap_types() {
   ARGON_NULL = new_object();
   add_field(ARGON_NULL, "__class__", ARGON_NULL_TYPE);
 
-  add_field(BASE_CLASS, "__base__", ARGON_NULL);
+  add_field(BASE_CLASS, "__base__", NULL);
+  add_field(BASE_CLASS, "__class__", ARGON_TYPE_TYPE);
 
   ARGON_BOOL_TYPE = new_object();
   add_field(ARGON_BOOL_TYPE, "__base__", BASE_CLASS);
@@ -254,6 +260,7 @@ void bootstrap_types() {
   add_field(ARGON_METHOD_TYPE, "__base__", BASE_CLASS);
   add_field(ARGON_METHOD_TYPE, "__name__",
             new_string_object_null_terminated("method"));
+  create_ARGON_NUMBER_TYPE();
 
   add_field(BASE_CLASS, "__new__",
             create_argon_native_function("__new__", BASE_CLASS___new__));
@@ -331,6 +338,8 @@ void load_const(Translated *translated, RuntimeState *state) {
   case TYPE_OP_STRING:
     object = new_string_object(data, length);
     break;
+  case TYPE_OP_NUMBER:
+    object = new_number_object(data);
   }
   state->registers[to_register] = object;
 }

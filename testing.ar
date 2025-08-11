@@ -1,3 +1,0 @@
-let x = "hello"
-if (x) term.log('bruh')
-else term.log('not bruh')
