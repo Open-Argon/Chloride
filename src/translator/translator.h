@@ -15,7 +15,7 @@
 #include <stdint.h>
 
 typedef enum {
-  OP_LOAD_CONST,
+  OP_LOAD_STRING,
   OP_DECLARE,
   OP_LOAD_NULL,
   OP_LOAD_FUNCTION,
@@ -30,9 +30,9 @@ typedef enum {
   OP_CALL,
   OP_SOURCE_LOCATION,
   OP_LOAD_ACCESS_FUNCTION,
-  OP_LOAD_BOOL
+  OP_LOAD_BOOL,
+  OP_LOAD_NUMBER
 } OperationType;
-typedef enum { TYPE_OP_STRING, TYPE_OP_NUMBER } types;
 
 void arena_resize(ConstantArena *arena, size_t new_size);
 

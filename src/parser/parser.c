@@ -22,6 +22,7 @@
 #include "operations/operations.h"
 #include "return/return.h"
 #include "string/string.h"
+#include <gmp-x86_64.h>
 #include <gmp.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -220,6 +221,7 @@ void free_parsed(void *ptr) {
     free_identifier(parsed);
     break;
   case AST_NUMBER:
+    mpq_clear(*(mpq_t *)parsed->data);
     free(parsed->data);
     break;
   case AST_STRING:

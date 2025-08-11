@@ -104,7 +104,7 @@ int mpq_set_decimal_str_exp(mpq_t r, const char *str) {
       return -1;
     }
 
-    if (endptr-exp_str>11) {
+    if (endptr - exp_str > 11) {
       free(buf);
       return -1;
     }
@@ -176,19 +176,17 @@ int mpq_set_decimal_str_exp(mpq_t r, const char *str) {
 ParsedValueReturn parse_number(Token *token, char *path) {
   ParsedValue *parsedValue = checked_malloc(sizeof(ParsedValue));
   parsedValue->type = AST_NUMBER;
-  mpq_t r;
-  mpq_init(r);
-  int err = mpq_set_decimal_str_exp(r, token->value);
+  mpq_t *r_ptr = malloc(sizeof(mpq_t));
+  mpq_init(*r_ptr);
+  int err = mpq_set_decimal_str_exp(*r_ptr, token->value);
   if (err) {
+    free_parsed(parsedValue);
     free(parsedValue);
-    mpq_clear(r);
     return (ParsedValueReturn){create_err(token->line, token->column,
                                           token->length, path, "Parsing Error",
                                           "Unable to parse number"),
                                NULL};
   }
-  char *s = mpq_get_str(NULL, 62, r);
-  mpq_clear(r);
-  parsedValue->data = s;
+  parsedValue->data = r_ptr;
   return (ParsedValueReturn){no_err, parsedValue};
 }

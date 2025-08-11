@@ -8,14 +8,13 @@ SPDX-License-Identifier: GPL-3.0-or-later
 
 all opcodes are uint8_t, and all operands are uint64_t unless marked with an asterisk (*), where it is marked as uint8_t
 
-## OP_LOAD_CONST
+## OP_LOAD_STRING
 
-loads and initialises a value from the constant buffer into the provided register.
+loads and initialises a string from the constant buffer into the provided register.
 
 this operation 4 operands.
 
 1. the register to write to. (*)
-2. the type of data from the constant buffer. (*)
 3. the length of the data in the constant buffer.
 4. the offset in the constant buffer.
 
@@ -118,6 +117,16 @@ loads the access function into register 1
 loads a boolean into register 1
 
 1. byte representing true or false (1 or 0) *
+
+## OP_LOAD_NUMBER
+
+loads a mpq_t number into memory
+
+1. the register to write to. (*)
+3. the size of the numerator in the constant buffer.
+4. the offset in the constant buffer of the numerator.
+3. the size of the denominator in the constant buffer.
+4. the offset in the constant buffer of the denominator.
 
 ## OP_SWAP_REGISTERS
 

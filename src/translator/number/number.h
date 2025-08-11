@@ -8,6 +8,7 @@
 #define BYTECODE_NUMBER_H
 #include "../translator.h"
 
-size_t translate_parsed_number(Translated *translated, char *number_str, size_t to_register);
+size_t translate_parsed_number(Translated *translated, mpq_t *number,
+                               size_t to_register);
 
 #endif
