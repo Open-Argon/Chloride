@@ -6,16 +6,17 @@
 
 #include "translator.h"
 #include "../hash_data/hash_data.h"
-#include "declaration/declaration.h"
+#include "access/access.h"
 #include "call/call.h"
+#include "declaration/declaration.h"
 #include "dowrap/dowrap.h"
 #include "function/function.h"
 #include "identifier/identifier.h"
 #include "if/if.h"
 #include "number/number.h"
-#include "string/string.h"
+#include "operation/operation.h"
 #include "return/return.h"
-#include "access/access.h"
+#include "string/string.h"
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -79,11 +80,11 @@ size_t arena_push(ConstantArena *arena, const void *data, size_t length) {
   return offset;
 }
 
-Translated init_translator(char* path) {
+Translated init_translator(char *path) {
   Translated translated;
   translated.path = path;
   translated.registerCount = 1;
-  translated.return_jumps=NULL;
+  translated.return_jumps = NULL;
   darray_init(&translated.bytecode, sizeof(uint8_t));
   arena_init(&translated.constants);
   return translated;
@@ -118,7 +119,8 @@ void set_registers(Translated *translator, uint8_t count) {
     translator->registerCount = count;
 }
 
-size_t translate_parsed(Translated *translated, ParsedValue *parsedValue, ArErr*err) {
+size_t translate_parsed(Translated *translated, ParsedValue *parsedValue,
+                        ArErr *err) {
   switch (parsedValue->type) {
   case AST_STRING:
     return translate_parsed_string(translated,
@@ -127,7 +129,7 @@ size_t translate_parsed(Translated *translated, ParsedValue *parsedValue, ArErr*
     return translate_parsed_declaration(translated,
                                         *((DArray *)parsedValue->data), err);
   case AST_NUMBER:
-    return translate_parsed_number(translated, (mpq_t*)parsedValue->data, 0);
+    return translate_parsed_number(translated, (mpq_t *)parsedValue->data, 0);
   case AST_NULL:
     set_registers(translated, 1);
     size_t output = push_instruction_byte(translated, OP_LOAD_NULL);
@@ -142,13 +144,19 @@ size_t translate_parsed(Translated *translated, ParsedValue *parsedValue, ArErr*
   case AST_IF:
     return translate_parsed_if(translated, (DArray *)parsedValue->data, err);
   case AST_DOWRAP:
-    return translate_parsed_dowrap(translated, (DArray *)parsedValue->data, err);
+    return translate_parsed_dowrap(translated, (DArray *)parsedValue->data,
+                                   err);
   case AST_RETURN:
-    return translate_parsed_return(translated, (ParsedReturn *)parsedValue->data, err);
+    return translate_parsed_return(translated,
+                                   (ParsedReturn *)parsedValue->data, err);
   case AST_CALL:
-    return translate_parsed_call(translated, (ParsedCall*)parsedValue->data, err);
+    return translate_parsed_call(translated, (ParsedCall *)parsedValue->data,
+                                 err);
   case AST_ACCESS:
-    return translate_access(translated,(ParsedAccess*)parsedValue->data, err);
+    return translate_access(translated, (ParsedAccess *)parsedValue->data, err);
+  case AST_OPERATION:
+    return translate_operation(translated, (ParsedOperation *)parsedValue->data,
+                               err);
   }
   return 0;
 }

@@ -14,6 +14,8 @@
 
 ArgonObject *ARGON_NUMBER_TYPE;
 
+#include "../../call/call.h"
+#include "../literals/literals.h"
 #include <gmp.h>
 #include <inttypes.h>
 #include <stdio.h>
@@ -22,6 +24,82 @@ ArgonObject *ARGON_NUMBER_TYPE;
 
 /* change SIGNIFICANT_DIGITS to taste (15 mimics double-ish behaviour) */
 #define SIGNIFICANT_DIGITS 15
+
+ArgonObject *ARGON_NUMBER_TYPE___new__(size_t argc, ArgonObject **argv,
+                                       ArErr *err, RuntimeState *state) {
+  if (argc != 2) {
+    *err = create_err(0, 0, 0, "", "Runtime Error",
+                      "__new__ expects 2 arguments, got %" PRIu64, argc);
+    return ARGON_NULL;
+  }
+  ArgonObject *self = argv[0];
+  ArgonObject *object = argv[1];
+
+  self->type = TYPE_STRING;
+  ArgonObject *boolean_convert_method = get_field_for_class(
+      get_field(object, "__class__", false, false), "__number__", object);
+  if (boolean_convert_method) {
+    ArgonObject *boolean_object =
+        argon_call(boolean_convert_method, 0, NULL, err, state);
+    if (err->exists)
+      return ARGON_NULL;
+    return boolean_object;
+  }
+  ArgonObject *type_name = get_field_for_class(
+      get_field(object, "__class__", false, false), "__name__", object);
+  *err = create_err(
+      0, 0, 0, "", "Runtime Error", "cannot convert type '%.*s' to number",
+      type_name->value.as_str.length, type_name->value.as_str.data);
+  return ARGON_NULL;
+}
+
+ArgonObject *ARGON_NUMBER_TYPE___number__(size_t argc, ArgonObject **argv,
+                                          ArErr *err, RuntimeState *state) {
+  (void)state;
+  if (argc != 1) {
+    *err = create_err(0, 0, 0, "", "Runtime Error",
+                      "__number__ expects 1 arguments, got %" PRIu64, argc);
+    return ARGON_NULL;
+  }
+  return argv[0];
+}
+
+ArgonObject *ARGON_NUMBER_TYPE___boolean__(size_t argc, ArgonObject **argv,
+                                           ArErr *err, RuntimeState *state) {
+  (void)state;
+  if (argc != 1) {
+    *err = create_err(0, 0, 0, "", "Runtime Error",
+                      "__boolean__ expects 1 arguments, got %" PRIu64, argc);
+    return ARGON_NULL;
+  }
+  return mpq_cmp_si(*argv[0]->value.as_number, 0, 1) == 0 ? ARGON_FALSE
+                                                          : ARGON_TRUE;
+}
+
+ArgonObject *ARGON_NUMBER_TYPE___add__(size_t argc, ArgonObject **argv,
+                                       ArErr *err, RuntimeState *state) {
+  (void)state;
+  if (argc != 2) {
+    *err = create_err(0, 0, 0, "", "Runtime Error",
+                      "__add__ expects 2 arguments, got %" PRIu64, argc);
+    return ARGON_NULL;
+  }
+  mpq_t r;
+  mpq_init(r);
+  if (argv[1]->type != TYPE_NUMBER) {
+    ArgonObject *type_name = get_field_for_class(
+        get_field(argv[1], "__class__", false, false), "__name__", argv[1]);
+    *err = create_err(0, 0, 0, "", "Runtime Error",
+                      "__add__ cannot perform addition between number and %.*s",
+                      type_name->value.as_str.length,
+                      type_name->value.as_str.data);
+    return ARGON_NULL;
+  }
+  mpq_add(r, *argv[0]->value.as_number, *argv[1]->value.as_number);
+  ArgonObject *result = new_number_object(r);
+  mpq_clear(r);
+  return result;
+}
 
 ArgonObject *ARGON_NUMBER_TYPE___string__(size_t argc, ArgonObject **argv,
                                           ArErr *err, RuntimeState *state) {
@@ -181,6 +259,17 @@ void create_ARGON_NUMBER_TYPE() {
   add_field(
       ARGON_NUMBER_TYPE, "__string__",
       create_argon_native_function("__string__", ARGON_NUMBER_TYPE___string__));
+  add_field(ARGON_NUMBER_TYPE, "__new__",
+            create_argon_native_function("__new__", ARGON_NUMBER_TYPE___new__));
+  add_field(
+      ARGON_NUMBER_TYPE, "__number__",
+      create_argon_native_function("__number__", ARGON_NUMBER_TYPE___number__));
+  add_field(ARGON_NUMBER_TYPE, "__boolean__",
+            create_argon_native_function("__boolean__",
+                                         ARGON_NUMBER_TYPE___boolean__));
+  add_field(ARGON_NUMBER_TYPE, "__add__",
+            create_argon_native_function("__add__",
+                                         ARGON_NUMBER_TYPE___add__));
 }
 
 void mpz_init_gc_managed(mpz_t z, size_t limbs_count) {
@@ -228,12 +317,34 @@ ArgonObject *new_number_object(mpq_t number) {
   return object;
 }
 
+ArgonObject *new_number_object_from_long(long n, unsigned long d) {
+  ArgonObject *object = new_object();
+  add_field(object, "__class__", ARGON_NUMBER_TYPE);
+  mpq_t r;
+  mpq_init(r);
+  mpq_set_si(r, n, d);
+  object->type = TYPE_NUMBER;
+  object->value.as_number = mpq_new_gc_from(r);
+  mpq_clear(r);
+  return object;
+}
+
+ArgonObject *new_number_object_from_double(double d) {
+  ArgonObject *object = new_object();
+  add_field(object, "__class__", ARGON_NUMBER_TYPE);
+  mpq_t r;
+  mpq_init(r);
+  mpq_set_d(r, d);
+  object->type = TYPE_NUMBER;
+  object->value.as_number = mpq_new_gc_from(r);
+  mpq_clear(r);
+  return object;
+}
+
 void load_number(Translated *translated, RuntimeState *state) {
   uint8_t to_register = pop_byte(translated, state);
   size_t num_size = pop_bytecode(translated, state);
   size_t num_pos = pop_bytecode(translated, state);
-  size_t den_size = pop_bytecode(translated, state);
-  size_t den_pos = pop_bytecode(translated, state);
   mpq_t r;
   mpq_init(r);
   mpz_t num;
@@ -242,12 +353,21 @@ void load_number(Translated *translated, RuntimeState *state) {
              arena_get(&translated->constants, num_pos));
   mpq_set_num(r, num);
   mpz_clear(num);
-  mpz_t den;
-  mpz_init(den);
-  mpz_import(den, den_size, 1, 1, 0, 0,
-             arena_get(&translated->constants, den_pos));
-  mpq_set_den(r, den);
-  mpz_clear(den);
+
+  bool is_int = pop_byte(translated, state);
+
+  if (!is_int) {
+    size_t den_size = pop_bytecode(translated, state);
+    size_t den_pos = pop_bytecode(translated, state);
+    mpz_t den;
+    mpz_init(den);
+    mpz_import(den, den_size, 1, 1, 0, 0,
+               arena_get(&translated->constants, den_pos));
+    mpq_set_den(r, den);
+    mpz_clear(den);
+  } else {
+    mpz_set_si(mpq_denref(r), 1);
+  }
 
   state->registers[to_register] = new_number_object(r);
   mpq_clear(r);

@@ -24,7 +24,7 @@ int parse_exponent(const char *exp_str, long *exp_val) {
   return 0;
 }
 
-int mpq_set_decimal_str_exp(mpq_t r, const char *str) {
+int mpq_set_decimal_str_exp(mpq_t r, const char *str, size_t len) {
   // Skip leading whitespace
   while (isspace(*str))
     str++;
@@ -39,11 +39,11 @@ int mpq_set_decimal_str_exp(mpq_t r, const char *str) {
   }
 
   // Copy input to a buffer for manipulation
-  size_t len = strlen(str);
   char *buf = malloc(len + 1);
   if (!buf)
     return -1;
-  strcpy(buf, str);
+  memcpy(buf, str, len);
+  buf[len] = '\0';
 
   // Find 'e' or 'E'
   char *e_ptr = strchr(buf, 'e');
@@ -178,7 +178,7 @@ ParsedValueReturn parse_number(Token *token, char *path) {
   parsedValue->type = AST_NUMBER;
   mpq_t *r_ptr = malloc(sizeof(mpq_t));
   mpq_init(*r_ptr);
-  int err = mpq_set_decimal_str_exp(*r_ptr, token->value);
+  int err = mpq_set_decimal_str_exp(*r_ptr, token->value, token->length);
   if (err) {
     free_parsed(parsedValue);
     free(parsedValue);

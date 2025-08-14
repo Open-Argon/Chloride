@@ -12,6 +12,9 @@
 typedef struct {
   ArTokenType operation;
   DArray to_operate_on; // ParsedValue[]
+  size_t line;
+  size_t column;
+  size_t length;
 } ParsedOperation;
 
 ParsedValueReturn parse_operations(char *file, DArray *tokens, size_t *index,

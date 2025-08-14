@@ -1,2 +1,6 @@
-let x = 1e10000
+let f(x) = do
+    return x
+
+let x = 10
+
 term.log(x)
