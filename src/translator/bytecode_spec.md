@@ -1,7 +1,7 @@
 <!--
 SPDX-FileCopyrightText: 2025 William Bell
 
-SPDX-License-Identifier: GPL-3.0-or-later
+SPDX-License-Identifier: GPL-1.0-or-later
 -->
 
 # Bytecode Specification
@@ -15,8 +15,8 @@ loads and initialises a string from the constant buffer into the provided regist
 this operation 4 operands.
 
 1. the register to write to. (*)
-3. the length of the data in the constant buffer.
-4. the offset in the constant buffer.
+1. the length of the data in the constant buffer.
+1. the offset in the constant buffer.
 
 ## OP_DECLARE
 
@@ -25,9 +25,9 @@ initilises a variable on the current scope with a given value. errors if the var
 this operation takes 3 operands.
 
 1. the length of the variable name.
-2. the offset in the constant buffer of the variable name.
-3. the fixed hash of the variable name.
-4. the register of the given value (*)
+1. the offset in the constant buffer of the variable name.
+1. the fixed hash of the variable name.
+1. the register of the given value (*)
 
 ## OP_LOAD_NULL
 
@@ -42,21 +42,21 @@ this operation takes 1 operand.
 initilises a function to a given register.
 
 1. the offset of the name of the function.
-2. the length of the name of the function.
-3. the number of arguments.
-4. the offset of the name of the argument.
-5. the length of the name of the argument.
-6. instruction 4 and 5 loop for each argument.
-7. the offset of the bytecode of the function.
-8. the length of the bytecode of the function.
+1. the length of the name of the function.
+1. the number of arguments.
+1. the offset of the name of the argument.
+1. the length of the name of the argument.
+1. instruction 4 and 5 loop for each argument.
+1. the offset of the bytecode of the function.
+1. the length of the bytecode of the function.
 
 ## OP_IDENTIFIER
 
 initilises a function to a given register.
 
 1. the length of the identifer.
-2. the offset of the identifier.
-3. the fixed hash of the variable name.
+1. the offset of the identifier.
+1. the fixed hash of the variable name.
 
 ## OP_BOOL
 
@@ -104,9 +104,9 @@ call the function at the head of the call instance stack, then pops it off the s
 
 sets the source location onto the runtime
 
-3. the line
-4. the column
-5. the length
+1. the line
+1. the column
+1. the length
 
 ## OP_LOAD_ACCESS_FUNCTION
 
@@ -123,11 +123,11 @@ loads a boolean into register 1
 loads a mpq_t number into memory
 
 1. the register to write to. (*)
-3. the size of the numerator in the constant buffer.
-4. the offset in the constant buffer of the numerator.
-5. is integer. (*)
-3. the size of the denominator in the constant buffer.
-4. the offset in the constant buffer of the denominator.
+1. the size of the numerator in the constant buffer.
+1. the offset in the constant buffer of the numerator.
+1. is integer. (*)
+1. the size of the denominator in the constant buffer.
+1. the offset in the constant buffer of the denominator.
 
 ## OP_LOAD_ADDITION_FUNCTION
 
