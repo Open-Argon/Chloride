@@ -1,6 +1,1 @@
-let f(x) = do
-    return x
-
-let x = 10
-
-term.log(x)
+term.log(1984+1)
