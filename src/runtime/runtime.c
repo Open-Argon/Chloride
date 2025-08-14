@@ -66,7 +66,7 @@ ArgonObject *ARGON_TYPE_TYPE___call__(size_t argc, ArgonObject **argv,
   if (argc < 1) {
     *err =
         create_err(0, 0, 0, "", "Runtime Error",
-                   "__call__ expects at least 1 argument, got  %" PRIu64, argc);
+                   "__call__ expects at least 1 argument, got %" PRIu64, argc);
     return ARGON_NULL;
   }
   ArgonObject *cls = argv[0];
