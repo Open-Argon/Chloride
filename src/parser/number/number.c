@@ -7,7 +7,7 @@
 #include "number.h"
 #include "../../memory.h"
 #include <ctype.h>
-#include <gmp-x86_64.h>
+#include <gmp.h>
 #include <gmp.h>
 #include <stdio.h>
 #include <stdlib.h>
