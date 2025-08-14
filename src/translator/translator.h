@@ -31,7 +31,8 @@ typedef enum {
   OP_SOURCE_LOCATION,
   OP_LOAD_ACCESS_FUNCTION,
   OP_LOAD_BOOL,
-  OP_LOAD_NUMBER
+  OP_LOAD_NUMBER,
+  OP_LOAD_ADDITION_FUNCTION
 } OperationType;
 
 void arena_resize(ConstantArena *arena, size_t new_size);

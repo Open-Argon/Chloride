@@ -98,7 +98,7 @@ initialises a call instance struct and arguments buffer.
 
 ## OP_CALL
 
-call a function with args
+call the function at the head of the call instance stack, then pops it off the stack.
 
 ## OP_SOURCE_LOCATION
 
@@ -125,12 +125,10 @@ loads a mpq_t number into memory
 1. the register to write to. (*)
 3. the size of the numerator in the constant buffer.
 4. the offset in the constant buffer of the numerator.
+5. is integer. (*)
 3. the size of the denominator in the constant buffer.
 4. the offset in the constant buffer of the denominator.
 
-## OP_SWAP_REGISTERS
+## OP_LOAD_ADDITION_FUNCTION
 
-swap the contents in two registers
-
-1. register a (*)
-2. register b (*)
+loads the addition function into register 1

@@ -12,18 +12,22 @@
 #include <stdlib.h>
 #include <string.h>
 
+struct operation {};
+
 ParsedValue convert_to_operation(DArray *to_operate_on, DArray *operations) {
   if (to_operate_on->size == 1) {
     return *((ParsedValue *)darray_get(to_operate_on, 0));
   }
-  ArTokenType operation = 0;
+  ArTokenType operation_type = 0;
+  Token operation = {};
   DArray positions;
   for (size_t i = 0; i < operations->size; i++) {
-    ArTokenType *current_operation = darray_get(operations, i);
-    if (operation < *current_operation) {
-      if (operation != 0) {
+    Token *current_operation = darray_get(operations, i);
+    if (operation_type < current_operation->type) {
+      if (operation_type != 0) {
         darray_free(&positions, NULL);
       }
+      operation_type = current_operation->type;
       operation = *current_operation;
       darray_init(&positions, sizeof(size_t));
     }
@@ -33,7 +37,10 @@ ParsedValue convert_to_operation(DArray *to_operate_on, DArray *operations) {
   parsedValue.type = AST_OPERATION;
   ParsedOperation *operationStruct = checked_malloc(sizeof(ParsedOperation));
   parsedValue.data = operationStruct;
-  operationStruct->operation = operation;
+  operationStruct->operation = operation_type;
+  operationStruct->line = operation.line;
+  operationStruct->column = operation.column;
+  operationStruct->length = operation.length;
   darray_init(&operationStruct->to_operate_on, sizeof(ParsedValue));
   size_t last_position = 0;
   size_t to_operate_on_last_position = 0;
@@ -68,7 +75,7 @@ ParsedValueReturn parse_operations(char *file, DArray *tokens, size_t *index,
   free(first_parsed_value);
 
   DArray operations;
-  darray_init(&operations, sizeof(ArTokenType));
+  darray_init(&operations, sizeof(Token));
 
   while (tokens->size > *index) {
     bool to_break = false;
@@ -81,7 +88,7 @@ ParsedValueReturn parse_operations(char *file, DArray *tokens, size_t *index,
     }
     if (to_break)
       break;
-    darray_push(&operations, &token->type);
+    darray_push(&operations, token);
     (*index)++;
     ArErr err = error_if_finished(file, tokens, index);
     if (err.exists) {

@@ -7,6 +7,7 @@
 #include "runtime.h"
 #include "../err.h"
 #include "../hash_data/hash_data.h"
+#include "../parser/number/number.h"
 #include "../translator/translator.h"
 #include "access/access.h"
 #include "call/call.h"
@@ -21,6 +22,7 @@
 #include "objects/type/type.h"
 #include <fcntl.h>
 #include <gc/gc.h>
+#include <gmp-x86_64.h>
 #include <inttypes.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -32,13 +34,39 @@
 ArgonObject *ARGON_METHOD_TYPE;
 Stack *Global_Scope = NULL;
 ArgonObject *ACCESS_FUNCTION;
+ArgonObject *ADDITION_FUNCTION;
+
+ArgonObject *ARGON_ADDITION_FUNCTION(size_t argc, ArgonObject **argv,
+                                     ArErr *err, RuntimeState *state) {
+  if (argc < 1) {
+    *err = create_err(0, 0, 0, "", "Runtime Error",
+                      "add expects at least 1 argument, got %" PRIu64, argc);
+    return ARGON_NULL;
+  }
+  ArgonObject *output = argv[0];
+  for (size_t i = 1; i < argc; i++) {
+    ArgonObject *__add__ = get_field_for_class(
+        get_field(output, "__class__", false, false), "__add__", output);
+    if (!__add__) {
+      ArgonObject *cls___name__ = get_field(output, "__name__", true, false);
+      *err = create_err(0, 0, 0, "", "Runtime Error",
+                        "Object '%.*s' is missing __add__ method",
+                        (int)cls___name__->value.as_str.length,
+                        cls___name__->value.as_str.data);
+      return ARGON_NULL;
+    }
+    output = argon_call(__add__, 1, (ArgonObject *[]){argv[i]}, err, state);
+  }
+  return output;
+}
 
 ArgonObject *ARGON_TYPE_TYPE___call__(size_t argc, ArgonObject **argv,
                                       ArErr *err, RuntimeState *state) {
   (void)state;
   if (argc < 1) {
-    *err = create_err(0, 0, 0, "", "Runtime Error",
-                      "__call__ expects at least 1 argument, got 0");
+    *err =
+        create_err(0, 0, 0, "", "Runtime Error",
+                   "__call__ expects at least 1 argument, got  %" PRIu64, argc);
     return ARGON_NULL;
   }
   ArgonObject *cls = argv[0];
@@ -83,6 +111,20 @@ ArgonObject *ARGON_TYPE_TYPE___call__(size_t argc, ArgonObject **argv,
   }
 
   return new_object;
+}
+
+ArgonObject *BASE_CLASS_address(size_t argc, ArgonObject **argv, ArErr *err,
+                                RuntimeState *state) {
+  (void)state;
+  if (argc < 1) {
+    *err =
+        create_err(0, 0, 0, "", "Runtime Error",
+                   "__new__ expects at least 1 argument, got %" PRIu64, argc);
+    return ARGON_NULL;
+  }
+  char buffer[32];
+  snprintf(buffer, sizeof(buffer), "%p", argv[0]);
+  return new_string_object_null_terminated(buffer);
 }
 
 ArgonObject *BASE_CLASS___new__(size_t argc, ArgonObject **argv, ArErr *err,
@@ -134,6 +176,17 @@ ArgonObject *BASE_CLASS___string__(size_t argc, ArgonObject **argv, ArErr *err,
   return new_string_object_null_terminated(buffer);
 }
 
+ArgonObject *BASE_CLASS___boolean__(size_t argc, ArgonObject **argv, ArErr *err,
+                                    RuntimeState *state) {
+  (void)argv;
+  (void)state;
+  if (argc != 1) {
+    *err = create_err(0, 0, 0, "", "Runtime Error",
+                      "__boolean__ expects 1 arguments, got %" PRIu64, argc);
+  }
+  return ARGON_TRUE;
+}
+
 ArgonObject *ARGON_STRING_TYPE___init__(size_t argc, ArgonObject **argv,
                                         ArErr *err, RuntimeState *state) {
   if (argc != 2) {
@@ -167,7 +220,7 @@ ArgonObject *ARGON_BOOL_TYPE___new__(size_t argc, ArgonObject **argv,
                                      ArErr *err, RuntimeState *state) {
   if (argc != 2) {
     *err = create_err(0, 0, 0, "", "Runtime Error",
-                      "__init__ expects 2 arguments, got %" PRIu64, argc);
+                      "__new__ expects 2 arguments, got %" PRIu64, argc);
     return ARGON_NULL;
   }
   ArgonObject *self = argv[0];
@@ -183,7 +236,12 @@ ArgonObject *ARGON_BOOL_TYPE___new__(size_t argc, ArgonObject **argv,
       return ARGON_NULL;
     return boolean_object;
   }
-  return ARGON_TRUE;
+  ArgonObject *type_name = get_field_for_class(
+      get_field(object, "__class__", false, false), "__name__", object);
+  *err = create_err(
+      0, 0, 0, "", "Runtime Error", "cannot convert type '%.*s' to bool",
+      type_name->value.as_str.length, type_name->value.as_str.data);
+  return ARGON_NULL;
 }
 
 ArgonObject *ARGON_STRING_TYPE___string__(size_t argc, ArgonObject **argv,
@@ -194,6 +252,30 @@ ArgonObject *ARGON_STRING_TYPE___string__(size_t argc, ArgonObject **argv,
                       "__string__ expects 1 arguments, got %" PRIu64, argc);
   }
   return argv[0];
+}
+
+ArgonObject *ARGON_STRING_TYPE___number__(size_t argc, ArgonObject **argv,
+                                          ArErr *err, RuntimeState *state) {
+  (void)state;
+  if (argc != 1) {
+    *err = create_err(0, 0, 0, "", "Runtime Error",
+                      "__number__ expects 1 arguments, got %" PRIu64, argc);
+    return ARGON_NULL;
+  }
+
+  mpq_t r;
+  mpq_init(r);
+  int result = mpq_set_decimal_str_exp(r, argv[0]->value.as_str.data,
+                                       argv[0]->value.as_str.length);
+  if (result != 0) {
+    mpq_clear(r);
+    *err = create_err(0, 0, 0, "", "Runtime Error", "Unable to parse number",
+                      argc);
+    return ARGON_NULL;
+  }
+  ArgonObject *object = new_number_object(r);
+  mpq_clear(r);
+  return object;
 }
 
 ArgonObject *ARGON_STRING_TYPE___boolean__(size_t argc, ArgonObject **argv,
@@ -214,6 +296,37 @@ ArgonObject *ARGON_BOOL_TYPE___boolean__(size_t argc, ArgonObject **argv,
                       "__boolean__ expects 1 arguments, got %" PRIu64, argc);
   }
   return argv[0];
+}
+
+ArgonObject *ARGON_NULL_TYPE___boolean__(size_t argc, ArgonObject **argv,
+                                         ArErr *err, RuntimeState *state) {
+  (void)argv;
+  (void)state;
+  if (argc != 1) {
+    *err = create_err(0, 0, 0, "", "Runtime Error",
+                      "__boolean__ expects 1 arguments, got %" PRIu64, argc);
+  }
+  return ARGON_FALSE;
+}
+ArgonObject *ARGON_NULL_TYPE___number__(size_t argc, ArgonObject **argv,
+                                        ArErr *err, RuntimeState *state) {
+  (void)argv;
+  (void)state;
+  if (argc != 1) {
+    *err = create_err(0, 0, 0, "", "Runtime Error",
+                      "__boolean__ expects 1 arguments, got %" PRIu64, argc);
+  }
+  return new_number_object_from_long(0, 1);
+}
+ArgonObject *ARGON_NULL_TYPE___string__(size_t argc, ArgonObject **argv,
+                                        ArErr *err, RuntimeState *state) {
+  (void)argv;
+  (void)state;
+  if (argc != 1) {
+    *err = create_err(0, 0, 0, "", "Runtime Error",
+                      "__boolean__ expects 1 arguments, got %" PRIu64, argc);
+  }
+  return new_string_object_null_terminated("null");
 }
 
 void bootstrap_types() {
@@ -264,6 +377,8 @@ void bootstrap_types() {
 
   add_field(BASE_CLASS, "__new__",
             create_argon_native_function("__new__", BASE_CLASS___new__));
+  add_field(BASE_CLASS, "address",
+            create_argon_native_function("address", BASE_CLASS_address));
   add_field(BASE_CLASS, "__init__",
             create_argon_native_function("__init__", BASE_CLASS___new__));
   add_field(BASE_CLASS, "__string__",
@@ -273,6 +388,18 @@ void bootstrap_types() {
   add_field(
       ARGON_STRING_TYPE, "__init__",
       create_argon_native_function("__init__", ARGON_STRING_TYPE___init__));
+  add_field(
+      ARGON_STRING_TYPE, "__number__",
+      create_argon_native_function("__number__", ARGON_STRING_TYPE___number__));
+  add_field(
+      ARGON_NULL_TYPE, "__boolean__",
+      create_argon_native_function("__boolean__", ARGON_NULL_TYPE___boolean__));
+  add_field(
+      ARGON_NULL_TYPE, "__string__",
+      create_argon_native_function("__string__", ARGON_NULL_TYPE___string__));
+  add_field(
+      ARGON_NULL_TYPE, "__number__",
+      create_argon_native_function("__number__", ARGON_NULL_TYPE___number__));
   add_field(
       ARGON_STRING_TYPE, "__string__",
       create_argon_native_function("__string__", ARGON_STRING_TYPE___string__));
@@ -284,8 +411,14 @@ void bootstrap_types() {
   add_field(ARGON_STRING_TYPE, "__boolean__",
             create_argon_native_function("__boolean__",
                                          ARGON_STRING_TYPE___boolean__));
-  ACCESS_FUNCTION = create_argon_native_function("ACCESS_FUNCTION",
+  add_field(
+      BASE_CLASS, "__boolean__",
+      create_argon_native_function("__boolean__", BASE_CLASS___boolean__));
+  ACCESS_FUNCTION = create_argon_native_function("__get_attr__",
                                                  ARGON_TYPE_TYPE___get_attr__);
+  ADDITION_FUNCTION =
+      create_argon_native_function("add", ARGON_ADDITION_FUNCTION);
+  add_field(BASE_CLASS, "__get_attr__", ACCESS_FUNCTION);
 }
 
 void add_to_scope(Stack *stack, char *name, ArgonObject *value) {
@@ -300,6 +433,8 @@ void bootstrap_globals() {
   add_to_scope(Global_Scope, "string", ARGON_STRING_TYPE);
   add_to_scope(Global_Scope, "type", ARGON_TYPE_TYPE);
   add_to_scope(Global_Scope, "boolean", ARGON_BOOL_TYPE);
+  add_to_scope(Global_Scope, "number", ARGON_NUMBER_TYPE);
+  add_to_scope(Global_Scope, "add", ADDITION_FUNCTION);
 
   ArgonObject *argon_term = new_object();
   add_field(argon_term, "__init__", ARGON_NULL);
@@ -387,7 +522,7 @@ ArErr run_instruction(Translated *translated, RuntimeState *state,
     load_const(translated, state);
     break;
   case OP_LOAD_NUMBER:
-    load_number(translated,state);
+    load_number(translated, state);
     break;
   case OP_LOAD_FUNCTION:
     load_argon_function(translated, state, *stack);
@@ -488,6 +623,9 @@ ArErr run_instruction(Translated *translated, RuntimeState *state,
     break;
   case OP_LOAD_ACCESS_FUNCTION:
     state->registers[0] = ACCESS_FUNCTION;
+    break;
+  case OP_LOAD_ADDITION_FUNCTION:
+    state->registers[0] = ADDITION_FUNCTION;
     break;
   default:
     return create_err(0, 0, 0, NULL, "Runtime Error", "Invalid Opcode %#x",
