@@ -139,5 +139,7 @@ jobs:
           name: Release ${{ github.ref_name }}
           body: Automated release based on tag ${{ github.ref_name }}
           draft: false
+          updateOnlyUnreleased: true
+          replacesArtifacts: true
           prerelease: ${{ runner.os == 'Windows' && steps.prerelease_check_win.outputs.prerelease || steps.prerelease_check_unix.outputs.prerelease }}
           artifacts: ${{ env.TAR_NAME }}
