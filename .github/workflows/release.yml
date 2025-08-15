@@ -26,8 +26,11 @@ jobs:
       # Windows
       - name: Install build tools (Windows)
         if: runner.os == 'Windows'
-        run: choco install winflexbison -y
+        run: |
+          choco install winflexbison mingw -y
+          cmake -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++
         shell: pwsh
+
       - name: Checkout code
         uses: actions/checkout@v3
         with:
@@ -73,7 +76,7 @@ jobs:
         if: runner.os == 'Windows'
         run: |
           conan install . --build=missing
-          conan build .
+          conan build . --config Release
         shell: pwsh
 
       - name: Determine if prerelease (Linux/macOS)
