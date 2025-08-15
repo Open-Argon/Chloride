@@ -30,6 +30,7 @@ class ArgonConan(ConanFile):
         self.folders.generators = "build"
 
     def generate(self):
+        os.environ["CONAN_NON_INTERACTIVE"] = "1"
         tc = CMakeToolchain(self)
 
         if os.name == "nt":  # Windows
