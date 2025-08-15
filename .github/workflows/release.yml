@@ -99,15 +99,14 @@ jobs:
           path: ${{ env.TAR_NAME }}
 
   build-windows:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
         with:
           submodules: recursive
 
-      - name: Install build tools
-        run: choco install winflexbison -y
-        shell: pwsh
+      - name: Install MinGW-w64 for cross-compilation
+        run: sudo apt-get update && sudo apt-get install -y mingw-w64
 
       - name: Setup Python
         uses: actions/setup-python@v4
@@ -119,25 +118,27 @@ jobs:
           python -m pip install --upgrade pip
           pip install conan
           conan profile detect
-        shell: pwsh
 
-      - name: Build with MinGW
+      - name: Build Windows with MinGW
         run: |
-          conan install .
+          conan install . \
+            -s os=Windows \
+            -s compiler=gcc \
+            -s compiler.version=13 \
+            -s compiler.libcxx=libstdc++11 \
+            -s arch=x86_64 \
+            --build=missing
           conan build .
-        shell: pwsh
 
-      - name: Package
+      - name: Package Windows build
         run: |
-          $TAG = $env:GITHUB_REF -replace 'refs/tags/', ''
-          $ARCH = if ([Environment]::Is64BitOperatingSystem) { 'x64' } else { 'x86' }
-          $FOLDER = "chloride-$TAG-windows-$ARCH"
-          $ZIP = "$FOLDER.zip"
-          Rename-Item build\bin $FOLDER
-          Copy-Item LICENSE.txt $FOLDER
-          Compress-Archive -Path $FOLDER -DestinationPath $ZIP
-          echo "TAR_NAME=$ZIP" >> $env:GITHUB_ENV
-        shell: pwsh
+          TAG=${GITHUB_REF##refs/tags/}
+          FOLDER="chloride-$TAG-windows-x64"
+          ZIP="$FOLDER.zip"
+          mv build/bin "$FOLDER"
+          cp LICENSE.txt "$FOLDER"
+          zip -r "$ZIP" "$FOLDER"
+          echo "TAR_NAME=$ZIP" >> $GITHUB_ENV
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
