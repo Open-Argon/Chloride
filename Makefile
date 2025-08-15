@@ -29,7 +29,7 @@ windows: $(CFILES) $(LEXER_C) $(LEXER_H)
 	 echo -n "external/libdye/src/dye.c " ; \
 	 find src -name '*.c' -print0 | xargs -0 echo -n) > sources.txt
 	mkdir -p bin
-	gcc -O3 -march=native -o $(BINARY) @sources.txt $(CFLAGS)
+	gcc -O3 -march=native -o $(BINARY) @sources.txt $(CFLAGS) -lbcrypt
 
 native: $(CFILES) $(LEXER_C) $(LEXER_H)
 	mkdir -p bin
