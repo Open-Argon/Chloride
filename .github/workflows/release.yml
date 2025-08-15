@@ -11,7 +11,10 @@ on:
 
 jobs:
   build_and_release:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
 
     steps:
       - name: Checkout code
@@ -28,15 +31,18 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install conan
+        shell: ${{ matrix.os == 'windows-latest' && 'pwsh' || 'bash' }}
 
       - name: Configure Conan
-        run: |
-          conan profile detect
+        run: conan profile detect
+        shell: ${{ matrix.os == 'windows-latest' && 'pwsh' || 'bash' }}
 
       - name: Install dependencies and build with Conan
         run: |
           conan install . --build=missing
           conan build .
+        shell: ${{ matrix.os == 'windows-latest' && 'pwsh' || 'bash' }}
+
       - name: Determine if prerelease
         id: prerelease_check
         run: |
@@ -47,16 +53,39 @@ jobs:
             echo "false" > prerelease.txt
           fi
           echo "prerelease=$(cat prerelease.txt)" >> $GITHUB_OUTPUT
+        shell: ${{ matrix.os == 'windows-latest' && 'pwsh' || 'bash' }}
+
       - name: Archive build folder
         run: |
           TAG=${GITHUB_REF##refs/tags/}
-          ARCH=$(uname -m)
-          FOLDER_NAME="chloride-$TAG-linux-${ARCH}"
-          TAR_NAME="$FOLDER_NAME.tar.gz"
-          mv build/bin "$FOLDER_NAME"
-          cp LICENSE "$FOLDER_NAME"
-          tar -czf "$TAR_NAME" "$FOLDER_NAME"
+          if [[ "$RUNNER_OS" == "Linux" ]]; then
+            OS=linux
+            ARCH=$(uname -m)
+            FOLDER_NAME="chloride-$TAG-$OS-$ARCH"
+            TAR_NAME="$FOLDER_NAME.tar.gz"
+            mv build/bin "$FOLDER_NAME"
+            cp LICENSE "$FOLDER_NAME"
+            tar -czf "$TAR_NAME" "$FOLDER_NAME"
+          elif [[ "$RUNNER_OS" == "macOS" ]]; then
+            OS=macos
+            ARCH=$(uname -m)
+            FOLDER_NAME="chloride-$TAG-$OS-$ARCH"
+            TAR_NAME="$FOLDER_NAME.tar.gz"
+            mv build/bin "$FOLDER_NAME"
+            cp LICENSE "$FOLDER_NAME"
+            tar -czf "$TAR_NAME" "$FOLDER_NAME"
+          else
+            # Windows
+            $TAG = $env:GITHUB_REF -replace 'refs/tags/', ''
+            $ARCH = if ([Environment]::Is64BitOperatingSystem) { 'x64' } else { 'x86' }
+            $FOLDER_NAME = "chloride-$TAG-windows-$ARCH"
+            $TAR_NAME = "$FOLDER_NAME.zip"
+            Rename-Item build\bin $FOLDER_NAME
+            Copy-Item LICENSE $FOLDER_NAME
+            Compress-Archive -Path $FOLDER_NAME -DestinationPath $TAR_NAME
+          fi
           echo "TAR_NAME=$TAR_NAME" >> $GITHUB_ENV
+        shell: ${{ matrix.os == 'windows-latest' && 'pwsh' || 'bash' }}
 
       - name: Create GitHub Release
         id: create_release

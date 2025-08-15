@@ -23,7 +23,6 @@
 #include "return/return.h"
 #include "string/string.h"
 #include <gmp.h>
-#include <gmp.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -75,6 +74,8 @@ ParsedValueReturn parse_token_full(char *file, DArray *tokens, size_t *index,
       return parse_if(file, tokens, index);
     case TOKEN_RETURN:
       return parse_return(file, tokens, index);
+    case TOKEN_LET:
+      return parse_declaration(file, tokens, index);
     default:
       break;
     };
@@ -120,9 +121,6 @@ ParsedValueReturn parse_token_full(char *file, DArray *tokens, size_t *index,
   case TOKEN_NUMBER:
     (*index)++;
     output = parse_number(token, file);
-    break;
-  case TOKEN_LET:
-    output = parse_declaration(file, tokens, index);
     break;
   case TOKEN_DO:
     output = parse_dowrap(file, tokens, index);

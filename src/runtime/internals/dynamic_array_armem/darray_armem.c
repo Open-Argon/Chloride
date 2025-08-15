@@ -36,8 +36,7 @@ void darray_armem_resize(darray_armem *arr, size_t new_size) {
   }
 
   size_t required_bytes = new_size * arr->element_size;
-  size_t new_capacity_bytes =
-      ((required_bytes + CHUNK_SIZE - 1) / CHUNK_SIZE) * CHUNK_SIZE;
+  size_t new_capacity_bytes =required_bytes*2;
   size_t new_capacity = new_capacity_bytes / arr->element_size;
 
   if (!new_capacity) {

@@ -1,1 +1,10 @@
-term.log("hello "+"world")
+let say_hi(name) = do
+    let z(y) = do
+        return y
+    let u = z(
+    do
+        return name
+    )
+    return "hello "+u+", how are you?"
+
+term.log(say_hi("william"))
