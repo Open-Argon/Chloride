@@ -41,7 +41,7 @@ class ArgonConan(ConanFile):
             if not flex_path:
                 raise Exception("Flex not found in system PATH. Please install flex on Linux/macOS.")
 
-        tc.variables["FLEX_EXECUTABLE"] = flex_path
+        tc.variables["FLEX_EXECUTABLE"] = flex_path.replace("\\", "\\\\")
         tc.generate()
 
     def build(self):
