@@ -158,7 +158,7 @@ int load_cache(Translated *translated_dest, char *joined_paths, uint64_t hash,
                char *source_path) {
   FILE *bytecode_file = fopen(joined_paths, "rb");
   if (!bytecode_file) {
-    printf("cache doesnt exist... compiling from source.\n");
+    fprintf(stderr,"cache doesnt exist... compiling from source.\n");
     return 1;
   }
 
@@ -194,7 +194,7 @@ int load_cache(Translated *translated_dest, char *joined_paths, uint64_t hash,
   XXH64_freeState(state);
 
   if (calc_hash != stored_hash) {
-    printf("cache hash mismatch (corrupted?)\n");
+    fprintf(stderr,"cache hash mismatch (corrupted?)\n");
     goto FAILED;
   }
 
@@ -268,11 +268,11 @@ int load_cache(Translated *translated_dest, char *joined_paths, uint64_t hash,
     goto FAILED;
   }
 
-  printf("cache exists and is valid, so will be used.\n");
+  fprintf(stderr,"cache exists and is valid, so will be used.\n");
   fclose(bytecode_file);
   return 0;
 FAILED:
-  printf("cache is invalid... compiling from source.\n");
+  fprintf(stderr,"cache is invalid... compiling from source.\n");
   fclose(bytecode_file);
   return 1;
 }
@@ -346,7 +346,7 @@ Execution execute(char *path, Stack *stack) {
     end = clock();
     time_spent = (double)(end - start) / CLOCKS_PER_SEC;
     total_time_spent += time_spent;
-    printf("Lexer time taken: %f seconds\n", time_spent);
+    fprintf(stderr,"Lexer time taken: %f seconds\n", time_spent);
     fclose(state.file);
 
     DArray ast;
@@ -363,7 +363,7 @@ Execution execute(char *path, Stack *stack) {
     end = clock();
     time_spent = (double)(end - start) / CLOCKS_PER_SEC;
     total_time_spent += time_spent;
-    printf("Parser time taken: %f seconds\n", time_spent);
+    fprintf(stderr,"Parser time taken: %f seconds\n", time_spent);
     darray_free(&tokens, free_token);
 
     start = clock();
@@ -380,7 +380,7 @@ Execution execute(char *path, Stack *stack) {
     end = clock();
     time_spent = (double)(end - start) / CLOCKS_PER_SEC;
     total_time_spent += time_spent;
-    printf("Translation time taken: %f seconds\n", time_spent);
+    fprintf(stderr,"Translation time taken: %f seconds\n", time_spent);
 
     darray_free(&ast, free_parsed);
 #if defined(__linux__)
@@ -452,8 +452,8 @@ Execution execute(char *path, Stack *stack) {
   end = clock();
   time_spent = (double)(end - start) / CLOCKS_PER_SEC;
   total_time_spent += time_spent;
-  printf("Execution time taken: %f seconds\n", time_spent);
-  printf("total time taken: %f seconds\n", total_time_spent);
+  fprintf(stderr,"Execution time taken: %f seconds\n", time_spent);
+  fprintf(stderr,"total time taken: %f seconds\n", total_time_spent);
 
   return (Execution){err, *main_scope};
 }

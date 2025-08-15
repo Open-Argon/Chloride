@@ -14,6 +14,7 @@ size_t translate_parsed_call(Translated *translated, ParsedCall *call,
   }
   push_instruction_byte(translated, OP_INIT_CALL);
   push_instruction_code(translated, call->args.size);
+  push_instruction_byte(translated, OP_NEW_SCOPE);
 
   DArray *old_return_jumps = translated->return_jumps;
   translated->return_jumps = NULL;
@@ -28,6 +29,7 @@ size_t translate_parsed_call(Translated *translated, ParsedCall *call,
   }
 
   translated->return_jumps = old_return_jumps;
+  push_instruction_byte(translated, OP_POP_SCOPE);
 
   push_instruction_byte(translated, OP_SOURCE_LOCATION);
   push_instruction_code(translated, call->line);
