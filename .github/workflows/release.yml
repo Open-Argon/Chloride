@@ -23,6 +23,11 @@ jobs:
         if: runner.os == 'macOS'
         run: brew install flex bison
 
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
       # Windows
       - name: Install build tools (Windows)
         if: runner.os == 'Windows'
@@ -30,11 +35,6 @@ jobs:
           choco install winflexbison mingw -y
           cmake -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++
         shell: pwsh
-
-      - name: Checkout code
-        uses: actions/checkout@v3
-        with:
-          submodules: recursive
 
       - name: Setup Python (needed for Conan)
         uses: actions/setup-python@v4
