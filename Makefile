@@ -32,7 +32,7 @@ $(BINARY): $(CFILES) $(LEXER_C) $(LEXER_H)
 	gcc -O3 -o $(BINARY) $(CFILES) $(CFLAGS) -s
 
 windows: $(CFILES) $(LEXER_C) $(LEXER_H)
-  	dir /b /s external\xxhash\xxhash.c external\cwalk\src\cwalk.c external\libdye\src\dye.c src\*.c > sources.txt
+	find external/xxhash external/cwalk external/libdye src -name '*.c' > sources.txt
 	mkdir -p bin
 	gcc -O3 -march=native -o $(BINARY) @sources.txt $(CFLAGS)
 
