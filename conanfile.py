@@ -31,18 +31,11 @@ class ArgonConan(ConanFile):
     def generate(self):
         tc = CMakeToolchain(self)
 
-        # Try to find flex in system PATH first
         flex_path = which("flex")
-
-        # If not found, fallback to flex from Conan build requirements
         if not flex_path:
-            flex_dep = self.dependencies.build.get("flex", None)
-            if not flex_dep:
-                raise Exception("Flex not found in system PATH and not declared as build requirement")
-            flex_path = join(flex_dep.package_folder, "bin", "flex")
+            raise Exception("Flex not found in system PATH. Please install flex on your system.")
 
         tc.variables["FLEX_EXECUTABLE"] = flex_path
-
         tc.generate()
 
     def build(self):
