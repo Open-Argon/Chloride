@@ -63,7 +63,7 @@ jobs:
 
       - name: Determine if prerelease (Linux/macOS)
         if: runner.os != 'Windows'
-        id: prerelease_check
+        id: prerelease_check_unix
         run: |
           TAG=${GITHUB_REF##refs/tags/}
           if [[ "$TAG" == prerelease-* ]]; then
@@ -76,7 +76,7 @@ jobs:
 
       - name: Determine if prerelease (Windows)
         if: runner.os == 'Windows'
-        id: prerelease_check
+        id: prerelease_check_win
         run: |
           $TAG = $env:GITHUB_REF -replace 'refs/tags/', ''
           if ($TAG -like 'prerelease-*') {
@@ -121,5 +121,5 @@ jobs:
           name: Release ${{ github.ref_name }}
           body: Automated release based on tag ${{ github.ref_name }}
           draft: false
-          prerelease: ${{ steps.prerelease_check.outputs.prerelease }}
+          prerelease: ${{ runner.os == 'Windows' && steps.prerelease_check_win.outputs.prerelease || steps.prerelease_check_unix.outputs.prerelease }}
           artifacts: ${{ env.TAR_NAME }}
