@@ -44,7 +44,6 @@
 #include <unistd.h>
 #endif
 #include "err.h"
-#include <malloc.h>
 #include <pthread.h>
 
 #if defined(_WIN32) || defined(_WIN64)
@@ -59,6 +58,7 @@ static inline uint64_t htole64(uint64_t x) { return x; }
 
 #elif defined(__linux__)
 #include <endian.h>
+#include <malloc.h>
 #elif defined(__APPLE__)
 #include <libkern/OSByteOrder.h>
 #define htole32(x) OSSwapHostToLittleInt32(x)
@@ -383,8 +383,9 @@ Execution execute(char *path, Stack *stack) {
     printf("Translation time taken: %f seconds\n", time_spent);
 
     darray_free(&ast, free_parsed);
-
+#if defined(__linux__)
     malloc_trim(0);
+#endif
 
     ensure_dir_exists(cache_folder_path);
 
