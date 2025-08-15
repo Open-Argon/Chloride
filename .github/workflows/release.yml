@@ -1,147 +1,164 @@
+# SPDX-FileCopyrightText: 2025 William Bell
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 name: Build and Release
 
 on:
   push:
     tags:
-      - '*'    # Trigger on any tag push
+      - '*' # Any tag
 
 jobs:
-  build_and_release:
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
-
+  build-linux:
+    runs-on: ubuntu-latest
     steps:
-      # Linux
-      - name: Install build tools (Linux)
-        if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y flex bison
-
-      # macOS
-      - name: Install build tools (macOS)
-        if: runner.os == 'macOS'
-        run: brew install flex bison
-
-      # Windows
-      - name: Install build tools (Windows)
-        if: runner.os == 'Windows'
-        run: |
-          choco install winflexbison mingw -y
-        shell: pwsh
-
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
         with:
           submodules: recursive
 
-      - name: Setup Python (needed for Conan)
+      - name: Install build tools
+        run: sudo apt-get update && sudo apt-get install -y flex bison
+
+      - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.x'
 
-      - name: Install Conan (Linux/macOS)
-        if: runner.os != 'Windows'
+      - name: Install Conan
         run: |
           python -m pip install --upgrade pip
           pip install conan
-        shell: bash
+          conan profile detect
 
-      - name: Install Conan (Windows)
-        if: runner.os == 'Windows'
-        run: |
-          python -m pip install --upgrade pip
-          pip install conan
-        shell: pwsh
-
-      - name: Configure Conan (Linux/macOS)
-        if: runner.os != 'Windows'
-        run: conan profile detect
-        shell: bash
-
-      - name: Configure Conan (Windows)
-        if: runner.os == 'Windows'
-        run: conan profile detect
-        shell: pwsh
-
-      - name: Install dependencies and build (Linux/macOS)
-        if: runner.os != 'Windows'
+      - name: Build
         run: |
           conan install . --build=missing
           conan build .
-        shell: bash
 
-      - name: Install dependencies and build (Windows)
-        if: runner.os == 'Windows'
-        run: |
-          conan install . \
-          -s compiler=gcc \
-          -s compiler.version=13 \
-          -s compiler.libcxx=libstdc++11 \
-          -s arch=x86_64 \
-          -s os=Windows \
-          --build=missing
-          conan install . \
-          -s compiler=gcc \
-          -s compiler.version=13 \
-          -s compiler.libcxx=libstdc++11 \
-          -s arch=x86_64 \
-          -s os=Windows \
-          --build=missing
-        shell: pwsh
-
-      - name: Determine if prerelease (Linux/macOS)
-        if: runner.os != 'Windows'
-        id: prerelease_check_unix
-        run: |
-          TAG=${GITHUB_REF##refs/tags/}
-          if [[ "$TAG" == prerelease-* ]]; then
-            echo "true" > prerelease.txt
-          else
-            echo "false" > prerelease.txt
-          fi
-          echo "prerelease=$(cat prerelease.txt)" >> $GITHUB_OUTPUT
-        shell: bash
-
-      - name: Determine if prerelease (Windows)
-        if: runner.os == 'Windows'
-        id: prerelease_check_win
-        run: |
-          $TAG = $env:GITHUB_REF -replace 'refs/tags/', ''
-          if ($TAG -like 'prerelease-*') {
-            echo "true" > prerelease.txt
-          } else {
-            echo "false" > prerelease.txt
-          }
-          echo "prerelease=$(Get-Content prerelease.txt)" >> $env:GITHUB_OUTPUT
-        shell: pwsh
-
-      - name: Archive build folder (Linux/macOS)
-        if: runner.os != 'Windows'
+      - name: Package
         run: |
           TAG=${GITHUB_REF##refs/tags/}
           OS=$(uname -s | tr '[:upper:]' '[:lower:]')
           ARCH=$(uname -m)
-          FOLDER_NAME="chloride-$TAG-$OS-$ARCH"
-          TAR_NAME="$FOLDER_NAME.tar.gz"
-          mv build/bin "$FOLDER_NAME"
-          cp LICENSE.txt "$FOLDER_NAME"
-          tar -czf "$TAR_NAME" "$FOLDER_NAME"
-          echo "TAR_NAME=$TAR_NAME" >> $GITHUB_ENV
-        shell: bash
+          FOLDER="chloride-$TAG-$OS-$ARCH"
+          TAR="$FOLDER.tar.gz"
+          mv build/bin "$FOLDER"
+          cp LICENSE.txt "$FOLDER"
+          tar -czf "$TAR" "$FOLDER"
+          echo "TAR_NAME=$TAR" >> $GITHUB_ENV
 
-      - name: Archive build folder (Windows)
-        if: runner.os == 'Windows'
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-artifact
+          path: ${{ env.TAR_NAME }}
+
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Install build tools
+        run: brew install flex bison
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Install Conan
+        run: |
+          python -m pip install --upgrade pip
+          pip install conan
+          conan profile detect
+
+      - name: Build
+        run: |
+          conan install . --build=missing
+          conan build .
+
+      - name: Package
+        run: |
+          TAG=${GITHUB_REF##refs/tags/}
+          OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+          ARCH=$(uname -m)
+          FOLDER="chloride-$TAG-$OS-$ARCH"
+          TAR="$FOLDER.tar.gz"
+          mv build/bin "$FOLDER"
+          cp LICENSE.txt "$FOLDER"
+          tar -czf "$TAR" "$FOLDER"
+          echo "TAR_NAME=$TAR" >> $GITHUB_ENV
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-artifact
+          path: ${{ env.TAR_NAME }}
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Install build tools
+        run: choco install winflexbison mingw -y
+        shell: pwsh
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Install Conan
+        run: |
+          python -m pip install --upgrade pip
+          pip install conan
+          conan profile detect
+        shell: pwsh
+
+      - name: Build with MinGW
+        run: |
+          conan install . `
+            -s compiler=gcc `
+            -s compiler.version=13 `
+            -s compiler.libcxx=libstdc++11 `
+            -s arch=x86_64 `
+            -s os=Windows `
+            --build=missing
+          conan build .
+        shell: pwsh
+
+      - name: Package
         run: |
           $TAG = $env:GITHUB_REF -replace 'refs/tags/', ''
           $ARCH = if ([Environment]::Is64BitOperatingSystem) { 'x64' } else { 'x86' }
-          $FOLDER_NAME = "chloride-$TAG-windows-$ARCH"
-          $TAR_NAME = "$FOLDER_NAME.zip"
-          Rename-Item build\bin $FOLDER_NAME
-          Copy-Item LICENSE.txt $FOLDER_NAME
-          Compress-Archive -Path $FOLDER_NAME -DestinationPath $TAR_NAME
-          echo "TAR_NAME=$TAR_NAME" >> $env:GITHUB_ENV
+          $FOLDER = "chloride-$TAG-windows-$ARCH"
+          $ZIP = "$FOLDER.zip"
+          Rename-Item build\bin $FOLDER
+          Copy-Item LICENSE.txt $FOLDER
+          Compress-Archive -Path $FOLDER -DestinationPath $ZIP
+          echo "TAR_NAME=$ZIP" >> $env:GITHUB_ENV
         shell: pwsh
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-artifact
+          path: ${{ env.TAR_NAME }}
+
+  release:
+    runs-on: ubuntu-latest
+    needs: [build-linux, build-macos, build-windows]
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ./artifacts
 
       - name: Create GitHub Release
         uses: ncipollo/release-action@v1
@@ -150,7 +167,5 @@ jobs:
           name: Release ${{ github.ref_name }}
           body: Automated release based on tag ${{ github.ref_name }}
           draft: false
-          updateOnlyUnreleased: true
-          replacesArtifacts: true
-          prerelease: ${{ runner.os == 'Windows' && steps.prerelease_check_win.outputs.prerelease || steps.prerelease_check_unix.outputs.prerelease }}
-          artifacts: ${{ env.TAR_NAME }}
+          prerelease: ${{ startsWith(github.ref_name, 'prerelease-') }}
+          artifacts: "./artifacts/*"
