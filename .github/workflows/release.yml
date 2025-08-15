@@ -13,6 +13,21 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
+      # Linux
+      - name: Install build tools (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y flex bison
+
+      # macOS
+      - name: Install build tools (macOS)
+        if: runner.os == 'macOS'
+        run: brew install flex bison
+
+      # Windows
+      - name: Install build tools (Windows)
+        if: runner.os == 'Windows'
+        run: choco install winflexbison -y
+        shell: pwsh
       - name: Checkout code
         uses: actions/checkout@v3
         with:
