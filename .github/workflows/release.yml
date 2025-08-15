@@ -111,7 +111,7 @@ jobs:
           FOLDER_NAME="chloride-$TAG-$OS-$ARCH"
           TAR_NAME="$FOLDER_NAME.tar.gz"
           mv build/bin "$FOLDER_NAME"
-          cp LICENSE "$FOLDER_NAME"
+          cp LICENSE.txt "$FOLDER_NAME"
           tar -czf "$TAR_NAME" "$FOLDER_NAME"
           echo "TAR_NAME=$TAR_NAME" >> $GITHUB_ENV
         shell: bash
@@ -124,7 +124,7 @@ jobs:
           $FOLDER_NAME = "chloride-$TAG-windows-$ARCH"
           $TAR_NAME = "$FOLDER_NAME.zip"
           Rename-Item build\bin $FOLDER_NAME
-          Copy-Item LICENSE $FOLDER_NAME
+          Copy-Item LICENSE.txt $FOLDER_NAME
           Compress-Archive -Path $FOLDER_NAME -DestinationPath $TAR_NAME
           echo "TAR_NAME=$TAR_NAME" >> $env:GITHUB_ENV
         shell: pwsh
