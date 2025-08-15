@@ -123,8 +123,7 @@ jobs:
 
       - name: Build with MinGW
         run: |
-          conan install .
-          conan build .
+          make
         shell: pwsh
 
       - name: Package
@@ -133,7 +132,7 @@ jobs:
           $ARCH = if ([Environment]::Is64BitOperatingSystem) { 'x64' } else { 'x86' }
           $FOLDER = "chloride-$TAG-windows-$ARCH"
           $ZIP = "$FOLDER.zip"
-          Rename-Item build\bin $FOLDER
+          Rename-Item bin $FOLDER
           Copy-Item LICENSE.txt $FOLDER
           Compress-Archive -Path $FOLDER -DestinationPath $ZIP
           echo "TAR_NAME=$ZIP" >> $env:GITHUB_ENV
