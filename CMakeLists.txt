@@ -52,7 +52,9 @@ find_package(BDWgc REQUIRED)
 find_package(gmp REQUIRED)
 
 target_compile_options(argon PRIVATE -O3 -Wall -Wextra -Wno-unused-function -s)
-target_link_options(argon PRIVATE -static)
+if(NOT APPLE)
+    target_link_options(argon PRIVATE -static)
+endif()
 
 target_link_libraries(argon PRIVATE
     BDWgc::BDWgc
