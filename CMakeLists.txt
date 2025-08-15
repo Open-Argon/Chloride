@@ -51,17 +51,7 @@ set_target_properties(argon PROPERTIES
 find_package(BDWgc REQUIRED)
 find_package(gmp REQUIRED)
 
-target_compile_options(argon PRIVATE -O3 -Wall -s)
-if(MSVC)
-    # Disable warning C4061 (enum in switch not handled)
-    target_compile_options(argon PRIVATE /wd4061)
-
-    # Disable Spectre mitigation warning C5045
-    target_compile_options(argon PRIVATE /wd5045)
-
-    # Optionally, remove "treat warnings as errors" if enabled
-    # target_compile_options(argon PRIVATE /WX-)  # uncomment if you previously used /WX
-endif()
+target_compile_options(argon PRIVATE -O3 -Wall -Wextra -Wno-unused-function -s)
 if(NOT APPLE)
     target_link_options(argon PRIVATE -static)
 endif()
