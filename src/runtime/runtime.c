@@ -35,6 +35,12 @@ ArgonObject *ARGON_METHOD_TYPE;
 Stack *Global_Scope = NULL;
 ArgonObject *ACCESS_FUNCTION;
 ArgonObject *ADDITION_FUNCTION;
+ArgonObject *SUBTRACTION_FUNCTION;
+ArgonObject *MULTIPLY_FUNCTION;
+ArgonObject *DIVIDE_FUNCTION;
+ArgonObject *POWER_FUNCTION;
+ArgonObject *MODULO_FUNCTION;
+ArgonObject *FLOORDIV_FUNCTION;
 
 ArgonObject *ARGON_ADDITION_FUNCTION(size_t argc, ArgonObject **argv,
                                      ArErr *err, RuntimeState *state) {
@@ -56,6 +62,31 @@ ArgonObject *ARGON_ADDITION_FUNCTION(size_t argc, ArgonObject **argv,
       return ARGON_NULL;
     }
     output = argon_call(__add__, 1, (ArgonObject *[]){argv[i]}, err, state);
+  }
+  return output;
+}
+
+ArgonObject *ARGON_SUBTRACTION_FUNCTION(size_t argc, ArgonObject **argv,
+                                        ArErr *err, RuntimeState *state) {
+  if (argc < 1) {
+    *err = create_err(0, 0, 0, "", "Runtime Error",
+                      "add expects at least 1 argument, got %" PRIu64, argc);
+    return ARGON_NULL;
+  }
+  ArgonObject *output = argv[0];
+  for (size_t i = 1; i < argc; i++) {
+    ArgonObject *__subtract__ = get_field_for_class(
+        get_field(output, "__class__", false, false), "__subtract__", output);
+    if (!__subtract__) {
+      ArgonObject *cls___name__ = get_field(output, "__name__", true, false);
+      *err = create_err(0, 0, 0, "", "Runtime Error",
+                        "Object '%.*s' is missing __subtract__ method",
+                        (int)cls___name__->value.as_str.length,
+                        cls___name__->value.as_str.data);
+      return ARGON_NULL;
+    }
+    output =
+        argon_call(__subtract__, 1, (ArgonObject *[]){argv[i]}, err, state);
   }
   return output;
 }
@@ -244,6 +275,53 @@ ArgonObject *ARGON_BOOL_TYPE___new__(size_t argc, ArgonObject **argv,
   return ARGON_NULL;
 }
 
+ArgonObject *ARGON_STRING_TYPE___add__(size_t argc, ArgonObject **argv,
+                                       ArErr *err, RuntimeState *state) {
+  (void)state;
+  if (argc != 2) {
+    *err = create_err(0, 0, 0, "", "Runtime Error",
+                      "__add__ expects 2 arguments, got %" PRIu64, argc);
+    return ARGON_NULL;
+  }
+  if (argv[1]->type != TYPE_STRING) {
+    ArgonObject *type_name = get_field_for_class(
+        get_field(argv[1], "__class__", false, false), "__name__", argv[1]);
+    *err = create_err(0, 0, 0, "", "Runtime Error",
+                      "__add__ cannot perform concatenation between a string and %.*s",
+                      type_name->value.as_str.length,
+                      type_name->value.as_str.data);
+    return ARGON_NULL;
+  }
+  size_t length = argv[0]->value.as_str.length+argv[1]->value.as_str.length;
+  char*concat = malloc(length);
+  memcpy(concat,argv[0]->value.as_str.data, argv[0]->value.as_str.length);
+  memcpy(concat+argv[0]->value.as_str.length,argv[1]->value.as_str.data, argv[1]->value.as_str.length);
+  ArgonObject* object = new_string_object(concat, length);
+  free(concat);
+  return object;
+}
+
+ArgonObject *ARGON_BOOL_TYPE___string__(size_t argc, ArgonObject **argv,
+                                        ArErr *err, RuntimeState *state) {
+  if (argc != 1) {
+    *err = create_err(0, 0, 0, "", "Runtime Error",
+                      "__string__ expects 1 arguments, got %" PRIu64, argc);
+    return ARGON_NULL;
+  }
+  return new_string_object_null_terminated(argv[0] == ARGON_TRUE ? "true"
+                                                                 : "false");
+}
+
+ArgonObject *ARGON_BOOL_TYPE___number__(size_t argc, ArgonObject **argv,
+                                        ArErr *err, RuntimeState *state) {
+  if (argc != 1) {
+    *err = create_err(0, 0, 0, "", "Runtime Error",
+                      "__number__ expects 1 arguments, got %" PRIu64, argc);
+    return ARGON_NULL;
+  }
+  return new_number_object_from_long(argv[0] == ARGON_TRUE, 1);
+}
+
 ArgonObject *ARGON_STRING_TYPE___string__(size_t argc, ArgonObject **argv,
                                           ArErr *err, RuntimeState *state) {
   (void)state;
@@ -389,6 +467,9 @@ void bootstrap_types() {
       ARGON_STRING_TYPE, "__init__",
       create_argon_native_function("__init__", ARGON_STRING_TYPE___init__));
   add_field(
+      ARGON_STRING_TYPE, "__add__",
+      create_argon_native_function("__add__", ARGON_STRING_TYPE___add__));
+  add_field(
       ARGON_STRING_TYPE, "__number__",
       create_argon_native_function("__number__", ARGON_STRING_TYPE___number__));
   add_field(
@@ -414,10 +495,18 @@ void bootstrap_types() {
   add_field(
       BASE_CLASS, "__boolean__",
       create_argon_native_function("__boolean__", BASE_CLASS___boolean__));
+  add_field(
+      ARGON_BOOL_TYPE, "__string__",
+      create_argon_native_function("__string__", ARGON_BOOL_TYPE___string__));
+  add_field(
+      ARGON_BOOL_TYPE, "__number__",
+      create_argon_native_function("__number__", ARGON_BOOL_TYPE___number__));
   ACCESS_FUNCTION = create_argon_native_function("__get_attr__",
                                                  ARGON_TYPE_TYPE___get_attr__);
   ADDITION_FUNCTION =
       create_argon_native_function("add", ARGON_ADDITION_FUNCTION);
+  SUBTRACTION_FUNCTION =
+      create_argon_native_function("subtract", ARGON_SUBTRACTION_FUNCTION);
   add_field(BASE_CLASS, "__get_attr__", ACCESS_FUNCTION);
 }
 
@@ -435,6 +524,7 @@ void bootstrap_globals() {
   add_to_scope(Global_Scope, "boolean", ARGON_BOOL_TYPE);
   add_to_scope(Global_Scope, "number", ARGON_NUMBER_TYPE);
   add_to_scope(Global_Scope, "add", ADDITION_FUNCTION);
+  add_to_scope(Global_Scope, "subtract", SUBTRACTION_FUNCTION);
 
   ArgonObject *argon_term = new_object();
   add_field(argon_term, "__init__", ARGON_NULL);
@@ -626,6 +716,9 @@ ArErr run_instruction(Translated *translated, RuntimeState *state,
     break;
   case OP_LOAD_ADDITION_FUNCTION:
     state->registers[0] = ADDITION_FUNCTION;
+    break;
+  case OP_LOAD_SUBTRACTION_FUNCTION:
+    state->registers[0] = SUBTRACTION_FUNCTION;
     break;
   default:
     return create_err(0, 0, 0, NULL, "Runtime Error", "Invalid Opcode %#x",

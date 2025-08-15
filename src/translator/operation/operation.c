@@ -8,18 +8,20 @@
 #include <stddef.h>
 
 size_t translate_operation(Translated *translated, ParsedOperation *operation,
-                        ArErr *err) {
+                           ArErr *err) {
   set_registers(translated, 1);
   uint64_t first;
   switch (operation->operation) {
-    case TOKEN_PLUS:;
-      first = push_instruction_byte(translated, OP_LOAD_ADDITION_FUNCTION);
-      break;
-    default:
-      *err = create_err(operation->line, operation->column,
-                                          operation->length, translated->path, "Syntax Error",
-                                          "unknown operation");
-      return 0;
+  case TOKEN_PLUS:;
+    first = push_instruction_byte(translated, OP_LOAD_ADDITION_FUNCTION);
+    break;
+  case TOKEN_MINUS:
+    first = push_instruction_byte(translated, OP_LOAD_SUBTRACTION_FUNCTION);
+    break;
+  default:
+    *err = create_err(operation->line, operation->column, operation->length,
+                      translated->path, "Syntax Error", "unknown operation");
+    return 0;
   }
   push_instruction_byte(translated, OP_INIT_CALL);
   push_instruction_code(translated, operation->to_operate_on.size);

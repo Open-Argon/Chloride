@@ -132,3 +132,7 @@ loads a mpq_t number into memory
 ## OP_LOAD_ADDITION_FUNCTION
 
 loads the addition function into register 1
+
+## OP_LOAD_SUBTRACTION_FUNCTION
+
+loads the subtraction function into register 1

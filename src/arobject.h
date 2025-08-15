@@ -74,7 +74,6 @@ struct ArgonObject {
   struct hashmap_GC *dict;
   union {
     mpq_t *as_number;
-    bool as_bool;
     struct string_struct as_str;
     native_fn native_fn;
     struct argon_function_struct argon_fn;
