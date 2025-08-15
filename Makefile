@@ -24,12 +24,10 @@ $(BINARY): $(CFILES) $(LEXER_C) $(LEXER_H)
 	gcc -O3 -o $(BINARY) $(CFILES) $(CFLAGS) -s
 
 windows: $(CFILES) $(LEXER_C) $(LEXER_H)
-	(
-		echo -n "external/xxhash/xxhash.c "
-		echo -n "external/cwalk/src/cwalk.c "
-		echo -n "external/libdye/src/dye.c "
-		find src -name '*.c' -print0 | xargs -0 echo -n
-	) > sources.txt
+	(echo -n "external/xxhash/xxhash.c " ; \
+	 echo -n "external/cwalk/src/cwalk.c " ; \
+	 echo -n "external/libdye/src/dye.c " ; \
+	 find src -name '*.c' -print0 | xargs -0 echo -n) > sources.txt
 	mkdir -p bin
 	gcc -O3 -march=native -o $(BINARY) @sources.txt $(CFLAGS)
 
