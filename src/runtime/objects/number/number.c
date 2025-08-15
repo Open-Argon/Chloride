@@ -84,18 +84,43 @@ ArgonObject *ARGON_NUMBER_TYPE___add__(size_t argc, ArgonObject **argv,
                       "__add__ expects 2 arguments, got %" PRIu64, argc);
     return ARGON_NULL;
   }
+  if (argv[1]->type != TYPE_NUMBER) {
+    ArgonObject *type_name = get_field_for_class(
+        get_field(argv[1], "__class__", false, false), "__name__", argv[1]);
+    *err = create_err(0, 0, 0, "", "Runtime Error",
+                      "__add__ cannot perform addition between a number and %.*s",
+                      type_name->value.as_str.length,
+                      type_name->value.as_str.data);
+    return ARGON_NULL;
+  }
+  mpq_t r;
+  mpq_init(r);
+  mpq_add(r, *argv[0]->value.as_number, *argv[1]->value.as_number);
+  ArgonObject *result = new_number_object(r);
+  mpq_clear(r);
+  return result;
+}
+
+ArgonObject *ARGON_NUMBER_TYPE___subtract__(size_t argc, ArgonObject **argv,
+                                       ArErr *err, RuntimeState *state) {
+  (void)state;
+  if (argc != 2) {
+    *err = create_err(0, 0, 0, "", "Runtime Error",
+                      "__subtract__ expects 2 arguments, got %" PRIu64, argc);
+    return ARGON_NULL;
+  }
   mpq_t r;
   mpq_init(r);
   if (argv[1]->type != TYPE_NUMBER) {
     ArgonObject *type_name = get_field_for_class(
         get_field(argv[1], "__class__", false, false), "__name__", argv[1]);
     *err = create_err(0, 0, 0, "", "Runtime Error",
-                      "__add__ cannot perform addition between number and %.*s",
+                      "__subtract__ cannot perform subtraction between number and %.*s",
                       type_name->value.as_str.length,
                       type_name->value.as_str.data);
     return ARGON_NULL;
   }
-  mpq_add(r, *argv[0]->value.as_number, *argv[1]->value.as_number);
+  mpq_sub(r, *argv[0]->value.as_number, *argv[1]->value.as_number);
   ArgonObject *result = new_number_object(r);
   mpq_clear(r);
   return result;
@@ -270,6 +295,9 @@ void create_ARGON_NUMBER_TYPE() {
   add_field(ARGON_NUMBER_TYPE, "__add__",
             create_argon_native_function("__add__",
                                          ARGON_NUMBER_TYPE___add__));
+  add_field(ARGON_NUMBER_TYPE, "__subtract__",
+            create_argon_native_function("__subtract__",
+                                         ARGON_NUMBER_TYPE___subtract__));
 }
 
 void mpz_init_gc_managed(mpz_t z, size_t limbs_count) {

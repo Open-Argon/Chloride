@@ -9,20 +9,17 @@
 #include <stdbool.h>
 #include "../../memory.h"
 
-static bool true_value = true;
-static bool false_value = false;
-
 ParsedValue * parse_true(){
     ParsedValue * parsedValue = checked_malloc(sizeof(ParsedValue));
     parsedValue->type = AST_BOOLEAN;
-    parsedValue->data = &true_value;
+    parsedValue->data = (void*)true;
     return parsedValue;
 };
 
 ParsedValue * parse_false(){
     ParsedValue * parsedValue = checked_malloc(sizeof(ParsedValue));
     parsedValue->type = AST_BOOLEAN;
-    parsedValue->data = &false_value;
+    parsedValue->data = (void*)false;
     return parsedValue;
 };
 
