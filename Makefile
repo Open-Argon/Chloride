@@ -8,14 +8,6 @@ FLEX_TOOL = flex
 
 CFILES = external/xxhash/xxhash.c external/cwalk/src/cwalk.c external/libdye/src/dye.c $(shell find src -name '*.c')
 
-# If target is "windows", override FLEX_TOOL
-ifeq ($(MAKECMDGOALS),windows)
-	BINARY = bin/argon.exe
-    FLEX_TOOL = win_flex
-
-	CFILES = external/xxhash/xxhash.c external/cwalk/src/cwalk.c external/libdye/src/dye.c $(shell dir /b /s src\*.c)
-endif
-
 LEXER_SRC = src/lexer/lex.l
 LEXER_C = src/lexer/lex.yy.c
 LEXER_H = src/lexer/lex.yy.h
