@@ -130,7 +130,13 @@ jobs:
             -s arch=x86_64 `
             -s os=Windows `
             --build=missing
-          conan build .
+          conan build . `
+            -s compiler=gcc `
+            -s compiler.version=13 `
+            -s compiler.libcxx=libstdc++11 `
+            -s arch=x86_64 `
+            -s os=Windows `
+            --build=missing
         shell: pwsh
 
       - name: Package
