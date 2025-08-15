@@ -117,7 +117,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install conan
-          conan profile new default --detect
+          conan profile detect
           conan profile update settings.compiler.version=13 default
           conan profile update settings.compiler=gcc default
           conan profile update settings.os=Windows default
@@ -126,7 +126,7 @@ jobs:
 
       - name: Build Windows with MinGW
         run: |
-          conan install . --profile:host=default --profile:build=default --build=missing
+          conan install . --profile:host=mingw-windows --profile:build=default --build=missing
           conan build .
 
       - name: Package Windows build
