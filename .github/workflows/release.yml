@@ -105,9 +105,17 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Install build tools
-        run: choco install winflexbison -y
-        shell: pwsh
+      - name: Install MSYS2 and build tools
+        uses: msys2/setup-msys2@v3
+        with:
+          update: true
+          install: >
+            mingw-w64-x86_64-toolchain
+            mingw-w64-x86_64-gmp
+            mingw-w64-x86_64-make
+            mingw-w64-x86_64-flex
+            mingw-w64-x86_64-bison
+          shell: msys2 {0}
 
       - name: Setup Python
         uses: actions/setup-python@v4
@@ -124,7 +132,7 @@ jobs:
       - name: Build with MinGW
         run: |
           make
-        shell: pwsh
+        shell: msys2 {0}
 
       - name: Package
         run: |
