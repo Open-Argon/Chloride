@@ -5,6 +5,7 @@
 from conan import ConanFile
 from conan.tools.cmake import CMake, CMakeToolchain, CMakeDeps, cmake_layout
 from shutil import which
+import os
 
 class ArgonConan(ConanFile):
     name = "argon"
