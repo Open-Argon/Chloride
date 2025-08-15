@@ -1,7 +1,3 @@
-# SPDX-FileCopyrightText: 2025 William Bell
-#
-# SPDX-License-Identifier: GPL-3.0-or-later
-
 name: Build and Release
 
 on:
@@ -27,23 +23,46 @@ jobs:
         with:
           python-version: '3.x'
 
-      - name: Install Conan
+      - name: Install Conan (Linux/macOS)
+        if: runner.os != 'Windows'
         run: |
           python -m pip install --upgrade pip
           pip install conan
-        shell: ${{ matrix.os == 'windows-latest' && 'pwsh' || 'bash' }}
+        shell: bash
 
-      - name: Configure Conan
+      - name: Install Conan (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          python -m pip install --upgrade pip
+          pip install conan
+        shell: pwsh
+
+      - name: Configure Conan (Linux/macOS)
+        if: runner.os != 'Windows'
         run: conan profile detect
-        shell: ${{ matrix.os == 'windows-latest' && 'pwsh' || 'bash' }}
+        shell: bash
 
-      - name: Install dependencies and build with Conan
+      - name: Configure Conan (Windows)
+        if: runner.os == 'Windows'
+        run: conan profile detect
+        shell: pwsh
+
+      - name: Install dependencies and build (Linux/macOS)
+        if: runner.os != 'Windows'
         run: |
           conan install . --build=missing
           conan build .
-        shell: ${{ matrix.os == 'windows-latest' && 'pwsh' || 'bash' }}
+        shell: bash
 
-      - name: Determine if prerelease
+      - name: Install dependencies and build (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          conan install . --build=missing
+          conan build .
+        shell: pwsh
+
+      - name: Determine if prerelease (Linux/macOS)
+        if: runner.os != 'Windows'
         id: prerelease_check
         run: |
           TAG=${GITHUB_REF##refs/tags/}
@@ -53,48 +72,54 @@ jobs:
             echo "false" > prerelease.txt
           fi
           echo "prerelease=$(cat prerelease.txt)" >> $GITHUB_OUTPUT
-        shell: ${{ matrix.os == 'windows-latest' && 'pwsh' || 'bash' }}
+        shell: bash
 
-      - name: Archive build folder
+      - name: Determine if prerelease (Windows)
+        if: runner.os == 'Windows'
+        id: prerelease_check
+        run: |
+          $TAG = $env:GITHUB_REF -replace 'refs/tags/', ''
+          if ($TAG -like 'prerelease-*') {
+            echo "true" > prerelease.txt
+          } else {
+            echo "false" > prerelease.txt
+          }
+          echo "prerelease=$(Get-Content prerelease.txt)" >> $env:GITHUB_OUTPUT
+        shell: pwsh
+
+      - name: Archive build folder (Linux/macOS)
+        if: runner.os != 'Windows'
         run: |
           TAG=${GITHUB_REF##refs/tags/}
-          if [[ "$RUNNER_OS" == "Linux" ]]; then
-            OS=linux
-            ARCH=$(uname -m)
-            FOLDER_NAME="chloride-$TAG-$OS-$ARCH"
-            TAR_NAME="$FOLDER_NAME.tar.gz"
-            mv build/bin "$FOLDER_NAME"
-            cp LICENSE "$FOLDER_NAME"
-            tar -czf "$TAR_NAME" "$FOLDER_NAME"
-          elif [[ "$RUNNER_OS" == "macOS" ]]; then
-            OS=macos
-            ARCH=$(uname -m)
-            FOLDER_NAME="chloride-$TAG-$OS-$ARCH"
-            TAR_NAME="$FOLDER_NAME.tar.gz"
-            mv build/bin "$FOLDER_NAME"
-            cp LICENSE "$FOLDER_NAME"
-            tar -czf "$TAR_NAME" "$FOLDER_NAME"
-          else
-            # Windows
-            $TAG = $env:GITHUB_REF -replace 'refs/tags/', ''
-            $ARCH = if ([Environment]::Is64BitOperatingSystem) { 'x64' } else { 'x86' }
-            $FOLDER_NAME = "chloride-$TAG-windows-$ARCH"
-            $TAR_NAME = "$FOLDER_NAME.zip"
-            Rename-Item build\bin $FOLDER_NAME
-            Copy-Item LICENSE $FOLDER_NAME
-            Compress-Archive -Path $FOLDER_NAME -DestinationPath $TAR_NAME
-          fi
+          OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+          ARCH=$(uname -m)
+          FOLDER_NAME="chloride-$TAG-$OS-$ARCH"
+          TAR_NAME="$FOLDER_NAME.tar.gz"
+          mv build/bin "$FOLDER_NAME"
+          cp LICENSE "$FOLDER_NAME"
+          tar -czf "$TAR_NAME" "$FOLDER_NAME"
           echo "TAR_NAME=$TAR_NAME" >> $GITHUB_ENV
-        shell: ${{ matrix.os == 'windows-latest' && 'pwsh' || 'bash' }}
+        shell: bash
+
+      - name: Archive build folder (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          $TAG = $env:GITHUB_REF -replace 'refs/tags/', ''
+          $ARCH = if ([Environment]::Is64BitOperatingSystem) { 'x64' } else { 'x86' }
+          $FOLDER_NAME = "chloride-$TAG-windows-$ARCH"
+          $TAR_NAME = "$FOLDER_NAME.zip"
+          Rename-Item build\bin $FOLDER_NAME
+          Copy-Item LICENSE $FOLDER_NAME
+          Compress-Archive -Path $FOLDER_NAME -DestinationPath $TAR_NAME
+          echo "TAR_NAME=$TAR_NAME" >> $env:GITHUB_ENV
+        shell: pwsh
 
       - name: Create GitHub Release
-        id: create_release
         uses: ncipollo/release-action@v1
         with:
           tag: ${{ github.ref_name }}
           name: Release ${{ github.ref_name }}
-          body: |
-            Automated release based on tag ${{ github.ref_name }}
+          body: Automated release based on tag ${{ github.ref_name }}
           draft: false
           prerelease: ${{ steps.prerelease_check.outputs.prerelease }}
           artifacts: ${{ env.TAR_NAME }}
