@@ -16,7 +16,9 @@
 #include <string.h>
 
 #if defined(_WIN32)
+#ifndef _WIN32_WINNT
 #define _WIN32_WINNT 0x0602
+#endif
 #include <windows.h>
 #include <psapi.h>
 
