@@ -99,14 +99,15 @@ jobs:
           path: ${{ env.TAR_NAME }}
 
   build-windows:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v3
         with:
           submodules: recursive
 
-      - name: Install MinGW-w64 for cross-compilation
-        run: sudo apt-get update && sudo apt-get install -y mingw-w64
+      - name: Install build tools
+        run: choco install winflexbison -y
+        shell: pwsh
 
       - name: Setup Python
         uses: actions/setup-python@v4
@@ -118,26 +119,25 @@ jobs:
           python -m pip install --upgrade pip
           pip install conan
           conan profile detect
-          conan profile update settings.compiler.version=13 default
-          conan profile update settings.compiler=gcc default
-          conan profile update settings.os=Windows default
-          conan profile update env.CC=x86_64-w64-mingw32-gcc default
-          conan profile update env.CXX=x86_64-w64-mingw32-g++ default
+        shell: pwsh
 
-      - name: Build Windows with MinGW
+      - name: Build with MinGW
         run: |
-          conan install . --profile:host=mingw-windows --profile:build=default --build=missing
+          conan install .
           conan build .
+        shell: pwsh
 
-      - name: Package Windows build
+      - name: Package
         run: |
-          TAG=${GITHUB_REF##refs/tags/}
-          FOLDER="chloride-$TAG-windows-x64"
-          ZIP="$FOLDER.zip"
-          mv build/bin "$FOLDER"
-          cp LICENSE.txt "$FOLDER"
-          zip -r "$ZIP" "$FOLDER"
-          echo "TAR_NAME=$ZIP" >> $GITHUB_ENV
+          $TAG = $env:GITHUB_REF -replace 'refs/tags/', ''
+          $ARCH = if ([Environment]::Is64BitOperatingSystem) { 'x64' } else { 'x86' }
+          $FOLDER = "chloride-$TAG-windows-$ARCH"
+          $ZIP = "$FOLDER.zip"
+          Rename-Item build\bin $FOLDER
+          Copy-Item LICENSE.txt $FOLDER
+          Compress-Archive -Path $FOLDER -DestinationPath $ZIP
+          echo "TAR_NAME=$ZIP" >> $env:GITHUB_ENV
+        shell: pwsh
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
