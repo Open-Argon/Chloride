@@ -22,7 +22,7 @@
 #include "operations/operations.h"
 #include "return/return.h"
 #include "string/string.h"
-#include <gmp-x86_64.h>
+#include <gmp.h>
 #include <gmp.h>
 #include <stdbool.h>
 #include <stddef.h>
