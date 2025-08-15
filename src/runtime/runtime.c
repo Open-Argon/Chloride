@@ -303,6 +303,7 @@ ArgonObject *ARGON_STRING_TYPE___add__(size_t argc, ArgonObject **argv,
 
 ArgonObject *ARGON_BOOL_TYPE___string__(size_t argc, ArgonObject **argv,
                                         ArErr *err, RuntimeState *state) {
+                                          (void)state;
   if (argc != 1) {
     *err = create_err(0, 0, 0, "", "Runtime Error",
                       "__string__ expects 1 arguments, got %" PRIu64, argc);
@@ -314,6 +315,7 @@ ArgonObject *ARGON_BOOL_TYPE___string__(size_t argc, ArgonObject **argv,
 
 ArgonObject *ARGON_BOOL_TYPE___number__(size_t argc, ArgonObject **argv,
                                         ArErr *err, RuntimeState *state) {
+                                          (void)state;
   if (argc != 1) {
     *err = create_err(0, 0, 0, "", "Runtime Error",
                       "__number__ expects 1 arguments, got %" PRIu64, argc);
