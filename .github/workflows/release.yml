@@ -106,7 +106,7 @@ jobs:
           submodules: recursive
 
       - name: Install build tools
-        run: choco install winflexbison mingw -y
+        run: choco install winflexbison -y
         shell: pwsh
 
       - name: Setup Python
@@ -123,20 +123,8 @@ jobs:
 
       - name: Build with MinGW
         run: |
-          conan install . `
-            -s compiler=gcc `
-            -s compiler.version=13 `
-            -s compiler.libcxx=libstdc++11 `
-            -s arch=x86_64 `
-            -s os=Windows `
-            --build=missing
-          conan build . `
-            -s compiler=gcc `
-            -s compiler.version=13 `
-            -s compiler.libcxx=libstdc++11 `
-            -s arch=x86_64 `
-            -s os=Windows `
-            --build=missing
+          conan install .
+          conan build .
         shell: pwsh
 
       - name: Package
