@@ -16,8 +16,9 @@
 #include <string.h>
 
 #if defined(_WIN32)
-#include <psapi.h>
+#define _WIN32_WINNT 0x0602
 #include <windows.h>
+#include <psapi.h>
 
 double get_memory_usage_mb() {
   PROCESS_MEMORY_COUNTERS pmc;
