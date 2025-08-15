@@ -23,7 +23,6 @@ CFLAGS = $(ARCHFLAGS) -lm -lgc -lgmp -Wall -Wextra -Wno-unused-function -Werror=
 
 all: $(BINARY)
 
-windows: $(BINARY)
 
 $(LEXER_C) $(LEXER_H): $(LEXER_SRC)
 	$(FLEX_TOOL) --header-file=$(LEXER_H) -o $(LEXER_C) $(LEXER_SRC)
@@ -31,6 +30,11 @@ $(LEXER_C) $(LEXER_H): $(LEXER_SRC)
 $(BINARY): $(CFILES) $(LEXER_C) $(LEXER_H)
 	mkdir -p bin
 	gcc -O3 -o $(BINARY) $(CFILES) $(CFLAGS) -s
+
+windows: $(CFILES) $(LEXER_C) $(LEXER_H)
+  	dir /b /s external\xxhash\xxhash.c external\cwalk\src\cwalk.c external\libdye\src\dye.c src\*.c > sources.txt
+	mkdir -p bin
+	gcc -O3 -march=native -o $(BINARY) @sources.txt $(CFLAGS)
 
 native: $(CFILES) $(LEXER_C) $(LEXER_H)
 	mkdir -p bin
