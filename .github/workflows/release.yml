@@ -131,7 +131,7 @@ jobs:
       - name: Build Project
         run: |
           conan install . --profile mingw-profile.txt --build=missing
-          conan build .
+          conan build . --profile mingw-profile.txt
 
       - name: Package
         run: |
