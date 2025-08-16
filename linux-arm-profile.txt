@@ -8,3 +8,5 @@ build_type=Release
 
 [conf]
 tools.build:compiler_executables={"c": "/usr/bin/gcc-aarch64-linux-gnu"}
+tools.cmake.cmaketoolchain:system_name=Linux
+tools.cmake.cmaketoolchain:system_processor=aarch64
