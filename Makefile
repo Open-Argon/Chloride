@@ -12,7 +12,11 @@ LEXER_SRC = src/lexer/lex.l
 LEXER_C = src/lexer/lex.yy.c
 LEXER_H = src/lexer/lex.yy.h
 CFLAGS = $(ARCHFLAGS) -lm -lgc -lgmp -Wall -Wextra -Wno-unused-function -Werror=unused-result -Iexternal/cwalk/include -Iexternal/libdye/include
-LDFLAGS = -Wl,-Bstatic -lgc -lgmp -Wl,-Bdynamic -lm
+LDFLAGS = -lgc -lgmp -lm
+
+ifeq ($(MAKECMDGOALS),windows)
+	LDFLAGS = -Wl,-Bstatic -lgc -lgmp -Wl,-Bdynamic -lm
+endif
 
 all: $(BINARY)
 
