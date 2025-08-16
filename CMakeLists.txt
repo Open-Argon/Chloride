@@ -54,17 +54,13 @@ find_package(gmp REQUIRED)
 target_compile_options(argon PRIVATE -O3 -Wall -Wextra -Wno-unused-function -s)
 
 target_link_libraries(argon PRIVATE
-    "${CMAKE_CURRENT_SOURCE_DIR}/external/lib/libgc.a"
-    "${CMAKE_CURRENT_SOURCE_DIR}/external/lib/libgmp.a"
+    BDWgc::BDWgc
+    gmp::gmp
     m
 )
 
 target_include_directories(argon PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src/lexer
-    ${BDWgc_INCLUDE_DIRS}   # BDWgc headers
-    ${GMP_INCLUDE_DIR}      # GMP headers
-    ${CMAKE_CURRENT_SOURCE_DIR}/external/cwalk/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/external/libdye/include
 )
 
 add_custom_command(TARGET argon POST_BUILD COMMAND ${CMAKE_STRIP} $<TARGET_FILE:argon>)
