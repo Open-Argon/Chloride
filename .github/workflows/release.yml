@@ -119,6 +119,8 @@ jobs:
             mingw-w64-x86_64-make
             mingw-w64-x86_64-gmp
             mingw-w64-x86_64-gc
+            mingw-w64-x86_64-gmp-static
+            mingw-w64-x86_64-gc-static
 
       - name: Build Project
         run: |
