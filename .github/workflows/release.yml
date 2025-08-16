@@ -12,21 +12,13 @@ on:
 jobs:
   build-linux:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        arch: [x86_64, arm64]
     steps:
       - uses: actions/checkout@v3
         with:
           submodules: recursive
 
       - name: Install build tools
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y flex bison make cmake build-essential
-          if [ "${{ matrix.arch }}" = "arm64" ]; then
-            sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
-          fi
+        run: sudo apt-get update && sudo apt-get install -y flex bison
 
       - name: Setup Python
         uses: actions/setup-python@v4
@@ -41,28 +33,17 @@ jobs:
 
       - name: Build
         run: |
-          BUILD_DIR="build_${{ matrix.arch }}"
-          mkdir -p "$BUILD_DIR"
-          cd "$BUILD_DIR"
-
-          if [ "${{ matrix.arch }}" = "arm64" ]; then
-            export CC=aarch64-linux-gnu-gcc
-            export CXX=aarch64-linux-gnu-g++
-          fi
-
-          conan install .. --build=missing
-          conan build ..
-
-          cd ..
+          conan install . --build=missing
+          conan build .
 
       - name: Package
         run: |
           TAG=${GITHUB_REF##refs/tags/}
-          OS="linux"
-          ARCH="${{ matrix.arch }}"
+          OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+          ARCH=$(uname -m)
           FOLDER="chloride-$TAG-$OS-$ARCH"
           TAR="$FOLDER.tar.gz"
-          mv build_${ARCH}/bin "$FOLDER"
+          mv build/bin "$FOLDER"
           cp LICENSE.txt "$FOLDER"
           tar -czf "$TAR" "$FOLDER"
           echo "TAR_NAME=$TAR" >> $GITHUB_ENV
@@ -70,7 +51,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: linux-${{ matrix.arch }}-artifact
+          name: linux-artifact
           path: ${{ env.TAR_NAME }}
 
   build-macos:
@@ -99,16 +80,14 @@ jobs:
 
       - name: Build
         run: |
-          # Create a build directory per arch
           BUILD_DIR="build_${{ matrix.arch }}"
           mkdir -p "$BUILD_DIR"
           cd "$BUILD_DIR"
-          
-          # Use the matrix architecture for the build
-          export CFLAGS="-arch ${{ matrix.arch }}"
-          export CXXFLAGS="-arch ${{ matrix.arch }}"
-          export LDFLAGS="-arch ${{ matrix.arch }}"
 
+          # Pass architecture explicitly to CMake via environment
+          export CMAKE_OSX_ARCHITECTURES="${{ matrix.arch }}"
+
+          # Run Conan install/build
           conan install .. --build=missing
           conan build ..
 
@@ -134,9 +113,6 @@ jobs:
 
   build-windows:
     runs-on: windows-latest
-    strategy:
-      matrix:
-        arch: [x86_64, arm64]
     defaults:
       run:
         shell: msys2 {0}
@@ -146,8 +122,7 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Setup MSYS2
-        uses: msys2/setup-msys2@v2
+      - uses: msys2/setup-msys2@v2
         with:
           msystem: MINGW64
           update: true
@@ -168,37 +143,25 @@ jobs:
 
       - name: Build Project
         run: |
-          BUILD_DIR="build_${{ matrix.arch }}"
-          mkdir -p "$BUILD_DIR"
-          cd "$BUILD_DIR"
-
-          if [ "${{ matrix.arch }}" = "arm64" ]; then
-            # Use the ARM64 cross-compiler
-            export CC=aarch64-w64-mingw32-gcc
-            export CXX=aarch64-w64-mingw32-g++
-          fi
-
-          conan install .. --profile mingw-profile.txt --build=missing
-          conan build .. --profile mingw-profile.txt
-
-          cd ..
+          conan install . --profile mingw-profile.txt --build=missing
+          conan build . --profile mingw-profile.txt
 
       - name: Package
         run: |
           TAG=${GITHUB_REF##refs/tags/}
           OS="windows"
-          ARCH="${{ matrix.arch }}"
+          ARCH=$(uname -m)
           FOLDER="chloride-$TAG-$OS-$ARCH"
-          ZIP="$FOLDER.zip"
-          mv build_${ARCH}/bin "$FOLDER"
+          TAR="$FOLDER.tar.gz"
+          mv build/bin "$FOLDER"
           cp LICENSE.txt "$FOLDER"
-          powershell Compress-Archive -Path "$FOLDER" -DestinationPath "$ZIP"
-          echo "TAR_NAME=$ZIP" >> $GITHUB_ENV
+          tar -czf "$TAR" "$FOLDER"
+          echo "TAR_NAME=$TAR" >> $GITHUB_ENV
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: windows-${{ matrix.arch }}-artifact
+          name: windows-artifact
           path: ${{ env.TAR_NAME }}
 
   release:
