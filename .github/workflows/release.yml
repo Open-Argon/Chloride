@@ -73,7 +73,7 @@ jobs:
             -v $PWD:/work -w /work \
             ubuntu:latest \
             bash -c "
-              apt-get update && apt-get install -y python3-pip g++ flex bison &&
+              apt-get update && apt-get install -y python3-pip gcc flex bison cmake make &&
               pip install --break-system-packages conan &&
               conan profile detect --force &&
               conan install . --build=missing &&
