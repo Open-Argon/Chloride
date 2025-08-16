@@ -150,6 +150,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: ./artifacts
+          merge-multiple: true
 
       - name: Create GitHub Release
         uses: ncipollo/release-action@v1
@@ -159,4 +160,4 @@ jobs:
           body: Automated release based on tag ${{ github.ref_name }}
           draft: false
           prerelease: ${{ startsWith(github.ref_name, 'prerelease-') }}
-          artifacts: "./artifacts/**/*"
+          artifacts: "./artifacts/*"
