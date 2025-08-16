@@ -135,15 +135,15 @@ jobs:
 
       - name: Package
         run: |
-          $TAG = $env:GITHUB_REF -replace 'refs/tags/', ''
-          $ARCH = if ([Environment]::Is64BitOperatingSystem) { 'x64' } else { 'x86' }
-          $FOLDER = "chloride-$TAG-windows-$ARCH"
-          $ZIP = "$FOLDER.zip"
-          Rename-Item build/bin $FOLDER
-          Copy-Item LICENSE.txt $FOLDER
-          Compress-Archive -Path $FOLDER -DestinationPath $ZIP
-          echo "TAR_NAME=$ZIP" >> $env:GITHUB_ENV
-        shell: pwsh
+          TAG=${GITHUB_REF##refs/tags/}
+          OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+          ARCH=$(uname -m)
+          FOLDER="chloride-$TAG-$OS-$ARCH"
+          TAR="$FOLDER.tar.gz"
+          mv build/bin "$FOLDER"
+          cp LICENSE.txt "$FOLDER"
+          tar -czf "$TAR" "$FOLDER"
+          echo "TAR_NAME=$TAR" >> $GITHUB_ENV
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
