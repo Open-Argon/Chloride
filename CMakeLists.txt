@@ -61,6 +61,10 @@ target_link_libraries(argon PRIVATE
 
 target_include_directories(argon PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src/lexer
+    ${BDWgc_INCLUDE_DIRS}   # BDWgc headers
+    ${GMP_INCLUDE_DIR}      # GMP headers
+    ${CMAKE_CURRENT_SOURCE_DIR}/external/cwalk/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/external/libdye/include
 )
 
 add_custom_command(TARGET argon POST_BUILD COMMAND ${CMAKE_STRIP} $<TARGET_FILE:argon>)
