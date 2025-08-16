@@ -8,3 +8,8 @@ let say_hi(name) = do
     return "hello "+u+", how are you?"
 
 term.log(say_hi("william"))
+
+let a = 9
+let b = 10
+
+term.log(string(a)+'+'+string(b)+'='+string(a+b))
