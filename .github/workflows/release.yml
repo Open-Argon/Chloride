@@ -40,7 +40,7 @@ jobs:
             conan install . --build=missing
             conan build .
           else
-            sudo apt-get install -y aarch64-linux-gnu-gcc
+            sudo apt-get install -y gcc-aarch64-linux-gnu
             conan install . --profile linux-arm-profile.txt --build=missing
             conan build . --profile linux-arm-profile.txt
           fi
