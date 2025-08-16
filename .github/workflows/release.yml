@@ -84,12 +84,18 @@ jobs:
           mkdir -p "$BUILD_DIR"
           cd "$BUILD_DIR"
 
-          # Pass architecture explicitly to CMake via environment
-          export CMAKE_OSX_ARCHITECTURES="${{ matrix.arch }}"
-
-          # Run Conan install/build
-          conan install .. --build=missing
-          conan build ..
+          # Use Rosetta for x86_64 builds on Apple Silicon
+          if [ "${{ matrix.arch }}" = "x86_64" ] && [ "$(uname -m)" = "arm64" ]; then
+            arch -x86_64 bash -c "
+              export CMAKE_OSX_ARCHITECTURES=x86_64
+              conan install .. --build=missing
+              conan build ..
+            "
+          else
+            export CMAKE_OSX_ARCHITECTURES="${{ matrix.arch }}"
+            conan install .. --build=missing
+            conan build ..
+          fi
 
           cd ..
 
