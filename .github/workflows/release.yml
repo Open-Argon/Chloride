@@ -100,7 +100,7 @@ jobs:
           ARCH="${{ matrix.arch }}"
           FOLDER="chloride-$TAG-$OS-$ARCH"
           TAR="$FOLDER.tar.gz"
-          mv build_${ARCH}/bin "$FOLDER"
+          mv build/bin "$FOLDER"
           cp LICENSE.txt "$FOLDER"
           tar -czf "$TAR" "$FOLDER"
           echo "TAR_NAME=$TAR" >> $GITHUB_ENV
