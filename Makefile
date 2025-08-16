@@ -12,6 +12,7 @@ LEXER_SRC = src/lexer/lex.l
 LEXER_C = src/lexer/lex.yy.c
 LEXER_H = src/lexer/lex.yy.h
 CFLAGS = $(ARCHFLAGS) -lm -lgc -lgmp -Wall -Wextra -Wno-unused-function -Werror=unused-result -Iexternal/cwalk/include -Iexternal/libdye/include
+LDFLAGS = -Wl,-Bstatic -lgc -lgmp -Wl,-Bdynamic -lm
 
 all: $(BINARY)
 
@@ -21,7 +22,7 @@ $(LEXER_C) $(LEXER_H): $(LEXER_SRC)
 
 $(BINARY): $(CFILES) $(LEXER_C) $(LEXER_H)
 	mkdir -p bin
-	gcc -O3 -o $(BINARY) $(CFILES) $(CFLAGS) -s
+	gcc -O3 -o $(BINARY) $(CFILES) $(CFLAGS) ${LDFLAGS} -s
 
 windows: $(CFILES) $(LEXER_C) $(LEXER_H)
 	(echo -n "external/xxhash/xxhash.c " ; \
@@ -33,7 +34,7 @@ windows: $(CFILES) $(LEXER_C) $(LEXER_H)
 
 native: $(CFILES) $(LEXER_C) $(LEXER_H)
 	mkdir -p bin
-	gcc -O3 -march=native -o $(BINARY) $(CFILES) $(CFLAGS)
+	gcc -O3 -march=native -o $(BINARY) $(CFILES) $(CFLAGS) ${LDFLAGS}
 
 debug: $(CFILES) $(LEXER_C) $(LEXER_H)
 	mkdir -p bin
@@ -41,13 +42,13 @@ debug: $(CFILES) $(LEXER_C) $(LEXER_H)
 
 full-debug: $(CFILES) $(LEXER_C) $(LEXER_H)
 	mkdir -p bin
-	gcc -g -O0 -fsanitize=address -fno-omit-frame-pointer -o $(BINARY) $(CFILES) $(CFLAGS)
+	gcc -g -O0 -fsanitize=address -fno-omit-frame-pointer -o $(BINARY) $(CFILES) $(CFLAGS) ${LDFLAGS}
 
 optimised: $(CFILES) $(LEXER_C) $(LEXER_H)
 	mkdir -p bin
-	gcc -O3 -fprofile-generate -o $(BINARY) $(CFILES) $(CFLAGS)
+	gcc -O3 -fprofile-generate -o $(BINARY) $(CFILES) $(CFLAGS) ${LDFLAGS}
 	${BINARY} rand_test.ar
-	gcc -O3 -fprofile-use -o $(BINARY) $(CFILES) $(CFLAGS)
+	gcc -O3 -fprofile-use -o $(BINARY) $(CFILES) $(CFLAGS) ${LDFLAGS}
 	
 
 clean:
