@@ -20,9 +20,4 @@ typedef struct ArErr {
   char type[32];
   char message[ERR_MSG_MAX_LEN];
 } ArErr;
-
-typedef struct Execution {
-  ArErr err;
-  Stack stack;
-} Execution;
 #endif // RETURN_TYPES_

@@ -11,6 +11,7 @@
 #include "lexer/token.h"
 #include "memory.h"
 #include "parser/parser.h"
+#include "returnTypes.h"
 #include "runtime/runtime.h"
 #include "translator/translator.h"
 
@@ -66,8 +67,9 @@ static inline uint64_t htole64(uint64_t x) { return x; }
 #define htole64(x) OSSwapHostToLittleInt64(x)
 #define le64toh(x) OSSwapLittleToHostInt64(x)
 // Add others as needed
-#else
-#error "Unsupported platform"
+#elif defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__)
+#include <stdlib.h>
+#include <sys/endian.h>
 #endif
 
 char *get_current_directory() {
@@ -158,7 +160,7 @@ int load_cache(Translated *translated_dest, char *joined_paths, uint64_t hash,
                char *source_path) {
   FILE *bytecode_file = fopen(joined_paths, "rb");
   if (!bytecode_file) {
-    fprintf(stderr,"cache doesnt exist... compiling from source.\n");
+    fprintf(stderr, "cache doesnt exist... compiling from source.\n");
     return 1;
   }
 
@@ -194,7 +196,7 @@ int load_cache(Translated *translated_dest, char *joined_paths, uint64_t hash,
   XXH64_freeState(state);
 
   if (calc_hash != stored_hash) {
-    fprintf(stderr,"cache hash mismatch (corrupted?)\n");
+    fprintf(stderr, "cache hash mismatch (corrupted?)\n");
     goto FAILED;
   }
 
@@ -268,27 +270,29 @@ int load_cache(Translated *translated_dest, char *joined_paths, uint64_t hash,
     goto FAILED;
   }
 
-  fprintf(stderr,"cache exists and is valid, so will be used.\n");
+  fprintf(stderr, "cache exists and is valid, so will be used.\n");
   fclose(bytecode_file);
   return 0;
 FAILED:
-  fprintf(stderr,"cache is invalid... compiling from source.\n");
+  fprintf(stderr, "cache is invalid... compiling from source.\n");
   fclose(bytecode_file);
   return 1;
 }
 
-Execution execute(char *path, Stack *stack) {
+Translated load_argon_file(char *path, ArErr *err) {
   clock_t start, end;
+  clock_t beginning = clock();
   double time_spent, total_time_spent = 0;
 
   const char *basename_ptr;
   size_t basename_length;
   cwk_path_get_basename(path, &basename_ptr, &basename_length);
 
-  if (!basename_ptr)
-    return (Execution){create_err(0, 0, 0, NULL, "Path Error",
-                                  "path has no basename '%s'", path),
-                       (Stack){NULL, NULL}};
+  if (!basename_ptr) {
+    *err = create_err(0, 0, 0, NULL, "Path Error", "path has no basename '%s'",
+                      path);
+    return (Translated){};
+  }
 
   char basename[FILENAME_MAX];
   memcpy(basename, basename_ptr, basename_length);
@@ -312,9 +316,9 @@ Execution execute(char *path, Stack *stack) {
 
   FILE *file = fopen(path, "r");
   if (!file) {
-    return (Execution){create_err(0, 0, 0, NULL, "File Error",
-                                  "Unable to open file '%s'", path),
-                       (Stack){NULL, NULL}};
+    *err = create_err(0, 0, 0, NULL, "File Error", "Unable to open file '%s'",
+                      path);
+    return (Translated){};
   }
 
   XXH3_state_t *hash_state = XXH3_createState();
@@ -338,15 +342,14 @@ Execution execute(char *path, Stack *stack) {
 
     LexerState state = {path, file, 0, 0, &tokens};
     start = clock();
-    ArErr err = lexer(state);
-    if (err.exists) {
+    *err = lexer(state);
+    if (err->exists) {
       darray_free(&tokens, free_token);
-      return (Execution){err, (Stack){NULL, NULL}};
+      return (Translated){};
     }
     end = clock();
     time_spent = (double)(end - start) / CLOCKS_PER_SEC;
-    total_time_spent += time_spent;
-    fprintf(stderr,"Lexer time taken: %f seconds\n", time_spent);
+    fprintf(stderr, "Lexer time taken: %f seconds\n", time_spent);
     fclose(state.file);
 
     DArray ast;
@@ -354,33 +357,31 @@ Execution execute(char *path, Stack *stack) {
     darray_init(&ast, sizeof(ParsedValue));
 
     start = clock();
-    err = parser(path, &ast, &tokens, false);
-    if (err.exists) {
+    *err = parser(path, &ast, &tokens, false);
+    if (err->exists) {
       darray_free(&tokens, free_token);
       darray_free(&ast, free_parsed);
-      return (Execution){err, (Stack){NULL, NULL}};
+      return (Translated){};
     }
     end = clock();
     time_spent = (double)(end - start) / CLOCKS_PER_SEC;
-    total_time_spent += time_spent;
-    fprintf(stderr,"Parser time taken: %f seconds\n", time_spent);
+    fprintf(stderr, "Parser time taken: %f seconds\n", time_spent);
     darray_free(&tokens, free_token);
 
     start = clock();
 
     translated = init_translator(path);
-    err = translate(&translated, &ast);
-    if (err.exists) {
+    *err = translate(&translated, &ast);
+    if (err->exists) {
       darray_free(&translated.bytecode, NULL);
       free(translated.constants.data);
       hashmap_free(translated.constants.hashmap, NULL);
       darray_free(&ast, free_parsed);
-      return (Execution){err, (Stack){NULL, NULL}};
+      return (Translated){};
     }
     end = clock();
     time_spent = (double)(end - start) / CLOCKS_PER_SEC;
-    total_time_spent += time_spent;
-    fprintf(stderr,"Translation time taken: %f seconds\n", time_spent);
+    fprintf(stderr, "Translation time taken: %f seconds\n", time_spent);
 
     darray_free(&ast, free_parsed);
 #if defined(__linux__)
@@ -444,18 +445,10 @@ Execution execute(char *path, Stack *stack) {
   gc_translated.constants.capacity = translated.constants.capacity;
   darray_free(&translated.bytecode, NULL);
   free(translated.constants.data);
-
-  start = clock();
-  RuntimeState state = init_runtime_state(gc_translated, path);
-  Stack *main_scope = create_scope(stack);
-  ArErr err = runtime(gc_translated, state, main_scope);
-  end = clock();
-  time_spent = (double)(end - start) / CLOCKS_PER_SEC;
-  total_time_spent += time_spent;
-  fprintf(stderr,"Execution time taken: %f seconds\n", time_spent);
-  fprintf(stderr,"total time taken: %f seconds\n", total_time_spent);
-
-  return (Execution){err, *main_scope};
+  total_time_spent = (double)(clock() - beginning) / CLOCKS_PER_SEC;
+  fprintf(stderr, "total time taken loading file (%s): %f seconds\n", path,
+          total_time_spent);
+  return gc_translated;
 }
 
 int main(int argc, char *argv[]) {
@@ -472,11 +465,25 @@ int main(int argc, char *argv[]) {
   char path[FILENAME_MAX];
   cwk_path_get_absolute(CWD, path_non_absolute, path, sizeof(path));
   free(CWD);
-  Execution resp = execute(path, Global_Scope);
+  ArErr err;
+  Translated translated = load_argon_file(path, &err);
+  if (err.exists) {
+    output_err(err);
+    return 1;
+  }
+  clock_t start = clock(), end;
+  RuntimeState state = init_runtime_state(translated, path);
+  Stack *main_scope = create_scope(Global_Scope);
+  err = runtime(translated, state, main_scope);
+
+  end = clock();
+  double time_spent = (double)(end - start) / CLOCKS_PER_SEC;
+  fprintf(stderr, "Execution time taken: %f seconds\n", time_spent);
+
   if (runtime_hash_table)
     hashmap_free(runtime_hash_table, NULL);
-  if (resp.err.exists) {
-    output_err(resp.err);
+  if (err.exists) {
+    output_err(err);
     return 1;
   }
   // Your main thread code
