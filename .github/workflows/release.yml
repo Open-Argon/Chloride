@@ -120,6 +120,7 @@ jobs:
             mingw-w64-x86_64-cmake
             mingw-w64-x86_64-python
             mingw-w64-x86_64-python-pip
+            mingw-w64-x86_64-flex
 
       - name: Install Conan
         run: |
@@ -138,7 +139,7 @@ jobs:
           $ARCH = if ([Environment]::Is64BitOperatingSystem) { 'x64' } else { 'x86' }
           $FOLDER = "chloride-$TAG-windows-$ARCH"
           $ZIP = "$FOLDER.zip"
-          Rename-Item bin $FOLDER
+          Rename-Item build/bin $FOLDER
           Copy-Item LICENSE.txt $FOLDER
           Compress-Archive -Path $FOLDER -DestinationPath $ZIP
           echo "TAR_NAME=$ZIP" >> $env:GITHUB_ENV
