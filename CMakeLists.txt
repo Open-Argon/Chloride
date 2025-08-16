@@ -57,6 +57,7 @@ target_link_libraries(argon PRIVATE
     BDWgc::BDWgc
     gmp::gmp
     m
+    $<$<PLATFORM_ID:Windows>:bcrypt>
 )
 
 target_include_directories(argon PRIVATE
