@@ -119,12 +119,17 @@ jobs:
             mingw-w64-x86_64-make
             mingw-w64-x86_64-gmp
             mingw-w64-x86_64-gc
-            mingw-w64-x86_64-gmp-static
-            mingw-w64-x86_64-gc-static
+
+      - name: Install Conan
+        run: |
+          python -m pip install --upgrade pip
+          pip install conan
+          conan profile detect
 
       - name: Build Project
         run: |
-          make windows
+          conan install . --build=missing
+          conan build .
 
       - name: Package
         run: |
