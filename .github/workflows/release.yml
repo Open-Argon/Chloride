@@ -54,7 +54,7 @@ jobs:
           name: linux-x86_64-artifact
           path: ${{ env.TAR_NAME }}
   build-linux-arm64:
-    runs-on: ubuntu-latest-arm # build both architectures
+    runs-on: ubuntu-22.04-arm # build both architectures
     steps:
       - uses: actions/checkout@v3
         with:
