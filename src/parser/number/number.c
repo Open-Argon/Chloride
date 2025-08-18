@@ -7,6 +7,7 @@
 #include "number.h"
 #include "../../memory.h"
 #include <ctype.h>
+#include <gmp-x86_64.h>
 #include <gmp.h>
 #include <gmp.h>
 #include <stdio.h>
@@ -180,7 +181,8 @@ ParsedValueReturn parse_number(Token *token, char *path) {
   mpq_init(*r_ptr);
   int err = mpq_set_decimal_str_exp(*r_ptr, token->value, token->length);
   if (err) {
-    free_parsed(parsedValue);
+    mpq_clear(*r_ptr);
+    free(r_ptr);
     free(parsedValue);
     return (ParsedValueReturn){create_err(token->line, token->column,
                                           token->length, path, "Parsing Error",
@@ -190,3 +192,4 @@ ParsedValueReturn parse_number(Token *token, char *path) {
   parsedValue->data = r_ptr;
   return (ParsedValueReturn){no_err, parsedValue};
 }
+

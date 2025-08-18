@@ -34,7 +34,7 @@ add_custom_command(
 add_custom_target(GenerateLexer DEPENDS ${LEXER_C} ${LEXER_H})
 
 # Step 3: Add executable
-add_executable(argon external/xxhash/xxhash.c external/cwalk/src/cwalk.c external/libdye/src/dye.c ${CFILES} ${LEXER_C})
+add_executable(argon external/xxhash/xxhash.c external/cwalk/src/cwalk.c external/libdye/src/dye.c external/linenoise/linenoise.c ${CFILES} ${LEXER_C})
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
 target_include_directories(argon PRIVATE ${CMAKE_SOURCE_DIR}/external/cwalk/include)
 target_include_directories(argon PRIVATE ${CMAKE_SOURCE_DIR}/external/libdye/include)
