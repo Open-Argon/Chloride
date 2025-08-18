@@ -3,7 +3,10 @@
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
+#if defined(_WIN32) || defined(_WIN64)
+#else
 #include "../external/linenoise/linenoise.h"
+#endif
 #include "./lexer/lexer.h"
 #include "./runtime/call/call.h"
 #include "./runtime/objects/functions/functions.h"
@@ -96,6 +99,7 @@ int execute_code(FILE *stream, char *path, Stack *scope,
   return 0;
 }
 
+#if defined(_WIN32) || defined(_WIN64)
 // Simple input function
 char *input(const char *prompt) {
   printf("%s", prompt);
@@ -117,6 +121,7 @@ char *input(const char *prompt) {
 
   return buffer;
 }
+#endif
 
 char *read_all_stdin(size_t *out_len) {
   size_t size = 1024;
@@ -194,7 +199,11 @@ int shell() {
       memcpy(prompt, textBefore, strlen(textBefore));
       memcpy(prompt + strlen(textBefore), indentStr, isz + 1);
 
+#if defined(_WIN32) || defined(_WIN64)
+      char *inp = input(prompt);
+#else
       char *inp = linenoise(prompt);
+#endif
       free(prompt);
 
       if (!inp) {
@@ -205,10 +214,13 @@ int shell() {
         free(indentStr);
         return 0;
       }
+#if defined(_WIN32) || defined(_WIN64)
+#else
       if (inp[0] != '\0') {
         // Optionally add line to history
         linenoiseHistoryAdd(inp);
       }
+#endif
 
       // Append line to totranslate
       size_t length = strlen(inp);
