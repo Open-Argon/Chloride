@@ -12,6 +12,7 @@
 #include "memory.h"
 #include "parser/parser.h"
 #include "returnTypes.h"
+#include "shell.h"
 #include "runtime/runtime.h"
 #include "translator/translator.h"
 
@@ -358,32 +359,29 @@ Translated load_argon_file(char *path, ArErr *err) {
 
     start = clock();
     *err = parser(path, &ast, &tokens, false);
+    darray_free(&tokens, free_token);
     if (err->exists) {
-      darray_free(&tokens, free_token);
       darray_free(&ast, free_parsed);
       return (Translated){};
     }
     end = clock();
     time_spent = (double)(end - start) / CLOCKS_PER_SEC;
     fprintf(stderr, "Parser time taken: %f seconds\n", time_spent);
-    darray_free(&tokens, free_token);
 
     start = clock();
 
     translated = init_translator(path);
     *err = translate(&translated, &ast);
+    darray_free(&ast, free_parsed);
     if (err->exists) {
       darray_free(&translated.bytecode, NULL);
       free(translated.constants.data);
       hashmap_free(translated.constants.hashmap, NULL);
-      darray_free(&ast, free_parsed);
       return (Translated){};
     }
     end = clock();
     time_spent = (double)(end - start) / CLOCKS_PER_SEC;
     fprintf(stderr, "Translation time taken: %f seconds\n", time_spent);
-
-    darray_free(&ast, free_parsed);
 #if defined(__linux__)
     malloc_trim(0);
 #endif
@@ -458,9 +456,9 @@ int main(int argc, char *argv[]) {
   generate_siphash_key(siphash_key);
   bootstrap_types();
   bootstrap_globals();
-  char *CWD = get_current_directory();
   if (argc <= 1)
-    return -1;
+    return shell();
+  char *CWD = get_current_directory();
   char *path_non_absolute = argv[1];
   char path[FILENAME_MAX];
   cwk_path_get_absolute(CWD, path_non_absolute, path, sizeof(path));

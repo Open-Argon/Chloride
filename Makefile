@@ -6,7 +6,7 @@
 BINARY = bin/argon
 FLEX_TOOL = flex
 
-CFILES = external/xxhash/xxhash.c external/cwalk/src/cwalk.c external/libdye/src/dye.c $(shell find src -name '*.c')
+CFILES = external/xxhash/xxhash.c external/cwalk/src/cwalk.c external/libdye/src/dye.c external/linenoise/linenoise.c $(shell find src -name '*.c')
 
 LEXER_SRC = src/lexer/lex.l
 LEXER_C = src/lexer/lex.yy.c
