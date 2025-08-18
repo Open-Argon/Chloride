@@ -3,10 +3,6 @@
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
-#if defined(_WIN32) || defined(_WIN64)
-#else
-#include "../external/linenoise/linenoise.h"
-#endif
 #include "./lexer/lexer.h"
 #include "./runtime/call/call.h"
 #include "./runtime/objects/functions/functions.h"
@@ -21,6 +17,20 @@
 #include <unistd.h>
 #if defined(__linux__)
 #include <malloc.h>
+#endif
+#if defined(_WIN32) || defined(_WIN64)
+FILE *fmemopen(void *buf, size_t size, const char *mode) {
+    FILE *fp = tmpfile();
+    if (!fp) return NULL;
+
+    if (strchr(mode, 'w') || strchr(mode, '+')) {
+        fwrite(buf, 1, size, fp);
+        rewind(fp);
+    }
+    return fp;
+}
+#else
+#include "../external/linenoise/linenoise.h"
 #endif
 
 volatile sig_atomic_t interrupted = 0;
