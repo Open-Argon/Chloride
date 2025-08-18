@@ -20,14 +20,21 @@
 #endif
 #if defined(_WIN32) || defined(_WIN64)
 FILE *fmemopen(void *buf, size_t size, const char *mode) {
-    FILE *fp = tmpfile();
-    if (!fp) return NULL;
-
-    if (strchr(mode, 'w') || strchr(mode, '+')) {
-        fwrite(buf, 1, size, fp);
-        rewind(fp);
+    if (strchr(mode, 'r') == NULL) {
+        return NULL;
     }
-    return fp;
+
+    FILE *tmp = tmpfile();
+    if (!tmp) return NULL;
+
+    if (fwrite(buf, 1, size, tmp) != size) {
+        fclose(tmp);
+        return NULL;
+    }
+
+    rewind(tmp);
+
+    return tmp;
 }
 #else
 #include "../external/linenoise/linenoise.h"
