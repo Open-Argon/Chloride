@@ -11,3 +11,6 @@
 [submodule "external/libdye"]
 	path = external/libdye
 	url = https://github.com/Ugric/libdye.git
+[submodule "external/linenoise"]
+	path = external/linenoise
+	url = https://github.com/antirez/linenoise
