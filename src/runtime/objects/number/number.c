@@ -359,7 +359,7 @@ void create_ARGON_NUMBER_TYPE() {
 void mpz_init_gc_managed(mpz_t z, size_t limbs_count) {
   z->_mp_alloc = limbs_count;
   z->_mp_size = 0;
-  z->_mp_d = ar_alloc(limbs_count * sizeof(mp_limb_t));
+  z->_mp_d = ar_alloc_atomic(limbs_count * sizeof(mp_limb_t));
 }
 
 void mpq_init_gc_managed(mpq_t q, size_t num_limbs, size_t den_limbs) {
