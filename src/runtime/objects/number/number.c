@@ -7,6 +7,7 @@
 #include "number.h"
 #include "../functions/functions.h"
 #include "../string/string.h"
+#include <gmp-x86_64.h>
 #include <gmp.h>
 #include <inttypes.h>
 #include <stdio.h>
@@ -121,6 +122,56 @@ ArgonObject *ARGON_NUMBER_TYPE___subtract__(size_t argc, ArgonObject **argv,
     return ARGON_NULL;
   }
   mpq_sub(r, *argv[0]->value.as_number, *argv[1]->value.as_number);
+  ArgonObject *result = new_number_object(r);
+  mpq_clear(r);
+  return result;
+}
+
+ArgonObject *ARGON_NUMBER_TYPE___multiply__(size_t argc, ArgonObject **argv,
+                                       ArErr *err, RuntimeState *state) {
+  (void)state;
+  if (argc != 2) {
+    *err = create_err(0, 0, 0, "", "Runtime Error",
+                      "__multiply__ expects 2 arguments, got %" PRIu64, argc);
+    return ARGON_NULL;
+  }
+  mpq_t r;
+  mpq_init(r);
+  if (argv[1]->type != TYPE_NUMBER) {
+    ArgonObject *type_name = get_field_for_class(
+        get_field(argv[1], "__class__", false, false), "__name__", argv[1]);
+    *err = create_err(0, 0, 0, "", "Runtime Error",
+                      "__multiply__ cannot perform multiplication between number and %.*s",
+                      type_name->value.as_str.length,
+                      type_name->value.as_str.data);
+    return ARGON_NULL;
+  }
+  mpq_mul(r, *argv[0]->value.as_number, *argv[1]->value.as_number);
+  ArgonObject *result = new_number_object(r);
+  mpq_clear(r);
+  return result;
+}
+
+ArgonObject *ARGON_NUMBER_TYPE___division__(size_t argc, ArgonObject **argv,
+                                       ArErr *err, RuntimeState *state) {
+  (void)state;
+  if (argc != 2) {
+    *err = create_err(0, 0, 0, "", "Runtime Error",
+                      "__division__ expects 2 arguments, got %" PRIu64, argc);
+    return ARGON_NULL;
+  }
+  mpq_t r;
+  mpq_init(r);
+  if (argv[1]->type != TYPE_NUMBER) {
+    ArgonObject *type_name = get_field_for_class(
+        get_field(argv[1], "__class__", false, false), "__name__", argv[1]);
+    *err = create_err(0, 0, 0, "", "Runtime Error",
+                      "__division__ cannot perform division between number and %.*s",
+                      type_name->value.as_str.length,
+                      type_name->value.as_str.data);
+    return ARGON_NULL;
+  }
+  mpq_div(r, *argv[0]->value.as_number, *argv[1]->value.as_number);
   ArgonObject *result = new_number_object(r);
   mpq_clear(r);
   return result;
@@ -298,6 +349,12 @@ void create_ARGON_NUMBER_TYPE() {
   add_field(ARGON_NUMBER_TYPE, "__subtract__",
             create_argon_native_function("__subtract__",
                                          ARGON_NUMBER_TYPE___subtract__));
+  add_field(ARGON_NUMBER_TYPE, "__multiply__",
+            create_argon_native_function("__multiply__",
+                                         ARGON_NUMBER_TYPE___multiply__));
+  add_field(ARGON_NUMBER_TYPE, "__division__",
+            create_argon_native_function("__division__",
+                                         ARGON_NUMBER_TYPE___division__));
 }
 
 void mpz_init_gc_managed(mpz_t z, size_t limbs_count) {

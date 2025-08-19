@@ -37,10 +37,10 @@ ArgonObject *ACCESS_FUNCTION;
 ArgonObject *ADDITION_FUNCTION;
 ArgonObject *SUBTRACTION_FUNCTION;
 ArgonObject *MULTIPLY_FUNCTION;
-ArgonObject *DIVIDE_FUNCTION;
+ArgonObject *DIVISION_FUNCTION;
 ArgonObject *POWER_FUNCTION;
 ArgonObject *MODULO_FUNCTION;
-ArgonObject *FLOORDIV_FUNCTION;
+ArgonObject *FLOORDIVISION_FUNCTION;
 
 ArgonObject *ARGON_ADDITION_FUNCTION(size_t argc, ArgonObject **argv,
                                      ArErr *err, RuntimeState *state) {
@@ -70,7 +70,7 @@ ArgonObject *ARGON_SUBTRACTION_FUNCTION(size_t argc, ArgonObject **argv,
                                         ArErr *err, RuntimeState *state) {
   if (argc < 1) {
     *err = create_err(0, 0, 0, "", "Runtime Error",
-                      "add expects at least 1 argument, got %" PRIu64, argc);
+                      "subtract expects at least 1 argument, got %" PRIu64, argc);
     return ARGON_NULL;
   }
   ArgonObject *output = argv[0];
@@ -87,6 +87,56 @@ ArgonObject *ARGON_SUBTRACTION_FUNCTION(size_t argc, ArgonObject **argv,
     }
     output =
         argon_call(__subtract__, 1, (ArgonObject *[]){argv[i]}, err, state);
+  }
+  return output;
+}
+
+ArgonObject *ARGON_MULTIPLY_FUNCTION(size_t argc, ArgonObject **argv,
+                                        ArErr *err, RuntimeState *state) {
+  if (argc < 1) {
+    *err = create_err(0, 0, 0, "", "Runtime Error",
+                      "multiply expects at least 1 argument, got %" PRIu64, argc);
+    return ARGON_NULL;
+  }
+  ArgonObject *output = argv[0];
+  for (size_t i = 1; i < argc; i++) {
+    ArgonObject *__multiply__ = get_field_for_class(
+        get_field(output, "__class__", false, false), "__multiply__", output);
+    if (!__multiply__) {
+      ArgonObject *cls___name__ = get_field(output, "__name__", true, false);
+      *err = create_err(0, 0, 0, "", "Runtime Error",
+                        "Object '%.*s' is missing __multiply__ method",
+                        (int)cls___name__->value.as_str.length,
+                        cls___name__->value.as_str.data);
+      return ARGON_NULL;
+    }
+    output =
+        argon_call(__multiply__, 1, (ArgonObject *[]){argv[i]}, err, state);
+  }
+  return output;
+}
+
+ArgonObject *ARGON_DIVISION_FUNCTION(size_t argc, ArgonObject **argv,
+                                        ArErr *err, RuntimeState *state) {
+  if (argc < 1) {
+    *err = create_err(0, 0, 0, "", "Runtime Error",
+                      "division expects at least 1 argument, got %" PRIu64, argc);
+    return ARGON_NULL;
+  }
+  ArgonObject *output = argv[0];
+  for (size_t i = 1; i < argc; i++) {
+    ArgonObject *__multiply__ = get_field_for_class(
+        get_field(output, "__class__", false, false), "__division__", output);
+    if (!__multiply__) {
+      ArgonObject *cls___name__ = get_field(output, "__name__", true, false);
+      *err = create_err(0, 0, 0, "", "Runtime Error",
+                        "Object '%.*s' is missing __division__ method",
+                        (int)cls___name__->value.as_str.length,
+                        cls___name__->value.as_str.data);
+      return ARGON_NULL;
+    }
+    output =
+        argon_call(__multiply__, 1, (ArgonObject *[]){argv[i]}, err, state);
   }
   return output;
 }
@@ -509,6 +559,10 @@ void bootstrap_types() {
       create_argon_native_function("add", ARGON_ADDITION_FUNCTION);
   SUBTRACTION_FUNCTION =
       create_argon_native_function("subtract", ARGON_SUBTRACTION_FUNCTION);
+  MULTIPLY_FUNCTION =
+      create_argon_native_function("multiply", ARGON_MULTIPLY_FUNCTION);
+  DIVISION_FUNCTION =
+      create_argon_native_function("division", ARGON_DIVISION_FUNCTION);
   add_field(BASE_CLASS, "__get_attr__", ACCESS_FUNCTION);
 }
 
@@ -527,6 +581,8 @@ void bootstrap_globals() {
   add_to_scope(Global_Scope, "number", ARGON_NUMBER_TYPE);
   add_to_scope(Global_Scope, "add", ADDITION_FUNCTION);
   add_to_scope(Global_Scope, "subtract", SUBTRACTION_FUNCTION);
+  add_to_scope(Global_Scope, "multiply", MULTIPLY_FUNCTION);
+  add_to_scope(Global_Scope, "division", DIVISION_FUNCTION);
 
   ArgonObject *argon_term = new_object();
   add_field(argon_term, "__init__", ARGON_NULL);
@@ -721,6 +777,12 @@ ArErr run_instruction(Translated *translated, RuntimeState *state,
     break;
   case OP_LOAD_SUBTRACTION_FUNCTION:
     state->registers[0] = SUBTRACTION_FUNCTION;
+    break;
+  case OP_LOAD_MULTIPLY_FUNCTION:
+    state->registers[0] = MULTIPLY_FUNCTION;
+    break;
+  case OP_LOAD_DIVISION_FUNCTION:
+    state->registers[0] = DIVISION_FUNCTION;
     break;
   default:
     return create_err(0, 0, 0, NULL, "Runtime Error", "Invalid Opcode %#x",

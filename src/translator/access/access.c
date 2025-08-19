@@ -10,19 +10,22 @@ size_t translate_access(Translated *translated, ParsedAccess *access,
   set_registers(translated, 1);
   uint64_t first = push_instruction_byte(translated, OP_LOAD_ACCESS_FUNCTION);
   push_instruction_byte(translated, OP_INIT_CALL);
-  push_instruction_code(translated, 3);
+  push_instruction_code(translated, access->access.size + 2);
 
   translate_parsed(translated, &access->to_access, err);
   push_instruction_byte(translated, OP_INSERT_ARG);
   push_instruction_code(translated, 0);
-  translate_parsed(translated, darray_get(&access->access, 0), err);
-  push_instruction_byte(translated, OP_INSERT_ARG);
-  push_instruction_code(translated, 1);
-  
   push_instruction_byte(translated, OP_LOAD_BOOL);
   push_instruction_byte(translated, access->access_fields);
   push_instruction_byte(translated, OP_INSERT_ARG);
-  push_instruction_code(translated, 2);
+  push_instruction_code(translated, 1);
+
+  for (size_t i = 0; i < access->access.size; i++) {
+    translate_parsed(translated, darray_get(&access->access, i), err);
+    push_instruction_byte(translated, OP_INSERT_ARG);
+    push_instruction_code(translated, 2+i);
+  }
+
   push_instruction_byte(translated, OP_SOURCE_LOCATION);
   push_instruction_code(translated, access->line);
   push_instruction_code(translated, access->column);

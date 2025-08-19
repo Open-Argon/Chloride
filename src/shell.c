@@ -20,32 +20,32 @@
 #endif
 #if defined(_WIN32) || defined(_WIN64)
 FILE *fmemopen(void *buf, size_t size, const char *mode) {
-    if (strchr(mode, 'r') == NULL) {
-        return NULL;
-    }
+  if (strchr(mode, 'r') == NULL) {
+    return NULL;
+  }
 
-    FILE *tmp = tmpfile();
-    if (!tmp) return NULL;
+  FILE *tmp = tmpfile();
+  if (!tmp)
+    return NULL;
 
-    if (fwrite(buf, 1, size, tmp) != size) {
-        fclose(tmp);
-        return NULL;
-    }
+  if (fwrite(buf, 1, size, tmp) != size) {
+    fclose(tmp);
+    return NULL;
+  }
 
-    rewind(tmp);
+  rewind(tmp);
 
-    return tmp;
+  return tmp;
 }
 #else
 #include "../external/linenoise/linenoise.h"
 #endif
 
-volatile sig_atomic_t interrupted = 0;
-
 // Ctrl+C handler
 void handle_sigint(int sig) {
   (void)sig;
-  interrupted = 1;
+  printf("\nBye :)\n");
+  exit(0);
 }
 
 int execute_code(FILE *stream, char *path, Stack *scope,
@@ -116,9 +116,9 @@ int execute_code(FILE *stream, char *path, Stack *scope,
   return 0;
 }
 
-#if defined(_WIN32) || defined(_WIN64)
 // Simple input function
 char *input(const char *prompt) {
+#if defined(_WIN32) || defined(_WIN64)
   printf("%s", prompt);
   fflush(stdout);
 
@@ -131,14 +131,17 @@ char *input(const char *prompt) {
     return NULL;
   }
 
-  // Remove trailing newline
   if (len > 0 && buffer[len - 1] == '\n') {
     buffer[len - 1] = '\0';
   }
-
+#else
+  char *buffer = linenoise(prompt);
+  if (buffer && buffer[0] != '\0') {
+    linenoiseHistoryAdd(buffer);
+  }
+#endif
   return buffer;
 }
-#endif
 
 char *read_all_stdin(size_t *out_len) {
   size_t size = 1024;
@@ -216,11 +219,7 @@ int shell() {
       memcpy(prompt, textBefore, strlen(textBefore));
       memcpy(prompt + strlen(textBefore), indentStr, isz + 1);
 
-#if defined(_WIN32) || defined(_WIN64)
       char *inp = input(prompt);
-#else
-      char *inp = linenoise(prompt);
-#endif
       free(prompt);
 
       if (!inp) {
@@ -231,13 +230,6 @@ int shell() {
         free(indentStr);
         return 0;
       }
-#if defined(_WIN32) || defined(_WIN64)
-#else
-      if (inp[0] != '\0') {
-        // Optionally add line to history
-        linenoiseHistoryAdd(inp);
-      }
-#endif
 
       // Append line to totranslate
       size_t length = strlen(inp);
