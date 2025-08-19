@@ -136,3 +136,11 @@ loads the addition function into register 1
 ## OP_LOAD_SUBTRACTION_FUNCTION
 
 loads the subtraction function into register 1
+
+## OP_LOAD_MULTIPLY_FUNCTION
+
+loads the multiply function into register 1
+
+## OP_LOAD_DIVISION_FUNCTION
+
+loads the division function into register 1
