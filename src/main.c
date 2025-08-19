@@ -428,7 +428,7 @@ Translated load_argon_file(char *path, ArErr *err) {
   hashmap_free(translated.constants.hashmap, NULL);
   Translated gc_translated = {
       translated.registerCount, NULL, {}, {}, translated.path};
-  gc_translated.bytecode.data = ar_alloc(translated.bytecode.capacity);
+  gc_translated.bytecode.data = ar_alloc_atomic(translated.bytecode.capacity);
   memcpy(gc_translated.bytecode.data, translated.bytecode.data,
          translated.bytecode.capacity);
   gc_translated.bytecode.element_size = translated.bytecode.element_size;
@@ -436,7 +436,7 @@ Translated load_argon_file(char *path, ArErr *err) {
   gc_translated.bytecode.resizable = false;
   gc_translated.bytecode.capacity =
       translated.bytecode.size * translated.bytecode.element_size;
-  gc_translated.constants.data = ar_alloc(translated.constants.capacity);
+  gc_translated.constants.data = ar_alloc_atomic(translated.constants.capacity);
   memcpy(gc_translated.constants.data, translated.constants.data,
          translated.constants.capacity);
   gc_translated.constants.size = translated.constants.size;
