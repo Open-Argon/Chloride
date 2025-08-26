@@ -13,6 +13,7 @@
 #include "assignable/identifier/identifier.h"
 #include "declaration/declaration.h"
 #include "dictionary/dictionary.h"
+#include "parentheses-and-anonymous-function/parentheses-and-anonymous-function.h"
 #include "dowrap/dowrap.h"
 #include "function/function.h"
 #include "if/if.h"
@@ -127,6 +128,9 @@ ParsedValueReturn parse_token_full(char *file, DArray *tokens, size_t *index,
     break;
   case TOKEN_LBRACKET:
     output = parse_list(file, tokens, index);
+    break;
+  case TOKEN_LPAREN:
+    output = parse_parentheses(file, tokens, index);
     break;
   case TOKEN_LBRACE:
     output = parse_dictionary(file, tokens, index);
