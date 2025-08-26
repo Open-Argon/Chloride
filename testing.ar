@@ -5,11 +5,33 @@ let say_hi(name) = do
     do
         return name
     )
-    return "hello "+u+", how are you?"
 
-term.log(say_hi("william"))
+    return "hello "+u+", how are you?"
+term.log(say_hi("william")
+, say_hi)
 
 let a = 9
 let b = 10
-
 term.log(string(a)+'+'+string(b)+'='+string(a+b))
+
+
+let call(f) = do
+    term.log(f)
+
+    return f()
+
+
+term.log(
+call(
+()=call(
+()=call(
+()=call(
+()=do
+    term.log("hello this is a test of anonymous functions. hopefully this works :)")
+
+    return say_hi("test")
+)
+)
+)
+)
+)
