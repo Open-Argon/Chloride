@@ -22,16 +22,26 @@ let call(f) = do
 
 
 term.log(
-call(
-()=call(
-()=call(
-()=call(
-()=do
-    term.log("hello this is a test of anonymous functions. hopefully this works :)")
+    call(
+        ()=call(
+            ()=do
+                term.log('hello testing testing')
+                return call(
+                    ()=call(
+                        ()=do
+                            term.log("hello this is a test of anonymous functions. hopefully this works :)")
 
-    return say_hi("test")
+                            return say_hi("test")
+                    )
+                )
+            )
+        )
 )
-)
-)
-)
+call(()=do
+    term.log((
+            (x)=x*x*x*x*x*x*x*x*x*x*x*x
+        )(
+            10000675435574942378423458324823473205237523053278452368578032472390453275238558438905348905894035890348905349805345485843578934268954328902589607469328905490832678934728969834689057843267854736890256743928563256749016078596789416895657435690769013674516750941765438576867893726789543789345678576846715416789058903890549045839804538905389045890435890349580348905894035890435784785236523656237985678342523678
+        )
+    )
 )
