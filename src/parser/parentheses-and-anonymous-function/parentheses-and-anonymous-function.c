@@ -1,7 +1,7 @@
 #include "parentheses-and-anonymous-function.h"
+#include "../../memory.h"
 #include "../assignable/identifier/identifier.h"
 #include "../function/function.h"
-#include "../../memory.h"
 #include <stddef.h>
 #include <string.h>
 
@@ -64,6 +64,8 @@ ParsedValueReturn parse_parentheses(char *file, DArray *tokens, size_t *index) {
       for (size_t i = 0; i < list.size; i++) {
         ParsedValue *item = darray_get(&list, i);
         if (item->type != AST_IDENTIFIER) {
+          darray_free(&list, free_parsed);
+          darray_free(&parameters, free_parameter);
           return (ParsedValueReturn){
               create_err(token->line, token->column, token->length, file,
                          "Syntax Error", "expected identifier"),
