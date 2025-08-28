@@ -17,6 +17,7 @@
 #include "operation/operation.h"
 #include "return/return.h"
 #include "string/string.h"
+#include "while/while.h"
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -148,6 +149,8 @@ size_t translate_parsed(Translated *translated, ParsedValue *parsedValue,
                                        (ParsedIdentifier *)parsedValue->data);
   case AST_IF:
     return translate_parsed_if(translated, (DArray *)parsedValue->data, err);
+  case AST_WHILE:
+    return translate_parsed_while(translated, (ParsedWhile *)parsedValue->data, err);
   case AST_DOWRAP:
     return translate_parsed_dowrap(translated, (DArray *)parsedValue->data,
                                    err);

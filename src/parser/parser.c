@@ -23,6 +23,7 @@
 #include "operations/operations.h"
 #include "return/return.h"
 #include "string/string.h"
+#include "while/while.h"
 #include <gmp.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -34,7 +35,7 @@ const char *ValueTypeNames[] = {
     "string",       "assign",     "identifier", "number",
     "if statement", "access",     "call",       "declaration",
     "null",         "boolean",    "do wrap",    "operations",
-    "list",         "dictionary", "function",   "return"};
+    "list",         "dictionary", "function",   "return", "while loop"};
 
 ArErr error_if_finished(char *file, DArray *tokens, size_t *index) {
   if ((*index) >= tokens->size) {
@@ -73,6 +74,8 @@ ParsedValueReturn parse_token_full(char *file, DArray *tokens, size_t *index,
     switch (token->type) {
     case TOKEN_IF:
       return parse_if(file, tokens, index);
+    case TOKEN_WHILE:
+      return parse_while(file, tokens, index);
     case TOKEN_RETURN:
       return parse_return(file, tokens, index);
     case TOKEN_LET:
@@ -246,6 +249,9 @@ void free_parsed(void *ptr) {
     break;
   case AST_IF:
     free_parsed_if(parsed);
+    break;
+  case AST_WHILE:
+    free_parsed_while(parsed);
     break;
   case AST_OPERATION:
     free_operation(parsed);
