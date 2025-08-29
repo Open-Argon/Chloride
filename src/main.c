@@ -463,7 +463,7 @@ int main(int argc, char *argv[]) {
   char path[FILENAME_MAX];
   cwk_path_get_absolute(CWD, path_non_absolute, path, sizeof(path));
   free(CWD);
-  ArErr err;
+  ArErr err=no_err;
   Translated translated = load_argon_file(path, &err);
   if (err.exists) {
     output_err(err);
