@@ -29,6 +29,17 @@ this operation takes 3 operands.
 1. the fixed hash of the variable name.
 1. the register of the given value (*)
 
+## OP_ASSIGN
+
+assigns to a variable in the stack. if the variable doesnt exist on the stack, it is automatically declared on the current scope.
+
+this operation takes 3 operands.
+
+1. the length of the variable name.
+1. the offset in the constant buffer of the variable name.
+1. the fixed hash of the variable name.
+1. the register of the given value (*)
+
 ## OP_LOAD_NULL
 
 sets a given register to null.

@@ -12,6 +12,7 @@
 #include "access/access.h"
 #include "call/call.h"
 #include "declaration/declaration.h"
+#include "assignment/assignment.h"
 #include "internals/hashmap/hashmap.h"
 #include "objects/functions/functions.h"
 #include "objects/literals/literals.h"
@@ -679,6 +680,8 @@ ArErr run_instruction(Translated *translated, RuntimeState *state,
     return load_variable(translated, state, *stack);
   case OP_DECLARE:
     return runtime_declaration(translated, state, *stack);
+  case OP_ASSIGN:
+    return runtime_assignment(translated, state, *stack);
   case OP_BOOL:;
     ArErr err = no_err;
     uint8_t to_register = pop_byte(translated, state);
