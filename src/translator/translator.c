@@ -9,6 +9,7 @@
 #include "access/access.h"
 #include "call/call.h"
 #include "declaration/declaration.h"
+#include "assignment/assignment.h"
 #include "dowrap/dowrap.h"
 #include "function/function.h"
 #include "identifier/identifier.h"
@@ -165,6 +166,9 @@ size_t translate_parsed(Translated *translated, ParsedValue *parsedValue,
   case AST_OPERATION:
     return translate_operation(translated, (ParsedOperation *)parsedValue->data,
                                err);
+  case AST_ASSIGN:
+    return translate_parsed_assignment(translated,
+                                        (ParsedAssign *)parsedValue->data, err);
   }
   return 0;
 }
