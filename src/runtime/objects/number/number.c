@@ -398,6 +398,7 @@ ArgonObject *new_number_object(mpq_t number) {
   add_field(object, "__class__", ARGON_NUMBER_TYPE);
   object->type = TYPE_NUMBER;
   object->value.as_number = mpq_new_gc_from(number);
+  object->as_bool = mpq_cmp_si(number, 0, 1) != 0;
   return object;
 }
 
@@ -409,6 +410,7 @@ ArgonObject *new_number_object_from_long(long n, unsigned long d) {
   mpq_set_si(r, n, d);
   object->type = TYPE_NUMBER;
   object->value.as_number = mpq_new_gc_from(r);
+  object->as_bool = n!=0;
   mpq_clear(r);
   return object;
 }
@@ -421,6 +423,7 @@ ArgonObject *new_number_object_from_double(double d) {
   mpq_set_d(r, d);
   object->type = TYPE_NUMBER;
   object->value.as_number = mpq_new_gc_from(r);
+  object->as_bool = d!=0;
   mpq_clear(r);
   return object;
 }
