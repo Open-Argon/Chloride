@@ -10,9 +10,9 @@
 #include "../parser/number/number.h"
 #include "../translator/translator.h"
 #include "access/access.h"
+#include "assignment/assignment.h"
 #include "call/call.h"
 #include "declaration/declaration.h"
-#include "assignment/assignment.h"
 #include "internals/hashmap/hashmap.h"
 #include "objects/functions/functions.h"
 #include "objects/literals/literals.h"
@@ -70,8 +70,9 @@ ArgonObject *ARGON_ADDITION_FUNCTION(size_t argc, ArgonObject **argv,
 ArgonObject *ARGON_SUBTRACTION_FUNCTION(size_t argc, ArgonObject **argv,
                                         ArErr *err, RuntimeState *state) {
   if (argc < 1) {
-    *err = create_err(0, 0, 0, "", "Runtime Error",
-                      "subtract expects at least 1 argument, got %" PRIu64, argc);
+    *err =
+        create_err(0, 0, 0, "", "Runtime Error",
+                   "subtract expects at least 1 argument, got %" PRIu64, argc);
     return ARGON_NULL;
   }
   ArgonObject *output = argv[0];
@@ -93,10 +94,11 @@ ArgonObject *ARGON_SUBTRACTION_FUNCTION(size_t argc, ArgonObject **argv,
 }
 
 ArgonObject *ARGON_MULTIPLY_FUNCTION(size_t argc, ArgonObject **argv,
-                                        ArErr *err, RuntimeState *state) {
+                                     ArErr *err, RuntimeState *state) {
   if (argc < 1) {
-    *err = create_err(0, 0, 0, "", "Runtime Error",
-                      "multiply expects at least 1 argument, got %" PRIu64, argc);
+    *err =
+        create_err(0, 0, 0, "", "Runtime Error",
+                   "multiply expects at least 1 argument, got %" PRIu64, argc);
     return ARGON_NULL;
   }
   ArgonObject *output = argv[0];
@@ -118,10 +120,11 @@ ArgonObject *ARGON_MULTIPLY_FUNCTION(size_t argc, ArgonObject **argv,
 }
 
 ArgonObject *ARGON_DIVISION_FUNCTION(size_t argc, ArgonObject **argv,
-                                        ArErr *err, RuntimeState *state) {
+                                     ArErr *err, RuntimeState *state) {
   if (argc < 1) {
-    *err = create_err(0, 0, 0, "", "Runtime Error",
-                      "division expects at least 1 argument, got %" PRIu64, argc);
+    *err =
+        create_err(0, 0, 0, "", "Runtime Error",
+                   "division expects at least 1 argument, got %" PRIu64, argc);
     return ARGON_NULL;
   }
   ArgonObject *output = argv[0];
@@ -337,24 +340,25 @@ ArgonObject *ARGON_STRING_TYPE___add__(size_t argc, ArgonObject **argv,
   if (argv[1]->type != TYPE_STRING) {
     ArgonObject *type_name = get_field_for_class(
         get_field(argv[1], "__class__", false, false), "__name__", argv[1]);
-    *err = create_err(0, 0, 0, "", "Runtime Error",
-                      "__add__ cannot perform concatenation between a string and %.*s",
-                      type_name->value.as_str.length,
-                      type_name->value.as_str.data);
+    *err = create_err(
+        0, 0, 0, "", "Runtime Error",
+        "__add__ cannot perform concatenation between a string and %.*s",
+        type_name->value.as_str.length, type_name->value.as_str.data);
     return ARGON_NULL;
   }
-  size_t length = argv[0]->value.as_str.length+argv[1]->value.as_str.length;
-  char*concat = malloc(length);
-  memcpy(concat,argv[0]->value.as_str.data, argv[0]->value.as_str.length);
-  memcpy(concat+argv[0]->value.as_str.length,argv[1]->value.as_str.data, argv[1]->value.as_str.length);
-  ArgonObject* object = new_string_object(concat, length);
+  size_t length = argv[0]->value.as_str.length + argv[1]->value.as_str.length;
+  char *concat = malloc(length);
+  memcpy(concat, argv[0]->value.as_str.data, argv[0]->value.as_str.length);
+  memcpy(concat + argv[0]->value.as_str.length, argv[1]->value.as_str.data,
+         argv[1]->value.as_str.length);
+  ArgonObject *object = new_string_object(concat, length);
   free(concat);
   return object;
 }
 
 ArgonObject *ARGON_BOOL_TYPE___string__(size_t argc, ArgonObject **argv,
                                         ArErr *err, RuntimeState *state) {
-                                          (void)state;
+  (void)state;
   if (argc != 1) {
     *err = create_err(0, 0, 0, "", "Runtime Error",
                       "__string__ expects 1 arguments, got %" PRIu64, argc);
@@ -366,7 +370,7 @@ ArgonObject *ARGON_BOOL_TYPE___string__(size_t argc, ArgonObject **argv,
 
 ArgonObject *ARGON_BOOL_TYPE___number__(size_t argc, ArgonObject **argv,
                                         ArErr *err, RuntimeState *state) {
-                                          (void)state;
+  (void)state;
   if (argc != 1) {
     *err = create_err(0, 0, 0, "", "Runtime Error",
                       "__number__ expects 1 arguments, got %" PRIu64, argc);
@@ -519,9 +523,8 @@ void bootstrap_types() {
   add_field(
       ARGON_STRING_TYPE, "__init__",
       create_argon_native_function("__init__", ARGON_STRING_TYPE___init__));
-  add_field(
-      ARGON_STRING_TYPE, "__add__",
-      create_argon_native_function("__add__", ARGON_STRING_TYPE___add__));
+  add_field(ARGON_STRING_TYPE, "__add__",
+            create_argon_native_function("__add__", ARGON_STRING_TYPE___add__));
   add_field(
       ARGON_STRING_TYPE, "__number__",
       create_argon_native_function("__number__", ARGON_STRING_TYPE___number__));
@@ -597,19 +600,7 @@ int compare_by_order(const void *a, const void *b) {
   return itemA->order - itemB->order;
 }
 
-uint8_t pop_byte(Translated *translated, RuntimeState *state) {
-  return *((uint8_t *)darray_get(&translated->bytecode, state->head++));
-}
-
-uint64_t pop_bytecode(Translated *translated, RuntimeState *state) {
-  uint64_t value = 0;
-  for (int i = 0; i < 8; i++) {
-    value |= ((uint64_t)pop_byte(translated, state)) << (i * 8);
-  }
-  return value;
-}
-
-void load_const(Translated *translated, RuntimeState *state) {
+static inline void load_const(Translated *translated, RuntimeState *state) {
   uint64_t to_register = pop_byte(translated, state);
   size_t length = pop_bytecode(translated, state);
   uint64_t offset = pop_bytecode(translated, state);
@@ -636,8 +627,8 @@ uint64_t runtime_hash(const void *data, size_t len, uint64_t prehash) {
   return hash;
 }
 
-ArErr load_variable(Translated *translated, RuntimeState *state,
-                    struct Stack *stack) {
+static inline ArErr load_variable(Translated *translated, RuntimeState *state,
+                                  struct Stack *stack) {
   int64_t length = pop_bytecode(translated, state);
   int64_t offset = pop_bytecode(translated, state);
   uint64_t prehash = pop_bytecode(translated, state);
@@ -660,137 +651,154 @@ ArErr load_variable(Translated *translated, RuntimeState *state,
   return err;
 }
 
-ArErr run_instruction(Translated *translated, RuntimeState *state,
-                      struct Stack **stack) {
-  OperationType opcode = pop_byte(translated, state);
-  switch (opcode) {
-  case OP_LOAD_NULL:
-    state->registers[pop_byte(translated, state)] = ARGON_NULL;
-    break;
-  case OP_LOAD_STRING:
-    load_const(translated, state);
-    break;
-  case OP_LOAD_NUMBER:
-    load_number(translated, state);
-    break;
-  case OP_LOAD_FUNCTION:
-    load_argon_function(translated, state, *stack);
-    break;
-  case OP_IDENTIFIER:
-    return load_variable(translated, state, *stack);
-  case OP_DECLARE:
-    return runtime_declaration(translated, state, *stack);
-  case OP_ASSIGN:
-    return runtime_assignment(translated, state, *stack);
-  case OP_BOOL:;
-    ArErr err = no_err;
-    uint8_t to_register = pop_byte(translated, state);
-    ArgonObject *args[] = {ARGON_BOOL_TYPE, state->registers[0]};
-    state->registers[to_register] =
-        ARGON_BOOL_TYPE___new__(2, args, &err, state);
-    return err;
-  case OP_JUMP_IF_FALSE:;
-    uint8_t from_register = pop_byte(translated, state);
-    uint64_t to = pop_bytecode(translated, state);
-    if (state->registers[from_register] == ARGON_FALSE) {
-      state->head = to;
-    }
-    break;
-  case OP_JUMP:
-    state->head = pop_bytecode(translated, state);
-    break;
-  case OP_NEW_SCOPE:
-    *stack = create_scope(*stack);
-    break;
-  case OP_POP_SCOPE:;
-    // struct node_GC *array =
-    //     checked_malloc(sizeof(struct node_GC) * (*stack)->scope->count);
-    // size_t j = 0;
-    // for (size_t i = 0; i < (*stack)->scope->size; i++) {
-    //   struct node_GC *temp = (*stack)->scope->list[i];
-    //   while (temp) {
-    //     array[j++] = *temp;
-    //     temp = temp->next;
-    //   }
-    // }
-    // qsort(array, (*stack)->scope->count, sizeof(struct node_GC),
-    //       compare_by_order);
-    // for (size_t i = 0; i < (*stack)->scope->count; i++) {
-    //   struct node_GC temp = array[i];
-    //   printf("%.*s = %.*s\n",
-    //            (int)((ArgonObject *)temp.key)->value.as_str.length,
-    //            ((ArgonObject *)temp.key)->value.as_str.data,
-    //            (int)((ArgonObject *)temp.val)->value.as_str.length,
-    //            ((ArgonObject *)temp.val)->value.as_str.data);
-    // }
-    // free(array);
-    *stack = (*stack)->prev;
-    break;
-  case OP_INIT_CALL:;
-    size_t length = pop_bytecode(translated, state);
-    call_instance call_instance = {state->call_instance, state->registers[0],
-                                   ar_alloc(length * sizeof(ArgonObject *)),
-                                   length};
-    state->call_instance = ar_alloc(sizeof(call_instance));
-    *state->call_instance = call_instance;
-    break;
-  case OP_INSERT_ARG:;
-    size_t index = pop_bytecode(translated, state);
-    (state->call_instance->args)[index] = state->registers[0];
-    break;
-  case OP_CALL:;
-    err = run_call(state->call_instance->to_call,
-                   state->call_instance->args_length,
-                   state->call_instance->args, state, false);
-    state->call_instance = (*state->call_instance).previous;
-    return err;
-    // ArgonObject *object = state->registers[from_register];
-    // char *field = "__class__";
-    // uint64_t hash = siphash64_bytes(field, strlen(field), siphash_key);
-    // ArgonObject *class = hashmap_lookup_GC(object->dict, hash);
-    // field = "__name__";
-    // hash = siphash64_bytes(field, strlen(field), siphash_key);
-    // ArgonObject *class_name = hashmap_lookup_GC(class->dict, hash);
-    // hash = siphash64_bytes(field, strlen(field), siphash_key);
-    // ArgonObject *object_name = hashmap_lookup_GC(object->dict, hash);
-    // if (object_name) {
-    //   printf("call <%.*s %.*s at %p>\n",
-    //   (int)class_name->value.as_str.length,
-    //   class_name->value.as_str.data,(int)object_name->value.as_str.length,
-    //   object_name->value.as_str.data, object);
-    // } else {
-    //   printf("call <%.*s object at %p>\n",
-    //   (int)class_name->value.as_str.length, class_name->value.as_str.data,
-    //   object);
-    // }
-  case OP_SOURCE_LOCATION:
-    state->source_location = (SourceLocation){pop_bytecode(translated, state),
-                                              pop_bytecode(translated, state),
-                                              pop_bytecode(translated, state)};
-    break;
-  case OP_LOAD_BOOL:
-    state->registers[0] =
-        pop_byte(translated, state) ? ARGON_TRUE : ARGON_FALSE;
-    break;
-  case OP_LOAD_ACCESS_FUNCTION:
-    state->registers[0] = ACCESS_FUNCTION;
-    break;
-  case OP_LOAD_ADDITION_FUNCTION:
-    state->registers[0] = ADDITION_FUNCTION;
-    break;
-  case OP_LOAD_SUBTRACTION_FUNCTION:
-    state->registers[0] = SUBTRACTION_FUNCTION;
-    break;
-  case OP_LOAD_MULTIPLY_FUNCTION:
-    state->registers[0] = MULTIPLY_FUNCTION;
-    break;
-  case OP_LOAD_DIVISION_FUNCTION:
-    state->registers[0] = DIVISION_FUNCTION;
-    break;
-  default:
-    return create_err(0, 0, 0, NULL, "Runtime Error", "Invalid Opcode %#x",
-                      opcode);
+static inline ArErr run_instruction(Translated *translated, RuntimeState *state,
+                                    struct Stack **stack) {
+  static void *dispatch_table[] = {
+      [OP_LOAD_STRING] = &&DO_LOAD_STRING,
+      [OP_DECLARE] = &&DO_DECLARE,
+      [OP_LOAD_NULL] = &&DO_LOAD_NULL,
+      [OP_LOAD_FUNCTION] = &&DO_LOAD_FUNCTION,
+      [OP_IDENTIFIER] = &&DO_IDENTIFIER,
+      [OP_BOOL] = &&DO_BOOL,
+      [OP_JUMP_IF_FALSE] = &&DO_JUMP_IF_FALSE,
+      [OP_JUMP] = &&DO_JUMP,
+      [OP_NEW_SCOPE] = &&DO_NEW_SCOPE,
+      [OP_POP_SCOPE] = &&DO_POP_SCOPE,
+      [OP_INIT_CALL] = &&DO_INIT_CALL,
+      [OP_INSERT_ARG] = &&DO_INSERT_ARG,
+      [OP_CALL] = &&DO_CALL,
+      [OP_SOURCE_LOCATION] = &&DO_SOURCE_LOCATION,
+      [OP_LOAD_ACCESS_FUNCTION] = &&DO_LOAD_ACCESS_FUNCTION,
+      [OP_LOAD_BOOL] = &&DO_LOAD_BOOL,
+      [OP_LOAD_NUMBER] = &&DO_LOAD_NUMBER,
+      [OP_LOAD_ADDITION_FUNCTION] = &&DO_LOAD_ADDITION_FUNCTION,
+      [OP_LOAD_SUBTRACTION_FUNCTION] = &&DO_LOAD_SUBTRACTION_FUNCTION,
+      [OP_LOAD_MULTIPLY_FUNCTION] = &&DO_LOAD_MULTIPLY_FUNCTION,
+      [OP_LOAD_DIVISION_FUNCTION] = &&DO_LOAD_DIVISION_FUNCTION,
+      [OP_ASSIGN] = &&DO_ASSIGN};
+goto *dispatch_table[pop_byte(translated, state)];
+DO_LOAD_NULL:
+  state->registers[pop_byte(translated, state)] = ARGON_NULL;
+  goto BREAK;
+DO_LOAD_STRING:
+  load_const(translated, state);
+  goto BREAK;
+DO_LOAD_NUMBER:
+  load_number(translated, state);
+  goto BREAK;
+DO_LOAD_FUNCTION:
+  load_argon_function(translated, state, *stack);
+  goto BREAK;
+DO_IDENTIFIER:
+  return load_variable(translated, state, *stack);
+DO_DECLARE:
+  return runtime_declaration(translated, state, *stack);
+DO_ASSIGN:
+  return runtime_assignment(translated, state, *stack);
+DO_BOOL:;
+  ArErr err = no_err;
+  uint8_t to_register = pop_byte(translated, state);
+  ArgonObject *args[] = {ARGON_BOOL_TYPE, state->registers[0]};
+  state->registers[to_register] = ARGON_BOOL_TYPE___new__(2, args, &err, state);
+  return err;
+DO_JUMP_IF_FALSE:;
+  uint8_t from_register = pop_byte(translated, state);
+  uint64_t to = pop_bytecode(translated, state);
+  if (state->registers[from_register] == ARGON_FALSE) {
+    state->head = to;
   }
+  goto BREAK;
+DO_JUMP:
+  state->head = pop_bytecode(translated, state);
+  goto BREAK;
+DO_NEW_SCOPE:
+  *stack = create_scope(*stack);
+  goto BREAK;
+DO_POP_SCOPE:;
+  // struct node_GC *array =
+  //     checked_malloc(sizeof(struct node_GC) * (*stack)->scope->count);
+  // size_t j = 0;
+  // for (size_t i = 0; i < (*stack)->scope->size; i++) {
+  //   struct node_GC *temp = (*stack)->scope->list[i];
+  //   while (temp) {
+  //     array[j++] = *temp;
+  //     temp = temp->next;
+  //   }
+  // }
+  // qsort(array, (*stack)->scope->count, sizeof(struct node_GC),
+  //       compare_by_order);
+  // for (size_t i = 0; i < (*stack)->scope->count; i++) {
+  //   struct node_GC temp = array[i];
+  //   printf("%.*s = %.*s\n",
+  //            (int)((ArgonObject *)temp.key)->value.as_str.length,
+  //            ((ArgonObject *)temp.key)->value.as_str.data,
+  //            (int)((ArgonObject *)temp.val)->value.as_str.length,
+  //            ((ArgonObject *)temp.val)->value.as_str.data);
+  // }
+  // free(array);
+  *stack = (*stack)->prev;
+  goto BREAK;
+DO_INIT_CALL:;
+  size_t length = pop_bytecode(translated, state);
+  call_instance call_instance = {state->call_instance, state->registers[0],
+                                 ar_alloc(length * sizeof(ArgonObject *)),
+                                 length};
+  state->call_instance = ar_alloc(sizeof(call_instance));
+  *state->call_instance = call_instance;
+  goto BREAK;
+DO_INSERT_ARG:;
+  size_t index = pop_bytecode(translated, state);
+  (state->call_instance->args)[index] = state->registers[0];
+  goto BREAK;
+DO_CALL:;
+  err =
+      run_call(state->call_instance->to_call, state->call_instance->args_length,
+               state->call_instance->args, state, false);
+  state->call_instance = (*state->call_instance).previous;
+  return err;
+  // ArgonObject *object = state->registers[from_register];
+  // char *field = "__class__";
+  // uint64_t hash = siphash64_bytes(field, strlen(field), siphash_key);
+  // ArgonObject *class = hashmap_lookup_GC(object->dict, hash);
+  // field = "__name__";
+  // hash = siphash64_bytes(field, strlen(field), siphash_key);
+  // ArgonObject *class_name = hashmap_lookup_GC(class->dict, hash);
+  // hash = siphash64_bytes(field, strlen(field), siphash_key);
+  // ArgonObject *object_name = hashmap_lookup_GC(object->dict, hash);
+  // if (object_name) {
+  //   printf("call <%.*s %.*s at %p>\n",
+  //   (int)class_name->value.as_str.length,
+  //   class_name->value.as_str.data,(int)object_name->value.as_str.length,
+  //   object_name->value.as_str.data, object);
+  // } else {
+  //   printf("call <%.*s object at %p>\n",
+  //   (int)class_name->value.as_str.length, class_name->value.as_str.data,
+  //   object);
+  // }
+DO_SOURCE_LOCATION:
+  state->source_location = (SourceLocation){pop_bytecode(translated, state),
+                                            pop_bytecode(translated, state),
+                                            pop_bytecode(translated, state)};
+  goto BREAK;
+DO_LOAD_BOOL:
+  state->registers[0] = pop_byte(translated, state) ? ARGON_TRUE : ARGON_FALSE;
+  goto BREAK;
+DO_LOAD_ACCESS_FUNCTION:
+  state->registers[0] = ACCESS_FUNCTION;
+  goto BREAK;
+DO_LOAD_ADDITION_FUNCTION:
+  state->registers[0] = ADDITION_FUNCTION;
+  goto BREAK;
+DO_LOAD_SUBTRACTION_FUNCTION:
+  state->registers[0] = SUBTRACTION_FUNCTION;
+  goto BREAK;
+DO_LOAD_MULTIPLY_FUNCTION:
+  state->registers[0] = MULTIPLY_FUNCTION;
+  goto BREAK;
+DO_LOAD_DIVISION_FUNCTION:
+  state->registers[0] = DIVISION_FUNCTION;
+  goto BREAK;
+BREAK:
   return no_err;
 }
 

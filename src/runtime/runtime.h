@@ -64,11 +64,20 @@ uint64_t runtime_hash(const void *data, size_t len, uint64_t prehash);
 
 void bootstrap_globals();
 
-uint8_t pop_byte(Translated *translated, RuntimeState *state);
+static inline uint8_t pop_byte(Translated *translated, RuntimeState *state) {
+  return *((uint8_t *)darray_get(&translated->bytecode, state->head++));
+}
 
-uint64_t pop_bytecode(Translated *translated, RuntimeState *state);
+static inline uint64_t pop_bytecode(Translated *translated,
+                                    RuntimeState *state) {
+  uint64_t value = 0;
+  for (int i = 0; i < 8; i++) {
+    value |= ((uint64_t)pop_byte(translated, state)) << (i * 8);
+  }
+  return value;
+}
 
-ArErr run_instruction(Translated *translated, RuntimeState *state,
+static inline ArErr run_instruction(Translated *translated, RuntimeState *state,
                       struct Stack **stack);
 
 RuntimeState init_runtime_state(Translated translated, char *path);
