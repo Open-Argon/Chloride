@@ -21,6 +21,7 @@ ArgonObject *new_object() {
   object->dict = createHashmap_GC();
   add_field(object, "__class__", ARGON_TYPE_TYPE);
   add_field(object, "__base__", BASE_CLASS);
+  object->as_bool = true;
   return object;
 }
 

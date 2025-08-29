@@ -72,6 +72,7 @@ struct ArgonObject {
   ArgonType type;
   ArgonType child_type;
   struct hashmap_GC *dict;
+  bool as_bool;
   union {
     mpq_t *as_number;
     struct string_struct as_str;

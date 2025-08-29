@@ -474,6 +474,7 @@ void bootstrap_types() {
   add_field(ARGON_NULL_TYPE, "__base__", BASE_CLASS);
   ARGON_NULL = new_object();
   add_field(ARGON_NULL, "__class__", ARGON_NULL_TYPE);
+  ARGON_NULL->as_bool = false;
 
   add_field(BASE_CLASS, "__base__", NULL);
   add_field(BASE_CLASS, "__class__", ARGON_TYPE_TYPE);
@@ -484,6 +485,7 @@ void bootstrap_types() {
   add_field(ARGON_TRUE, "__class__", ARGON_BOOL_TYPE);
   ARGON_FALSE = new_object();
   add_field(ARGON_FALSE, "__class__", ARGON_BOOL_TYPE);
+  ARGON_NULL->as_bool = false;
 
   ARGON_STRING_TYPE = new_object();
   add_field(ARGON_STRING_TYPE, "__base__", BASE_CLASS);
@@ -676,7 +678,7 @@ static inline ArErr run_instruction(Translated *translated, RuntimeState *state,
       [OP_LOAD_MULTIPLY_FUNCTION] = &&DO_LOAD_MULTIPLY_FUNCTION,
       [OP_LOAD_DIVISION_FUNCTION] = &&DO_LOAD_DIVISION_FUNCTION,
       [OP_ASSIGN] = &&DO_ASSIGN};
-goto *dispatch_table[pop_byte(translated, state)];
+  goto *dispatch_table[pop_byte(translated, state)];
 DO_LOAD_NULL:
   state->registers[pop_byte(translated, state)] = ARGON_NULL;
   goto BREAK;
@@ -695,19 +697,26 @@ DO_DECLARE:
   return runtime_declaration(translated, state, *stack);
 DO_ASSIGN:
   return runtime_assignment(translated, state, *stack);
-DO_BOOL:;
-  ArErr err = no_err;
+DO_BOOL: {
   uint8_t to_register = pop_byte(translated, state);
+  if (state->registers[0]->type != TYPE_OBJECT) {
+    state->registers[to_register] =
+        state->registers[0]->as_bool ? ARGON_TRUE : ARGON_FALSE;
+    goto BREAK;
+  }
+  ArErr err = no_err;
   ArgonObject *args[] = {ARGON_BOOL_TYPE, state->registers[0]};
   state->registers[to_register] = ARGON_BOOL_TYPE___new__(2, args, &err, state);
   return err;
-DO_JUMP_IF_FALSE:;
+}
+DO_JUMP_IF_FALSE: {
   uint8_t from_register = pop_byte(translated, state);
   uint64_t to = pop_bytecode(translated, state);
   if (state->registers[from_register] == ARGON_FALSE) {
     state->head = to;
   }
   goto BREAK;
+}
 DO_JUMP:
   state->head = pop_bytecode(translated, state);
   goto BREAK;
@@ -738,7 +747,7 @@ DO_POP_SCOPE:;
   // free(array);
   *stack = (*stack)->prev;
   goto BREAK;
-DO_INIT_CALL:;
+DO_INIT_CALL: {
   size_t length = pop_bytecode(translated, state);
   call_instance call_instance = {state->call_instance, state->registers[0],
                                  ar_alloc(length * sizeof(ArgonObject *)),
@@ -746,12 +755,13 @@ DO_INIT_CALL:;
   state->call_instance = ar_alloc(sizeof(call_instance));
   *state->call_instance = call_instance;
   goto BREAK;
+}
 DO_INSERT_ARG:;
   size_t index = pop_bytecode(translated, state);
   (state->call_instance->args)[index] = state->registers[0];
   goto BREAK;
-DO_CALL:;
-  err =
+DO_CALL: {
+  ArErr err =
       run_call(state->call_instance->to_call, state->call_instance->args_length,
                state->call_instance->args, state, false);
   state->call_instance = (*state->call_instance).previous;
@@ -775,6 +785,7 @@ DO_CALL:;
   //   (int)class_name->value.as_str.length, class_name->value.as_str.data,
   //   object);
   // }
+}
 DO_SOURCE_LOCATION:
   state->source_location = (SourceLocation){pop_bytecode(translated, state),
                                             pop_bytecode(translated, state),

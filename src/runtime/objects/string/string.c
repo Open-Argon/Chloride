@@ -22,6 +22,7 @@ ArgonObject *new_string_object(char*data, size_t length) {
   object->value.as_str.data = ar_alloc_atomic(length);
   memcpy(object->value.as_str.data, data, length);
   object->value.as_str.length = length;
+  object->as_bool = length;
   return object;
 }
 
