@@ -14,10 +14,12 @@ void create_ARGON_NUMBER_TYPE();
 
 ArgonObject *new_number_object(mpq_t number);
 
+bool mpq_to_int64(mpq_t q, int64_t *out);
+
 void load_number(Translated *translated, RuntimeState *state);
 
 ArgonObject *new_number_object_from_double(double d);
 
-ArgonObject *new_number_object_from_long(long n, unsigned long d);
+ArgonObject *new_number_object_from_num_and_den(int64_t n, uint64_t d);
 
 #endif // RUNTIME_NUMBER_H

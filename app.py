@@ -1,4 +1,3 @@
-def f():
-    return f()
-
-f()
+i = 1000000
+while i:
+    i=i-1

@@ -131,27 +131,27 @@ loads a boolean into register 1
 
 ## OP_LOAD_NUMBER
 
-loads a mpq_t number into memory
+loads a mpq_t / int64 number into memory
 
 1. the register to write to. (*)
+1. is int64 (*)
 1. the size of the numerator in the constant buffer.
 1. the offset in the constant buffer of the numerator.
 1. is integer. (*)
 1. the size of the denominator in the constant buffer.
 1. the offset in the constant buffer of the denominator.
 
-## OP_LOAD_ADDITION_FUNCTION
+## OP_COPY_TO_REGISTER
 
-loads the addition function into register 1
+copies the value from one register to another
 
-## OP_LOAD_SUBTRACTION_FUNCTION
+1. the register to copy from (*)
+2. the register to write to (*)
 
-loads the subtraction function into register 1
+## OP_ADDITION
 
-## OP_LOAD_MULTIPLY_FUNCTION
+performs an addition between register A and register B, storing the result in register C
 
-loads the multiply function into register 1
-
-## OP_LOAD_DIVISION_FUNCTION
-
-loads the division function into register 1
+1. the register A (*)
+2. the register B (*)
+2. the register C (*)

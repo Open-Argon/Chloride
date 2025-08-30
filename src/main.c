@@ -427,7 +427,7 @@ Translated load_argon_file(char *path, ArErr *err) {
   }
   hashmap_free(translated.constants.hashmap, NULL);
   Translated gc_translated = {
-      translated.registerCount, NULL, {}, {}, translated.path};
+      translated.registerCount, translated.registerAssignment,NULL, {}, {}, translated.path};
   gc_translated.bytecode.data = ar_alloc_atomic(translated.bytecode.capacity);
   memcpy(gc_translated.bytecode.data, translated.bytecode.data,
          translated.bytecode.capacity);

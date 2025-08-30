@@ -86,6 +86,7 @@ Translated init_translator(char *path) {
   Translated translated;
   translated.path = path;
   translated.registerCount = 1;
+  translated.registerAssignment = 1;
   translated.return_jumps = NULL;
   darray_init(&translated.bytecode, sizeof(uint8_t));
   arena_init(&translated.constants);

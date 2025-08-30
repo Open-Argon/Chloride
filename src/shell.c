@@ -91,7 +91,7 @@ int execute_code(FILE *stream, char *path, Stack *scope,
 
   hashmap_free(__translated.constants.hashmap, NULL);
   Translated translated = {
-      __translated.registerCount, NULL, {}, {}, __translated.path};
+      __translated.registerCount, __translated.registerAssignment, NULL, {}, {}, __translated.path};
   translated.bytecode.data = ar_alloc(__translated.bytecode.capacity);
   memcpy(translated.bytecode.data, __translated.bytecode.data,
          __translated.bytecode.capacity);

@@ -376,7 +376,7 @@ ArgonObject *ARGON_BOOL_TYPE___number__(size_t argc, ArgonObject **argv,
                       "__number__ expects 1 arguments, got %" PRIu64, argc);
     return ARGON_NULL;
   }
-  return new_number_object_from_long(argv[0] == ARGON_TRUE, 1);
+  return new_number_object_from_num_and_den(argv[0] == ARGON_TRUE, 1);
 }
 
 ArgonObject *ARGON_STRING_TYPE___string__(size_t argc, ArgonObject **argv,
@@ -451,7 +451,7 @@ ArgonObject *ARGON_NULL_TYPE___number__(size_t argc, ArgonObject **argv,
     *err = create_err(0, 0, 0, "", "Runtime Error",
                       "__boolean__ expects 1 arguments, got %" PRIu64, argc);
   }
-  return new_number_object_from_long(0, 1);
+  return new_number_object_from_num_and_den(0, 1);
 }
 ArgonObject *ARGON_NULL_TYPE___string__(size_t argc, ArgonObject **argv,
                                         ArErr *err, RuntimeState *state) {
@@ -655,29 +655,28 @@ static inline ArErr load_variable(Translated *translated, RuntimeState *state,
 
 static inline ArErr run_instruction(Translated *translated, RuntimeState *state,
                                     struct Stack **stack) {
-  static void *dispatch_table[] = {
-      [OP_LOAD_STRING] = &&DO_LOAD_STRING,
-      [OP_DECLARE] = &&DO_DECLARE,
-      [OP_LOAD_NULL] = &&DO_LOAD_NULL,
-      [OP_LOAD_FUNCTION] = &&DO_LOAD_FUNCTION,
-      [OP_IDENTIFIER] = &&DO_IDENTIFIER,
-      [OP_BOOL] = &&DO_BOOL,
-      [OP_JUMP_IF_FALSE] = &&DO_JUMP_IF_FALSE,
-      [OP_JUMP] = &&DO_JUMP,
-      [OP_NEW_SCOPE] = &&DO_NEW_SCOPE,
-      [OP_POP_SCOPE] = &&DO_POP_SCOPE,
-      [OP_INIT_CALL] = &&DO_INIT_CALL,
-      [OP_INSERT_ARG] = &&DO_INSERT_ARG,
-      [OP_CALL] = &&DO_CALL,
-      [OP_SOURCE_LOCATION] = &&DO_SOURCE_LOCATION,
-      [OP_LOAD_ACCESS_FUNCTION] = &&DO_LOAD_ACCESS_FUNCTION,
-      [OP_LOAD_BOOL] = &&DO_LOAD_BOOL,
-      [OP_LOAD_NUMBER] = &&DO_LOAD_NUMBER,
-      [OP_LOAD_ADDITION_FUNCTION] = &&DO_LOAD_ADDITION_FUNCTION,
-      [OP_LOAD_SUBTRACTION_FUNCTION] = &&DO_LOAD_SUBTRACTION_FUNCTION,
-      [OP_LOAD_MULTIPLY_FUNCTION] = &&DO_LOAD_MULTIPLY_FUNCTION,
-      [OP_LOAD_DIVISION_FUNCTION] = &&DO_LOAD_DIVISION_FUNCTION,
-      [OP_ASSIGN] = &&DO_ASSIGN};
+  static void *dispatch_table[] = {[OP_LOAD_STRING] = &&DO_LOAD_STRING,
+                                   [OP_DECLARE] = &&DO_DECLARE,
+                                   [OP_LOAD_NULL] = &&DO_LOAD_NULL,
+                                   [OP_LOAD_FUNCTION] = &&DO_LOAD_FUNCTION,
+                                   [OP_IDENTIFIER] = &&DO_IDENTIFIER,
+                                   [OP_BOOL] = &&DO_BOOL,
+                                   [OP_JUMP_IF_FALSE] = &&DO_JUMP_IF_FALSE,
+                                   [OP_JUMP] = &&DO_JUMP,
+                                   [OP_NEW_SCOPE] = &&DO_NEW_SCOPE,
+                                   [OP_POP_SCOPE] = &&DO_POP_SCOPE,
+                                   [OP_INIT_CALL] = &&DO_INIT_CALL,
+                                   [OP_INSERT_ARG] = &&DO_INSERT_ARG,
+                                   [OP_CALL] = &&DO_CALL,
+                                   [OP_SOURCE_LOCATION] = &&DO_SOURCE_LOCATION,
+                                   [OP_LOAD_BOOL] = &&DO_LOAD_BOOL,
+                                   [OP_LOAD_NUMBER] = &&DO_LOAD_NUMBER,
+                                   [OP_ASSIGN] = &&DO_ASSIGN,
+                                   [OP_COPY_TO_REGISTER] =
+                                       &&DO_COPY_TO_REGISTER,
+                                   [OP_ADDITION] = &&DO_ADDITION,
+                                   [OP_SUBTRACTION] = &&DO_SUBTRACTION,
+                                   [OP_LOAD_ACCESS_FUNCTION] = &&DO_LOAD_ACCESS_FUNCTION};
   goto *dispatch_table[pop_byte(translated, state)];
 DO_LOAD_NULL:
   state->registers[pop_byte(translated, state)] = ARGON_NULL;
@@ -723,28 +722,7 @@ DO_JUMP:
 DO_NEW_SCOPE:
   *stack = create_scope(*stack);
   goto BREAK;
-DO_POP_SCOPE:;
-  // struct node_GC *array =
-  //     checked_malloc(sizeof(struct node_GC) * (*stack)->scope->count);
-  // size_t j = 0;
-  // for (size_t i = 0; i < (*stack)->scope->size; i++) {
-  //   struct node_GC *temp = (*stack)->scope->list[i];
-  //   while (temp) {
-  //     array[j++] = *temp;
-  //     temp = temp->next;
-  //   }
-  // }
-  // qsort(array, (*stack)->scope->count, sizeof(struct node_GC),
-  //       compare_by_order);
-  // for (size_t i = 0; i < (*stack)->scope->count; i++) {
-  //   struct node_GC temp = array[i];
-  //   printf("%.*s = %.*s\n",
-  //            (int)((ArgonObject *)temp.key)->value.as_str.length,
-  //            ((ArgonObject *)temp.key)->value.as_str.data,
-  //            (int)((ArgonObject *)temp.val)->value.as_str.length,
-  //            ((ArgonObject *)temp.val)->value.as_str.data);
-  // }
-  // free(array);
+DO_POP_SCOPE:
   *stack = (*stack)->prev;
   goto BREAK;
 DO_INIT_CALL: {
@@ -758,7 +736,7 @@ DO_INIT_CALL: {
 }
 DO_INSERT_ARG:;
   size_t index = pop_bytecode(translated, state);
-  (state->call_instance->args)[index] = state->registers[0];
+  state->call_instance->args[index] = state->registers[0];
   goto BREAK;
 DO_CALL: {
   ArErr err =
@@ -766,25 +744,6 @@ DO_CALL: {
                state->call_instance->args, state, false);
   state->call_instance = (*state->call_instance).previous;
   return err;
-  // ArgonObject *object = state->registers[from_register];
-  // char *field = "__class__";
-  // uint64_t hash = siphash64_bytes(field, strlen(field), siphash_key);
-  // ArgonObject *class = hashmap_lookup_GC(object->dict, hash);
-  // field = "__name__";
-  // hash = siphash64_bytes(field, strlen(field), siphash_key);
-  // ArgonObject *class_name = hashmap_lookup_GC(class->dict, hash);
-  // hash = siphash64_bytes(field, strlen(field), siphash_key);
-  // ArgonObject *object_name = hashmap_lookup_GC(object->dict, hash);
-  // if (object_name) {
-  //   printf("call <%.*s %.*s at %p>\n",
-  //   (int)class_name->value.as_str.length,
-  //   class_name->value.as_str.data,(int)object_name->value.as_str.length,
-  //   object_name->value.as_str.data, object);
-  // } else {
-  //   printf("call <%.*s object at %p>\n",
-  //   (int)class_name->value.as_str.length, class_name->value.as_str.data,
-  //   object);
-  // }
 }
 DO_SOURCE_LOCATION:
   state->source_location = (SourceLocation){pop_bytecode(translated, state),
@@ -797,18 +756,134 @@ DO_LOAD_BOOL:
 DO_LOAD_ACCESS_FUNCTION:
   state->registers[0] = ACCESS_FUNCTION;
   goto BREAK;
-DO_LOAD_ADDITION_FUNCTION:
-  state->registers[0] = ADDITION_FUNCTION;
+DO_COPY_TO_REGISTER: {
+  uint8_t from_register = pop_byte(translated, state);
+  uint64_t to_register = pop_byte(translated, state);
+  state->registers[to_register] = state->registers[from_register];
   goto BREAK;
-DO_LOAD_SUBTRACTION_FUNCTION:
-  state->registers[0] = SUBTRACTION_FUNCTION;
-  goto BREAK;
-DO_LOAD_MULTIPLY_FUNCTION:
-  state->registers[0] = MULTIPLY_FUNCTION;
-  goto BREAK;
-DO_LOAD_DIVISION_FUNCTION:
-  state->registers[0] = DIVISION_FUNCTION;
-  goto BREAK;
+}
+DO_ADDITION: {
+  uint8_t registerA = pop_byte(translated, state);
+  uint64_t registerB = pop_byte(translated, state);
+  uint64_t registerC = pop_byte(translated, state);
+
+  ArgonObject *valueA = state->registers[registerA];
+  ArgonObject *valueB = state->registers[registerB];
+
+  if (valueA->type == TYPE_NUMBER && valueB->type == TYPE_NUMBER) {
+    if (valueA->value.as_number.is_int64 && valueB->value.as_number.is_int64) {
+      int64_t a = valueA->value.as_number.n.i64;
+      int64_t b = valueB->value.as_number.n.i64;
+      bool gonna_overflow = (a > 0 && b > 0 && a > INT64_MAX - b) ||
+                            (a < 0 && b < 0 && a < INT64_MIN - b);
+      if (!gonna_overflow) {
+        state->registers[registerC] =
+            new_number_object_from_num_and_den(a + b, 1);
+        goto BREAK;
+      }
+      mpq_t a_GMP, b_GMP;
+      mpq_init(a_GMP);
+      mpq_init(b_GMP);
+      mpq_set_si(a_GMP, a, 1);
+      mpq_set_si(b_GMP, b, 1);
+      mpq_add(a_GMP, a_GMP, b_GMP);
+      state->registers[registerC] = new_number_object(a_GMP);
+      mpq_clear(a_GMP);
+      mpq_clear(b_GMP);
+    } else if (!valueA->value.as_number.is_int64 &&
+               !valueB->value.as_number.is_int64) {
+      mpq_t r;
+      mpq_init(r);
+      mpq_add(r, *valueA->value.as_number.n.mpq,
+              *valueB->value.as_number.n.mpq);
+      state->registers[registerC] = new_number_object(r);
+      mpq_clear(r);
+    } else {
+      mpq_t a_GMP, b_GMP;
+      mpq_init(a_GMP);
+      mpq_init(b_GMP);
+      if (valueA->value.as_number.is_int64) {
+        mpq_set_si(a_GMP, valueA->value.as_number.n.i64, 1);
+        mpq_set(b_GMP, *valueB->value.as_number.n.mpq);
+      } else {
+        mpq_set(a_GMP, *valueA->value.as_number.n.mpq);
+        mpq_set_si(b_GMP, valueB->value.as_number.n.i64, 1);
+      }
+      mpq_add(a_GMP, a_GMP, b_GMP);
+      state->registers[registerC] = new_number_object(a_GMP);
+      mpq_clear(a_GMP);
+      mpq_clear(b_GMP);
+    }
+    goto BREAK;
+  }
+
+  ArErr err = no_err;
+  ArgonObject *args[] = {valueA, valueB};
+  state->registers[registerC] = ARGON_ADDITION_FUNCTION(2, args, &err, state);
+  return err;
+}
+DO_SUBTRACTION: {
+  uint8_t registerA = pop_byte(translated, state);
+  uint64_t registerB = pop_byte(translated, state);
+  uint64_t registerC = pop_byte(translated, state);
+
+  ArgonObject *valueA = state->registers[registerA];
+  ArgonObject *valueB = state->registers[registerB];
+
+  if (valueA->type == TYPE_NUMBER && valueB->type == TYPE_NUMBER) {
+    if (valueA->value.as_number.is_int64 && valueB->value.as_number.is_int64) {
+      int64_t a = valueA->value.as_number.n.i64;
+      int64_t b = valueB->value.as_number.n.i64;
+      int64_t neg_a = -a;
+      bool gonna_overflow = (neg_a > 0 && b > 0 && b > INT64_MAX - neg_a) ||
+                            (neg_a < 0 && b < 0 && b < INT64_MIN - neg_a);
+      if (!gonna_overflow) {
+        state->registers[registerC] =
+            new_number_object_from_num_and_den(a - b, 1);
+        goto BREAK;
+      }
+      mpq_t a_GMP, b_GMP;
+      mpq_init(a_GMP);
+      mpq_init(b_GMP);
+      mpq_set_si(a_GMP, a, 1);
+      mpq_set_si(b_GMP, b, 1);
+      mpq_sub(a_GMP, a_GMP, b_GMP);
+      state->registers[registerC] = new_number_object(a_GMP);
+      mpq_clear(a_GMP);
+      mpq_clear(b_GMP);
+    } else if (!valueA->value.as_number.is_int64 &&
+               !valueB->value.as_number.is_int64) {
+      mpq_t r;
+      mpq_init(r);
+      mpq_sub(r, *valueA->value.as_number.n.mpq,
+              *valueB->value.as_number.n.mpq);
+      state->registers[registerC] = new_number_object(r);
+      mpq_clear(r);
+    } else {
+      mpq_t a_GMP, b_GMP;
+      mpq_init(a_GMP);
+      mpq_init(b_GMP);
+      if (valueA->value.as_number.is_int64) {
+        mpq_set_si(a_GMP, valueA->value.as_number.n.i64, 1);
+        mpq_set(b_GMP, *valueB->value.as_number.n.mpq);
+      } else {
+        mpq_set(a_GMP, *valueA->value.as_number.n.mpq);
+        mpq_set_si(b_GMP, valueB->value.as_number.n.i64, 1);
+      }
+      mpq_sub(a_GMP, a_GMP, b_GMP);
+      state->registers[registerC] = new_number_object(a_GMP);
+      mpq_clear(a_GMP);
+      mpq_clear(b_GMP);
+    }
+    goto BREAK;
+  }
+
+  ArErr err = no_err;
+  ArgonObject *args[] = {valueA, valueB};
+  state->registers[registerC] = ARGON_ADDITION_FUNCTION(2, args, &err, state);
+  return err;
+}
+
 BREAK:
   return no_err;
 }
