@@ -134,6 +134,7 @@ ArErr run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
     }
     StackFrame new_stackFrame = {
         {object->value.argon_fn.translated.registerCount,
+          object->value.argon_fn.translated.registerAssignment,
          NULL,
          {object->value.argon_fn.bytecode, sizeof(uint8_t),
           object->value.argon_fn.bytecode_length,

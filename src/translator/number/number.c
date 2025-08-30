@@ -5,6 +5,7 @@
  */
 
 #include "number.h"
+#include "../../runtime/objects/number/number.h"
 #include "../translator.h"
 #include <gmp.h>
 #include <stddef.h>
@@ -16,6 +17,13 @@ size_t translate_parsed_number(Translated *translated, mpq_t *number,
   set_registers(translated, to_register + 1);
   size_t start = push_instruction_byte(translated, OP_LOAD_NUMBER);
   push_instruction_byte(translated, to_register);
+  int64_t i64;
+  uint8_t is_int64 = mpq_to_int64(*number, &i64);
+  push_instruction_byte(translated, is_int64);
+  if (is_int64) {
+    push_instruction_code(translated, i64);
+    return start;
+  }
   size_t num_size;
   void *num_data = mpz_export(NULL, &num_size, 1, 1, 0, 0, mpq_numref(*number));
   size_t numerator_pos = arena_push(&translated->constants, num_data, num_size);

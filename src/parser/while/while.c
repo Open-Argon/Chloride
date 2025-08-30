@@ -94,6 +94,8 @@ void free_parsed_while(void *ptr) {
   ParsedValue *parsedValue = ptr;
   ParsedWhile *parsed_while = parsedValue->data;
   free_parsed(parsed_while->condition);
+  free(parsed_while->condition);
   free_parsed(parsed_while->content);
+  free(parsed_while->content);
   free(parsed_while);
 }

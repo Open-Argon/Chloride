@@ -40,6 +40,7 @@ typedef struct {
 
 typedef struct {
   uint8_t registerCount;
+  uint8_t registerAssignment;
   DArray *return_jumps;
   DArray bytecode;
   ConstantArena constants;
@@ -74,7 +75,13 @@ struct ArgonObject {
   struct hashmap_GC *dict;
   bool as_bool;
   union {
-    mpq_t *as_number;
+    struct as_number {
+      bool is_int64;
+      union {
+        mpq_t *mpq;
+        int64_t i64;
+      } n;
+    }as_number;
     struct string_struct as_str;
     native_fn native_fn;
     struct argon_function_struct argon_fn;

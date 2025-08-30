@@ -15,6 +15,7 @@
 
 ArgonObject *BASE_CLASS = NULL;
 
+
 ArgonObject *new_object() {
   ArgonObject *object = ar_alloc(sizeof(ArgonObject));
   object->type = TYPE_OBJECT;
