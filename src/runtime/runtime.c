@@ -683,6 +683,7 @@ static inline void run_instructions(Translated *translated, RuntimeState *state,
       [OP_JUMP_IF_FALSE] = &&DO_JUMP_IF_FALSE,
       [OP_JUMP] = &&DO_JUMP,
       [OP_NEW_SCOPE] = &&DO_NEW_SCOPE,
+      [OP_EMPTY_SCOPE] = &&DO_EMPTY_SCOPE,
       [OP_POP_SCOPE] = &&DO_POP_SCOPE,
       [OP_INIT_CALL] = &&DO_INIT_CALL,
       [OP_INSERT_ARG] = &&DO_INSERT_ARG,
@@ -744,6 +745,9 @@ DO_JUMP:
   goto START;
 DO_NEW_SCOPE:
   *stack = create_scope(*stack);
+  goto START;
+DO_EMPTY_SCOPE:
+  clear_hashmap_GC((*stack)->scope);
   goto START;
 DO_POP_SCOPE:
   *stack = (*stack)->prev;

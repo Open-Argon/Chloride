@@ -17,7 +17,7 @@ ArgonObject *new_string_object(char *data, size_t length, uint64_t prehash,
                                uint64_t hash) {
   ArgonObject *object = new_object();
   add_builtin_field(object, __class__, ARGON_STRING_TYPE);
-  add_builtin_field(object, length,
+  add_builtin_field(object, field_length,
                     new_number_object_from_num_and_den(length, 1));
   object->type = TYPE_STRING;
   object->value.as_str.data = ar_alloc_atomic(length);

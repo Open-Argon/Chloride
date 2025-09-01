@@ -21,7 +21,14 @@ struct hashmap_GC *createHashmap_GC() {
   t->order = 1;
   t->list = (struct node_GC **)ar_alloc(sizeof(struct node_GC *) * size);
   memset(t->list, 0, sizeof(struct node_GC *) * size);
+  t->count = 0;
   return t;
+}
+
+void clear_hashmap_GC(struct hashmap_GC *t) {
+  t->order = 1;
+  t->count = 0;
+  memset(t->list, 0, sizeof(struct node_GC *) * t->size);
 }
 
 void resize_hashmap_GC(struct hashmap_GC *t) {

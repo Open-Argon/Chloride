@@ -18,7 +18,7 @@ size_t translate_parsed_while(Translated *translated, ParsedWhile *parsedWhile,
     translated->return_jumps = &return_jumps;
   }
   size_t first = push_instruction_byte(translated, OP_NEW_SCOPE);
-  translate_parsed(translated, parsedWhile->condition, err);
+  size_t start_of_loop = translate_parsed(translated, parsedWhile->condition, err);
   if (err->exists) {
     return 0;
   }
@@ -28,9 +28,9 @@ size_t translate_parsed_while(Translated *translated, ParsedWhile *parsedWhile,
   push_instruction_byte(translated, 0);
   uint64_t jump_index = push_instruction_code(translated, 0);
   translate_parsed(translated, parsedWhile->content, err);
-  push_instruction_byte(translated, OP_POP_SCOPE);
+  push_instruction_byte(translated, OP_EMPTY_SCOPE);
   push_instruction_byte(translated, OP_JUMP);
-  push_instruction_code(translated, first);
+  push_instruction_code(translated, start_of_loop);
 
 
 
