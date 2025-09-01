@@ -671,9 +671,8 @@ static inline void load_variable(Translated *translated, RuntimeState *state,
                     arena_get(&translated->constants, offset));
   return;
 }
-
-static inline void run_instruction(Translated *translated, RuntimeState *state,
-                                   struct Stack **stack, ArErr *err) {
+static inline void run_instructions(Translated *translated, RuntimeState *state,
+                                    struct Stack **stack, ArErr *err) {
   static void *dispatch_table[] = {
       [OP_LOAD_STRING] = &&DO_LOAD_STRING,
       [OP_DECLARE] = &&DO_DECLARE,
@@ -696,35 +695,41 @@ static inline void run_instruction(Translated *translated, RuntimeState *state,
       [OP_ADDITION] = &&DO_ADDITION,
       [OP_SUBTRACTION] = &&DO_SUBTRACTION,
       [OP_LOAD_ACCESS_FUNCTION] = &&DO_LOAD_ACCESS_FUNCTION};
+START:
+  if (unlikely(state->head >= translated->bytecode.size || err->exists))
+    return;
   goto *dispatch_table[pop_byte(translated, state)];
 DO_LOAD_NULL:
   state->registers[pop_byte(translated, state)] = ARGON_NULL;
-  return;
+  goto START;
 DO_LOAD_STRING:
   load_const(translated, state);
-  return;
+  goto START;
 DO_LOAD_NUMBER:
   load_number(translated, state);
-  return;
+  goto START;
 DO_LOAD_FUNCTION:
   load_argon_function(translated, state, *stack);
-  return;
+  goto START;
 DO_IDENTIFIER:
-  return load_variable(translated, state, *stack, err);
+  load_variable(translated, state, *stack, err);
+  goto START;
 DO_DECLARE:
-  return runtime_declaration(translated, state, *stack, err);
+  runtime_declaration(translated, state, *stack, err);
+  goto START;
 DO_ASSIGN:
-  return runtime_assignment(translated, state, *stack);
+  runtime_assignment(translated, state, *stack);
+  goto START;
 DO_BOOL: {
   uint8_t to_register = pop_byte(translated, state);
   if (likely(state->registers[0]->type != TYPE_OBJECT)) {
     state->registers[to_register] =
         state->registers[0]->as_bool ? ARGON_TRUE : ARGON_FALSE;
-    return;
+    goto START;
   }
   ArgonObject *args[] = {ARGON_BOOL_TYPE, state->registers[0]};
   state->registers[to_register] = ARGON_BOOL_TYPE___new__(2, args, err, state);
-  return;
+  goto START;
 }
 DO_JUMP_IF_FALSE: {
   uint8_t from_register = pop_byte(translated, state);
@@ -732,17 +737,17 @@ DO_JUMP_IF_FALSE: {
   if (state->registers[from_register] == ARGON_FALSE) {
     state->head = to;
   }
-  return;
+  goto START;
 }
 DO_JUMP:
   state->head = pop_bytecode(translated, state);
-  return;
+  goto START;
 DO_NEW_SCOPE:
   *stack = create_scope(*stack);
-  return;
+  goto START;
 DO_POP_SCOPE:
   *stack = (*stack)->prev;
-  return;
+  goto START;
 DO_INIT_CALL: {
   size_t length = pop_bytecode(translated, state);
   call_instance call_instance = {state->call_instance, state->registers[0],
@@ -750,34 +755,34 @@ DO_INIT_CALL: {
                                  length};
   state->call_instance = ar_alloc(sizeof(call_instance));
   *state->call_instance = call_instance;
-  return;
+  goto START;
 }
 DO_INSERT_ARG:;
   size_t index = pop_bytecode(translated, state);
   state->call_instance->args[index] = state->registers[0];
-  return;
+  goto START;
 DO_CALL: {
   run_call(state->call_instance->to_call, state->call_instance->args_length,
            state->call_instance->args, state, false, err);
   state->call_instance = (*state->call_instance).previous;
-  return;
+  goto START;
 }
 DO_SOURCE_LOCATION:
   state->source_location = (SourceLocation){pop_bytecode(translated, state),
                                             pop_bytecode(translated, state),
                                             pop_bytecode(translated, state)};
-  return;
+  goto START;
 DO_LOAD_BOOL:
   state->registers[0] = pop_byte(translated, state) ? ARGON_TRUE : ARGON_FALSE;
-  return;
+  goto START;
 DO_LOAD_ACCESS_FUNCTION:
   state->registers[0] = ACCESS_FUNCTION;
-  return;
+  goto START;
 DO_COPY_TO_REGISTER: {
   uint8_t from_register = pop_byte(translated, state);
   uint64_t to_register = pop_byte(translated, state);
   state->registers[to_register] = state->registers[from_register];
-  return;
+  goto START;
 }
 DO_ADDITION: {
   uint8_t registerA = pop_byte(translated, state);
@@ -797,7 +802,7 @@ DO_ADDITION: {
       if (!gonna_overflow) {
         state->registers[registerC] =
             new_number_object_from_num_and_den(a + b, 1);
-        return;
+        goto START;
       }
       mpq_t a_GMP, b_GMP;
       mpq_init(a_GMP);
@@ -832,12 +837,12 @@ DO_ADDITION: {
       mpq_clear(a_GMP);
       mpq_clear(b_GMP);
     }
-    return;
+    goto START;
   }
 
   ArgonObject *args[] = {valueA, valueB};
   state->registers[registerC] = ARGON_ADDITION_FUNCTION(2, args, err, state);
-  return;
+  goto START;
 }
 DO_SUBTRACTION: {
   uint8_t registerA = pop_byte(translated, state);
@@ -858,7 +863,7 @@ DO_SUBTRACTION: {
       if (!gonna_overflow) {
         state->registers[registerC] =
             new_number_object_from_num_and_den(a - b, 1);
-        return;
+        goto START;
       }
       mpq_t a_GMP, b_GMP;
       mpq_init(a_GMP);
@@ -893,13 +898,14 @@ DO_SUBTRACTION: {
       mpq_clear(a_GMP);
       mpq_clear(b_GMP);
     }
-    return;
+    goto START;
   }
 
   ArgonObject *args[] = {valueA, valueB};
   state->registers[registerC] = ARGON_ADDITION_FUNCTION(2, args, err, state);
-  return;
+  goto START;
 }
+  goto START;
 }
 
 RuntimeState init_runtime_state(Translated translated, char *path) {
@@ -930,12 +936,8 @@ void runtime(Translated translated, RuntimeState state, Stack *stack,
   *currentStackFrame = (StackFrame){translated, state, stack, NULL, 0};
   currentStackFrame->state.currentStackFramePointer = &currentStackFrame;
   while (currentStackFrame) {
-    while (likely(currentStackFrame->state.head <
-                      currentStackFrame->translated.bytecode.size &&
-                  !err->exists)) {
-      run_instruction(&currentStackFrame->translated, &currentStackFrame->state,
-                      &currentStackFrame->stack, err);
-    }
+    run_instructions(&currentStackFrame->translated, &currentStackFrame->state,
+                     &currentStackFrame->stack, err);
     currentStackFrame = currentStackFrame->previousStackFrame;
   }
 }

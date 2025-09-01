@@ -1,3 +1,4 @@
-let i = 1000000
+let i = 10000000
 while (i) do
+  term.log(i)
   i=i-1
