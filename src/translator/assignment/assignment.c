@@ -15,7 +15,6 @@
 
 size_t translate_parsed_assignment(Translated *translated,
                                    ParsedAssign *assignment, ArErr *err) {
-  printf("bruh\n");
   set_registers(translated, 1);
   DArray *old_return_jumps = translated->return_jumps;
   translated->return_jumps = NULL;
