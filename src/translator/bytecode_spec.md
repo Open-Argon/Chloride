@@ -93,6 +93,10 @@ jumps unconditionally to an index.
 
 creates a new stack
 
+## OP_EMPTY_SCOPE
+
+empties the current scope so the same memory can be reused.
+
 ## OP_POP_SCOPE
 
 pops the top scope off the current

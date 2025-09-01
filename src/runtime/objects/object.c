@@ -20,7 +20,7 @@ const char *built_in_field_names[BUILT_IN_FIELDS_COUNT] = {
     "__string__",  "__subtract__", "__multiply__", "__division__",
     "__new__",     "__init__",     "__boolean__",  "__get_attr__",
     "__binding__", "__function__", "address",      "__call__",
-    "__number__",  "log"};
+    "__number__",  "log", "length"};
 
 uint64_t built_in_field_hashes[BUILT_IN_FIELDS_COUNT];
 

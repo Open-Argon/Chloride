@@ -30,6 +30,7 @@ typedef enum {
   __call__,
   __number__,
   field_log,
+  field_length,
   BUILT_IN_FIELDS_COUNT
 } built_in_fields;
 

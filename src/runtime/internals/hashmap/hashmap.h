@@ -25,6 +25,8 @@ struct hashmap_GC {
 
 struct hashmap_GC *createHashmap_GC();
 
+void clear_hashmap_GC(struct hashmap_GC *t);
+
 int hashCode_GC(struct hashmap_GC *t, uint64_t hash);
 
 int hashmap_remove_GC(struct hashmap_GC *t, uint64_t hash);
