@@ -6,16 +6,15 @@
 
 #include "assignment.h"
 
-ArErr runtime_assignment(Translated *translated, RuntimeState *state,
+void runtime_assignment(Translated *translated, RuntimeState *state,
                          struct Stack *stack) {
   int64_t length = pop_bytecode(translated, state);
   int64_t offset = pop_bytecode(translated, state);
   int64_t prehash = pop_bytecode(translated, state);
   int64_t from_register = pop_byte(translated, state);
-  uint64_t hash =
-      runtime_hash(arena_get(&translated->constants, offset), length, prehash);
-  ArgonObject *key =
-      new_string_object(arena_get(&translated->constants, offset), length);
+  void *data = arena_get(&translated->constants, offset);
+  uint64_t hash = runtime_hash(data, length, prehash);
+  ArgonObject *key = new_string_object(data, length, prehash, hash);
   for (Stack *current_stack = stack; current_stack;
        current_stack = current_stack->prev) {
     ArgonObject *exists = hashmap_lookup_GC(current_stack->scope, hash);
@@ -26,5 +25,4 @@ ArErr runtime_assignment(Translated *translated, RuntimeState *state,
   }
   hashmap_insert_GC(stack->scope, hash, key, state->registers[from_register],
                     0);
-  return no_err;
 }

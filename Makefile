@@ -30,11 +30,11 @@ native: $(CFILES) $(LEXER_C) $(LEXER_H)
 
 debug: $(CFILES) $(LEXER_C) $(LEXER_H)
 	mkdir -p bin
-	gcc -g -O3 -o $(BINARY) $(CFILES) $(CFLAGS)
+	gcc -g -O0 -o $(BINARY) $(CFILES) $(CFLAGS)
 
 full-debug: $(CFILES) $(LEXER_C) $(LEXER_H)
 	mkdir -p bin
-	gcc -g -O0 -fsanitize=address -fno-omit-frame-pointer -o $(BINARY) $(CFILES) $(CFLAGS) ${LDFLAGS}
+	gcc -g -O3 -fsanitize=address -fno-omit-frame-pointer -o $(BINARY) $(CFILES) $(CFLAGS) ${LDFLAGS}
 
 optimised: $(CFILES) $(LEXER_C) $(LEXER_H)
 	mkdir -p bin

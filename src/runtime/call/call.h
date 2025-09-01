@@ -11,7 +11,7 @@
 ArgonObject *argon_call(ArgonObject *original_object, size_t argc,
                         ArgonObject **argv, ArErr *err, RuntimeState *state);
 
-ArErr run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
-               RuntimeState *state, bool CStackFrame);
+void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
+              RuntimeState *state, bool CStackFrame, ArErr *err);
 
 #endif // runtime_call_H

@@ -40,8 +40,6 @@ typedef enum {
 
 void arena_resize(ConstantArena *arena, size_t new_size);
 
-void *arena_get(ConstantArena *arena, size_t offset);
-
 size_t arena_push(ConstantArena *arena, const void *data, size_t length);
 
 size_t push_instruction_byte(Translated *translator, uint8_t byte);

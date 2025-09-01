@@ -9,7 +9,7 @@
 #include "../runtime.h"
 #include "../objects/string/string.h"
 
-ArErr runtime_declaration(Translated *translated, RuntimeState *state,
-                          struct Stack *stack);
+void runtime_declaration(Translated *translated, RuntimeState *state,
+                         struct Stack *stack, ArErr *err);
 
 #endif // runtime_declaration_H

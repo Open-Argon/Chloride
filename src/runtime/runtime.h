@@ -11,6 +11,9 @@
 #include "internals/dynamic_array_armem/darray_armem.h"
 #include "internals/hashmap/hashmap.h"
 
+#define likely(x)   __builtin_expect(!!(x), 1)
+#define unlikely(x) __builtin_expect(!!(x), 0)
+
 extern ArgonObject *ARGON_METHOD_TYPE;
 extern Stack *Global_Scope;
 
@@ -64,26 +67,29 @@ uint64_t runtime_hash(const void *data, size_t len, uint64_t prehash);
 
 void bootstrap_globals();
 
+static inline void *arena_get(ConstantArena *arena, size_t offset) {
+  return (char*)arena->data + offset;
+}
+
 static inline uint8_t pop_byte(Translated *translated, RuntimeState *state) {
-  return *((uint8_t *)darray_get(&translated->bytecode, state->head++));
+  return ((uint8_t *)(translated->bytecode.data))[state->head++];
 }
 
-static inline uint64_t pop_bytecode(Translated *translated,
-                                    RuntimeState *state) {
-  uint64_t value = 0;
-  for (int i = 0; i < 8; i++) {
-    value |= ((uint64_t)pop_byte(translated, state)) << (i * 8);
-  }
-  return value;
+static inline uint64_t pop_bytecode(Translated *translated, RuntimeState *state) {
+    uint64_t *ptr = (uint64_t *)((uint8_t*)translated->bytecode.data + state->head);
+    uint64_t value = *ptr;
+    state->head += 8;
+    return value;
 }
 
-static inline ArErr run_instruction(Translated *translated, RuntimeState *state,
-                      struct Stack **stack);
+static inline void run_instruction(Translated *translated, RuntimeState *state,
+                                    struct Stack **stack, ArErr*err);
 
 RuntimeState init_runtime_state(Translated translated, char *path);
 
 Stack *create_scope(Stack *prev);
 
-ArErr runtime(Translated translated, RuntimeState state, Stack *stack);
+void runtime(Translated translated, RuntimeState state, Stack *stack,
+             ArErr *err);
 
 #endif // RUNTIME_H

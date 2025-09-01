@@ -51,10 +51,6 @@ void arena_resize(ConstantArena *arena, size_t new_size) {
   arena->capacity = new_capacity;
 }
 
-void *arena_get(ConstantArena *arena, size_t offset) {
-  return arena->data + offset;
-}
-
 size_t arena_push(ConstantArena *arena, const void *data, size_t length) {
   uint64_t hash = siphash64_bytes(data, length, siphash_key);
 
