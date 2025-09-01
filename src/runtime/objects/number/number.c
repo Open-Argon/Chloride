@@ -37,8 +37,8 @@ ArgonObject *ARGON_NUMBER_TYPE___new__(size_t argc, ArgonObject **argv,
   ArgonObject *object = argv[1];
 
   self->type = TYPE_STRING;
-  ArgonObject *boolean_convert_method = get_field_for_class(
-      get_field(object, "__class__", false, false), "__number__", object);
+  ArgonObject *boolean_convert_method = get_builtin_field_for_class(
+      get_builtin_field(object, __class__, false, false), __number__, object);
   if (boolean_convert_method) {
     ArgonObject *boolean_object =
         argon_call(boolean_convert_method, 0, NULL, err, state);
@@ -46,8 +46,8 @@ ArgonObject *ARGON_NUMBER_TYPE___new__(size_t argc, ArgonObject **argv,
       return ARGON_NULL;
     return boolean_object;
   }
-  ArgonObject *type_name = get_field_for_class(
-      get_field(object, "__class__", false, false), "__name__", object);
+  ArgonObject *type_name = get_builtin_field_for_class(
+      get_builtin_field(object, __class__, false, false), __name__, object);
   *err = create_err(
       0, 0, 0, "", "Runtime Error", "cannot convert type '%.*s' to number",
       type_name->value.as_str.length, type_name->value.as_str.data);
@@ -85,8 +85,8 @@ ArgonObject *ARGON_NUMBER_TYPE___add__(size_t argc, ArgonObject **argv,
     return ARGON_NULL;
   }
   if (argv[1]->type != TYPE_NUMBER) {
-    ArgonObject *type_name = get_field_for_class(
-        get_field(argv[1], "__class__", false, false), "__name__", argv[1]);
+    ArgonObject *type_name = get_builtin_field_for_class(
+        get_builtin_field(argv[1], __class__, false, false), __name__, argv[1]);
     *err = create_err(
         0, 0, 0, "", "Runtime Error",
         "__add__ cannot perform addition between a number and %.*s",
@@ -150,8 +150,8 @@ ArgonObject *ARGON_NUMBER_TYPE___subtract__(size_t argc, ArgonObject **argv,
   mpq_t r;
   mpq_init(r);
   if (argv[1]->type != TYPE_NUMBER) {
-    ArgonObject *type_name = get_field_for_class(
-        get_field(argv[1], "__class__", false, false), "__name__", argv[1]);
+    ArgonObject *type_name = get_builtin_field_for_class(
+        get_builtin_field(argv[1], __class__, false, false), __name__, argv[1]);
     *err = create_err(
         0, 0, 0, "", "Runtime Error",
         "__subtract__ cannot perform subtraction between number and %.*s",
@@ -216,8 +216,8 @@ ArgonObject *ARGON_NUMBER_TYPE___multiply__(size_t argc, ArgonObject **argv,
   mpq_t r;
   mpq_init(r);
   if (argv[1]->type != TYPE_NUMBER) {
-    ArgonObject *type_name = get_field_for_class(
-        get_field(argv[1], "__class__", false, false), "__name__", argv[1]);
+    ArgonObject *type_name = get_builtin_field_for_class(
+        get_builtin_field(argv[1], __class__, false, false), __name__, argv[1]);
     *err = create_err(
         0, 0, 0, "", "Runtime Error",
         "__multiply__ cannot perform multiplication between number and %.*s",
@@ -241,8 +241,8 @@ ArgonObject *ARGON_NUMBER_TYPE___division__(size_t argc, ArgonObject **argv,
   mpq_t r;
   mpq_init(r);
   if (argv[1]->type != TYPE_NUMBER) {
-    ArgonObject *type_name = get_field_for_class(
-        get_field(argv[1], "__class__", false, false), "__name__", argv[1]);
+    ArgonObject *type_name = get_builtin_field_for_class(
+        get_builtin_field(argv[1], __class__, false, false), __name__, argv[1]);
     *err = create_err(
         0, 0, 0, "", "Runtime Error",
         "__division__ cannot perform division between number and %.*s",
@@ -418,8 +418,8 @@ void init_small_ints() {
   for (uint64_t i = 0; i < UINT8_MAX * 2; i++) {
     small_ints[i].type = TYPE_NUMBER;
     small_ints[i].dict = createHashmap_GC();
-    add_field(&small_ints[i], "__class__", ARGON_NUMBER_TYPE);
-    add_field(&small_ints[i], "__base__", BASE_CLASS);
+    add_builtin_field(&small_ints[i], __class__, ARGON_NUMBER_TYPE);
+    add_builtin_field(&small_ints[i], __base__, BASE_CLASS);
     small_ints[i].value.as_number.is_int64 = true;
     small_ints[i].value.as_number.n.i64 = i;
     small_ints[i].as_bool = i;
@@ -428,28 +428,28 @@ void init_small_ints() {
 
 void create_ARGON_NUMBER_TYPE() {
   ARGON_NUMBER_TYPE = new_object();
-  add_field(ARGON_NUMBER_TYPE, "__name__",
+  add_builtin_field(ARGON_NUMBER_TYPE, __name__,
             new_string_object_null_terminated("number"));
-  add_field(
-      ARGON_NUMBER_TYPE, "__string__",
+  add_builtin_field(
+      ARGON_NUMBER_TYPE, __string__,
       create_argon_native_function("__string__", ARGON_NUMBER_TYPE___string__));
-  add_field(ARGON_NUMBER_TYPE, "__new__",
+  add_builtin_field(ARGON_NUMBER_TYPE, __new__,
             create_argon_native_function("__new__", ARGON_NUMBER_TYPE___new__));
-  add_field(
-      ARGON_NUMBER_TYPE, "__number__",
+  add_builtin_field(
+      ARGON_NUMBER_TYPE, __number__,
       create_argon_native_function("__number__", ARGON_NUMBER_TYPE___number__));
-  add_field(ARGON_NUMBER_TYPE, "__boolean__",
+  add_builtin_field(ARGON_NUMBER_TYPE, __boolean__,
             create_argon_native_function("__boolean__",
                                          ARGON_NUMBER_TYPE___boolean__));
-  add_field(ARGON_NUMBER_TYPE, "__add__",
+  add_builtin_field(ARGON_NUMBER_TYPE, __add__,
             create_argon_native_function("__add__", ARGON_NUMBER_TYPE___add__));
-  add_field(ARGON_NUMBER_TYPE, "__subtract__",
+  add_builtin_field(ARGON_NUMBER_TYPE, __subtract__,
             create_argon_native_function("__subtract__",
                                          ARGON_NUMBER_TYPE___subtract__));
-  add_field(ARGON_NUMBER_TYPE, "__multiply__",
+  add_builtin_field(ARGON_NUMBER_TYPE, __multiply__,
             create_argon_native_function("__multiply__",
                                          ARGON_NUMBER_TYPE___multiply__));
-  add_field(ARGON_NUMBER_TYPE, "__division__",
+  add_builtin_field(ARGON_NUMBER_TYPE, __division__,
             create_argon_native_function("__division__",
                                          ARGON_NUMBER_TYPE___division__));
   init_small_ints();
@@ -534,7 +534,7 @@ ArgonObject *new_number_object(mpq_t number) {
     return &small_ints[i64];
   }
   ArgonObject *object = new_object();
-  add_field(object, "__class__", ARGON_NUMBER_TYPE);
+  add_builtin_field(object, __class__, ARGON_NUMBER_TYPE);
   object->type = TYPE_NUMBER;
   object->value.as_number.n.i64 = i64;
   object->value.as_number.is_int64 = is_int64;
@@ -552,7 +552,7 @@ ArgonObject *new_number_object_from_num_and_den(int64_t n, uint64_t d) {
     return &small_ints[(int8_t)n];
   }
   ArgonObject *object = new_object();
-  add_field(object, "__class__", ARGON_NUMBER_TYPE);
+  add_builtin_field(object, __class__, ARGON_NUMBER_TYPE);
   object->type = TYPE_NUMBER;
   if (d == 1) {
     object->value.as_number.is_int64 = true;
@@ -577,7 +577,7 @@ ArgonObject *new_number_object_from_double(double d) {
     return &small_ints[(int8_t)i64];
   }
   ArgonObject *object = new_object();
-  add_field(object, "__class__", ARGON_NUMBER_TYPE);
+  add_builtin_field(object, __class__, ARGON_NUMBER_TYPE);
   object->type = TYPE_NUMBER;
   object->value.as_number.n.i64 = i64;
   object->value.as_number.is_int64 = is_int64;

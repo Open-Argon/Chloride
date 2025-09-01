@@ -18,12 +18,23 @@ ArgonObject *ARGON_TYPE_TYPE___get_attr__(size_t argc, ArgonObject **argv,
   bool check_field = argv[1] == ARGON_TRUE;
   if (check_field) {
     ArgonObject *access = argv[2];
-    ArgonObject *value = get_field_l(to_access, access->value.as_str.data,
+    uint64_t hash;
+    if (access->value.as_str.hash_computed) {
+      hash = access->value.as_str.hash;
+    } else {
+      hash =
+          runtime_hash(access->value.as_str.data, access->value.as_str.length,
+                       access->value.as_str.prehash);
+      access->value.as_str.hash = hash;
+      access->value.as_str.hash_computed = true;
+    }
+    ArgonObject *value = get_field_l(to_access, access->value.as_str.data, hash,
                                      access->value.as_str.length, true, false);
     if (value)
       return value;
-    ArgonObject *name = get_field_for_class(
-        get_field(to_access, "__class__", false, false), "__name__", to_access);
+    ArgonObject *name = get_builtin_field_for_class(
+        get_builtin_field(to_access, __class__, false, false), __name__,
+        to_access);
     *err = create_err(
         0, 0, 0, "", "Runtime Error", "'%.*s' object has no attribute '%.*s'",
         (int)name->value.as_str.length, name->value.as_str.data,

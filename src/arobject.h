@@ -49,6 +49,9 @@ typedef struct {
 
 struct string_struct {
   char *data;
+  uint64_t prehash;
+  uint64_t hash;
+  bool hash_computed;
   size_t length;
 };
 

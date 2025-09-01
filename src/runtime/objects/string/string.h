@@ -10,7 +10,7 @@
 
 extern ArgonObject *ARGON_STRING_TYPE;
 
-ArgonObject *new_string_object(char*data, size_t length);
+ArgonObject *new_string_object(char *data, size_t length, uint64_t prehash, uint64_t hash);
 
 ArgonObject *new_string_object_null_terminated(char*data);
 #endif // STRING_OBJ_H

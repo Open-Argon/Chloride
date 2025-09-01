@@ -12,8 +12,9 @@
 #include "memory.h"
 #include "parser/parser.h"
 #include "returnTypes.h"
-#include "shell.h"
+#include "runtime/objects/object.h"
 #include "runtime/runtime.h"
+#include "shell.h"
 #include "translator/translator.h"
 
 #include "../external/xxhash/xxhash.h"
@@ -427,7 +428,8 @@ Translated load_argon_file(char *path, ArErr *err) {
   }
   hashmap_free(translated.constants.hashmap, NULL);
   Translated gc_translated = {
-      translated.registerCount, translated.registerAssignment,NULL, {}, {}, translated.path};
+      translated.registerCount, translated.registerAssignment, NULL, {}, {},
+      translated.path};
   gc_translated.bytecode.data = ar_alloc_atomic(translated.bytecode.capacity);
   memcpy(gc_translated.bytecode.data, translated.bytecode.data,
          translated.bytecode.capacity);
@@ -454,6 +456,7 @@ int main(int argc, char *argv[]) {
   ar_memory_init();
 
   generate_siphash_key(siphash_key);
+  init_built_in_field_hashes();
   bootstrap_types();
   bootstrap_globals();
   if (argc <= 1)
@@ -463,7 +466,7 @@ int main(int argc, char *argv[]) {
   char path[FILENAME_MAX];
   cwk_path_get_absolute(CWD, path_non_absolute, path, sizeof(path));
   free(CWD);
-  ArErr err=no_err;
+  ArErr err = no_err;
   Translated translated = load_argon_file(path, &err);
   if (err.exists) {
     output_err(err);
@@ -472,7 +475,7 @@ int main(int argc, char *argv[]) {
   clock_t start = clock(), end;
   RuntimeState state = init_runtime_state(translated, path);
   Stack *main_scope = create_scope(Global_Scope);
-  err = runtime(translated, state, main_scope);
+  runtime(translated, state, main_scope, &err);
 
   end = clock();
   double time_spent = (double)(end - start) / CLOCKS_PER_SEC;

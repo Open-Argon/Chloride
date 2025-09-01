@@ -13,8 +13,8 @@ ArgonObject *term_log(size_t argc, ArgonObject **argv, ArErr *err,
   for (size_t i = 0; i < argc; i++) {
     if (i != 0)
       printf(" ");
-    ArgonObject *string_convert_method = get_field_for_class(
-        get_field(argv[i], "__class__", false, false), "__string__", argv[i]);
+    ArgonObject *string_convert_method = get_builtin_field_for_class(
+        get_builtin_field(argv[i], __class__, false, false), __string__, argv[i]);
 
     if (string_convert_method) {
       ArgonObject *string_object =

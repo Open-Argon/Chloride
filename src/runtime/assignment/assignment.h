@@ -9,7 +9,7 @@
 #include "../runtime.h"
 #include "../objects/string/string.h"
 
-ArErr runtime_assignment(Translated *translated, RuntimeState *state,
-                          struct Stack *stack);
+void runtime_assignment(Translated *translated, RuntimeState *state,
+                         struct Stack *stack);
 
 #endif // runtime_assignment_H

@@ -39,10 +39,6 @@ uint64_t siphash64_bytes(const void *data, size_t len,const uint8_t hash_key[16]
   uint8_t out[8];
   if (siphash(data, len, hash_key, out, sizeof(out)) != 0)
     return 0;
-
-  uint64_t hash = 0;
-  for (int i = 0; i < 8; ++i)
-    hash |= ((uint64_t)out[i]) << (8 * i);
-
-  return hash;
+  
+  return *(uint64_t *)out;
 }
