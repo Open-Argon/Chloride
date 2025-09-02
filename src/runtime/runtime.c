@@ -873,15 +873,13 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
         continue;
       }
 
-      ArgonObject *args[] = {valueA, valueB};
-      state->registers[registerC] =
-          ARGON_ADDITION_FUNCTION(2, args, err, state);
-      continue;
-    }
-    DO_SUBTRACTION: {
-      uint8_t registerA = pop_byte(translated, state);
-      uint8_t registerB = pop_byte(translated, state);
-      uint8_t registerC = pop_byte(translated, state);
+    ArgonObject *args[] = {valueA, valueB};
+    state->registers[registerC] = ARGON_ADDITION_FUNCTION(2, args, err, state);
+    goto START;
+  DO_SUBTRACTION:;
+     registerA = pop_byte(translated, state);
+     registerB = pop_byte(translated, state);
+     registerC = pop_byte(translated, state);
 
       ArgonObject *valueA = state->registers[registerA];
       ArgonObject *valueB = state->registers[registerB];
