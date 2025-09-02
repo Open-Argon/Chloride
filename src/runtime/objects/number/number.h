@@ -22,4 +22,6 @@ ArgonObject *new_number_object_from_double(double d);
 
 ArgonObject *new_number_object_from_num_and_den(int64_t n, uint64_t d);
 
+ArgonObject *new_number_object_from_int64(int64_t i64);
+
 #endif // RUNTIME_NUMBER_H

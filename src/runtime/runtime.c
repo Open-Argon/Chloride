@@ -388,7 +388,7 @@ ArgonObject *ARGON_BOOL_TYPE___number__(size_t argc, ArgonObject **argv,
                       "__number__ expects 1 arguments, got %" PRIu64, argc);
     return ARGON_NULL;
   }
-  return new_number_object_from_num_and_den(argv[0] == ARGON_TRUE, 1);
+  return new_number_object_from_int64(argv[0] == ARGON_TRUE);
 }
 
 ArgonObject *ARGON_STRING_TYPE___string__(size_t argc, ArgonObject **argv,
@@ -463,7 +463,7 @@ ArgonObject *ARGON_NULL_TYPE___number__(size_t argc, ArgonObject **argv,
     *err = create_err(0, 0, 0, "", "Runtime Error",
                       "__boolean__ expects 1 arguments, got %" PRIu64, argc);
   }
-  return new_number_object_from_num_and_den(0, 1);
+  return new_number_object_from_int64(0);
 }
 ArgonObject *ARGON_NULL_TYPE___string__(size_t argc, ArgonObject **argv,
                                         ArErr *err, RuntimeState *state) {
@@ -494,8 +494,10 @@ void bootstrap_types() {
   ARGON_BOOL_TYPE = new_object();
   add_builtin_field(ARGON_BOOL_TYPE, __base__, BASE_CLASS);
   ARGON_TRUE = new_object();
+  ARGON_TRUE->type = TYPE_BOOL;
   add_builtin_field(ARGON_TRUE, __class__, ARGON_BOOL_TYPE);
   ARGON_FALSE = new_object();
+  ARGON_FALSE->type = TYPE_BOOL;
   add_builtin_field(ARGON_FALSE, __class__, ARGON_BOOL_TYPE);
   ARGON_NULL->as_bool = false;
 
@@ -626,7 +628,8 @@ static inline void load_const(Translated *translated, RuntimeState *state) {
   uint64_t to_register = pop_byte(translated, state);
   size_t length = pop_bytecode(translated, state);
   uint64_t offset = pop_bytecode(translated, state);
-  ArgonObject *object = new_string_object(arena_get(&translated->constants, offset), length, 0, 0);
+  ArgonObject *object = new_string_object(
+      arena_get(&translated->constants, offset), length, 0, 0);
   state->registers[to_register] = object;
 }
 
@@ -715,8 +718,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       [OP_LOAD_ACCESS_FUNCTION] = &&DO_LOAD_ACCESS_FUNCTION};
   _state.head = 0;
 
-  StackFrame *currentStackFrame =
-      ar_alloc(sizeof(StackFrame));
+  StackFrame *currentStackFrame = ar_alloc(sizeof(StackFrame));
   *currentStackFrame = (StackFrame){_translated, _state, stack, NULL, 0};
   currentStackFrame->state.currentStackFramePointer = &currentStackFrame;
   while (currentStackFrame) {
@@ -819,8 +821,8 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
     }
     DO_ADDITION: {
       uint8_t registerA = pop_byte(translated, state);
-      uint64_t registerB = pop_byte(translated, state);
-      uint64_t registerC = pop_byte(translated, state);
+      uint8_t registerB = pop_byte(translated, state);
+      uint8_t registerC = pop_byte(translated, state);
 
       ArgonObject *valueA = state->registers[registerA];
       ArgonObject *valueB = state->registers[registerB];
@@ -833,8 +835,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
           bool gonna_overflow = (a > 0 && b > 0 && a > INT64_MAX - b) ||
                                 (a < 0 && b < 0 && a < INT64_MIN - b);
           if (!gonna_overflow) {
-            state->registers[registerC] =
-                new_number_object_from_num_and_den(a + b, 1);
+            state->registers[registerC] = new_number_object_from_int64(a + b);
             continue;
           }
           mpq_t a_GMP, b_GMP;
@@ -873,13 +874,15 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
         continue;
       }
 
-    ArgonObject *args[] = {valueA, valueB};
-    state->registers[registerC] = ARGON_ADDITION_FUNCTION(2, args, err, state);
-    goto START;
-  DO_SUBTRACTION:;
-     registerA = pop_byte(translated, state);
-     registerB = pop_byte(translated, state);
-     registerC = pop_byte(translated, state);
+      ArgonObject *args[] = {valueA, valueB};
+      state->registers[registerC] =
+          ARGON_ADDITION_FUNCTION(2, args, err, state);
+      continue;
+    }
+    DO_SUBTRACTION: {
+      uint8_t registerA = pop_byte(translated, state);
+      uint8_t registerB = pop_byte(translated, state);
+      uint8_t registerC = pop_byte(translated, state);
 
       ArgonObject *valueA = state->registers[registerA];
       ArgonObject *valueB = state->registers[registerB];
@@ -893,8 +896,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
           bool gonna_overflow = (neg_a > 0 && b > 0 && b > INT64_MAX - neg_a) ||
                                 (neg_a < 0 && b < 0 && b < INT64_MIN - neg_a);
           if (!gonna_overflow) {
-            state->registers[registerC] =
-                new_number_object_from_num_and_den(a - b, 1);
+            state->registers[registerC] = new_number_object_from_int64(a - b);
             continue;
           }
           mpq_t a_GMP, b_GMP;
@@ -939,6 +941,9 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       continue;
     }
     }
+
+    ArgonObject *result = currentStackFrame->state.registers[0];
     currentStackFrame = currentStackFrame->previousStackFrame;
+    if(currentStackFrame) currentStackFrame->state.registers[0] = result;
   }
 }

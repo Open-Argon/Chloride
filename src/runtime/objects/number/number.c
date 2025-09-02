@@ -99,7 +99,7 @@ ArgonObject *ARGON_NUMBER_TYPE___add__(size_t argc, ArgonObject **argv,
     bool gonna_overflow = (a > 0 && b > 0 && a > INT64_MAX - b) ||
                           (a < 0 && b < 0 && a < INT64_MIN - b);
     if (!gonna_overflow) {
-      return new_number_object_from_num_and_den(a + b, 1);
+      return new_number_object_from_int64(a + b);
     }
     mpq_t a_GMP, b_GMP;
     mpq_init(a_GMP);
@@ -165,7 +165,7 @@ ArgonObject *ARGON_NUMBER_TYPE___subtract__(size_t argc, ArgonObject **argv,
     bool gonna_overflow = (neg_a > 0 && b > 0 && b > INT64_MAX - neg_a) ||
                           (neg_a < 0 && b < 0 && b < INT64_MIN - neg_a);
     if (!gonna_overflow) {
-      return new_number_object_from_num_and_den(a - b, 1);
+      return new_number_object_from_int64(a - b);
     }
     mpq_t a_GMP, b_GMP;
     mpq_init(a_GMP);
@@ -414,11 +414,11 @@ ArgonObject *ARGON_NUMBER_TYPE___string__(size_t argc, ArgonObject **argv,
 
 #define small_ints_min -256
 #define small_ints_max 256
-ArgonObject small_ints[small_ints_max-small_ints_min+1];
+ArgonObject small_ints[small_ints_max - small_ints_min + 1];
 
 void init_small_ints() {
-  for (int64_t i = 0; i <= small_ints_max-small_ints_min; i++) {
-    int64_t n = i+small_ints_min;
+  for (int64_t i = 0; i <= small_ints_max - small_ints_min; i++) {
+    int64_t n = i + small_ints_min;
     small_ints[i].type = TYPE_NUMBER;
     small_ints[i].dict = createHashmap_GC();
     add_builtin_field(&small_ints[i], __class__, ARGON_NUMBER_TYPE);
@@ -432,29 +432,31 @@ void init_small_ints() {
 void create_ARGON_NUMBER_TYPE() {
   ARGON_NUMBER_TYPE = new_object();
   add_builtin_field(ARGON_NUMBER_TYPE, __name__,
-            new_string_object_null_terminated("number"));
+                    new_string_object_null_terminated("number"));
   add_builtin_field(
       ARGON_NUMBER_TYPE, __string__,
       create_argon_native_function("__string__", ARGON_NUMBER_TYPE___string__));
-  add_builtin_field(ARGON_NUMBER_TYPE, __new__,
-            create_argon_native_function("__new__", ARGON_NUMBER_TYPE___new__));
+  add_builtin_field(
+      ARGON_NUMBER_TYPE, __new__,
+      create_argon_native_function("__new__", ARGON_NUMBER_TYPE___new__));
   add_builtin_field(
       ARGON_NUMBER_TYPE, __number__,
       create_argon_native_function("__number__", ARGON_NUMBER_TYPE___number__));
   add_builtin_field(ARGON_NUMBER_TYPE, __boolean__,
-            create_argon_native_function("__boolean__",
-                                         ARGON_NUMBER_TYPE___boolean__));
-  add_builtin_field(ARGON_NUMBER_TYPE, __add__,
-            create_argon_native_function("__add__", ARGON_NUMBER_TYPE___add__));
+                    create_argon_native_function(
+                        "__boolean__", ARGON_NUMBER_TYPE___boolean__));
+  add_builtin_field(
+      ARGON_NUMBER_TYPE, __add__,
+      create_argon_native_function("__add__", ARGON_NUMBER_TYPE___add__));
   add_builtin_field(ARGON_NUMBER_TYPE, __subtract__,
-            create_argon_native_function("__subtract__",
-                                         ARGON_NUMBER_TYPE___subtract__));
+                    create_argon_native_function(
+                        "__subtract__", ARGON_NUMBER_TYPE___subtract__));
   add_builtin_field(ARGON_NUMBER_TYPE, __multiply__,
-            create_argon_native_function("__multiply__",
-                                         ARGON_NUMBER_TYPE___multiply__));
+                    create_argon_native_function(
+                        "__multiply__", ARGON_NUMBER_TYPE___multiply__));
   add_builtin_field(ARGON_NUMBER_TYPE, __division__,
-            create_argon_native_function("__division__",
-                                         ARGON_NUMBER_TYPE___division__));
+                    create_argon_native_function(
+                        "__division__", ARGON_NUMBER_TYPE___division__));
   init_small_ints();
 }
 
@@ -534,7 +536,7 @@ ArgonObject *new_number_object(mpq_t number) {
   int64_t i64 = 0;
   bool is_int64 = mpq_to_int64(number, &i64);
   if (is_int64 && i64 >= small_ints_min && i64 <= small_ints_max) {
-    return &small_ints[i64-small_ints_min];
+    return &small_ints[i64 - small_ints_min];
   }
   ArgonObject *object = new_object();
   add_builtin_field(object, __class__, ARGON_NUMBER_TYPE);
@@ -552,7 +554,7 @@ ArgonObject *new_number_object(mpq_t number) {
 
 ArgonObject *new_number_object_from_num_and_den(int64_t n, uint64_t d) {
   if (d == 1 && n >= small_ints_min && n <= small_ints_max) {
-    return &small_ints[n-small_ints_min];
+    return &small_ints[n - small_ints_min];
   }
   ArgonObject *object = new_object();
   add_builtin_field(object, __class__, ARGON_NUMBER_TYPE);
@@ -573,11 +575,24 @@ ArgonObject *new_number_object_from_num_and_den(int64_t n, uint64_t d) {
   return object;
 }
 
+ArgonObject *new_number_object_from_int64(int64_t i64) {
+  if (i64 >= small_ints_min && i64 <= small_ints_max) {
+    return &small_ints[i64 - small_ints_min];
+  }
+  ArgonObject *object = new_object();
+  add_builtin_field(object, __class__, ARGON_NUMBER_TYPE);
+  object->type = TYPE_NUMBER;
+  object->value.as_number.is_int64 = true;
+  object->value.as_number.n.i64 = i64;
+  object->as_bool = i64;
+  return object;
+}
+
 ArgonObject *new_number_object_from_double(double d) {
   int64_t i64 = 0;
   bool is_int64 = double_to_int64(d, &i64);
   if (is_int64 && i64 >= small_ints_min && i64 <= small_ints_max) {
-    return &small_ints[i64-small_ints_min];
+    return &small_ints[i64 - small_ints_min];
   }
   ArgonObject *object = new_object();
   add_builtin_field(object, __class__, ARGON_NUMBER_TYPE);
@@ -602,7 +617,7 @@ void load_number(Translated *translated, RuntimeState *state) {
   uint8_t is_int64 = pop_byte(translated, state);
   if (is_int64) {
     state->registers[to_register] =
-        new_number_object_from_num_and_den(pop_bytecode(translated, state), 1);
+        new_number_object_from_int64(pop_bytecode(translated, state));
     return;
   }
   size_t num_size = pop_bytecode(translated, state);
