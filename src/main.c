@@ -430,20 +430,20 @@ Translated load_argon_file(char *path, ArErr *err) {
   Translated gc_translated = {
       translated.registerCount, translated.registerAssignment, NULL, {}, {},
       translated.path};
-  gc_translated.bytecode.data = ar_alloc_atomic(translated.bytecode.capacity);
+  gc_translated.bytecode.data = ar_alloc_atomic(translated.bytecode.size);
   memcpy(gc_translated.bytecode.data, translated.bytecode.data,
-         translated.bytecode.capacity);
+         translated.bytecode.size);
   gc_translated.bytecode.element_size = translated.bytecode.element_size;
   gc_translated.bytecode.size = translated.bytecode.size;
   gc_translated.bytecode.resizable = false;
   gc_translated.bytecode.capacity =
       translated.bytecode.size * translated.bytecode.element_size;
-  gc_translated.constants.data = ar_alloc_atomic(translated.constants.capacity);
+  gc_translated.constants.data = ar_alloc_atomic(translated.constants.size);
   memcpy(gc_translated.constants.data, translated.constants.data,
-         translated.constants.capacity);
+         translated.constants.size);
   gc_translated.constants.size = translated.constants.size;
-  gc_translated.constants.capacity = translated.constants.capacity;
-  darray_free(&translated.bytecode, NULL);
+  gc_translated.constants.capacity = translated.constants.size * translated.bytecode.element_size;
+  free(translated.bytecode.data);
   free(translated.constants.data);
   total_time_spent = (double)(clock() - beginning) / CLOCKS_PER_SEC;
   fprintf(stderr, "total time taken loading file (%s): %f seconds\n", path,
