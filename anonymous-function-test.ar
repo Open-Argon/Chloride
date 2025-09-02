@@ -1,3 +1,4 @@
-let f(i) = do
-  while (i) i=i-1
-f(1e6)
+let i = 1000000
+while (i) do
+  i=i-1
+term.log(add)
