@@ -258,6 +258,9 @@ int load_cache(Translated *translated_dest, char *joined_paths, uint64_t hash,
 
   *translated_dest = init_translator(source_path);
 
+
+  translated_dest->registerCount = register_count;
+
   arena_resize(&translated_dest->constants, constantsSize);
 
   if (fread(translated_dest->constants.data, 1, constantsSize, bytecode_file) !=

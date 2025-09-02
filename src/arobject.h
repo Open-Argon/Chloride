@@ -48,10 +48,10 @@ typedef struct {
 } Translated;
 
 struct string_struct {
-  char *data;
   uint64_t prehash;
   uint64_t hash;
   bool hash_computed;
+  char *data;
   size_t length;
 };
 

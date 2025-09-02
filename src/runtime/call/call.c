@@ -143,7 +143,7 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
           object->value.argon_fn.bytecode_length, false},
          object->value.argon_fn.translated.constants,
          object->value.argon_fn.translated.path},
-        {state->registers,
+        {ar_alloc(object->value.argon_fn.translated.registerCount * sizeof(ArgonObject *)),
          0,
          object->value.argon_fn.translated.path,
          NULL,
@@ -156,10 +156,11 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
     if (CStackFrame) {
       runtime(new_stackFrame.translated, new_stackFrame.state,
               new_stackFrame.stack, err);
+      state->registers[0] = new_stackFrame.state.registers[0];
     } else {
-      *state->currentStackFramePointer =
-            ar_alloc(sizeof(StackFrame));
-      **state->currentStackFramePointer = new_stackFrame;
+      StackFrame *currentStackFrame = ar_alloc(sizeof(StackFrame));
+      *currentStackFrame = new_stackFrame;
+      *state->currentStackFramePointer = currentStackFrame;
       if ((*state->currentStackFramePointer)->depth >= 10000) {
         double logval =
             log10((double)(*state->currentStackFramePointer)->depth);
