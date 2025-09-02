@@ -412,17 +412,20 @@ ArgonObject *ARGON_NUMBER_TYPE___string__(size_t argc, ArgonObject **argv,
   return result;
 }
 
-ArgonObject small_ints[UINT8_MAX * 2];
+#define small_ints_min -256
+#define small_ints_max 256
+ArgonObject small_ints[small_ints_max-small_ints_min+1];
 
 void init_small_ints() {
-  for (uint64_t i = 0; i < UINT8_MAX * 2; i++) {
+  for (int64_t i = 0; i <= small_ints_max-small_ints_min; i++) {
+    int64_t n = i+small_ints_min;
     small_ints[i].type = TYPE_NUMBER;
     small_ints[i].dict = createHashmap_GC();
     add_builtin_field(&small_ints[i], __class__, ARGON_NUMBER_TYPE);
     add_builtin_field(&small_ints[i], __base__, BASE_CLASS);
     small_ints[i].value.as_number.is_int64 = true;
-    small_ints[i].value.as_number.n.i64 = i;
-    small_ints[i].as_bool = i;
+    small_ints[i].value.as_number.n.i64 = n;
+    small_ints[i].as_bool = n;
   }
 }
 
@@ -530,8 +533,8 @@ bool double_to_int64(double x, int64_t *out) {
 ArgonObject *new_number_object(mpq_t number) {
   int64_t i64 = 0;
   bool is_int64 = mpq_to_int64(number, &i64);
-  if (is_int64 && i64 >= INT8_MIN * 2 && i64 <= INT8_MAX * 2) {
-    return &small_ints[i64];
+  if (is_int64 && i64 >= small_ints_min && i64 <= small_ints_max) {
+    return &small_ints[i64-small_ints_min];
   }
   ArgonObject *object = new_object();
   add_builtin_field(object, __class__, ARGON_NUMBER_TYPE);
@@ -548,8 +551,8 @@ ArgonObject *new_number_object(mpq_t number) {
 }
 
 ArgonObject *new_number_object_from_num_and_den(int64_t n, uint64_t d) {
-  if (d == 1 && n >= INT8_MIN && n <= INT8_MAX) {
-    return &small_ints[(int8_t)n];
+  if (d == 1 && n >= small_ints_min && n <= small_ints_max) {
+    return &small_ints[n-small_ints_min];
   }
   ArgonObject *object = new_object();
   add_builtin_field(object, __class__, ARGON_NUMBER_TYPE);
@@ -573,8 +576,8 @@ ArgonObject *new_number_object_from_num_and_den(int64_t n, uint64_t d) {
 ArgonObject *new_number_object_from_double(double d) {
   int64_t i64 = 0;
   bool is_int64 = double_to_int64(d, &i64);
-  if (is_int64 && i64 >= INT8_MIN && i64 <= INT8_MAX) {
-    return &small_ints[(int8_t)i64];
+  if (is_int64 && i64 >= small_ints_min && i64 <= small_ints_max) {
+    return &small_ints[i64-small_ints_min];
   }
   ArgonObject *object = new_object();
   add_builtin_field(object, __class__, ARGON_NUMBER_TYPE);

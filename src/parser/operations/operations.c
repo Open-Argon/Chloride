@@ -12,8 +12,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-struct operation {};
-
 ParsedValue convert_to_operation(DArray *to_operate_on, DArray *operations) {
   if (to_operate_on->size == 1) {
     return *((ParsedValue *)darray_get(to_operate_on, 0));
@@ -31,7 +29,9 @@ ParsedValue convert_to_operation(DArray *to_operate_on, DArray *operations) {
       operation = *current_operation;
       darray_init(&positions, sizeof(size_t));
     }
-    darray_push(&positions, &i);
+    if (operation_type == current_operation->type) {
+      darray_push(&positions, &i);
+    }
   }
   ParsedValue parsedValue;
   parsedValue.type = AST_OPERATION;
