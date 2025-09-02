@@ -21,8 +21,6 @@ ArgonObject *new_string_object(char *data, size_t length, uint64_t prehash,
                     new_number_object_from_num_and_den(length, 1));
   object->type = TYPE_STRING;
   object->value.as_str.data = ar_alloc_atomic(length);
-  printf("%zu, %p\n", length,data);
-  printf("%.*s\n", (int)length,data);
   memcpy(object->value.as_str.data, data, length);
   object->value.as_str.prehash = prehash;
   object->value.as_str.hash_computed = hash;
