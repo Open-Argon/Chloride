@@ -14,6 +14,8 @@
 size_t translate_parsed_function(Translated *translated,
                                  ParsedFunction *parsedFunction, ArErr *err) {
   DArray main_bytecode = translated->bytecode;
+  uint8_t old_assignment = translated->registerAssignment;
+  translated->registerAssignment = 1;
   darray_init(&translated->bytecode, sizeof(uint8_t));
   set_registers(translated, 1);
   translate_parsed(translated, parsedFunction->body, err);
@@ -23,6 +25,7 @@ size_t translate_parsed_function(Translated *translated,
   size_t function_bytecode_length = translated->bytecode.size;
   darray_free(&translated->bytecode, NULL);
   translated->bytecode = main_bytecode;
+  translated->registerAssignment = old_assignment;
   size_t start = push_instruction_byte(translated, OP_LOAD_FUNCTION);
   size_t offset = arena_push(&translated->constants, parsedFunction->name,
                              strlen(parsedFunction->name));
