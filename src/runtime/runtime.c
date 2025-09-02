@@ -626,7 +626,6 @@ static inline void load_const(Translated *translated, RuntimeState *state) {
   uint64_t to_register = pop_byte(translated, state);
   size_t length = pop_bytecode(translated, state);
   uint64_t offset = pop_bytecode(translated, state);
-  printf("offset %zu\n", offset);
   ArgonObject *object = new_string_object(arena_get(&translated->constants, offset), length, 0, 0);
   state->registers[to_register] = object;
 }
@@ -689,7 +688,7 @@ Stack *create_scope(Stack *prev) {
   return stack;
 }
 
-void runtime(Translated translated, RuntimeState state, Stack *stack,
+void runtime(Translated _translated, RuntimeState _state, Stack *stack,
              ArErr *err) {
   static void *dispatch_table[] = {
       [OP_LOAD_STRING] = &&DO_LOAD_STRING,
@@ -714,11 +713,11 @@ void runtime(Translated translated, RuntimeState state, Stack *stack,
       [OP_ADDITION] = &&DO_ADDITION,
       [OP_SUBTRACTION] = &&DO_SUBTRACTION,
       [OP_LOAD_ACCESS_FUNCTION] = &&DO_LOAD_ACCESS_FUNCTION};
-  state.head = 0;
+  _state.head = 0;
 
   StackFrame *currentStackFrame =
-      ar_alloc(sizeof(StackFrame) * STACKFRAME_CHUNKS);
-  *currentStackFrame = (StackFrame){translated, state, stack, NULL, 0};
+      ar_alloc(sizeof(StackFrame));
+  *currentStackFrame = (StackFrame){_translated, _state, stack, NULL, 0};
   currentStackFrame->state.currentStackFramePointer = &currentStackFrame;
   while (currentStackFrame) {
     while (likely(currentStackFrame->state.head <
@@ -727,7 +726,6 @@ void runtime(Translated translated, RuntimeState state, Stack *stack,
       Translated *translated = &currentStackFrame->translated;
       RuntimeState *state = &currentStackFrame->state;
       uint8_t instruction = pop_byte(translated, state);
-      printf("opcode: %d\n",instruction);
       goto *dispatch_table[instruction];
     DO_LOAD_NULL:
       state->registers[pop_byte(translated, state)] = ARGON_NULL;

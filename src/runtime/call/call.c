@@ -157,13 +157,8 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
       runtime(new_stackFrame.translated, new_stackFrame.state,
               new_stackFrame.stack, err);
     } else {
-      if (((*state->currentStackFramePointer)->depth + 1) % STACKFRAME_CHUNKS ==
-          0) {
-        *state->currentStackFramePointer =
-            ar_alloc(sizeof(StackFrame) * STACKFRAME_CHUNKS);
-      } else {
-        *state->currentStackFramePointer = *state->currentStackFramePointer + 1;
-      }
+      *state->currentStackFramePointer =
+            ar_alloc(sizeof(StackFrame));
       **state->currentStackFramePointer = new_stackFrame;
       if ((*state->currentStackFramePointer)->depth >= 10000) {
         double logval =

@@ -6,6 +6,7 @@
 
 #include "memory.h"
 #include <gc.h>
+#include <gc/gc.h>
 #include <gmp.h>
 #include <stdio.h>
 #include <stdlib.h> // for malloc/free (temp arena fallback)

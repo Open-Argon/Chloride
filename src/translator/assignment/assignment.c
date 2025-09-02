@@ -42,7 +42,7 @@ size_t translate_parsed_assignment(Translated *translated,
     push_instruction_byte(translated, 0);
     break;
   default:
-    fprintf(stderr, "panic: freeing NULL pointer\n");
+    fprintf(stderr, "panic: unsupported assignment\n");
     exit(EXIT_FAILURE);
   }
   translated->return_jumps = old_return_jumps;

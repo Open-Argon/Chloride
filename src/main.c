@@ -265,12 +265,16 @@ int load_cache(Translated *translated_dest, char *joined_paths, uint64_t hash,
     goto FAILED;
   }
 
+  translated_dest->constants.size = constantsSize;
+
   darray_resize(&translated_dest->bytecode, bytecodeSize);
 
   if (fread(translated_dest->bytecode.data, 1, bytecodeSize, bytecode_file) !=
       bytecodeSize) {
     goto FAILED;
   }
+
+  translated_dest->bytecode.size = bytecodeSize;
 
   fprintf(stderr, "cache exists and is valid, so will be used.\n");
   fclose(bytecode_file);
@@ -430,19 +434,19 @@ Translated load_argon_file(char *path, ArErr *err) {
   Translated gc_translated = {
       translated.registerCount, translated.registerAssignment, NULL, {}, {},
       translated.path};
-  gc_translated.bytecode.data = ar_alloc_atomic(translated.bytecode.size);
+  gc_translated.bytecode.data = ar_alloc_atomic(translated.bytecode.capacity);
   memcpy(gc_translated.bytecode.data, translated.bytecode.data,
-         translated.bytecode.size);
+         translated.bytecode.capacity);
   gc_translated.bytecode.element_size = translated.bytecode.element_size;
   gc_translated.bytecode.size = translated.bytecode.size;
   gc_translated.bytecode.resizable = false;
   gc_translated.bytecode.capacity =
       translated.bytecode.size * translated.bytecode.element_size;
-  gc_translated.constants.data = ar_alloc_atomic(translated.constants.size);
+  gc_translated.constants.data = ar_alloc_atomic(translated.constants.capacity);
   memcpy(gc_translated.constants.data, translated.constants.data,
-         translated.constants.size);
+         translated.constants.capacity);
   gc_translated.constants.size = translated.constants.size;
-  gc_translated.constants.capacity = translated.constants.size * translated.bytecode.element_size;
+  gc_translated.constants.capacity =translated.constants.capacity;
   free(translated.bytecode.data);
   free(translated.constants.data);
   total_time_spent = (double)(clock() - beginning) / CLOCKS_PER_SEC;

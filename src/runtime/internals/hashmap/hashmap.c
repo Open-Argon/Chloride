@@ -9,6 +9,7 @@
 #include "../../../memory.h"
 #include <gc/gc.h>
 #include <stddef.h>
+#include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>

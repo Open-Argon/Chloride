@@ -1,1 +1,3 @@
-term.log(1+2+3-4+5-100+10)
+let i = 10000
+while (i) do
+  i=i-1
