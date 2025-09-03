@@ -55,7 +55,7 @@ int execute_code(FILE *stream, char *path, Stack *scope,
     return 1;
   }
 
-  ArErr err;
+  ArErr err = no_err;
 
   DArray tokens;
   darray_init(&tokens, sizeof(Token));
@@ -263,7 +263,7 @@ int shell() {
     if (resp) {
       continue;
     }
-    ArErr err;
+    ArErr err = no_err;
     argon_call(output_object, 1, (ArgonObject *[]){runtime_state.registers[0]},
                &err, &runtime_state);
     totranslatelength = 0;

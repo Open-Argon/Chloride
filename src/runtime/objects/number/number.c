@@ -147,8 +147,6 @@ ArgonObject *ARGON_NUMBER_TYPE___subtract__(size_t argc, ArgonObject **argv,
                       "__subtract__ expects 2 arguments, got %" PRIu64, argc);
     return ARGON_NULL;
   }
-  mpq_t r;
-  mpq_init(r);
   if (argv[1]->type != TYPE_NUMBER) {
     ArgonObject *type_name = get_builtin_field_for_class(
         get_builtin_field(argv[1], __class__, false, false), __name__, argv[1]);
@@ -158,6 +156,7 @@ ArgonObject *ARGON_NUMBER_TYPE___subtract__(size_t argc, ArgonObject **argv,
         type_name->value.as_str.length, type_name->value.as_str.data);
     return ARGON_NULL;
   }
+
   if (argv[0]->value.as_number.is_int64 && argv[1]->value.as_number.is_int64) {
     int64_t a = argv[0]->value.as_number.n.i64;
     int64_t b = argv[1]->value.as_number.n.i64;
@@ -213,8 +212,6 @@ ArgonObject *ARGON_NUMBER_TYPE___multiply__(size_t argc, ArgonObject **argv,
                       "__multiply__ expects 2 arguments, got %" PRIu64, argc);
     return ARGON_NULL;
   }
-  mpq_t r;
-  mpq_init(r);
   if (argv[1]->type != TYPE_NUMBER) {
     ArgonObject *type_name = get_builtin_field_for_class(
         get_builtin_field(argv[1], __class__, false, false), __name__, argv[1]);
@@ -224,10 +221,52 @@ ArgonObject *ARGON_NUMBER_TYPE___multiply__(size_t argc, ArgonObject **argv,
         type_name->value.as_str.length, type_name->value.as_str.data);
     return ARGON_NULL;
   }
-  mpq_mul(r, *argv[0]->value.as_number.n.mpq, *argv[1]->value.as_number.n.mpq);
-  ArgonObject *result = new_number_object(r);
-  mpq_clear(r);
-  return result;
+
+  if (argv[0]->value.as_number.is_int64 && argv[1]->value.as_number.is_int64) {
+    int64_t a = argv[0]->value.as_number.n.i64;
+    int64_t b = argv[1]->value.as_number.n.i64;
+    bool gonna_overflow =
+        a > 0 ? (b > 0 ? a > INT64_MAX / b : b < INT64_MIN / a)
+              : (b > 0 ? a < INT64_MIN / b : a != 0 && b < INT64_MAX / a);
+    if (!gonna_overflow) {
+      return new_number_object_from_int64(a * b);
+    }
+    mpq_t a_GMP, b_GMP;
+    mpq_init(a_GMP);
+    mpq_init(b_GMP);
+    mpq_set_si(a_GMP, a, 1);
+    mpq_set_si(b_GMP, b, 1);
+    mpq_mul(a_GMP, a_GMP, b_GMP);
+    ArgonObject *result = new_number_object(a_GMP);
+    mpq_clear(a_GMP);
+    mpq_clear(b_GMP);
+    return result;
+  } else if (!argv[0]->value.as_number.is_int64 &&
+             !argv[1]->value.as_number.is_int64) {
+    mpq_t r;
+    mpq_init(r);
+    mpq_mul(r, *argv[0]->value.as_number.n.mpq,
+            *argv[1]->value.as_number.n.mpq);
+    ArgonObject *result = new_number_object(r);
+    mpq_clear(r);
+    return result;
+  } else {
+    mpq_t a_GMP, b_GMP;
+    mpq_init(a_GMP);
+    mpq_init(b_GMP);
+    if (argv[0]->value.as_number.is_int64) {
+      mpq_set_si(a_GMP, argv[0]->value.as_number.n.i64, 1);
+      mpq_set(b_GMP, *argv[1]->value.as_number.n.mpq);
+    } else {
+      mpq_set(a_GMP, *argv[0]->value.as_number.n.mpq);
+      mpq_set_si(b_GMP, argv[1]->value.as_number.n.i64, 1);
+    }
+    mpq_mul(a_GMP, a_GMP, b_GMP);
+    ArgonObject *result = new_number_object(a_GMP);
+    mpq_clear(a_GMP);
+    mpq_clear(b_GMP);
+    return result;
+  }
 }
 
 ArgonObject *ARGON_NUMBER_TYPE___division__(size_t argc, ArgonObject **argv,
@@ -238,8 +277,6 @@ ArgonObject *ARGON_NUMBER_TYPE___division__(size_t argc, ArgonObject **argv,
                       "__division__ expects 2 arguments, got %" PRIu64, argc);
     return ARGON_NULL;
   }
-  mpq_t r;
-  mpq_init(r);
   if (argv[1]->type != TYPE_NUMBER) {
     ArgonObject *type_name = get_builtin_field_for_class(
         get_builtin_field(argv[1], __class__, false, false), __name__, argv[1]);
@@ -249,10 +286,36 @@ ArgonObject *ARGON_NUMBER_TYPE___division__(size_t argc, ArgonObject **argv,
         type_name->value.as_str.length, type_name->value.as_str.data);
     return ARGON_NULL;
   }
-  mpq_div(r, *argv[0]->value.as_number.n.mpq, *argv[1]->value.as_number.n.mpq);
-  ArgonObject *result = new_number_object(r);
-  mpq_clear(r);
-  return result;
+  if (argv[0]->value.as_number.is_int64 && argv[1]->value.as_number.is_int64) {
+    int64_t a = argv[0]->value.as_number.n.i64;
+    int64_t b = argv[1]->value.as_number.n.i64;
+    return new_number_object_from_num_and_den(a, b);
+  } else if (!argv[0]->value.as_number.is_int64 &&
+             !argv[1]->value.as_number.is_int64) {
+    mpq_t r;
+    mpq_init(r);
+    mpq_div(r, *argv[0]->value.as_number.n.mpq,
+            *argv[1]->value.as_number.n.mpq);
+    ArgonObject *result = new_number_object(r);
+    mpq_clear(r);
+    return result;
+  } else {
+    mpq_t a_GMP, b_GMP;
+    mpq_init(a_GMP);
+    mpq_init(b_GMP);
+    if (argv[0]->value.as_number.is_int64) {
+      mpq_set_si(a_GMP, argv[0]->value.as_number.n.i64, 1);
+      mpq_set(b_GMP, *argv[1]->value.as_number.n.mpq);
+    } else {
+      mpq_set(a_GMP, *argv[0]->value.as_number.n.mpq);
+      mpq_set_si(b_GMP, argv[1]->value.as_number.n.i64, 1);
+    }
+    mpq_div(a_GMP, a_GMP, b_GMP);
+    ArgonObject *result = new_number_object(a_GMP);
+    mpq_clear(a_GMP);
+    mpq_clear(b_GMP);
+    return result;
+  }
 }
 
 ArgonObject *ARGON_NUMBER_TYPE___string__(size_t argc, ArgonObject **argv,
