@@ -1,4 +1,8 @@
-let i = 1000000
+let factorial(x) = do
+  if (x-1) return x * factorial(x-1)
+  return 1
+
+let i = 10000000
+term.log(factorial(10000))
 while (i) do
   i=i-1
-term.log(add)

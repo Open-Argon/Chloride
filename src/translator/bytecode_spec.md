@@ -82,12 +82,11 @@ jumps when a the value in the given register is false.
 1. the register to read. (*)
 1. the index to jump to.
 
-## OP_JUMP_IF_FALSE
+## OP_JUMP
 
 jumps unconditionally to an index.
 
 1. the index to jump to.
-
 
 ## OP_NEW_SCOPE
 
@@ -155,6 +154,30 @@ copies the value from one register to another
 ## OP_ADDITION
 
 performs an addition between register A and register B, storing the result in register C
+
+1. the register A (*)
+2. the register B (*)
+2. the register C (*)
+
+## OP_SUBTRACTION
+
+performs an subtraction between register A and register B, storing the result in register C
+
+1. the register A (*)
+2. the register B (*)
+2. the register C (*)
+
+## OP_MULTIPLICATION
+
+performs an multiplication between register A and register B, storing the result in register C
+
+1. the register A (*)
+2. the register B (*)
+2. the register C (*)
+
+## OP_DIVISION
+
+performs an division between register A and register B, storing the result in register C
 
 1. the register A (*)
 2. the register B (*)

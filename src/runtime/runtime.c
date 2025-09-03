@@ -681,6 +681,9 @@ RuntimeState init_runtime_state(Translated translated, char *path) {
       NULL,
       {0, 0, 0},
       {}};
+  for (size_t i = 0;i<translated.registerCount;i++) {
+    runtime.registers[i] = ARGON_NULL;
+  }
   return runtime;
 }
 
@@ -715,7 +718,9 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       [OP_COPY_TO_REGISTER] = &&DO_COPY_TO_REGISTER,
       [OP_ADDITION] = &&DO_ADDITION,
       [OP_SUBTRACTION] = &&DO_SUBTRACTION,
-      [OP_LOAD_ACCESS_FUNCTION] = &&DO_LOAD_ACCESS_FUNCTION};
+      [OP_LOAD_ACCESS_FUNCTION] = &&DO_LOAD_ACCESS_FUNCTION,
+      [OP_MULTIPLICATION] = &&DO_MULTIPLICATION,
+      [OP_DIVISION] = &&DO_DIVISION};
   _state.head = 0;
 
   StackFrame *currentStackFrame = ar_alloc(sizeof(StackFrame));
@@ -752,9 +757,9 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       continue;
     DO_BOOL: {
       uint8_t to_register = pop_byte(translated, state);
-      if (likely(state->registers[0]->type != TYPE_OBJECT)) {
+      if (likely(state->registers[to_register]->type != TYPE_OBJECT)) {
         state->registers[to_register] =
-            state->registers[0]->as_bool ? ARGON_TRUE : ARGON_FALSE;
+            state->registers[to_register]->as_bool ? ARGON_TRUE : ARGON_FALSE;
         continue;
       }
       ArgonObject *args[] = {ARGON_BOOL_TYPE, state->registers[0]};
@@ -937,13 +942,122 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
 
       ArgonObject *args[] = {valueA, valueB};
       state->registers[registerC] =
-          ARGON_ADDITION_FUNCTION(2, args, err, state);
+          ARGON_SUBTRACTION_FUNCTION(2, args, err, state);
+      continue;
+    }
+    DO_MULTIPLICATION: {
+      uint8_t registerA = pop_byte(translated, state);
+      uint8_t registerB = pop_byte(translated, state);
+      uint8_t registerC = pop_byte(translated, state);
+
+      ArgonObject *valueA = state->registers[registerA];
+      ArgonObject *valueB = state->registers[registerB];
+
+      if (likely(valueA->type == TYPE_NUMBER && valueB->type == TYPE_NUMBER)) {
+        if (likely(valueA->value.as_number.is_int64 &&
+                   valueB->value.as_number.is_int64)) {
+          int64_t a = valueA->value.as_number.n.i64;
+          int64_t b = valueB->value.as_number.n.i64;
+          bool gonna_overflow =
+              a > 0 ? (b > 0 ? a > INT64_MAX / b : b < INT64_MIN / a)
+                    : (b > 0 ? a < INT64_MIN / b : a != 0 && b < INT64_MAX / a);
+          if (!gonna_overflow) {
+            state->registers[registerC] = new_number_object_from_int64(a * b);
+            continue;
+          }
+          mpq_t a_GMP, b_GMP;
+          mpq_init(a_GMP);
+          mpq_init(b_GMP);
+          mpq_set_si(a_GMP, a, 1);
+          mpq_set_si(b_GMP, b, 1);
+          mpq_mul(a_GMP, a_GMP, b_GMP);
+          state->registers[registerC] = new_number_object(a_GMP);
+          mpq_clear(a_GMP);
+          mpq_clear(b_GMP);
+        } else if (!valueA->value.as_number.is_int64 &&
+                   !valueB->value.as_number.is_int64) {
+          mpq_t r;
+          mpq_init(r);
+          mpq_mul(r, *valueA->value.as_number.n.mpq,
+                  *valueB->value.as_number.n.mpq);
+          state->registers[registerC] = new_number_object(r);
+          mpq_clear(r);
+        } else {
+          mpq_t a_GMP, b_GMP;
+          mpq_init(a_GMP);
+          mpq_init(b_GMP);
+          if (valueA->value.as_number.is_int64) {
+            mpq_set_si(a_GMP, valueA->value.as_number.n.i64, 1);
+            mpq_set(b_GMP, *valueB->value.as_number.n.mpq);
+          } else {
+            mpq_set(a_GMP, *valueA->value.as_number.n.mpq);
+            mpq_set_si(b_GMP, valueB->value.as_number.n.i64, 1);
+          }
+          mpq_mul(a_GMP, a_GMP, b_GMP);
+          state->registers[registerC] = new_number_object(a_GMP);
+          mpq_clear(a_GMP);
+          mpq_clear(b_GMP);
+        }
+        continue;
+      }
+
+      ArgonObject *args[] = {valueA, valueB};
+      state->registers[registerC] =
+          ARGON_MULTIPLY_FUNCTION(2, args, err, state);
+      continue;
+    }
+    DO_DIVISION: {
+      uint8_t registerA = pop_byte(translated, state);
+      uint8_t registerB = pop_byte(translated, state);
+      uint8_t registerC = pop_byte(translated, state);
+
+      ArgonObject *valueA = state->registers[registerA];
+      ArgonObject *valueB = state->registers[registerB];
+
+      if (likely(valueA->type == TYPE_NUMBER && valueB->type == TYPE_NUMBER)) {
+        if (likely(valueA->value.as_number.is_int64 &&
+                   valueB->value.as_number.is_int64)) {
+          int64_t a = valueA->value.as_number.n.i64;
+          int64_t b = valueB->value.as_number.n.i64;
+          state->registers[registerC] =
+              new_number_object_from_num_and_den(a, b);
+        } else if (!valueA->value.as_number.is_int64 &&
+                   !valueB->value.as_number.is_int64) {
+          mpq_t r;
+          mpq_init(r);
+          mpq_div(r, *valueA->value.as_number.n.mpq,
+                  *valueB->value.as_number.n.mpq);
+          state->registers[registerC] = new_number_object(r);
+          mpq_clear(r);
+        } else {
+          mpq_t a_GMP, b_GMP;
+          mpq_init(a_GMP);
+          mpq_init(b_GMP);
+          if (valueA->value.as_number.is_int64) {
+            mpq_set_si(a_GMP, valueA->value.as_number.n.i64, 1);
+            mpq_set(b_GMP, *valueB->value.as_number.n.mpq);
+          } else {
+            mpq_set(a_GMP, *valueA->value.as_number.n.mpq);
+            mpq_set_si(b_GMP, valueB->value.as_number.n.i64, 1);
+          }
+          mpq_div(a_GMP, a_GMP, b_GMP);
+          state->registers[registerC] = new_number_object(a_GMP);
+          mpq_clear(a_GMP);
+          mpq_clear(b_GMP);
+        }
+        continue;
+      }
+
+      ArgonObject *args[] = {valueA, valueB};
+      state->registers[registerC] =
+          ARGON_DIVISION_FUNCTION(2, args, err, state);
       continue;
     }
     }
 
     ArgonObject *result = currentStackFrame->state.registers[0];
     currentStackFrame = currentStackFrame->previousStackFrame;
-    if(currentStackFrame) currentStackFrame->state.registers[0] = result;
+    if (currentStackFrame)
+      currentStackFrame->state.registers[0] = result;
   }
 }
