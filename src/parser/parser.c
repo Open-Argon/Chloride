@@ -13,7 +13,6 @@
 #include "assignable/identifier/identifier.h"
 #include "declaration/declaration.h"
 #include "dictionary/dictionary.h"
-#include "parentheses-and-anonymous-function/parentheses-and-anonymous-function.h"
 #include "dowrap/dowrap.h"
 #include "function/function.h"
 #include "if/if.h"
@@ -21,8 +20,10 @@
 #include "literals/literals.h"
 #include "number/number.h"
 #include "operations/operations.h"
+#include "parentheses-and-anonymous-function/parentheses-and-anonymous-function.h"
 #include "return/return.h"
 #include "string/string.h"
+#include "not/not.h"
 #include "while/while.h"
 #include <gmp.h>
 #include <stdbool.h>
@@ -32,10 +33,10 @@
 #include <string.h>
 
 const char *ValueTypeNames[] = {
-    "string",       "assign",     "identifier", "number",
-    "if statement", "access",     "call",       "declaration",
-    "null",         "boolean",    "do wrap",    "operations",
-    "list",         "dictionary", "function",   "return", "while loop"};
+    "string",  "assign",     "identifier",  "number",     "if statement",
+    "access",  "call",       "declaration", "null",       "boolean",
+    "do wrap", "operations", "list",        "dictionary", "function",
+    "return",  "while loop", "not"};
 
 ArErr error_if_finished(char *file, DArray *tokens, size_t *index) {
   if ((*index) >= tokens->size) {
@@ -137,6 +138,9 @@ ParsedValueReturn parse_token_full(char *file, DArray *tokens, size_t *index,
     break;
   case TOKEN_LBRACE:
     output = parse_dictionary(file, tokens, index);
+    break;
+  case TOKEN_EXCLAMATION:
+    output = parse_not(file, tokens, index);
     break;
   default:
     return (ParsedValueReturn){create_err(token->line, token->column,
@@ -270,6 +274,9 @@ void free_parsed(void *ptr) {
     break;
   case AST_RETURN:
     free_parsed_return(parsed);
+    break;
+  case AST_TO_BOOL:
+    free_not(parsed);
     break;
   }
 }

@@ -6,10 +6,11 @@
 
 #include "translator.h"
 #include "../hash_data/hash_data.h"
+#include "../parser/not/not.h"
 #include "access/access.h"
+#include "assignment/assignment.h"
 #include "call/call.h"
 #include "declaration/declaration.h"
-#include "assignment/assignment.h"
 #include "dowrap/dowrap.h"
 #include "function/function.h"
 #include "identifier/identifier.h"
@@ -148,7 +149,8 @@ size_t translate_parsed(Translated *translated, ParsedValue *parsedValue,
   case AST_IF:
     return translate_parsed_if(translated, (DArray *)parsedValue->data, err);
   case AST_WHILE:
-    return translate_parsed_while(translated, (ParsedWhile *)parsedValue->data, err);
+    return translate_parsed_while(translated, (ParsedWhile *)parsedValue->data,
+                                  err);
   case AST_DOWRAP:
     return translate_parsed_dowrap(translated, (DArray *)parsedValue->data,
                                    err);
@@ -165,7 +167,15 @@ size_t translate_parsed(Translated *translated, ParsedValue *parsedValue,
                                err);
   case AST_ASSIGN:
     return translate_parsed_assignment(translated,
-                                        (ParsedAssign *)parsedValue->data, err);
+                                       (ParsedAssign *)parsedValue->data, err);
+  case AST_TO_BOOL: {
+    size_t first = translate_parsed(
+        translated, ((ParsedToBool *)parsedValue->data)->value, err);
+    push_instruction_byte(translated, OP_BOOL);
+    if (((ParsedToBool *)parsedValue->data)->invert)
+      push_instruction_byte(translated, OP_NOT);
+    return first;
+  }
   }
   return 0;
 }

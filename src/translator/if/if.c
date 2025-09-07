@@ -40,7 +40,6 @@ size_t translate_parsed_if(Translated *translated, DArray *parsedIf,
         return 0;
       }
       push_instruction_byte(translated, OP_BOOL);
-      push_instruction_byte(translated, 0);
       push_instruction_byte(translated, OP_JUMP_IF_FALSE);
       push_instruction_byte(translated, 0);
       uint64_t last_jump_index = push_instruction_code(translated, 0);

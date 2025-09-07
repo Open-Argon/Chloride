@@ -50,7 +50,8 @@ typedef enum {
   AST_DICTIONARY,
   AST_FUNCTION,
   AST_RETURN,
-  AST_WHILE
+  AST_WHILE,
+  AST_TO_BOOL
 } ValueType;
 
 extern const char *ValueTypeNames[];

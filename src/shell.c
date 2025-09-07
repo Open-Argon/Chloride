@@ -91,7 +91,8 @@ int execute_code(FILE *stream, char *path, Stack *scope,
 
   hashmap_free(__translated.constants.hashmap, NULL);
   Translated translated = {
-      __translated.registerCount, __translated.registerAssignment, NULL, {}, {}, __translated.path};
+      __translated.registerCount, __translated.registerAssignment, NULL, {}, {},
+      __translated.path};
   translated.bytecode.data = ar_alloc(__translated.bytecode.capacity);
   memcpy(translated.bytecode.data, __translated.bytecode.data,
          __translated.bytecode.capacity);
@@ -198,11 +199,13 @@ int shell() {
       totranslatelength = 0;
     };
     int indent = 0;
+    int last_indent = 0;
     char textBefore[] = ">>> ";
 
     // Dynamic array of lines
 
     do {
+      last_indent = indent;
       // indent string
       size_t isz = (size_t)indent * 4;
       char *indentStr = (char *)malloc(isz + 1);
@@ -253,7 +256,7 @@ int shell() {
       strcpy(textBefore, "... ");
       free(indentStr);
 
-    } while (indent > 0);
+    } while (indent > 0 || last_indent != 0);
     totranslate = realloc(totranslate, totranslatelength + 1);
     totranslate[totranslatelength] = '\0';
     RuntimeState runtime_state;
@@ -263,9 +266,12 @@ int shell() {
     if (resp) {
       continue;
     }
-    ArErr err = no_err;
-    argon_call(output_object, 1, (ArgonObject *[]){runtime_state.registers[0]},
-               &err, &runtime_state);
+    if (runtime_state.registers[0]) {
+      ArErr err = no_err;
+      argon_call(output_object, 1,
+                 (ArgonObject *[]){runtime_state.registers[0]}, &err,
+                 &runtime_state);
+    }
     totranslatelength = 0;
   }
 

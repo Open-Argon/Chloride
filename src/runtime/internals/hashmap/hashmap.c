@@ -15,18 +15,19 @@
 #include <string.h>
 
 struct hashmap_GC *createHashmap_GC() {
-  size_t size = 8;
-  struct hashmap_GC *t =
-      (struct hashmap_GC *)ar_alloc(sizeof(struct hashmap_GC));
-  t->size = size;
-  t->order = 1;
-  t->list = (struct node_GC **)ar_alloc(sizeof(struct node_GC *) * size);
-  memset(t->list, 0, sizeof(struct node_GC *) * size);
-  t->count = 0;
-  return t;
+    size_t size = 8;
+    struct hashmap_GC *t =
+        (struct hashmap_GC *)ar_alloc(sizeof(struct hashmap_GC) + sizeof(struct node_GC *) * size);
+    t->size = size;
+    t->order = 1;
+    t->list = (struct node_GC **)((char*)t + sizeof(struct hashmap_GC));
+    memset(t->list, 0, sizeof(struct node_GC *) * size);
+    t->count = 0;
+    return t;
 }
 
 void clear_hashmap_GC(struct hashmap_GC *t) {
+  if (!t->count) return;
   t->order = 1;
   t->count = 0;
   memset(t->list, 0, sizeof(struct node_GC *) * t->size);

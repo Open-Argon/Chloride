@@ -21,6 +21,7 @@ void runtime_assignment(Translated *translated, RuntimeState *state,
     if (exists) {
       hashmap_insert_GC(current_stack->scope, hash, key,
                         state->registers[from_register], 0);
+      return;
     }
   }
   hashmap_insert_GC(stack->scope, hash, key, state->registers[from_register],
