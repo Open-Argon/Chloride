@@ -6,7 +6,6 @@
 
 #include "call.h"
 #include "../../hash_data/hash_data.h"
-#include "../objects/literals/literals.h"
 #include "../objects/string/string.h"
 #include <inttypes.h>
 #include <math.h>
@@ -156,7 +155,7 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
         *state->currentStackFramePointer,
         (*state->currentStackFramePointer)->depth + 1};
     for (size_t i = 0; i < new_stackFrame.translated.registerCount; i++) {
-      new_stackFrame.state.registers[i] = ARGON_NULL;
+      new_stackFrame.state.registers[i] = NULL;
     }
     if (CStackFrame) {
       runtime(new_stackFrame.translated, new_stackFrame.state,

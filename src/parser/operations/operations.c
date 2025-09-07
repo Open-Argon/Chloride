@@ -42,24 +42,22 @@ ParsedValue convert_to_operation(DArray *to_operate_on, DArray *operations) {
   operationStruct->column = operation.column;
   operationStruct->length = operation.length;
   darray_init(&operationStruct->to_operate_on, sizeof(ParsedValue));
-  size_t last_position = 0;
   size_t to_operate_on_last_position = 0;
   for (size_t i = 0; i < positions.size; i++) {
     size_t *position = darray_get(&positions, i);
     DArray to_operate_on_slice = darray_slice(
         to_operate_on, to_operate_on_last_position, (*position) + 1);
     DArray operations_slice =
-        darray_slice(operations, last_position, *position);
+        darray_slice(operations, to_operate_on_last_position, (*position));
     ParsedValue result =
         convert_to_operation(&to_operate_on_slice, &operations_slice);
     darray_push(&operationStruct->to_operate_on, &result);
-    last_position = (*position);
     to_operate_on_last_position = (*position) + 1;
   }
   DArray to_operate_on_slice = darray_slice(
       to_operate_on, to_operate_on_last_position, to_operate_on->size);
   DArray operations_slice =
-      darray_slice(operations, last_position, operations->size);
+      darray_slice(operations, to_operate_on_last_position, operations->size);
   ParsedValue result =
       convert_to_operation(&to_operate_on_slice, &operations_slice);
   darray_push(&operationStruct->to_operate_on, &result);

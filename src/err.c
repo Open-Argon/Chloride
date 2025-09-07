@@ -73,8 +73,7 @@ ArErr create_err(int64_t line, int64_t column, int length, char *path,
   err.length = length;
 
   // Copy error type safely
-  strncpy(err.type, type, sizeof(err.type) - 1);
-  err.type[sizeof(err.type) - 1] = '\0';
+  snprintf(err.type, sizeof(err.type), "%s",(char*)type);
 
   // Format error message
   va_list args;

@@ -64,5 +64,6 @@ build
 *.yy.c
 *.yy.h
 
+__isotope__
 __arcache__
 argon_modules

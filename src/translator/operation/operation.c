@@ -11,7 +11,7 @@
 
 size_t translate_operation(Translated *translated, ParsedOperation *operation,
                            ArErr *err) {
-  if (operation->operation == TOKEN_AND) {
+  if (operation->operation == TOKEN_AND || operation->operation == TOKEN_OR) {
     size_t *jump_to_if_false =
         checked_malloc(operation->to_operate_on.size * sizeof(size_t));
     uint8_t registerA = translated->registerAssignment++;
@@ -21,7 +21,7 @@ size_t translate_operation(Translated *translated, ParsedOperation *operation,
       uint64_t position = translate_parsed(
           translated, darray_get(&operation->to_operate_on, i), err);
       if (i == 0)
-        position = first;
+        first = position;
       if (err->exists) {
         free(jump_to_if_false);
         return first;
@@ -31,16 +31,21 @@ size_t translate_operation(Translated *translated, ParsedOperation *operation,
       push_instruction_byte(translated, registerA);
 
       push_instruction_byte(translated, OP_BOOL);
-      push_instruction_byte(translated, registerA);
+      if (operation->operation == TOKEN_OR) push_instruction_byte(translated, OP_NOT);
 
       push_instruction_byte(translated, OP_JUMP_IF_FALSE);
-      push_instruction_byte(translated, registerA);
+      push_instruction_byte(translated, 0);
       jump_to_if_false[i] = push_instruction_code(translated, 0);
     }
     for (size_t i = 0; i < operation->to_operate_on.size; i++) {
       set_instruction_code(translated, jump_to_if_false[i],
                            translated->bytecode.size);
     }
+    push_instruction_byte(translated, OP_COPY_TO_REGISTER);
+    push_instruction_byte(translated, registerA);
+    push_instruction_byte(translated, 0);
+    push_instruction_byte(translated, OP_LOAD_NULL);
+    push_instruction_byte(translated, registerA);
 
     free(jump_to_if_false);
     return first;

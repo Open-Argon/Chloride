@@ -71,9 +71,7 @@ initilises a function to a given register.
 
 ## OP_BOOL
 
-converts a value in a given register into true or false depending on the result from \_\_bool\_\_
-
-1. the register to read and write to. (*)
+converts a value in register 0 into true or false depending on the result from \_\_bool\_\_ (using asBool if the object is a primitive)
 
 ## OP_JUMP_IF_FALSE
 
@@ -182,3 +180,7 @@ performs an division between register A and register B, storing the result in re
 1. the register A (*)
 2. the register B (*)
 2. the register C (*)
+
+## OP_NOT
+
+inverts the boolean value in register 0.

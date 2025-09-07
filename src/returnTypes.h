@@ -9,7 +9,7 @@
 #include <stdint.h>
 #include "arobject.h"
 
-#define ERR_MSG_MAX_LEN 256
+#define ERR_MSG_MAX_LEN 64
 
 typedef struct ArErr {
   bool exists;

@@ -18,12 +18,12 @@ size_t translate_parsed_while(Translated *translated, ParsedWhile *parsedWhile,
     translated->return_jumps = &return_jumps;
   }
   size_t first = push_instruction_byte(translated, OP_NEW_SCOPE);
-  size_t start_of_loop = translate_parsed(translated, parsedWhile->condition, err);
+  size_t start_of_loop =
+      translate_parsed(translated, parsedWhile->condition, err);
   if (err->exists) {
     return 0;
   }
   push_instruction_byte(translated, OP_BOOL);
-  push_instruction_byte(translated, 0);
   push_instruction_byte(translated, OP_JUMP_IF_FALSE);
   push_instruction_byte(translated, 0);
   uint64_t jump_index = push_instruction_code(translated, 0);
@@ -31,9 +31,8 @@ size_t translate_parsed_while(Translated *translated, ParsedWhile *parsedWhile,
   push_instruction_byte(translated, OP_EMPTY_SCOPE);
   push_instruction_byte(translated, OP_JUMP);
   push_instruction_code(translated, start_of_loop);
-
-
-
+  set_instruction_code(translated, jump_index, translated->bytecode.size);
+  push_instruction_byte(translated, OP_POP_SCOPE);
   if (translated->return_jumps) {
     push_instruction_byte(translated, OP_JUMP);
     size_t skip_return = push_instruction_code(translated, 0);
@@ -50,8 +49,5 @@ size_t translate_parsed_while(Translated *translated, ParsedWhile *parsedWhile,
     darray_free(&return_jumps, NULL);
     translated->return_jumps = old_return_jumps;
   }
-
-  set_instruction_code(translated, jump_index,
-                         translated->bytecode.size);
   return first;
 }

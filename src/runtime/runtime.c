@@ -359,12 +359,11 @@ ArgonObject *ARGON_STRING_TYPE___add__(size_t argc, ArgonObject **argv,
     return ARGON_NULL;
   }
   size_t length = argv[0]->value.as_str.length + argv[1]->value.as_str.length;
-  char *concat = malloc(length);
+  char *concat = ar_alloc_atomic(length);
   memcpy(concat, argv[0]->value.as_str.data, argv[0]->value.as_str.length);
   memcpy(concat + argv[0]->value.as_str.length, argv[1]->value.as_str.data,
          argv[1]->value.as_str.length);
-  ArgonObject *object = new_string_object(concat, length, 0, 0);
-  free(concat);
+  ArgonObject *object = new_string_object_without_memcpy(concat, length, 0, 0);
   return object;
 }
 
@@ -485,6 +484,7 @@ void bootstrap_types() {
   ARGON_NULL_TYPE = new_object();
   add_builtin_field(ARGON_NULL_TYPE, __base__, BASE_CLASS);
   ARGON_NULL = new_object();
+  ARGON_NULL->type = TYPE_NULL;
   add_builtin_field(ARGON_NULL, __class__, ARGON_NULL_TYPE);
   ARGON_NULL->as_bool = false;
 
@@ -681,22 +681,27 @@ RuntimeState init_runtime_state(Translated translated, char *path) {
       NULL,
       {0, 0, 0},
       {}};
-  for (size_t i = 0;i<translated.registerCount;i++) {
-    runtime.registers[i] = ARGON_NULL;
+  for (size_t i = 0; i < translated.registerCount; i++) {
+    runtime.registers[i] = NULL;
   }
   return runtime;
 }
 
 Stack *create_scope(Stack *prev) {
-  Stack *stack = ar_alloc(sizeof(Stack));
-  stack->scope = createHashmap_GC();
-  stack->prev = prev;
-  return stack;
+  if (!prev || prev->scope->count) {
+    Stack *stack = ar_alloc(sizeof(Stack));
+    stack->fake_new_scopes = 0;
+    stack->scope = createHashmap_GC();
+    stack->prev = prev;
+    return stack;
+  }
+  prev->fake_new_scopes++;
+  return prev;
 }
 
 void runtime(Translated _translated, RuntimeState _state, Stack *stack,
              ArErr *err) {
-  static void *dispatch_table[] = {
+  static void *const dispatch_table[] = {
       [OP_LOAD_STRING] = &&DO_LOAD_STRING,
       [OP_DECLARE] = &&DO_DECLARE,
       [OP_LOAD_NULL] = &&DO_LOAD_NULL,
@@ -720,7 +725,8 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       [OP_SUBTRACTION] = &&DO_SUBTRACTION,
       [OP_LOAD_ACCESS_FUNCTION] = &&DO_LOAD_ACCESS_FUNCTION,
       [OP_MULTIPLICATION] = &&DO_MULTIPLICATION,
-      [OP_DIVISION] = &&DO_DIVISION};
+      [OP_DIVISION] = &&DO_DIVISION,
+      [OP_NOT] = &&DO_NOT};
   _state.head = 0;
 
   StackFrame *currentStackFrame = ar_alloc(sizeof(StackFrame));
@@ -756,15 +762,16 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       runtime_assignment(translated, state, currentStackFrame->stack);
       continue;
     DO_BOOL: {
-      uint8_t to_register = pop_byte(translated, state);
-      if (likely(state->registers[to_register]->type != TYPE_OBJECT)) {
-        state->registers[to_register] =
-            state->registers[to_register]->as_bool ? ARGON_TRUE : ARGON_FALSE;
+      if (state->registers[0] == ARGON_TRUE ||
+          state->registers[0] == ARGON_FALSE)
+        continue;
+      if (likely(state->registers[0]->type != TYPE_OBJECT)) {
+        state->registers[0] =
+            state->registers[0]->as_bool ? ARGON_TRUE : ARGON_FALSE;
         continue;
       }
       ArgonObject *args[] = {ARGON_BOOL_TYPE, state->registers[0]};
-      state->registers[to_register] =
-          ARGON_BOOL_TYPE___new__(2, args, err, state);
+      state->registers[0] = ARGON_BOOL_TYPE___new__(2, args, err, state);
       continue;
     }
     DO_JUMP_IF_FALSE: {
@@ -775,6 +782,10 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       }
       continue;
     }
+    DO_NOT:
+      state->registers[0] =
+          state->registers[0] == ARGON_FALSE ? ARGON_TRUE : ARGON_FALSE;
+      continue;
     DO_JUMP:
       state->head = pop_bytecode(translated, state);
       continue;
@@ -785,6 +796,10 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       clear_hashmap_GC(currentStackFrame->stack->scope);
       continue;
     DO_POP_SCOPE:
+      if (currentStackFrame->stack->fake_new_scopes) {
+        currentStackFrame->stack->fake_new_scopes--;
+        goto DO_EMPTY_SCOPE;
+      }
       currentStackFrame->stack = currentStackFrame->stack->prev;
       continue;
     DO_INIT_CALL: {

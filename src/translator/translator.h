@@ -38,7 +38,8 @@ typedef enum {
   OP_SUBTRACTION,
   OP_LOAD_ACCESS_FUNCTION,
   OP_MULTIPLICATION,
-  OP_DIVISION
+  OP_DIVISION,
+  OP_NOT
 } OperationType;
 
 void arena_resize(ConstantArena *arena, size_t new_size);
