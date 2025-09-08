@@ -481,7 +481,7 @@ int main(int argc, char *argv[]) {
   }
   clock_t start = clock(), end;
   RuntimeState state = init_runtime_state(translated, path);
-  Stack *main_scope = create_scope(Global_Scope);
+  Stack *main_scope = create_scope(Global_Scope, true);
   runtime(translated, state, main_scope, &err);
 
   end = clock();

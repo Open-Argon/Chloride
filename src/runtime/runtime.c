@@ -601,7 +601,7 @@ void add_to_scope(Stack *stack, char *name, ArgonObject *value) {
 }
 
 void bootstrap_globals() {
-  Global_Scope = create_scope(NULL);
+  Global_Scope = create_scope(NULL, true);
   add_to_scope(Global_Scope, "string", ARGON_STRING_TYPE);
   add_to_scope(Global_Scope, "type", ARGON_TYPE_TYPE);
   add_to_scope(Global_Scope, "boolean", ARGON_BOOL_TYPE);
@@ -687,8 +687,8 @@ RuntimeState init_runtime_state(Translated translated, char *path) {
   return runtime;
 }
 
-Stack *create_scope(Stack *prev) {
-  if (!prev || prev->scope->count) {
+Stack *create_scope(Stack *prev, bool force) {
+  if (force || !prev || prev->scope->count) {
     Stack *stack = ar_alloc(sizeof(Stack));
     stack->fake_new_scopes = 0;
     stack->scope = createHashmap_GC();
@@ -790,7 +790,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       state->head = pop_bytecode(translated, state);
       continue;
     DO_NEW_SCOPE:
-      currentStackFrame->stack = create_scope(currentStackFrame->stack);
+      currentStackFrame->stack = create_scope(currentStackFrame->stack, false);
       continue;
     DO_EMPTY_SCOPE:
       clear_hashmap_GC(currentStackFrame->stack->scope);

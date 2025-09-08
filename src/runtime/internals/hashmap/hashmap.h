@@ -6,8 +6,11 @@
 
 #ifndef HASHMAP_GC_H
 #define HASHMAP_GC_H
+#include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
+
+#define INLINE_HASHMAP_ARRAY_SIZE 3
 
 struct node_GC {
   uint64_t hash;
@@ -18,7 +21,10 @@ struct node_GC {
 };
 struct hashmap_GC {
   size_t size;
+  struct node_GC inline_values[INLINE_HASHMAP_ARRAY_SIZE];
   size_t count;
+  size_t inline_count;
+  size_t hashmap_count;
   size_t order;
   struct node_GC **list;
 };
