@@ -168,7 +168,7 @@ char *read_all_stdin(size_t *out_len) {
 
 int shell() {
 
-  Stack *main_scope = create_scope(Global_Scope);
+  Stack *main_scope = create_scope(Global_Scope, true);
 
   if (!isatty(STDIN_FILENO)) {
     RuntimeState runtime_state;

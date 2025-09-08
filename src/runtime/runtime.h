@@ -87,7 +87,7 @@ static inline void run_instruction(Translated *translated, RuntimeState *state,
 
 RuntimeState init_runtime_state(Translated translated, char *path);
 
-Stack *create_scope(Stack *prev);
+Stack *create_scope(Stack *prev, bool force);
 
 void runtime(Translated translated, RuntimeState state, Stack *stack,
              ArErr *err);

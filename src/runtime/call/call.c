@@ -125,7 +125,7 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
           (int)object_name->value.as_str.length, object_name->value.as_str.data,
           object->value.argon_fn.number_of_parameters, argc);
     }
-    Stack *scope = create_scope(object->value.argon_fn.stack);
+    Stack *scope = create_scope(object->value.argon_fn.stack, true);
     for (size_t i = 0; i < argc; i++) {
       struct string_struct key = object->value.argon_fn.parameters[i];
       ArgonObject *value = argv[i];
