@@ -19,8 +19,8 @@ ArgonObject *term_log(size_t argc, ArgonObject **argv, ArErr *err,
     if (string_convert_method) {
       ArgonObject *string_object =
         argon_call(string_convert_method, 0, NULL, err, state);
-      fwrite(string_object->value.as_str.data, sizeof(char),
-             string_object->value.as_str.length, stdout);
+      fwrite(string_object->value.as_str->data, sizeof(char),
+             string_object->value.as_str->length, stdout);
     }
   }
   printf("\n");

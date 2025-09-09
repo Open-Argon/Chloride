@@ -12,7 +12,6 @@
 #include "runtime/internals/hashmap/hashmap.h"
 #include <gmp.h>
 
-
 typedef enum {
   __base__,
   __class__,
@@ -76,9 +75,9 @@ typedef struct {
 struct string_struct {
   uint64_t prehash;
   uint64_t hash;
-  bool hash_computed;
   char *data;
   size_t length;
+  bool hash_computed;
 };
 
 typedef struct Stack {
@@ -100,30 +99,31 @@ struct argon_function_struct {
 
 struct built_in_slot {
   built_in_fields field;
-  ArgonObject*value;
+  ArgonObject *value;
+};
+
+struct as_number {
+  union {
+    mpq_t *mpq;
+    int64_t i64;
+  } n;
+  bool is_int64;
 };
 
 // full definition of ArgonObject (no typedef again!)
 struct ArgonObject {
-  ArgonType type;
-  ArgonType child_type;
   struct hashmap_GC *dict;
-  struct built_in_slot* built_in_slot;
   size_t built_in_slot_size;
   size_t built_in_slot_length;
-  bool as_bool;
+  struct built_in_slot *built_in_slot;
   union {
-    struct as_number {
-      bool is_int64;
-      union {
-        mpq_t *mpq;
-        int64_t i64;
-      } n;
-    }as_number;
-    struct string_struct as_str;
+    struct as_number *as_number;
+    struct string_struct* as_str;
     native_fn native_fn;
-    struct argon_function_struct argon_fn;
+    struct argon_function_struct *argon_fn;
   } value;
+  ArgonType type;
+  bool as_bool;
 };
 
 #endif // AROBJECT_H

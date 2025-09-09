@@ -67,8 +67,7 @@ inline void add_builtin_field(ArgonObject *target, built_in_fields field,
       return;
     }
   }
-  size_t position = target->built_in_slot_length++;
-  if (target->built_in_slot_length > target->built_in_slot_size) {
+  if (target->built_in_slot_length >= target->built_in_slot_size) {
     target->built_in_slot_size *= 2;
     if (target->built_in_slot_size == 0) target->built_in_slot_size = 2;
     else if (target->built_in_slot_size>BUILT_IN_FIELDS_COUNT) target->built_in_slot_size = BUILT_IN_FIELDS_COUNT;
@@ -76,7 +75,7 @@ inline void add_builtin_field(ArgonObject *target, built_in_fields field,
         ar_realloc(target->built_in_slot, target->built_in_slot_size *
                                               sizeof(struct built_in_slot));
   }
-  target->built_in_slot[position] = (struct built_in_slot){field, object};
+  target->built_in_slot[target->built_in_slot_length++] = (struct built_in_slot){field, object};
   // hashmap_insert_GC(target->dict, built_in_field_hashes[field],
   //                   (char *)built_in_field_names[field], object, 0);
 }

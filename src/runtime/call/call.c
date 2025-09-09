@@ -110,7 +110,7 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
       object = function_object;
   }
   if (object->type == TYPE_FUNCTION) {
-    if (argc != object->value.argon_fn.number_of_parameters) {
+    if (argc != object->value.argon_fn->number_of_parameters) {
       ArgonObject *type_object_name = get_builtin_field_for_class(
           get_builtin_field(object, __class__), __name__,
           original_object);
@@ -120,14 +120,14 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
           state->source_location.line, state->source_location.column,
           state->source_location.length, state->path, "Type Error",
           "%.*s %.*s takes %" PRIu64 " argument(s) but %" PRIu64 " was given",
-          (int)type_object_name->value.as_str.length,
-          type_object_name->value.as_str.data,
-          (int)object_name->value.as_str.length, object_name->value.as_str.data,
-          object->value.argon_fn.number_of_parameters, argc);
+          (int)type_object_name->value.as_str->length,
+          type_object_name->value.as_str->data,
+          (int)object_name->value.as_str->length, object_name->value.as_str->data,
+          object->value.argon_fn->number_of_parameters, argc);
     }
-    Stack *scope = create_scope(object->value.argon_fn.stack, true);
+    Stack *scope = create_scope(object->value.argon_fn->stack, true);
     for (size_t i = 0; i < argc; i++) {
-      struct string_struct key = object->value.argon_fn.parameters[i];
+      struct string_struct key = object->value.argon_fn->parameters[i];
       ArgonObject *value = argv[i];
       uint64_t hash = siphash64_bytes(key.data, key.length, siphash_key);
       hashmap_insert_GC(scope->scope, hash,
@@ -135,18 +135,18 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
                         0);
     }
     StackFrame new_stackFrame = {
-        {object->value.argon_fn.translated.registerCount,
-         object->value.argon_fn.translated.registerAssignment,
+        {object->value.argon_fn->translated.registerCount,
+         object->value.argon_fn->translated.registerAssignment,
          NULL,
-         {object->value.argon_fn.bytecode, sizeof(uint8_t),
-          object->value.argon_fn.bytecode_length,
-          object->value.argon_fn.bytecode_length, false},
-         object->value.argon_fn.translated.constants,
-         object->value.argon_fn.translated.path},
-        {ar_alloc(object->value.argon_fn.translated.registerCount *
+         {object->value.argon_fn->bytecode, sizeof(uint8_t),
+          object->value.argon_fn->bytecode_length,
+          object->value.argon_fn->bytecode_length, false},
+         object->value.argon_fn->translated.constants,
+         object->value.argon_fn->translated.path},
+        {ar_alloc(object->value.argon_fn->translated.registerCount *
                   sizeof(ArgonObject *)),
          0,
-         object->value.argon_fn.translated.path,
+         object->value.argon_fn->translated.path,
          NULL,
          state->currentStackFramePointer,
          {},
@@ -201,6 +201,6 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
   *err = create_err(state->source_location.line, state->source_location.column,
                     state->source_location.length, state->path, "Type Error",
                     "'%.*s' object is not callable",
-                    (int)type_object_name->value.as_str.length,
-                    type_object_name->value.as_str.data);
+                    (int)type_object_name->value.as_str->length,
+                    type_object_name->value.as_str->data);
 }
