@@ -9,15 +9,15 @@
 #include <stdint.h>
 #include "arobject.h"
 
-#define ERR_MSG_MAX_LEN 64
+#define ERR_MSG_MAX_LEN 32
 
 typedef struct ArErr {
-  bool exists;
   char *path;
   int64_t line;
   int64_t column;
   int length;
-  char type[32];
   char message[ERR_MSG_MAX_LEN];
+  char type[16];
+  bool exists;
 } ArErr;
 #endif // RETURN_TYPES_

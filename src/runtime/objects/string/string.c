@@ -19,11 +19,12 @@ ArgonObject *new_string_object_without_memcpy(char *data, size_t length, uint64_
   add_builtin_field(object, field_length,
                     new_number_object_from_int64(length));
   object->type = TYPE_STRING;
-  object->value.as_str.data = data;
-  object->value.as_str.prehash = prehash;
-  object->value.as_str.hash_computed = hash;
-  object->value.as_str.hash = hash;
-  object->value.as_str.length = length;
+  object->value.as_str = ar_alloc(sizeof(struct string_struct));
+  object->value.as_str->data = data;
+  object->value.as_str->prehash = prehash;
+  object->value.as_str->hash_computed = hash;
+  object->value.as_str->hash = hash;
+  object->value.as_str->length = length;
   object->as_bool = length;
   return object;
 }

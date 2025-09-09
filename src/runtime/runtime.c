@@ -55,17 +55,17 @@ ArgonObject *BASE_CLASS___getattribute__(size_t argc, ArgonObject **argv,
   if (check_field) {
     ArgonObject *access = argv[2];
     uint64_t hash;
-    if (access->value.as_str.hash_computed) {
-      hash = access->value.as_str.hash;
+    if (access->value.as_str->hash_computed) {
+      hash = access->value.as_str->hash;
     } else {
       hash =
-          runtime_hash(access->value.as_str.data, access->value.as_str.length,
-                       access->value.as_str.prehash);
-      access->value.as_str.hash = hash;
-      access->value.as_str.hash_computed = true;
+          runtime_hash(access->value.as_str->data, access->value.as_str->length,
+                       access->value.as_str->prehash);
+      access->value.as_str->hash = hash;
+      access->value.as_str->hash_computed = true;
     }
-    ArgonObject *value = get_field_l(to_access, access->value.as_str.data, hash,
-                                     access->value.as_str.length, true, false);
+    ArgonObject *value = get_field_l(to_access, access->value.as_str->data, hash,
+                                     access->value.as_str->length, true, false);
     if (value)
       return value;
     ArgonObject *cls__get_attr__ = get_builtin_field_for_class(
@@ -83,8 +83,8 @@ ArgonObject *BASE_CLASS___getattribute__(size_t argc, ArgonObject **argv,
         to_access);
     *err = create_err(
         0, 0, 0, "", "Runtime Error", "'%.*s' object has no attribute '%.*s'",
-        (int)name->value.as_str.length, name->value.as_str.data,
-        (int)access->value.as_str.length, access->value.as_str.data);
+        (int)name->value.as_str->length, name->value.as_str->data,
+        (int)access->value.as_str->length, access->value.as_str->data);
   }
   return ARGON_NULL;
 }
@@ -105,8 +105,8 @@ ArgonObject *ARGON_ADDITION_FUNCTION(size_t argc, ArgonObject **argv,
           get_builtin_field(output, __name__);
       *err = create_err(0, 0, 0, "", "Runtime Error",
                         "Object '%.*s' is missing __add__ method",
-                        (int)cls___name__->value.as_str.length,
-                        cls___name__->value.as_str.data);
+                        (int)cls___name__->value.as_str->length,
+                        cls___name__->value.as_str->data);
       return ARGON_NULL;
     }
     output =
@@ -133,8 +133,8 @@ ArgonObject *ARGON_SUBTRACTION_FUNCTION(size_t argc, ArgonObject **argv,
           get_builtin_field(output, __name__);
       *err = create_err(0, 0, 0, "", "Runtime Error",
                         "Object '%.*s' is missing __subtract__ method",
-                        (int)cls___name__->value.as_str.length,
-                        cls___name__->value.as_str.data);
+                        (int)cls___name__->value.as_str->length,
+                        cls___name__->value.as_str->data);
       return ARGON_NULL;
     }
     output = argon_call(function__subtract__, 1, (ArgonObject *[]){argv[i]},
@@ -161,8 +161,8 @@ ArgonObject *ARGON_MULTIPLY_FUNCTION(size_t argc, ArgonObject **argv,
           get_builtin_field(output, __name__);
       *err = create_err(0, 0, 0, "", "Runtime Error",
                         "Object '%.*s' is missing __multiply__ method",
-                        (int)cls___name__->value.as_str.length,
-                        cls___name__->value.as_str.data);
+                        (int)cls___name__->value.as_str->length,
+                        cls___name__->value.as_str->data);
       return ARGON_NULL;
     }
     output = argon_call(function__multiply__, 1, (ArgonObject *[]){argv[i]},
@@ -189,8 +189,8 @@ ArgonObject *ARGON_DIVISION_FUNCTION(size_t argc, ArgonObject **argv,
           get_builtin_field(output, __name__);
       *err = create_err(0, 0, 0, "", "Runtime Error",
                         "Object '%.*s' is missing __division__ method",
-                        (int)cls___name__->value.as_str.length,
-                        cls___name__->value.as_str.data);
+                        (int)cls___name__->value.as_str->length,
+                        cls___name__->value.as_str->data);
       return ARGON_NULL;
     }
     output = argon_call(function__division__, 1, (ArgonObject *[]){argv[i]},
@@ -223,8 +223,8 @@ ArgonObject *ARGON_TYPE_TYPE___call__(size_t argc, ArgonObject **argv,
     *err = create_err(
         0, 0, 0, "", "Runtime Error",
         "Object '%.*s' is missing __new__ method, so cannot be initialised",
-        (int)cls___name__->value.as_str.length,
-        cls___name__->value.as_str.data);
+        (int)cls___name__->value.as_str->length,
+        cls___name__->value.as_str->data);
     return ARGON_NULL;
   }
 
@@ -244,8 +244,8 @@ ArgonObject *ARGON_TYPE_TYPE___call__(size_t argc, ArgonObject **argv,
       *err = create_err(
           0, 0, 0, "", "Runtime Error",
           "Object '%.*s' is missing __init__ method, so cannot be initialised",
-          (int)cls___name__->value.as_str.length,
-          cls___name__->value.as_str.data);
+          (int)cls___name__->value.as_str->length,
+          cls___name__->value.as_str->data);
     }
     argon_call(cls___init__, argc - 1, argv + 1, err, state);
     if (err->exists)
@@ -309,10 +309,10 @@ ArgonObject *BASE_CLASS___string__(size_t argc, ArgonObject **argv, ArErr *err,
   char buffer[100];
   if (class_name && object_name)
     snprintf(buffer, sizeof(buffer), "<%.*s %.*s at %p>",
-             (int)class_name->value.as_str.length,
-             class_name->value.as_str.data,
-             (int)object_name->value.as_str.length,
-             object_name->value.as_str.data, argv[0]);
+             (int)class_name->value.as_str->length,
+             class_name->value.as_str->data,
+             (int)object_name->value.as_str->length,
+             object_name->value.as_str->data, argv[0]);
   else
     snprintf(buffer, sizeof(buffer), "<object at %p>", argv[0]);
   return new_string_object_null_terminated(buffer);
@@ -339,8 +339,8 @@ ArgonObject *ARGON_STRING_TYPE___init__(size_t argc, ArgonObject **argv,
   ArgonObject *self = argv[0];
   ArgonObject *object = argv[1];
 
-  self->value.as_str.data = NULL;
-  self->value.as_str.length = 0;
+  self->value.as_str->data = NULL;
+  self->value.as_str->length = 0;
   self->type = TYPE_STRING;
   ArgonObject *string_convert_method = get_builtin_field_for_class(
       get_builtin_field(object, __class__), __string__, object);
@@ -349,11 +349,11 @@ ArgonObject *ARGON_STRING_TYPE___init__(size_t argc, ArgonObject **argv,
         argon_call(string_convert_method, 0, NULL, err, state);
     if (err->exists)
       return ARGON_NULL;
-    self->value.as_str.data =
-        ar_alloc_atomic(string_object->value.as_str.length);
-    memcpy(self->value.as_str.data, string_object->value.as_str.data,
-           string_object->value.as_str.length);
-    self->value.as_str.length = string_object->value.as_str.length;
+    self->value.as_str->data =
+        ar_alloc_atomic(string_object->value.as_str->length);
+    memcpy(self->value.as_str->data, string_object->value.as_str->data,
+           string_object->value.as_str->length);
+    self->value.as_str->length = string_object->value.as_str->length;
   }
   return ARGON_NULL;
 }
@@ -382,7 +382,7 @@ ArgonObject *ARGON_BOOL_TYPE___new__(size_t argc, ArgonObject **argv,
       get_builtin_field(object, __class__), __name__, object);
   *err = create_err(
       0, 0, 0, "", "Runtime Error", "cannot convert type '%.*s' to bool",
-      type_name->value.as_str.length, type_name->value.as_str.data);
+      type_name->value.as_str->length, type_name->value.as_str->data);
   return ARGON_NULL;
 }
 
@@ -400,14 +400,14 @@ ArgonObject *ARGON_STRING_TYPE___add__(size_t argc, ArgonObject **argv,
     *err = create_err(
         0, 0, 0, "", "Runtime Error",
         "__add__ cannot perform concatenation between a string and %.*s",
-        type_name->value.as_str.length, type_name->value.as_str.data);
+        type_name->value.as_str->length, type_name->value.as_str->data);
     return ARGON_NULL;
   }
-  size_t length = argv[0]->value.as_str.length + argv[1]->value.as_str.length;
+  size_t length = argv[0]->value.as_str->length + argv[1]->value.as_str->length;
   char *concat = ar_alloc_atomic(length);
-  memcpy(concat, argv[0]->value.as_str.data, argv[0]->value.as_str.length);
-  memcpy(concat + argv[0]->value.as_str.length, argv[1]->value.as_str.data,
-         argv[1]->value.as_str.length);
+  memcpy(concat, argv[0]->value.as_str->data, argv[0]->value.as_str->length);
+  memcpy(concat + argv[0]->value.as_str->length, argv[1]->value.as_str->data,
+         argv[1]->value.as_str->length);
   ArgonObject *object = new_string_object_without_memcpy(concat, length, 0, 0);
   return object;
 }
@@ -456,8 +456,8 @@ ArgonObject *ARGON_STRING_TYPE___number__(size_t argc, ArgonObject **argv,
 
   mpq_t r;
   mpq_init(r);
-  int result = mpq_set_decimal_str_exp(r, argv[0]->value.as_str.data,
-                                       argv[0]->value.as_str.length);
+  int result = mpq_set_decimal_str_exp(r, argv[0]->value.as_str->data,
+                                       argv[0]->value.as_str->length);
   if (result != 0) {
     mpq_clear(r);
     *err = create_err(0, 0, 0, "", "Runtime Error", "Unable to parse number",
@@ -476,7 +476,7 @@ ArgonObject *ARGON_STRING_TYPE___boolean__(size_t argc, ArgonObject **argv,
     *err = create_err(0, 0, 0, "", "Runtime Error",
                       "__boolean__ expects 1 arguments, got %" PRIu64, argc);
   }
-  return argv[0]->value.as_str.length == 0 ? ARGON_FALSE : ARGON_TRUE;
+  return argv[0]->value.as_str->length == 0 ? ARGON_FALSE : ARGON_TRUE;
 }
 
 ArgonObject *ARGON_BOOL_TYPE___boolean__(size_t argc, ArgonObject **argv,
@@ -898,10 +898,10 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       ArgonObject *valueB = state->registers[registerB];
 
       if (likely(valueA->type == TYPE_NUMBER && valueB->type == TYPE_NUMBER)) {
-        if (likely(valueA->value.as_number.is_int64 &&
-                   valueB->value.as_number.is_int64)) {
-          int64_t a = valueA->value.as_number.n.i64;
-          int64_t b = valueB->value.as_number.n.i64;
+        if (likely(valueA->value.as_number->is_int64 &&
+                   valueB->value.as_number->is_int64)) {
+          int64_t a = valueA->value.as_number->n.i64;
+          int64_t b = valueB->value.as_number->n.i64;
           bool gonna_overflow = (a > 0 && b > 0 && a > INT64_MAX - b) ||
                                 (a < 0 && b < 0 && a < INT64_MIN - b);
           if (!gonna_overflow) {
@@ -917,24 +917,24 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
           state->registers[registerC] = new_number_object(a_GMP);
           mpq_clear(a_GMP);
           mpq_clear(b_GMP);
-        } else if (!valueA->value.as_number.is_int64 &&
-                   !valueB->value.as_number.is_int64) {
+        } else if (!valueA->value.as_number->is_int64 &&
+                   !valueB->value.as_number->is_int64) {
           mpq_t r;
           mpq_init(r);
-          mpq_add(r, *valueA->value.as_number.n.mpq,
-                  *valueB->value.as_number.n.mpq);
+          mpq_add(r, *valueA->value.as_number->n.mpq,
+                  *valueB->value.as_number->n.mpq);
           state->registers[registerC] = new_number_object(r);
           mpq_clear(r);
         } else {
           mpq_t a_GMP, b_GMP;
           mpq_init(a_GMP);
           mpq_init(b_GMP);
-          if (valueA->value.as_number.is_int64) {
-            mpq_set_si(a_GMP, valueA->value.as_number.n.i64, 1);
-            mpq_set(b_GMP, *valueB->value.as_number.n.mpq);
+          if (valueA->value.as_number->is_int64) {
+            mpq_set_si(a_GMP, valueA->value.as_number->n.i64, 1);
+            mpq_set(b_GMP, *valueB->value.as_number->n.mpq);
           } else {
-            mpq_set(a_GMP, *valueA->value.as_number.n.mpq);
-            mpq_set_si(b_GMP, valueB->value.as_number.n.i64, 1);
+            mpq_set(a_GMP, *valueA->value.as_number->n.mpq);
+            mpq_set_si(b_GMP, valueB->value.as_number->n.i64, 1);
           }
           mpq_add(a_GMP, a_GMP, b_GMP);
           state->registers[registerC] = new_number_object(a_GMP);
@@ -958,10 +958,10 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       ArgonObject *valueB = state->registers[registerB];
 
       if (likely(valueA->type == TYPE_NUMBER && valueB->type == TYPE_NUMBER)) {
-        if (likely(valueA->value.as_number.is_int64 &&
-                   valueB->value.as_number.is_int64)) {
-          int64_t a = valueA->value.as_number.n.i64;
-          int64_t b = valueB->value.as_number.n.i64;
+        if (likely(valueA->value.as_number->is_int64 &&
+                   valueB->value.as_number->is_int64)) {
+          int64_t a = valueA->value.as_number->n.i64;
+          int64_t b = valueB->value.as_number->n.i64;
           int64_t neg_a = -a;
           bool gonna_overflow = (neg_a > 0 && b > 0 && b > INT64_MAX - neg_a) ||
                                 (neg_a < 0 && b < 0 && b < INT64_MIN - neg_a);
@@ -978,24 +978,24 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
           state->registers[registerC] = new_number_object(a_GMP);
           mpq_clear(a_GMP);
           mpq_clear(b_GMP);
-        } else if (!valueA->value.as_number.is_int64 &&
-                   !valueB->value.as_number.is_int64) {
+        } else if (!valueA->value.as_number->is_int64 &&
+                   !valueB->value.as_number->is_int64) {
           mpq_t r;
           mpq_init(r);
-          mpq_sub(r, *valueA->value.as_number.n.mpq,
-                  *valueB->value.as_number.n.mpq);
+          mpq_sub(r, *valueA->value.as_number->n.mpq,
+                  *valueB->value.as_number->n.mpq);
           state->registers[registerC] = new_number_object(r);
           mpq_clear(r);
         } else {
           mpq_t a_GMP, b_GMP;
           mpq_init(a_GMP);
           mpq_init(b_GMP);
-          if (valueA->value.as_number.is_int64) {
-            mpq_set_si(a_GMP, valueA->value.as_number.n.i64, 1);
-            mpq_set(b_GMP, *valueB->value.as_number.n.mpq);
+          if (valueA->value.as_number->is_int64) {
+            mpq_set_si(a_GMP, valueA->value.as_number->n.i64, 1);
+            mpq_set(b_GMP, *valueB->value.as_number->n.mpq);
           } else {
-            mpq_set(a_GMP, *valueA->value.as_number.n.mpq);
-            mpq_set_si(b_GMP, valueB->value.as_number.n.i64, 1);
+            mpq_set(a_GMP, *valueA->value.as_number->n.mpq);
+            mpq_set_si(b_GMP, valueB->value.as_number->n.i64, 1);
           }
           mpq_sub(a_GMP, a_GMP, b_GMP);
           state->registers[registerC] = new_number_object(a_GMP);
@@ -1019,10 +1019,10 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       ArgonObject *valueB = state->registers[registerB];
 
       if (likely(valueA->type == TYPE_NUMBER && valueB->type == TYPE_NUMBER)) {
-        if (likely(valueA->value.as_number.is_int64 &&
-                   valueB->value.as_number.is_int64)) {
-          int64_t a = valueA->value.as_number.n.i64;
-          int64_t b = valueB->value.as_number.n.i64;
+        if (likely(valueA->value.as_number->is_int64 &&
+                   valueB->value.as_number->is_int64)) {
+          int64_t a = valueA->value.as_number->n.i64;
+          int64_t b = valueB->value.as_number->n.i64;
           bool gonna_overflow =
               a > 0 ? (b > 0 ? a > INT64_MAX / b : b < INT64_MIN / a)
                     : (b > 0 ? a < INT64_MIN / b : a != 0 && b < INT64_MAX / a);
@@ -1039,24 +1039,24 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
           state->registers[registerC] = new_number_object(a_GMP);
           mpq_clear(a_GMP);
           mpq_clear(b_GMP);
-        } else if (!valueA->value.as_number.is_int64 &&
-                   !valueB->value.as_number.is_int64) {
+        } else if (!valueA->value.as_number->is_int64 &&
+                   !valueB->value.as_number->is_int64) {
           mpq_t r;
           mpq_init(r);
-          mpq_mul(r, *valueA->value.as_number.n.mpq,
-                  *valueB->value.as_number.n.mpq);
+          mpq_mul(r, *valueA->value.as_number->n.mpq,
+                  *valueB->value.as_number->n.mpq);
           state->registers[registerC] = new_number_object(r);
           mpq_clear(r);
         } else {
           mpq_t a_GMP, b_GMP;
           mpq_init(a_GMP);
           mpq_init(b_GMP);
-          if (valueA->value.as_number.is_int64) {
-            mpq_set_si(a_GMP, valueA->value.as_number.n.i64, 1);
-            mpq_set(b_GMP, *valueB->value.as_number.n.mpq);
+          if (valueA->value.as_number->is_int64) {
+            mpq_set_si(a_GMP, valueA->value.as_number->n.i64, 1);
+            mpq_set(b_GMP, *valueB->value.as_number->n.mpq);
           } else {
-            mpq_set(a_GMP, *valueA->value.as_number.n.mpq);
-            mpq_set_si(b_GMP, valueB->value.as_number.n.i64, 1);
+            mpq_set(a_GMP, *valueA->value.as_number->n.mpq);
+            mpq_set_si(b_GMP, valueB->value.as_number->n.i64, 1);
           }
           mpq_mul(a_GMP, a_GMP, b_GMP);
           state->registers[registerC] = new_number_object(a_GMP);
@@ -1080,10 +1080,10 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       ArgonObject *valueB = state->registers[registerB];
 
       if (likely(valueA->type == TYPE_NUMBER && valueB->type == TYPE_NUMBER)) {
-        if (likely(valueA->value.as_number.is_int64 &&
-                   valueB->value.as_number.is_int64)) {
-          int64_t a = valueA->value.as_number.n.i64;
-          int64_t b = valueB->value.as_number.n.i64;
+        if (likely(valueA->value.as_number->is_int64 &&
+                   valueB->value.as_number->is_int64)) {
+          int64_t a = valueA->value.as_number->n.i64;
+          int64_t b = valueB->value.as_number->n.i64;
           if (!b) {
             *err = create_err(state->source_location.line,
                               state->source_location.column,
@@ -1093,31 +1093,31 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
           }
           state->registers[registerC] =
               new_number_object_from_num_and_den(a, b);
-        } else if (!valueA->value.as_number.is_int64 &&
-                   !valueB->value.as_number.is_int64) {
+        } else if (!valueA->value.as_number->is_int64 &&
+                   !valueB->value.as_number->is_int64) {
           mpq_t r;
           mpq_init(r);
-          mpq_div(r, *valueA->value.as_number.n.mpq,
-                  *valueB->value.as_number.n.mpq);
+          mpq_div(r, *valueA->value.as_number->n.mpq,
+                  *valueB->value.as_number->n.mpq);
           state->registers[registerC] = new_number_object(r);
           mpq_clear(r);
         } else {
           mpq_t a_GMP, b_GMP;
           mpq_init(a_GMP);
           mpq_init(b_GMP);
-          if (valueA->value.as_number.is_int64) {
-            mpq_set_si(a_GMP, valueA->value.as_number.n.i64, 1);
-            mpq_set(b_GMP, *valueB->value.as_number.n.mpq);
+          if (valueA->value.as_number->is_int64) {
+            mpq_set_si(a_GMP, valueA->value.as_number->n.i64, 1);
+            mpq_set(b_GMP, *valueB->value.as_number->n.mpq);
           } else {
-            mpq_set(a_GMP, *valueA->value.as_number.n.mpq);
-            if (!valueB->value.as_number.n.i64) {
+            mpq_set(a_GMP, *valueA->value.as_number->n.mpq);
+            if (!valueB->value.as_number->n.i64) {
               *err = create_err(state->source_location.line,
                                 state->source_location.column,
                                 state->source_location.length, state->path,
                                 "Zero Division Error", "division by zero");
               continue;
             }
-            mpq_set_si(b_GMP, valueB->value.as_number.n.i64, 1);
+            mpq_set_si(b_GMP, valueB->value.as_number->n.i64, 1);
           }
           mpq_div(a_GMP, a_GMP, b_GMP);
           state->registers[registerC] = new_number_object(a_GMP);
