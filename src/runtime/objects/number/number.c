@@ -498,7 +498,6 @@ void init_small_ints() {
     small_ints[i].type = TYPE_NUMBER;
     small_ints[i].dict = createHashmap_GC();
     add_builtin_field(&small_ints[i], __class__, ARGON_NUMBER_TYPE);
-    add_builtin_field(&small_ints[i], __base__, BASE_CLASS);
     small_ints[i].value.as_number.is_int64 = true;
     small_ints[i].value.as_number.n.i64 = n;
     small_ints[i].as_bool = n;
