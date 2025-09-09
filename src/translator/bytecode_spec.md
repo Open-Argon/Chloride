@@ -120,9 +120,9 @@ sets the source location onto the runtime
 1. the column
 1. the length
 
-## OP_LOAD_ACCESS_FUNCTION
+## OP_LOAD_GETATTRIBUTE_FUNCTION
 
-loads the access function into register 1
+loads the \_\_getattribute\_\_ function from the objects class in register 1 and put it into register 1
 
 ## OP_LOAD_BOOL
 

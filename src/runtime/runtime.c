@@ -9,7 +9,6 @@
 #include "../hash_data/hash_data.h"
 #include "../parser/number/number.h"
 #include "../translator/translator.h"
-#include "access/access.h"
 #include "assignment/assignment.h"
 #include "call/call.h"
 #include "declaration/declaration.h"
@@ -34,7 +33,7 @@
 
 ArgonObject *ARGON_METHOD_TYPE;
 Stack *Global_Scope = NULL;
-ArgonObject *ACCESS_FUNCTION;
+ArgonObject *GETATTRIBUTE_FUNCTION;
 ArgonObject *ADDITION_FUNCTION;
 ArgonObject *SUBTRACTION_FUNCTION;
 ArgonObject *MULTIPLY_FUNCTION;
@@ -42,6 +41,53 @@ ArgonObject *DIVISION_FUNCTION;
 ArgonObject *POWER_FUNCTION;
 ArgonObject *MODULO_FUNCTION;
 ArgonObject *FLOORDIVISION_FUNCTION;
+
+ArgonObject *BASE_CLASS___getattribute__(size_t argc, ArgonObject **argv,
+                                         ArErr *err, RuntimeState *state) {
+  (void)state;
+  if (argc != 3) {
+    *err = create_err(0, 0, 0, "", "Runtime Error",
+                      "__getattribute__ expects 3 arguments, got %" PRIu64);
+    return ARGON_NULL;
+  }
+  ArgonObject *to_access = argv[0];
+  bool check_field = argv[1] == ARGON_TRUE;
+  if (check_field) {
+    ArgonObject *access = argv[2];
+    uint64_t hash;
+    if (access->value.as_str.hash_computed) {
+      hash = access->value.as_str.hash;
+    } else {
+      hash =
+          runtime_hash(access->value.as_str.data, access->value.as_str.length,
+                       access->value.as_str.prehash);
+      access->value.as_str.hash = hash;
+      access->value.as_str.hash_computed = true;
+    }
+    ArgonObject *value = get_field_l(to_access, access->value.as_str.data, hash,
+                                     access->value.as_str.length, true, false);
+    if (value)
+      return value;
+    ArgonObject *cls__get_attr__ = get_builtin_field_for_class(
+        get_builtin_field(to_access, __class__), __get_attr__,
+        to_access);
+    if (cls__get_attr__) {
+      value = argon_call(cls__get_attr__, 1, (ArgonObject *[]){access}, err, state);
+      if (err->exists) {
+        return ARGON_NULL;
+      }
+      return value;
+    }
+    ArgonObject *name = get_builtin_field_for_class(
+        get_builtin_field(to_access, __class__), __name__,
+        to_access);
+    *err = create_err(
+        0, 0, 0, "", "Runtime Error", "'%.*s' object has no attribute '%.*s'",
+        (int)name->value.as_str.length, name->value.as_str.data,
+        (int)access->value.as_str.length, access->value.as_str.data);
+  }
+  return ARGON_NULL;
+}
 
 ArgonObject *ARGON_ADDITION_FUNCTION(size_t argc, ArgonObject **argv,
                                      ArErr *err, RuntimeState *state) {
@@ -53,10 +99,10 @@ ArgonObject *ARGON_ADDITION_FUNCTION(size_t argc, ArgonObject **argv,
   ArgonObject *output = argv[0];
   for (size_t i = 1; i < argc; i++) {
     ArgonObject *object__add__ = get_builtin_field_for_class(
-        get_builtin_field(output, __class__, false, false), __add__, output);
+        get_builtin_field(output, __class__), __add__, output);
     if (!object__add__) {
       ArgonObject *cls___name__ =
-          get_builtin_field(output, __name__, true, false);
+          get_builtin_field(output, __name__);
       *err = create_err(0, 0, 0, "", "Runtime Error",
                         "Object '%.*s' is missing __add__ method",
                         (int)cls___name__->value.as_str.length,
@@ -80,11 +126,11 @@ ArgonObject *ARGON_SUBTRACTION_FUNCTION(size_t argc, ArgonObject **argv,
   ArgonObject *output = argv[0];
   for (size_t i = 1; i < argc; i++) {
     ArgonObject *function__subtract__ = get_builtin_field_for_class(
-        get_builtin_field(output, __class__, false, false), __subtract__,
+        get_builtin_field(output, __class__), __subtract__,
         output);
     if (!function__subtract__) {
       ArgonObject *cls___name__ =
-          get_builtin_field(output, __name__, true, false);
+          get_builtin_field(output, __name__);
       *err = create_err(0, 0, 0, "", "Runtime Error",
                         "Object '%.*s' is missing __subtract__ method",
                         (int)cls___name__->value.as_str.length,
@@ -108,11 +154,11 @@ ArgonObject *ARGON_MULTIPLY_FUNCTION(size_t argc, ArgonObject **argv,
   ArgonObject *output = argv[0];
   for (size_t i = 1; i < argc; i++) {
     ArgonObject *function__multiply__ = get_builtin_field_for_class(
-        get_builtin_field(output, __class__, false, false), __multiply__,
+        get_builtin_field(output, __class__), __multiply__,
         output);
     if (!function__multiply__) {
       ArgonObject *cls___name__ =
-          get_builtin_field(output, __name__, true, false);
+          get_builtin_field(output, __name__);
       *err = create_err(0, 0, 0, "", "Runtime Error",
                         "Object '%.*s' is missing __multiply__ method",
                         (int)cls___name__->value.as_str.length,
@@ -136,11 +182,11 @@ ArgonObject *ARGON_DIVISION_FUNCTION(size_t argc, ArgonObject **argv,
   ArgonObject *output = argv[0];
   for (size_t i = 1; i < argc; i++) {
     ArgonObject *function__division__ = get_builtin_field_for_class(
-        get_builtin_field(output, __class__, false, false), __division__,
+        get_builtin_field(output, __class__), __division__,
         output);
     if (!function__division__) {
       ArgonObject *cls___name__ =
-          get_builtin_field(output, __name__, true, false);
+          get_builtin_field(output, __name__);
       *err = create_err(0, 0, 0, "", "Runtime Error",
                         "Object '%.*s' is missing __division__ method",
                         (int)cls___name__->value.as_str.length,
@@ -164,7 +210,7 @@ ArgonObject *ARGON_TYPE_TYPE___call__(size_t argc, ArgonObject **argv,
   }
   ArgonObject *cls = argv[0];
   if (cls == ARGON_TYPE_TYPE && argc == 2) {
-    ArgonObject *cls_class = get_builtin_field(argv[1], __class__, true, false);
+    ArgonObject *cls_class = get_builtin_field(argv[1], __class__);
     if (cls_class)
       return cls_class;
     return ARGON_NULL;
@@ -173,7 +219,7 @@ ArgonObject *ARGON_TYPE_TYPE___call__(size_t argc, ArgonObject **argv,
       get_builtin_field_for_class(argv[0], __new__, NULL);
   if (!cls___new__) {
     ArgonObject *cls___name__ =
-        get_builtin_field(argv[0], __name__, true, false);
+        get_builtin_field(argv[0], __name__);
     *err = create_err(
         0, 0, 0, "", "Runtime Error",
         "Object '%.*s' is missing __new__ method, so cannot be initialised",
@@ -194,7 +240,7 @@ ArgonObject *ARGON_TYPE_TYPE___call__(size_t argc, ArgonObject **argv,
         get_builtin_field_for_class(argv[0], __init__, new_object);
     if (!cls___init__) {
       ArgonObject *cls___name__ =
-          get_builtin_field(argv[0], __name__, true, false);
+          get_builtin_field(argv[0], __name__);
       *err = create_err(
           0, 0, 0, "", "Runtime Error",
           "Object '%.*s' is missing __init__ method, so cannot be initialised",
@@ -232,8 +278,7 @@ ArgonObject *BASE_CLASS___new__(size_t argc, ArgonObject **argv, ArErr *err,
                    "__new__ expects at least 1 argument, got %" PRIu64, argc);
     return ARGON_NULL;
   }
-  ArgonObject *new_obj = new_object();
-  add_builtin_field(new_obj, __class__, argv[0]);
+  ArgonObject *new_obj = new_instance(argv[0]);
   return new_obj;
 }
 
@@ -259,7 +304,7 @@ ArgonObject *BASE_CLASS___string__(size_t argc, ArgonObject **argv, ArErr *err,
   ArgonObject *object_name =
       get_builtin_field_for_class(argv[0], __name__, NULL);
   ArgonObject *class_name = get_builtin_field_for_class(
-      get_builtin_field(argv[0], __class__, false, false), __name__, NULL);
+      get_builtin_field(argv[0], __class__), __name__, NULL);
 
   char buffer[100];
   if (class_name && object_name)
@@ -298,7 +343,7 @@ ArgonObject *ARGON_STRING_TYPE___init__(size_t argc, ArgonObject **argv,
   self->value.as_str.length = 0;
   self->type = TYPE_STRING;
   ArgonObject *string_convert_method = get_builtin_field_for_class(
-      get_builtin_field(object, __class__, false, false), __string__, object);
+      get_builtin_field(object, __class__), __string__, object);
   if (string_convert_method) {
     ArgonObject *string_object =
         argon_call(string_convert_method, 0, NULL, err, state);
@@ -325,7 +370,7 @@ ArgonObject *ARGON_BOOL_TYPE___new__(size_t argc, ArgonObject **argv,
 
   self->type = TYPE_STRING;
   ArgonObject *boolean_convert_method = get_builtin_field_for_class(
-      get_builtin_field(object, __class__, false, false), __boolean__, object);
+      get_builtin_field(object, __class__), __boolean__, object);
   if (boolean_convert_method) {
     ArgonObject *boolean_object =
         argon_call(boolean_convert_method, 0, NULL, err, state);
@@ -334,7 +379,7 @@ ArgonObject *ARGON_BOOL_TYPE___new__(size_t argc, ArgonObject **argv,
     return boolean_object;
   }
   ArgonObject *type_name = get_builtin_field_for_class(
-      get_builtin_field(object, __class__, false, false), __name__, object);
+      get_builtin_field(object, __class__), __name__, object);
   *err = create_err(
       0, 0, 0, "", "Runtime Error", "cannot convert type '%.*s' to bool",
       type_name->value.as_str.length, type_name->value.as_str.data);
@@ -351,7 +396,7 @@ ArgonObject *ARGON_STRING_TYPE___add__(size_t argc, ArgonObject **argv,
   }
   if (argv[1]->type != TYPE_STRING) {
     ArgonObject *type_name = get_builtin_field_for_class(
-        get_builtin_field(argv[1], __class__, false, false), __name__, argv[1]);
+        get_builtin_field(argv[1], __class__), __name__, argv[1]);
     *err = create_err(
         0, 0, 0, "", "Runtime Error",
         "__add__ cannot perform concatenation between a string and %.*s",
@@ -476,32 +521,29 @@ ArgonObject *ARGON_NULL_TYPE___string__(size_t argc, ArgonObject **argv,
 }
 
 void bootstrap_types() {
-  BASE_CLASS = new_object();
-  ARGON_TYPE_TYPE = new_object();
+  BASE_CLASS = new_class();
+  ARGON_TYPE_TYPE = new_class();
   add_builtin_field(ARGON_TYPE_TYPE, __base__, BASE_CLASS);
   add_builtin_field(ARGON_TYPE_TYPE, __class__, ARGON_TYPE_TYPE);
 
-  ARGON_NULL_TYPE = new_object();
+  ARGON_NULL_TYPE = new_class();
   add_builtin_field(ARGON_NULL_TYPE, __base__, BASE_CLASS);
-  ARGON_NULL = new_object();
+  ARGON_NULL = new_instance(ARGON_NULL_TYPE);
   ARGON_NULL->type = TYPE_NULL;
-  add_builtin_field(ARGON_NULL, __class__, ARGON_NULL_TYPE);
   ARGON_NULL->as_bool = false;
 
-  add_builtin_field(BASE_CLASS, __base__, NULL);
+  add_builtin_field(BASE_CLASS, __base__, ARGON_NULL);
   add_builtin_field(BASE_CLASS, __class__, ARGON_TYPE_TYPE);
 
-  ARGON_BOOL_TYPE = new_object();
+  ARGON_BOOL_TYPE = new_class();
   add_builtin_field(ARGON_BOOL_TYPE, __base__, BASE_CLASS);
-  ARGON_TRUE = new_object();
+  ARGON_TRUE = new_instance(ARGON_BOOL_TYPE);
   ARGON_TRUE->type = TYPE_BOOL;
-  add_builtin_field(ARGON_TRUE, __class__, ARGON_BOOL_TYPE);
-  ARGON_FALSE = new_object();
+  ARGON_FALSE = new_instance(ARGON_BOOL_TYPE);
   ARGON_FALSE->type = TYPE_BOOL;
-  add_builtin_field(ARGON_FALSE, __class__, ARGON_BOOL_TYPE);
   ARGON_NULL->as_bool = false;
 
-  ARGON_STRING_TYPE = new_object();
+  ARGON_STRING_TYPE = new_class();
   add_builtin_field(ARGON_STRING_TYPE, __base__, BASE_CLASS);
 
   add_builtin_field(ARGON_STRING_TYPE, __name__,
@@ -515,12 +557,12 @@ void bootstrap_types() {
   add_builtin_field(ARGON_BOOL_TYPE, __name__,
                     new_string_object_null_terminated("boolean"));
 
-  ARGON_FUNCTION_TYPE = new_object();
+  ARGON_FUNCTION_TYPE = new_class();
   add_builtin_field(ARGON_FUNCTION_TYPE, __base__, BASE_CLASS);
   add_builtin_field(ARGON_FUNCTION_TYPE, __name__,
                     new_string_object_null_terminated("function"));
 
-  ARGON_METHOD_TYPE = new_object();
+  ARGON_METHOD_TYPE = new_class();
   add_builtin_field(ARGON_METHOD_TYPE, __base__, BASE_CLASS);
   add_builtin_field(ARGON_METHOD_TYPE, __name__,
                     new_string_object_null_terminated("method"));
@@ -580,8 +622,8 @@ void bootstrap_types() {
   add_builtin_field(
       ARGON_BOOL_TYPE, __number__,
       create_argon_native_function("__number__", ARGON_BOOL_TYPE___number__));
-  ACCESS_FUNCTION = create_argon_native_function("__get_attr__",
-                                                 ARGON_TYPE_TYPE___get_attr__);
+  GETATTRIBUTE_FUNCTION = create_argon_native_function("__get_attr__",
+                                                 BASE_CLASS___getattribute__);
   ADDITION_FUNCTION =
       create_argon_native_function("add", ARGON_ADDITION_FUNCTION);
   SUBTRACTION_FUNCTION =
@@ -590,7 +632,7 @@ void bootstrap_types() {
       create_argon_native_function("multiply", ARGON_MULTIPLY_FUNCTION);
   DIVISION_FUNCTION =
       create_argon_native_function("division", ARGON_DIVISION_FUNCTION);
-  add_builtin_field(BASE_CLASS, __get_attr__, ACCESS_FUNCTION);
+  add_builtin_field(BASE_CLASS, __getattribute__, GETATTRIBUTE_FUNCTION);
 }
 
 void add_to_scope(Stack *stack, char *name, ArgonObject *value) {
@@ -611,7 +653,7 @@ void bootstrap_globals() {
   add_to_scope(Global_Scope, "multiply", MULTIPLY_FUNCTION);
   add_to_scope(Global_Scope, "division", DIVISION_FUNCTION);
 
-  ArgonObject *argon_term = new_object();
+  ArgonObject *argon_term = new_class();
   add_builtin_field(argon_term, __init__, ARGON_NULL);
   add_builtin_field(argon_term, field_log,
                     create_argon_native_function("log", term_log));
@@ -723,7 +765,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       [OP_COPY_TO_REGISTER] = &&DO_COPY_TO_REGISTER,
       [OP_ADDITION] = &&DO_ADDITION,
       [OP_SUBTRACTION] = &&DO_SUBTRACTION,
-      [OP_LOAD_ACCESS_FUNCTION] = &&DO_LOAD_ACCESS_FUNCTION,
+      [OP_LOAD_GETATTRIBUTE_FUNCTION] = &&DO_LOAD_GETATTRIBUTE_FUNCTION,
       [OP_MULTIPLICATION] = &&DO_MULTIPLICATION,
       [OP_DIVISION] = &&DO_DIVISION,
       [OP_NOT] = &&DO_NOT};
@@ -830,8 +872,16 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       state->registers[0] =
           pop_byte(translated, state) ? ARGON_TRUE : ARGON_FALSE;
       continue;
-    DO_LOAD_ACCESS_FUNCTION:
-      state->registers[0] = ACCESS_FUNCTION;
+    DO_LOAD_GETATTRIBUTE_FUNCTION:
+      state->registers[0] = get_builtin_field_for_class(
+          get_builtin_field(state->registers[0], __class__),
+          __getattribute__, state->registers[0]);
+      if (!state->registers[0]) {
+        *err = create_err(
+            state->source_location.line, state->source_location.column,
+            state->source_location.length, state->path, "Runtime Error",
+            "unable to get __getattribute__ from objects class");
+      }
       continue;
     DO_COPY_TO_REGISTER: {
       uint8_t from_register = pop_byte(translated, state);
@@ -1034,6 +1084,13 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
                    valueB->value.as_number.is_int64)) {
           int64_t a = valueA->value.as_number.n.i64;
           int64_t b = valueB->value.as_number.n.i64;
+          if (!b) {
+            *err = create_err(state->source_location.line,
+                              state->source_location.column,
+                              state->source_location.length, state->path,
+                              "Zero Division Error", "division by zero");
+            continue;
+          }
           state->registers[registerC] =
               new_number_object_from_num_and_den(a, b);
         } else if (!valueA->value.as_number.is_int64 &&
@@ -1053,6 +1110,13 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
             mpq_set(b_GMP, *valueB->value.as_number.n.mpq);
           } else {
             mpq_set(a_GMP, *valueA->value.as_number.n.mpq);
+            if (!valueB->value.as_number.n.i64) {
+              *err = create_err(state->source_location.line,
+                                state->source_location.column,
+                                state->source_location.length, state->path,
+                                "Zero Division Error", "division by zero");
+              continue;
+            }
             mpq_set_si(b_GMP, valueB->value.as_number.n.i64, 1);
           }
           mpq_div(a_GMP, a_GMP, b_GMP);

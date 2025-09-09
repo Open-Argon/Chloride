@@ -27,7 +27,7 @@ struct hashmap_GC *createHashmap_GC() {
 }
 
 void clear_hashmap_GC(struct hashmap_GC *t) {
-  if (!t->hashmap_count)
+  if (!t->count)
     return;
   t->order = 1;
   t->count = 0;

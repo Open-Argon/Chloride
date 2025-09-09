@@ -12,6 +12,32 @@
 #include "runtime/internals/hashmap/hashmap.h"
 #include <gmp.h>
 
+
+typedef enum {
+  __base__,
+  __class__,
+  __name__,
+  __add__,
+  __string__,
+  __subtract__,
+  __multiply__,
+  __division__,
+  __new__,
+  __init__,
+  __boolean__,
+  __get_attr__,
+  __binding__,
+  __function__,
+  field__address,
+  __call__,
+  __number__,
+  field_log,
+  field_length,
+  __getattribute__,
+
+  BUILT_IN_FIELDS_COUNT,
+} built_in_fields;
+
 typedef struct ArErr ArErr;
 typedef struct RuntimeState RuntimeState;
 
@@ -77,6 +103,7 @@ struct ArgonObject {
   ArgonType type;
   ArgonType child_type;
   struct hashmap_GC *dict;
+  ArgonObject* Builtin_slots[BUILT_IN_FIELDS_COUNT];
   bool as_bool;
   union {
     struct as_number {

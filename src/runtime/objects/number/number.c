@@ -37,7 +37,7 @@ ArgonObject *ARGON_NUMBER_TYPE___new__(size_t argc, ArgonObject **argv,
 
   self->type = TYPE_STRING;
   ArgonObject *boolean_convert_method = get_builtin_field_for_class(
-      get_builtin_field(object, __class__, false, false), __number__, object);
+      get_builtin_field(object, __class__), __number__, object);
   if (boolean_convert_method) {
     ArgonObject *boolean_object =
         argon_call(boolean_convert_method, 0, NULL, err, state);
@@ -46,7 +46,7 @@ ArgonObject *ARGON_NUMBER_TYPE___new__(size_t argc, ArgonObject **argv,
     return boolean_object;
   }
   ArgonObject *type_name = get_builtin_field_for_class(
-      get_builtin_field(object, __class__, false, false), __name__, object);
+      get_builtin_field(object, __class__), __name__, object);
   *err = create_err(
       0, 0, 0, "", "Runtime Error", "cannot convert type '%.*s' to number",
       type_name->value.as_str.length, type_name->value.as_str.data);
@@ -85,7 +85,7 @@ ArgonObject *ARGON_NUMBER_TYPE___add__(size_t argc, ArgonObject **argv,
   }
   if (argv[1]->type != TYPE_NUMBER) {
     ArgonObject *type_name = get_builtin_field_for_class(
-        get_builtin_field(argv[1], __class__, false, false), __name__, argv[1]);
+        get_builtin_field(argv[1], __class__), __name__, argv[1]);
     *err = create_err(
         0, 0, 0, "", "Runtime Error",
         "__add__ cannot perform addition between a number and %.*s",
@@ -148,7 +148,7 @@ ArgonObject *ARGON_NUMBER_TYPE___subtract__(size_t argc, ArgonObject **argv,
   }
   if (argv[1]->type != TYPE_NUMBER) {
     ArgonObject *type_name = get_builtin_field_for_class(
-        get_builtin_field(argv[1], __class__, false, false), __name__, argv[1]);
+        get_builtin_field(argv[1], __class__), __name__, argv[1]);
     *err = create_err(
         0, 0, 0, "", "Runtime Error",
         "__subtract__ cannot perform subtraction between number and %.*s",
@@ -213,7 +213,7 @@ ArgonObject *ARGON_NUMBER_TYPE___multiply__(size_t argc, ArgonObject **argv,
   }
   if (argv[1]->type != TYPE_NUMBER) {
     ArgonObject *type_name = get_builtin_field_for_class(
-        get_builtin_field(argv[1], __class__, false, false), __name__, argv[1]);
+        get_builtin_field(argv[1], __class__), __name__, argv[1]);
     *err = create_err(
         0, 0, 0, "", "Runtime Error",
         "__multiply__ cannot perform multiplication between number and %.*s",
@@ -278,7 +278,7 @@ ArgonObject *ARGON_NUMBER_TYPE___division__(size_t argc, ArgonObject **argv,
   }
   if (argv[1]->type != TYPE_NUMBER) {
     ArgonObject *type_name = get_builtin_field_for_class(
-        get_builtin_field(argv[1], __class__, false, false), __name__, argv[1]);
+        get_builtin_field(argv[1], __class__), __name__, argv[1]);
     *err = create_err(
         0, 0, 0, "", "Runtime Error",
         "__division__ cannot perform division between number and %.*s",
@@ -288,6 +288,13 @@ ArgonObject *ARGON_NUMBER_TYPE___division__(size_t argc, ArgonObject **argv,
   if (argv[0]->value.as_number.is_int64 && argv[1]->value.as_number.is_int64) {
     int64_t a = argv[0]->value.as_number.n.i64;
     int64_t b = argv[1]->value.as_number.n.i64;
+    if (!b) {
+      *err =
+          create_err(state->source_location.line, state->source_location.column,
+                     state->source_location.length, state->path,
+                     "Zero Division Error", "division by zero");
+      return NULL;
+    }
     return new_number_object_from_num_and_den(a, b);
   } else if (!argv[0]->value.as_number.is_int64 &&
              !argv[1]->value.as_number.is_int64) {
@@ -307,6 +314,13 @@ ArgonObject *ARGON_NUMBER_TYPE___division__(size_t argc, ArgonObject **argv,
       mpq_set(b_GMP, *argv[1]->value.as_number.n.mpq);
     } else {
       mpq_set(a_GMP, *argv[0]->value.as_number.n.mpq);
+      if (!argv[1]->value.as_number.n.i64) {
+        *err = create_err(state->source_location.line,
+                          state->source_location.column,
+                          state->source_location.length, state->path,
+                          "Zero Division Error", "division by zero");
+        return NULL;
+      }
       mpq_set_si(b_GMP, argv[1]->value.as_number.n.i64, 1);
     }
     mpq_div(a_GMP, a_GMP, b_GMP);
@@ -492,7 +506,7 @@ void init_small_ints() {
 }
 
 void create_ARGON_NUMBER_TYPE() {
-  ARGON_NUMBER_TYPE = new_object();
+  ARGON_NUMBER_TYPE = new_class();
   add_builtin_field(ARGON_NUMBER_TYPE, __name__,
                     new_string_object_null_terminated("number"));
   add_builtin_field(
@@ -600,8 +614,7 @@ ArgonObject *new_number_object(mpq_t number) {
   if (is_int64 && i64 >= small_ints_min && i64 <= small_ints_max) {
     return &small_ints[i64 - small_ints_min];
   }
-  ArgonObject *object = new_object();
-  add_builtin_field(object, __class__, ARGON_NUMBER_TYPE);
+  ArgonObject *object = new_instance(ARGON_NUMBER_TYPE);
   object->type = TYPE_NUMBER;
   object->value.as_number.n.i64 = i64;
   object->value.as_number.is_int64 = is_int64;
@@ -618,8 +631,7 @@ ArgonObject *new_number_object_from_num_and_den(int64_t n, uint64_t d) {
   if (d == 1 && n >= small_ints_min && n <= small_ints_max) {
     return &small_ints[n - small_ints_min];
   }
-  ArgonObject *object = new_object();
-  add_builtin_field(object, __class__, ARGON_NUMBER_TYPE);
+  ArgonObject *object = new_instance(ARGON_NUMBER_TYPE);
   object->type = TYPE_NUMBER;
   if (d == 1) {
     object->value.as_number.is_int64 = true;
@@ -641,8 +653,7 @@ ArgonObject *new_number_object_from_int64(int64_t i64) {
   if (i64 >= small_ints_min && i64 <= small_ints_max) {
     return &small_ints[i64 - small_ints_min];
   }
-  ArgonObject *object = new_object();
-  add_builtin_field(object, __class__, ARGON_NUMBER_TYPE);
+  ArgonObject *object = new_instance(ARGON_NUMBER_TYPE);
   object->type = TYPE_NUMBER;
   object->value.as_number.is_int64 = true;
   object->value.as_number.n.i64 = i64;
@@ -656,8 +667,7 @@ ArgonObject *new_number_object_from_double(double d) {
   if (is_int64 && i64 >= small_ints_min && i64 <= small_ints_max) {
     return &small_ints[i64 - small_ints_min];
   }
-  ArgonObject *object = new_object();
-  add_builtin_field(object, __class__, ARGON_NUMBER_TYPE);
+  ArgonObject *object = new_instance(ARGON_NUMBER_TYPE);
   object->type = TYPE_NUMBER;
   object->value.as_number.n.i64 = i64;
   object->value.as_number.is_int64 = is_int64;

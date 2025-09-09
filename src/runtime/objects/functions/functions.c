@@ -15,8 +15,7 @@
 ArgonObject *ARGON_FUNCTION_TYPE = NULL;
 
 ArgonObject *create_argon_native_function(char *name, native_fn native_fn) {
-  ArgonObject *object = new_object();
-  add_builtin_field(object, __class__, ARGON_FUNCTION_TYPE);
+  ArgonObject *object = new_instance(ARGON_FUNCTION_TYPE);
   object->type = TYPE_NATIVE_FUNCTION;
   add_builtin_field(object, __name__,
                     new_string_object(name, strlen(name), 0, 0));
@@ -26,8 +25,7 @@ ArgonObject *create_argon_native_function(char *name, native_fn native_fn) {
 
 void load_argon_function(Translated *translated, RuntimeState *state,
                          struct Stack *stack) {
-  ArgonObject *object = new_object();
-  add_builtin_field(object, __class__, ARGON_FUNCTION_TYPE);
+  ArgonObject *object = new_instance(ARGON_FUNCTION_TYPE);
   object->type = TYPE_FUNCTION;
   uint64_t offset = pop_bytecode(translated, state);
   uint64_t length = pop_bytecode(translated, state);
