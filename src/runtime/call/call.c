@@ -85,7 +85,7 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
   if (object->type != TYPE_FUNCTION && object->type != TYPE_NATIVE_FUNCTION &&
       object->type != TYPE_METHOD) {
     ArgonObject *call_method = get_builtin_field_for_class(
-        get_builtin_field(object, __class__, false, false), __call__,
+        get_builtin_field(object, __class__), __call__,
         original_object);
     if (call_method) {
       object = call_method;
@@ -93,7 +93,7 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
   }
   if (object->type == TYPE_METHOD) {
     ArgonObject *binding_object =
-        get_builtin_field(object, __binding__, false, false);
+        get_builtin_field(object, __binding__);
     if (binding_object) {
       ArgonObject **new_call_args =
           ar_alloc(sizeof(ArgonObject *) * (argc + 1));
@@ -105,14 +105,14 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
       argc++;
     }
     ArgonObject *function_object =
-        get_builtin_field(object, __function__, false, false);
+        get_builtin_field(object, __function__);
     if (function_object)
       object = function_object;
   }
   if (object->type == TYPE_FUNCTION) {
     if (argc != object->value.argon_fn.number_of_parameters) {
       ArgonObject *type_object_name = get_builtin_field_for_class(
-          get_builtin_field(object, __class__, false, false), __name__,
+          get_builtin_field(object, __class__), __name__,
           original_object);
       ArgonObject *object_name =
           get_builtin_field_for_class(object, __name__, original_object);
@@ -196,7 +196,7 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
     return;
   }
   ArgonObject *type_object_name = get_builtin_field_for_class(
-      get_builtin_field(original_object, __class__, false, false), __name__,
+      get_builtin_field(original_object, __class__), __name__,
       original_object);
   *err = create_err(state->source_location.line, state->source_location.column,
                     state->source_location.length, state->path, "Type Error",

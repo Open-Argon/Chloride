@@ -14,7 +14,7 @@ ArgonObject *term_log(size_t argc, ArgonObject **argv, ArErr *err,
     if (i != 0)
       printf(" ");
     ArgonObject *string_convert_method = get_builtin_field_for_class(
-        get_builtin_field(argv[i], __class__, false, false), __string__, argv[i]);
+        get_builtin_field(argv[i], __class__), __string__, argv[i]);
 
     if (string_convert_method) {
       ArgonObject *string_object =
