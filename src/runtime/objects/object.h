@@ -21,8 +21,8 @@ ArgonObject *new_instance(ArgonObject * of);
 void add_builtin_field(ArgonObject *target, built_in_fields field,
                        ArgonObject *object);
 
-void add_field(ArgonObject *target, char *name, uint64_t hash,
-               ArgonObject *object);
+void add_field_l(ArgonObject *target, char *name, uint64_t hash, size_t length,
+                 ArgonObject *object);
 
 ArgonObject *bind_object_to_function(ArgonObject *object,
                                      ArgonObject *function);

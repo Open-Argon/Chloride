@@ -98,12 +98,19 @@ struct argon_function_struct {
   uint64_t column;
 };
 
+struct built_in_slot {
+  built_in_fields field;
+  ArgonObject*value;
+};
+
 // full definition of ArgonObject (no typedef again!)
 struct ArgonObject {
   ArgonType type;
   ArgonType child_type;
   struct hashmap_GC *dict;
-  ArgonObject* Builtin_slots[BUILT_IN_FIELDS_COUNT];
+  struct built_in_slot* built_in_slot;
+  size_t built_in_slot_size;
+  size_t built_in_slot_length;
   bool as_bool;
   union {
     struct as_number {
