@@ -7,10 +7,11 @@
 #include "memory.h"
 #include <gc.h>
 #include <gc/gc.h>
-#include <gmp.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h> // for malloc/free (temp arena fallback)
 #include <string.h>
+#include <pthread.h>
 
 void *checked_malloc(size_t size) {
   void *ptr = malloc(size);
@@ -21,19 +22,23 @@ void *checked_malloc(size_t size) {
   return ptr;
 }
 
-void *gmp_gc_realloc(void *ptr, size_t old_size, size_t new_size) {
-  (void)old_size; // Ignore old_size, Boehm doesn't need it
-  return GC_realloc(ptr, new_size);
-}
-
-void gmp_gc_free(void *ptr, size_t size) {
-  (void)size; // Boehm GC manages this itself
-  // No-op — memory will be collected automatically
-  GC_FREE(ptr);
-}
+struct allocation*memory_allocations = NULL;
+size_t memory_allocations_size = 0;
+pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 
 void ar_memory_init() {
   GC_INIT();
+  // memory_allocations_size = 8;
+  // memory_allocations = malloc(memory_allocations_size*sizeof(struct allocation));
+}
+
+void ar_memory_shutdown() {
+  // for (size_t i = 0; i<memory_allocations_size;i++) {
+  //   if (memory_allocations[i].status != allocation_fully_freed) {
+  //     free(memory_allocations[i].ptr);
+  //   }
+  // }
+  // free(memory_allocations);
 }
 
 void *ar_alloc(size_t size) { return GC_MALLOC(size); }

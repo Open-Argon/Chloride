@@ -89,6 +89,8 @@ RuntimeState init_runtime_state(Translated translated, char *path);
 
 Stack *create_scope(Stack *prev, bool force);
 
+void add_to_scope(Stack *stack, char *name, ArgonObject *value);
+
 void runtime(Translated translated, RuntimeState state, Stack *stack,
              ArErr *err);
 

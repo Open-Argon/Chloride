@@ -13,9 +13,8 @@
 
 ArgonObject *ARGON_STRING_TYPE = NULL;
 
-ArgonObject *new_string_object_without_memcpy(char *data, size_t length, uint64_t prehash,
+void init_string(ArgonObject*object,char *data, size_t length, uint64_t prehash,
                                uint64_t hash) {
-  ArgonObject *object = new_instance(ARGON_STRING_TYPE);
   add_builtin_field(object, field_length,
                     new_number_object_from_int64(length));
   object->type = TYPE_STRING;
@@ -26,6 +25,12 @@ ArgonObject *new_string_object_without_memcpy(char *data, size_t length, uint64_
   object->value.as_str->hash = hash;
   object->value.as_str->length = length;
   object->as_bool = length;
+}
+
+ArgonObject *new_string_object_without_memcpy(char *data, size_t length, uint64_t prehash,
+                               uint64_t hash) {
+  ArgonObject *object = new_instance(ARGON_STRING_TYPE);
+  init_string(object,data,length,prehash,hash);
   return object;
 }
 

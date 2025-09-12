@@ -8,9 +8,22 @@
 #define ARGON_MEMORY_H
 
 #include <stddef.h> // for size_t
+#include <stdbool.h>
 #include <gc/gc.h>
 
 // GC-managed allocations
+
+typedef enum allocation_status {
+  allocation_used,
+  allocation_soft_free,  // avaiable for use, since it hasnt been freed but isnt in use.
+  allocation_fully_freed,
+} allocation_status;
+
+struct allocation {
+  void*ptr;
+  size_t size;
+  allocation_status status;
+};
 
 void ar_finalizer(void *obj, GC_finalization_proc fn, void *client_data,
                   GC_finalization_proc *old_fn, void **old_client_data);
@@ -21,6 +34,7 @@ char *ar_strdup(const char *str);
 
 // Memory init/shutdown
 void ar_memory_init();
+void ar_memory_shutdown();
 
 void *checked_malloc(size_t size);
 
