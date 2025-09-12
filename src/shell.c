@@ -9,6 +9,10 @@
 #include "./runtime/objects/term/term.h"
 #include "./runtime/runtime.h"
 #include "./translator/translator.h"
+#include "LICENSE_c.h"
+#include "import.h"
+#include "runtime/objects/literals/literals.h"
+#include "runtime/objects/string/string.h"
 #include <signal.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -180,10 +184,14 @@ int shell() {
     free(data);
     return resp;
   }
+  add_to_scope(main_scope, "license",
+               new_string_object_without_memcpy((char *)LICENSE_txt,
+                                                LICENSE_txt_len, 0, 0));
 
   signal(SIGINT, handle_sigint);
 
-  printf("Welcome to the Argon shell!\n\n");
+  printf("Argon (Chloride %s)\nType \"license\" for more information.\n",
+         version_string);
 
   ArgonObject *output_object = create_argon_native_function("log", term_log);
   char *totranslate = NULL;
@@ -266,7 +274,7 @@ int shell() {
     if (resp) {
       continue;
     }
-    if (runtime_state.registers[0]) {
+    if (runtime_state.registers[0]&&runtime_state.registers[0] != ARGON_NULL) {
       ArErr err = no_err;
       argon_call(output_object, 1,
                  (ArgonObject *[]){runtime_state.registers[0]}, &err,

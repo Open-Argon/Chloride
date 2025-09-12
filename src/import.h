@@ -10,6 +10,8 @@
 
 extern char*CWD;
 
+extern const char version_string[];
+
 Stack *ar_import(char *current_directory, char *path_relative, ArErr *err);
 
 #endif // IMPORT_H

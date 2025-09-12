@@ -7,6 +7,7 @@
 #include "err.h"
 #include "../external/libdye/include/dye.h"
 #include <ctype.h>
+#include <inttypes.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -14,7 +15,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <inttypes.h>
 
 #ifdef _WIN32
 ssize_t getline(char **lineptr, size_t *n, FILE *stream) {
@@ -61,19 +61,19 @@ ssize_t getline(char **lineptr, size_t *n, FILE *stream) {
 }
 #endif
 
-const ArErr no_err = (ArErr){false};
+const ArErr no_err = (ArErr){"", "", "", 0, 0, 0, false};
 
 ArErr create_err(int64_t line, int64_t column, int length, char *path,
                  const char *type, const char *fmt, ...) {
   ArErr err;
   err.exists = true;
-  err.path = path;
+  strcpy(err.path, path);
   err.line = line;
   err.column = column;
   err.length = length;
 
   // Copy error type safely
-  snprintf(err.type, sizeof(err.type), "%s",(char*)type);
+  snprintf(err.type, sizeof(err.type), "%s", (char *)type);
 
   // Format error message
   va_list args;
@@ -103,7 +103,7 @@ void output_err(ArErr err) {
   dyefg(stderr, DYE_RESET);
   fprintf(stderr, "\n");
 
-  if (err.path && err.line) {
+  if (strlen(err.path) && err.line) {
     dyefg(stderr, DYE_GRAY);
     fprintf(stderr, "  --> ");
     dyefg(stderr, DYE_CYAN);
@@ -111,7 +111,7 @@ void output_err(ArErr err) {
     dyefg(stderr, DYE_GRAY);
     fprintf(stderr, ":");
     dyefg(stderr, DYE_YELLOW);
-    fprintf(stderr, "%" PRIu64 , err.line);
+    fprintf(stderr, "%" PRIu64, err.line);
     dyefg(stderr, DYE_GRAY);
     fprintf(stderr, ":");
     dyefg(stderr, DYE_YELLOW);
@@ -140,7 +140,7 @@ void output_err(ArErr err) {
         fprintf(stderr, " ");
       }
       fprintf(stderr, "|\n");
-      for (ssize_t i = 0;i<len;i++) {
+      for (ssize_t i = 0; i < len; i++) {
         if (buffer[i] == '\n') {
           buffer[i] = '\0';
           break;
@@ -164,7 +164,7 @@ void output_err(ArErr err) {
         dyefg(stderr, DYE_RESET);
         fprintf(stderr, "%.*s",
                 (int)len - (int)skipped_chars - (int)err.column -
-                    (int)err.length+1,
+                    (int)err.length + 1,
                 line_starts + (int)err.column + err.length - 1);
         for (int64_t i = 0; i < err.column - 1; i++) {
           fprintf(stderr, " ");

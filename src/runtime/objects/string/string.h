@@ -10,6 +10,9 @@
 
 extern ArgonObject *ARGON_STRING_TYPE;
 
+void init_string(ArgonObject*object,char *data, size_t length, uint64_t prehash,
+                               uint64_t hash);
+
 ArgonObject *new_string_object_without_memcpy(char *data, size_t length, uint64_t prehash,
                                uint64_t hash);
 

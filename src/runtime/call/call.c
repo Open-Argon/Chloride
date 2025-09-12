@@ -85,15 +85,13 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
   if (object->type != TYPE_FUNCTION && object->type != TYPE_NATIVE_FUNCTION &&
       object->type != TYPE_METHOD) {
     ArgonObject *call_method = get_builtin_field_for_class(
-        get_builtin_field(object, __class__), __call__,
-        original_object);
+        get_builtin_field(object, __class__), __call__, original_object);
     if (call_method) {
       object = call_method;
     }
   }
   if (object->type == TYPE_METHOD) {
-    ArgonObject *binding_object =
-        get_builtin_field(object, __binding__);
+    ArgonObject *binding_object = get_builtin_field(object, __binding__);
     if (binding_object) {
       ArgonObject **new_call_args =
           ar_alloc(sizeof(ArgonObject *) * (argc + 1));
@@ -104,16 +102,14 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
       argv = new_call_args;
       argc++;
     }
-    ArgonObject *function_object =
-        get_builtin_field(object, __function__);
+    ArgonObject *function_object = get_builtin_field(object, __function__);
     if (function_object)
       object = function_object;
   }
   if (object->type == TYPE_FUNCTION) {
     if (argc != object->value.argon_fn->number_of_parameters) {
       ArgonObject *type_object_name = get_builtin_field_for_class(
-          get_builtin_field(object, __class__), __name__,
-          original_object);
+          get_builtin_field(object, __class__), __name__, original_object);
       ArgonObject *object_name =
           get_builtin_field_for_class(object, __name__, original_object);
       *err = create_err(
@@ -122,7 +118,8 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
           "%.*s %.*s takes %" PRIu64 " argument(s) but %" PRIu64 " was given",
           (int)type_object_name->value.as_str->length,
           type_object_name->value.as_str->data,
-          (int)object_name->value.as_str->length, object_name->value.as_str->data,
+          (int)object_name->value.as_str->length,
+          object_name->value.as_str->data,
           object->value.argon_fn->number_of_parameters, argc);
     }
     Stack *scope = create_scope(object->value.argon_fn->stack, true);
@@ -191,13 +188,12 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
       err->line = state->source_location.line;
       err->column = state->source_location.column;
       err->length = state->source_location.length;
-      err->path = state->path;
+      strcpy(err->path, state->path);
     }
     return;
   }
   ArgonObject *type_object_name = get_builtin_field_for_class(
-      get_builtin_field(original_object, __class__), __name__,
-      original_object);
+      get_builtin_field(original_object, __class__), __name__, original_object);
   *err = create_err(state->source_location.line, state->source_location.column,
                     state->source_location.length, state->path, "Type Error",
                     "'%.*s' object is not callable",

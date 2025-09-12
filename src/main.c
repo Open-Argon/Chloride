@@ -8,7 +8,7 @@
 #include "hashmap/hashmap.h"
 #include "import.h"
 #include "memory.h"
-#include "runtime/objects/object.h"
+#include "runtime/runtime.h"
 #include "shell.h"
 
 #include "hash_data/hash_data.h"
@@ -65,6 +65,7 @@ int main(int argc, char *argv[]) {
     return 1;
   }
   free(CWD);
+  ar_memory_shutdown();
   if (runtime_hash_table)
     hashmap_free(runtime_hash_table, NULL);
   if (err.exists) {
