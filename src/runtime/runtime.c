@@ -310,6 +310,18 @@ ArgonObject *BASE_CLASS___string__(size_t argc, ArgonObject **argv, ArErr *err,
   return new_string_object_null_terminated(buffer);
 }
 
+
+ArgonObject *BASE_CLASS___repr__(size_t argc, ArgonObject **argv,
+                                          ArErr *err, RuntimeState *state) {
+  if (argc != 1) {
+    *err = create_err(0, 0, 0, "", "Runtime Error",
+                      "__repr__ expects 1 arguments, got %" PRIu64, argc);
+  }
+  ArgonObject *string_method = get_builtin_field_for_class(
+      get_builtin_field(argv[0], __class__), __string__, argv[0]);
+  return argon_call(string_method, 0, NULL, err, state);
+}
+
 ArgonObject *BASE_CLASS___boolean__(size_t argc, ArgonObject **argv, ArErr *err,
                                     RuntimeState *state) {
   (void)argv;
@@ -433,6 +445,18 @@ ArgonObject *ARGON_STRING_TYPE___string__(size_t argc, ArgonObject **argv,
                       "__string__ expects 1 arguments, got %" PRIu64, argc);
   }
   return argv[0];
+}
+ArgonObject *ARGON_STRING_TYPE___repr__(size_t argc, ArgonObject **argv,
+                                          ArErr *err, RuntimeState *state) {
+  (void)state;
+  if (argc != 1) {
+    *err = create_err(0, 0, 0, "", "Runtime Error",
+                      "__repr__ expects 1 arguments, got %" PRIu64, argc);
+  }
+  char* quoted = c_quote_string(argv[0]->value.as_str->data,argv[0]->value.as_str->length);
+  ArgonObject* result = new_string_object_null_terminated(quoted);
+  free(quoted);
+  return result;
 }
 ArgonObject *ARGON_STRING_TYPE___hash__(size_t argc, ArgonObject **argv,
                                         ArErr *err, RuntimeState *state) {
@@ -591,7 +615,7 @@ void bootstrap_types() {
       create_argon_native_function("__string__", BASE_CLASS___string__));
   add_builtin_field(
       BASE_CLASS, __repr__,
-      create_argon_native_function("__repr__", BASE_CLASS___string__));
+      create_argon_native_function("__repr__", BASE_CLASS___repr__));
   add_builtin_field(
       ARGON_TYPE_TYPE, __call__,
       create_argon_native_function("__call__", ARGON_TYPE_TYPE___call__));
@@ -619,6 +643,9 @@ void bootstrap_types() {
   add_builtin_field(
       ARGON_STRING_TYPE, __string__,
       create_argon_native_function("__string__", ARGON_STRING_TYPE___string__));
+  add_builtin_field(
+      ARGON_STRING_TYPE, __repr__,
+      create_argon_native_function("__repr__", ARGON_STRING_TYPE___repr__));
   add_builtin_field(
       ARGON_BOOL_TYPE, __new__,
       create_argon_native_function("__new__", ARGON_BOOL_TYPE___new__));

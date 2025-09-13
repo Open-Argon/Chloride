@@ -7,11 +7,53 @@
 #include "string.h"
 #include "../number/number.h"
 #include "../object.h"
+#include <ctype.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 
 ArgonObject *ARGON_STRING_TYPE = NULL;
+
+
+
+
+char *c_quote_string(const char *input, size_t len) {
+    // Worst case: every byte becomes "\uXXXX" (6 chars) + quotes + NUL
+    size_t max_out = 2 + (len * 6) + 1;
+    char *out = malloc(max_out);
+    if (!out) return NULL;
+
+    size_t j = 0;
+    out[j++] = '"';
+
+    for (size_t i = 0; i < len; i++) {
+        unsigned char c = (unsigned char)input[i];
+
+        switch (c) {
+            case '\n':
+                out[j++] = '\\'; out[j++] = 'n'; break;
+            case '\t':
+                out[j++] = '\\'; out[j++] = 't'; break;
+            case '\r':
+                out[j++] = '\\'; out[j++] = 'r'; break;
+            case '\\':
+                out[j++] = '\\'; out[j++] = '\\'; break;
+            case '\"':
+                out[j++] = '\\'; out[j++] = '\"'; break;
+            default:
+                if (isprint(c)) {
+                    out[j++] = c;
+                } else {
+                    // write \uXXXX
+                    j += sprintf(&out[j], "\\u%04X", c);
+                }
+        }
+    }
+
+    out[j++] = '"';
+    out[j] = '\0';
+    return out;
+}
 
 void init_string(ArgonObject*object,char *data, size_t length, uint64_t prehash,
                                uint64_t hash) {
