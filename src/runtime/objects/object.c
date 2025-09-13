@@ -5,7 +5,9 @@
  */
 
 #include "object.h"
+#include "../../hash_data/hash_data.h"
 #include "../../memory.h"
+#include "../call/call.h"
 #include "type/type.h"
 #include <stdbool.h>
 #include <stddef.h>
@@ -29,21 +31,65 @@ int strcmp_len(const char *s1, size_t len, const char *s2) {
 ArgonObject *BASE_CLASS = NULL;
 
 const char *built_in_field_names[BUILT_IN_FIELDS_COUNT] = {
-    "__base__",    "__class__",    "__name__",     "__add__",
-    "__string__",  "__subtract__", "__multiply__", "__division__",
-    "__new__",     "__init__",     "__boolean__",  "__get_attr__",
-    "__binding__", "__function__", "address",      "__call__",
-    "__number__",  "log",          "length",       "__getattribute__"};
+    "__base__",
+    "__class__",
+    "__name__",
+    "", // above is anything that gets stored in built in slots
+    "__add__",
+    "__string__",
+    "__subtract__",
+    "__multiply__",
+    "__division__",
+    "__new__",
+    "__init__",
+    "__boolean__",
+    "__get_attr__",
+    "__binding__",
+    "__function__",
+    "address",
+    "__call__",
+    "__number__",
+    "log",
+    "length",
+    "__getattribute__",
+    "__hash__",
+    "__repr__"};
+
+uint64_t built_in_field_hashes[BUILT_IN_FIELDS_COUNT];
 
 ArgonObject *new_object() {
   ArgonObject *object = ar_alloc(sizeof(ArgonObject));
-  object->built_in_slot = NULL;
-  object->built_in_slot_size = 0;
   object->built_in_slot_length = 0;
   object->type = TYPE_OBJECT;
   object->dict = NULL;
   object->as_bool = true;
   return object;
+}
+
+void init_built_in_field_hashes() {
+  for (int i = 0; i < BUILT_IN_FIELDS_COUNT; i++) {
+    built_in_field_hashes[i] = siphash64_bytes(
+        built_in_field_names[i], strlen(built_in_field_names[i]), siphash_key);
+  }
+}
+
+int64_t hash_object(ArgonObject *object, ArErr *err, RuntimeState *state) {
+  ArgonObject *hash_function = get_builtin_field_for_class(
+      get_builtin_field(object, __class__), __hash__, object);
+  if (!hash_function) {
+    *err = create_err(err->line, err->column, err->length, err->path,
+                      "Hash Error", "objects class has no __hash__ method");
+    return 0;
+  }
+  ArgonObject *hash_result = argon_call(hash_function, 0, NULL, err, state);
+  if (hash_result->type != TYPE_NUMBER ||
+      !hash_result->value.as_number->is_int64) {
+    *err =
+        create_err(err->line, err->column, err->length, err->path, "Hash Error",
+                   "hash result needs to be a 64 bit integer.");
+    return 0;
+  }
+  return hash_result->value.as_number->n.i64;
 }
 
 ArgonObject *new_class() {
@@ -67,30 +113,33 @@ inline void add_builtin_field(ArgonObject *target, built_in_fields field,
       return;
     }
   }
-  if (target->built_in_slot_length >= target->built_in_slot_size) {
-    target->built_in_slot_size *= 2;
-    if (target->built_in_slot_size == 0) target->built_in_slot_size = 2;
-    else if (target->built_in_slot_size>BUILT_IN_FIELDS_COUNT) target->built_in_slot_size = BUILT_IN_FIELDS_COUNT;
-    target->built_in_slot =
-        ar_realloc(target->built_in_slot, target->built_in_slot_size *
-                                              sizeof(struct built_in_slot));
+  if (field > BUILT_IN_ARRAY_COUNT) {
+    if (!target->dict)
+      target->dict = createHashmap_GC();
+    hashmap_insert_GC(target->dict, built_in_field_hashes[field],
+                      (char *)built_in_field_names[field], object, 0);
+    return;
   }
-  target->built_in_slot[target->built_in_slot_length++] = (struct built_in_slot){field, object};
+  target->built_in_slot[target->built_in_slot_length++] =
+      (struct built_in_slot){field, object};
   // hashmap_insert_GC(target->dict, built_in_field_hashes[field],
   //                   (char *)built_in_field_names[field], object, 0);
 }
 
 void add_field_l(ArgonObject *target, char *name, uint64_t hash, size_t length,
                  ArgonObject *object) {
-  for (size_t i = 0; i < BUILT_IN_FIELDS_COUNT; i++) {
+  for (size_t i = 0; i < BUILT_IN_ARRAY_COUNT; i++) {
     if (strcmp_len(name, length, built_in_field_names[i]) == 0) {
       add_builtin_field(target, i, object);
       return;
     }
   }
-  if (!object->dict)
-    object->dict = createHashmap_GC();
-  hashmap_insert_GC(target->dict, hash, name, object, 0);
+  if (!target->dict)
+    target->dict = createHashmap_GC();
+  char *name_copy = ar_alloc(length);
+  memcpy(name_copy, name, length);
+  name_copy[length] = '\0';
+  hashmap_insert_GC(target->dict, hash, name_copy, object, 0);
 }
 
 ArgonObject *bind_object_to_function(ArgonObject *object,
@@ -127,9 +176,9 @@ ArgonObject *get_field_for_class_l(ArgonObject *target, char *name,
 ArgonObject *get_field_l(ArgonObject *target, char *name, uint64_t hash,
                          size_t length, bool recursive,
                          bool disable_method_wrapper) {
-  for (size_t i = 0; i < BUILT_IN_FIELDS_COUNT; i++) {
+  for (size_t i = 0; i < target->built_in_slot_length; i++) {
     if (strcmp_len(name, length, built_in_field_names[i]) == 0) {
-      return get_builtin_field(target, i);
+      return target->built_in_slot[i].value;
     }
   }
   if (!target->dict)
@@ -161,22 +210,32 @@ ArgonObject *get_builtin_field_for_class(ArgonObject *target,
   }
   return NULL;
 }
+inline ArgonObject *get_builtin_field(ArgonObject *target,
+                                      built_in_fields field) {
+  return get_builtin_field_with_recursion_support(target, field, false, false);
+}
 
-ArgonObject *get_builtin_field(ArgonObject *target, built_in_fields field) {
+ArgonObject *
+get_builtin_field_with_recursion_support(ArgonObject *target,
+                                         built_in_fields field, bool recursive,
+                                         bool disable_method_wrapper) {
+  if (!target)
+    return NULL;
   for (size_t i = 0; i < target->built_in_slot_length; i++) {
     if (target->built_in_slot[i].field == field) {
       return target->built_in_slot[i].value;
     }
   }
-  return NULL;
-  // ArgonObject *object =
-  //     hashmap_lookup_GC(target->dict, built_in_field_hashes[field]);
-  // if (!recursive || object)
-  //   return object;
-  // ArgonObject *binding = target;
-  // if (disable_method_wrapper)
-  //   binding = NULL;
-  // return get_builtin_field_for_class(
-  //     hashmap_lookup_GC(target->dict, built_in_field_hashes[__class__]),
-  //     field, binding);
+  if (!target->dict)
+    return NULL;
+  ArgonObject *object =
+      hashmap_lookup_GC(target->dict, built_in_field_hashes[field]);
+  if (!recursive || object)
+    return object;
+  ArgonObject *binding = target;
+  if (disable_method_wrapper)
+    binding = NULL;
+  return get_builtin_field_for_class(
+      hashmap_lookup_GC(target->dict, built_in_field_hashes[__class__]), field,
+      binding);
 }

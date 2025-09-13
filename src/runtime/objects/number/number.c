@@ -497,9 +497,7 @@ void init_small_ints() {
   for (int64_t i = 0; i <= small_ints_max - small_ints_min; i++) {
     int64_t n = i + small_ints_min;
     small_ints[i].type = TYPE_NUMBER;
-    small_ints[i].built_in_slot = NULL;
     small_ints[i].built_in_slot_length = 0;
-    small_ints[i].built_in_slot_size = 0;
     small_ints[i].dict = NULL;
     small_ints[i].value.as_number = &small_ints_as_number[i];
     add_builtin_field(&small_ints[i], __class__, ARGON_NUMBER_TYPE);

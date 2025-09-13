@@ -8,6 +8,7 @@
 #include "hashmap/hashmap.h"
 #include "import.h"
 #include "memory.h"
+#include "runtime/objects/object.h"
 #include "runtime/runtime.h"
 #include "shell.h"
 
@@ -50,8 +51,8 @@ char *get_current_directory() {
 int main(int argc, char *argv[]) {
   setlocale(LC_ALL, "");
   ar_memory_init();
-
   generate_siphash_key(siphash_key);
+  init_built_in_field_hashes();
   bootstrap_types();
   bootstrap_globals();
   if (argc <= 1)

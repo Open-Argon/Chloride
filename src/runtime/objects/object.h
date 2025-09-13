@@ -18,6 +18,10 @@ typedef struct ArgonObject ArgonObject;
 ArgonObject *new_class();
 ArgonObject *new_instance(ArgonObject * of);
 
+void init_built_in_field_hashes();
+
+int64_t hash_object(ArgonObject *object, ArErr *err, RuntimeState *state);
+
 void add_builtin_field(ArgonObject *target, built_in_fields field,
                        ArgonObject *object);
 
@@ -40,5 +44,7 @@ ArgonObject *get_builtin_field_for_class(ArgonObject *target,
                                          ArgonObject *binding_object);
 
 ArgonObject *get_builtin_field(ArgonObject *target, built_in_fields field);
+
+ArgonObject *get_builtin_field_with_recursion_support(ArgonObject *target, built_in_fields field, bool recursive, bool disable_method_wrapper);
 
 #endif // OBJECT_H
