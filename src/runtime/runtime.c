@@ -13,6 +13,7 @@
 #include "call/call.h"
 #include "declaration/declaration.h"
 #include "internals/hashmap/hashmap.h"
+#include "objects/dictionary/dictionary.h"
 #include "objects/functions/functions.h"
 #include "objects/literals/literals.h"
 #include "objects/number/number.h"
@@ -433,6 +434,25 @@ ArgonObject *ARGON_STRING_TYPE___string__(size_t argc, ArgonObject **argv,
   }
   return argv[0];
 }
+ArgonObject *ARGON_STRING_TYPE___hash__(size_t argc, ArgonObject **argv,
+                                        ArErr *err, RuntimeState *state) {
+  (void)state;
+  if (argc != 1) {
+    *err = create_err(0, 0, 0, "", "Runtime Error",
+                      "__hash__ expects 1 arguments, got %" PRIu64, argc);
+  }
+  uint64_t hash;
+  if (argv[0]->value.as_str->hash_computed) {
+    hash = argv[0]->value.as_str->hash;
+  } else {
+    hash =
+        runtime_hash(argv[0]->value.as_str->data, argv[0]->value.as_str->length,
+                     argv[0]->value.as_str->prehash);
+    argv[0]->value.as_str->hash = hash;
+    argv[0]->value.as_str->hash_computed = true;
+  }
+  return new_number_object_from_int64(hash);
+}
 
 ArgonObject *ARGON_STRING_TYPE___number__(size_t argc, ArgonObject **argv,
                                           ArErr *err, RuntimeState *state) {
@@ -570,11 +590,17 @@ void bootstrap_types() {
       BASE_CLASS, __string__,
       create_argon_native_function("__string__", BASE_CLASS___string__));
   add_builtin_field(
+      BASE_CLASS, __repr__,
+      create_argon_native_function("__repr__", BASE_CLASS___string__));
+  add_builtin_field(
       ARGON_TYPE_TYPE, __call__,
       create_argon_native_function("__call__", ARGON_TYPE_TYPE___call__));
   add_builtin_field(
       ARGON_STRING_TYPE, __init__,
       create_argon_native_function("__init__", ARGON_STRING_TYPE___init__));
+  add_builtin_field(
+      ARGON_STRING_TYPE, __hash__,
+      create_argon_native_function("__hash__", ARGON_STRING_TYPE___hash__));
   add_builtin_field(
       ARGON_STRING_TYPE, __add__,
       create_argon_native_function("__add__", ARGON_STRING_TYPE___add__));
@@ -622,17 +648,19 @@ void bootstrap_types() {
   DIVISION_FUNCTION =
       create_argon_native_function("division", ARGON_DIVISION_FUNCTION);
   add_builtin_field(BASE_CLASS, __getattribute__, GETATTRIBUTE_FUNCTION);
+  create_ARGON_DICTIONARY_TYPE();
 }
 
 void add_to_scope(Stack *stack, char *name, ArgonObject *value) {
   size_t length = strlen(name);
   uint64_t hash = siphash64_bytes(name, length, siphash_key);
-  ArgonObject *key = new_string_object(name, length, 0, 0);
+  ArgonObject *key = new_string_object(name, length, 0, hash);
   hashmap_insert_GC(stack->scope, hash, key, value, 0);
 }
 
 void bootstrap_globals() {
   Global_Scope = create_scope(NULL, true);
+  add_to_scope(Global_Scope, "global", create_dictionary(Global_Scope->scope));
   add_to_scope(Global_Scope, "string", ARGON_STRING_TYPE);
   add_to_scope(Global_Scope, "type", ARGON_TYPE_TYPE);
   add_to_scope(Global_Scope, "boolean", ARGON_BOOL_TYPE);
@@ -641,6 +669,7 @@ void bootstrap_globals() {
   add_to_scope(Global_Scope, "subtract", SUBTRACTION_FUNCTION);
   add_to_scope(Global_Scope, "multiply", MULTIPLY_FUNCTION);
   add_to_scope(Global_Scope, "division", DIVISION_FUNCTION);
+  add_to_scope(Global_Scope, "dictionary", ARGON_DICTIONARY_TYPE);
 
   ArgonObject *argon_term = new_class();
   add_builtin_field(argon_term, __init__, ARGON_NULL);

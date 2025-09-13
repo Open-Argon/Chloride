@@ -16,6 +16,7 @@ typedef enum {
   __base__,
   __class__,
   __name__,
+  BUILT_IN_ARRAY_COUNT,
   __add__,
   __string__,
   __subtract__,
@@ -33,6 +34,8 @@ typedef enum {
   field_log,
   field_length,
   __getattribute__,
+  __hash__,
+  __repr__,
 
   BUILT_IN_FIELDS_COUNT,
 } built_in_fields;
@@ -53,6 +56,7 @@ typedef enum ArgonType {
   TYPE_FUNCTION,
   TYPE_NATIVE_FUNCTION,
   TYPE_METHOD,
+  TYPE_DICTIONARY,
   TYPE_OBJECT,
 } ArgonType;
 
@@ -113,11 +117,11 @@ struct as_number {
 // full definition of ArgonObject (no typedef again!)
 struct ArgonObject {
   struct hashmap_GC *dict;
-  size_t built_in_slot_size;
   size_t built_in_slot_length;
-  struct built_in_slot *built_in_slot;
+  struct built_in_slot built_in_slot[BUILT_IN_ARRAY_COUNT];
   union {
     struct as_number *as_number;
+    struct hashmap_GC* as_hashmap;
     struct string_struct* as_str;
     native_fn native_fn;
     struct argon_function_struct *argon_fn;

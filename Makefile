@@ -2,52 +2,46 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
+# Default FLEX tool
 BINARY = bin/argon
 FLEX_TOOL = flex
 
-SRC_DIRS = src external/xxhash external/cwalk/src external/libdye/src external/linenoise
-CFILES = $(shell find $(SRC_DIRS) -name '*.c' \
-    ! -path "*/tests/*" \
-    ! -path "*/fuzz/*" \
-    ! -path "*/cli/*" \
-    ! -path "*/example*") \
- $(LEXER_C)
-OBJDIR = build
-OBJS = $(CFILES:%.c=$(OBJDIR)/%.o)
+CFILES = external/xxhash/xxhash.c external/cwalk/src/cwalk.c external/libdye/src/dye.c external/linenoise/linenoise.c $(shell find src -name '*.c')
 
-CFLAGS = $(ARCHFLAGS) -Wall -Wextra -Wno-unused-function -Werror=unused-result \
-         -Iexternal/cwalk/include -Iexternal/libdye/include
+LEXER_SRC = src/lexer/lex.l
+LEXER_C = src/lexer/lex.yy.c
+LEXER_H = src/lexer/lex.yy.h
+CFLAGS = $(ARCHFLAGS) -lm -lgc -lgmp -Wall -Wextra -Wno-unused-function -Werror=unused-result -Iexternal/cwalk/include -Iexternal/libdye/include
 LDFLAGS = -lgc -lgmp -lm
 
 all: $(BINARY)
 
-# Rule to build lexer
+
 $(LEXER_C) $(LEXER_H): $(LEXER_SRC)
 	$(FLEX_TOOL) --header-file=$(LEXER_H) -o $(LEXER_C) $(LEXER_SRC)
 
-# Pattern rule for compiling .c -> .o
-$(OBJDIR)/%.o: %.c $(LEXER_C) $(LEXER_H)
-	@mkdir -p $(dir $@)
-	gcc -O3 -c $< -o $@ $(CFLAGS)
+$(BINARY): $(CFILES) $(LEXER_C) $(LEXER_H)
+	mkdir -p bin
+	gcc -O3 -o $(BINARY) $(CFILES) $(CFLAGS) ${LDFLAGS} -s
 
-# Link final binary
-$(BINARY): $(OBJS)
-	@mkdir -p bin
-	gcc -o $@ $^ $(CFLAGS) $(LDFLAGS) -s
+native: $(CFILES) $(LEXER_C) $(LEXER_H)
+	mkdir -p bin
+	gcc -O3 -march=native -o $(BINARY) $(CFILES) $(CFLAGS) ${LDFLAGS}
 
-native: CFLAGS += -march=native
-native: $(BINARY)
+debug: $(CFILES) $(LEXER_C) $(LEXER_H)
+	mkdir -p bin
+	gcc -g -O3 -o $(BINARY) $(CFILES) $(CFLAGS)
 
-debug: CFLAGS += -g
-debug: $(BINARY)
+full-debug: $(CFILES) $(LEXER_C) $(LEXER_H)
+	mkdir -p bin
+	gcc -g -O3 -fsanitize=address -fno-omit-frame-pointer -o $(BINARY) $(CFILES) $(CFLAGS) ${LDFLAGS}
 
-full-debug: CFLAGS += -g -fsanitize=address -fno-omit-frame-pointer
-full-debug: $(BINARY)
-
-optimised: CFLAGS += -fprofile-generate
-optimised: $(BINARY)
+optimised: $(CFILES) $(LEXER_C) $(LEXER_H)
+	mkdir -p bin
+	gcc -O3 -fprofile-generate -o $(BINARY) $(CFILES) $(CFLAGS) ${LDFLAGS}
 	${BINARY} rand_test.ar
-	$(MAKE) CFLAGS="$(CFLAGS:-fprofile-generate=-fprofile-use)" $(BINARY)
+	gcc -O3 -fprofile-use -o $(BINARY) $(CFILES) $(CFLAGS) ${LDFLAGS}
+	
 
 clean:
 	rm -rf build bin

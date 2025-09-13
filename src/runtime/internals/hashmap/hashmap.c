@@ -25,6 +25,27 @@ struct hashmap_GC *createHashmap_GC() {
   t->inline_count = 0;
   return t;
 }
+void hashmap_GC_to_array(struct hashmap_GC *t, struct node_GC**array,
+                           size_t *array_length) {
+  size_t array_size = 8;
+  *array_length = 0;
+  *array = ar_alloc(array_size * sizeof(struct node_GC));
+  for (size_t i = 0; i < t->inline_count; i++) {
+    if (*array_length >=array_size) {
+      array_size*=2;
+      *array=ar_realloc(*array, array_size * sizeof(struct node_GC));
+    }
+    (*array)[(*array_length)++] = t->inline_values[i];
+  }
+  for (size_t i = 0; i < t->size; i++) {
+    if (!t->list[i]) continue;
+    if (*array_length >=array_size) {
+      array_size*=2;
+      *array=ar_realloc(*array, array_size * sizeof(struct node_GC));
+    }
+    (*array)[(*array_length)++] = *t->list[i];
+  }
+}
 
 void clear_hashmap_GC(struct hashmap_GC *t) {
   if (!t->count)
@@ -68,6 +89,17 @@ int hashCode_GC(struct hashmap_GC *t, uint64_t hash) {
 }
 
 int hashmap_remove_GC(struct hashmap_GC *t, uint64_t hash) {
+  for (size_t i = 0; i < t->inline_count; i++) {
+    if (t->inline_values[i].hash == hash) {
+      size_t length = t->inline_count - i;
+      if (length > 1) {
+        memmove(&t->inline_values[i], &t->inline_values[i + 1],
+                (length - 1) * sizeof(struct node_GC));
+      }
+      t->inline_count--;
+      return 1;
+    }
+  }
   int pos = hashCode_GC(t, hash);
   struct node_GC *list = t->list[pos];
   struct node_GC *temp = list;
@@ -91,18 +123,17 @@ void hashmap_insert_GC(struct hashmap_GC *t, uint64_t hash, void *key,
   if (!order) {
     order = t->order++;
   }
-  size_t stop = t->inline_count;
-  for (size_t i = 0; i < stop; i++) {
+  for (size_t i = 0; i < t->inline_count; i++) {
     if (t->inline_values[i].hash == hash) {
       t->inline_values[i].val = val;
       return;
     }
   }
-  if (!t->list && stop < INLINE_HASHMAP_ARRAY_SIZE) {
-    t->inline_values[stop].hash = hash;
-    t->inline_values[stop].key = key;
-    t->inline_values[stop].val = val;
-    t->inline_values[stop].order = order;
+  if (!t->list && t->inline_count < INLINE_HASHMAP_ARRAY_SIZE) {
+    t->inline_values[t->inline_count].hash = hash;
+    t->inline_values[t->inline_count].key = key;
+    t->inline_values[t->inline_count].val = val;
+    t->inline_values[t->inline_count].order = order;
     t->inline_count++;
     t->count++;
     return;
