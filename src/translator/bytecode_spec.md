@@ -120,9 +120,9 @@ sets the source location onto the runtime
 1. the column
 1. the length
 
-## OP_LOAD_GETATTRIBUTE_FUNCTION
+## OP_LOAD_GETATTRIBUTE_METHOD
 
-loads the \_\_getattribute\_\_ function from the objects class in register 1 and put it into register 1
+loads the \_\_getattribute\_\_ method from the objects class in register 1 and put it into register 1
 
 ## OP_LOAD_BOOL
 
@@ -184,3 +184,7 @@ performs an division between register A and register B, storing the result in re
 ## OP_NOT
 
 inverts the boolean value in register 0.
+
+## OP_LOAD_SETATTR_METHOD
+
+loads the \_\_setattr\_\_ method from the objects class in register 1 and put it into register 1

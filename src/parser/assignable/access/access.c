@@ -18,13 +18,11 @@ ParsedValueReturn parse_access(char *file, DArray *tokens, size_t *index,
   Token *first_token = darray_get(tokens, *index);
   (*index)++;
   ParsedValue *parsedValue = checked_malloc(sizeof(ParsedValue));
-  ParsedAccess *parsedAccess = checked_malloc(sizeof(ParsedAccess));
-  parsedAccess->to_access = *to_access;
-  parsedValue->type = AST_ACCESS;
-  parsedValue->data = parsedAccess;
-  free(to_access);
-  darray_init(&parsedAccess->access, sizeof(ParsedValue));
   if (first_token->type == TOKEN_DOT) {
+    ParsedAccess *parsedAccess = checked_malloc(sizeof(ParsedAccess));
+    parsedAccess->to_access = to_access;
+    parsedValue->type = AST_ACCESS;
+    parsedValue->data = parsedAccess;
     ArErr err = error_if_finished(file, tokens, index);
     if (err.exists) {
       free_parsed(parsedValue);
@@ -41,59 +39,7 @@ ParsedValueReturn parse_access(char *file, DArray *tokens, size_t *index,
       free(parsedValue);
       return parsedString;
     }
-    darray_push(&parsedAccess->access, parsedString.value);
-    free(parsedString.value);
-    parsedAccess->access_fields = true;
-  } else {
-    parsedAccess->line = first_token->line;
-    parsedAccess->column = first_token->column;
-    parsedAccess->length = first_token->length;
-    parsedAccess->access_fields = false;
-    Token *token = first_token;
-    while (true) {
-      skip_newlines_and_indents(tokens, index);
-      ArErr err = error_if_finished(file, tokens, index);
-      if (err.exists) {
-        free_parsed(parsedValue);
-        free(parsedValue);
-        return (ParsedValueReturn){err, NULL};
-      }
-      ParsedValueReturn parsedAccessValue =
-          parse_token(file, tokens, index, true);
-      if (parsedAccessValue.err.exists) {
-        free_parsed(parsedValue);
-        free(parsedValue);
-        return parsedAccessValue;
-      } else if (!parsedAccessValue.value) {
-        free_parsed(parsedValue);
-        free(parsedValue);
-        return (ParsedValueReturn){create_err(token->line, token->column,
-                                              token->length, file,
-                                              "Syntax Error", "expected value"),
-                                   NULL};
-      }
-      darray_push(&parsedAccess->access, parsedAccessValue.value);
-      free(parsedAccessValue.value);
-      skip_newlines_and_indents(tokens, index);
-      err = error_if_finished(file, tokens, index);
-      if (err.exists) {
-        free_parsed(parsedValue);
-        free(parsedValue);
-        return (ParsedValueReturn){err, NULL};
-      }
-      token = darray_get(tokens, *index);
-      if (token->type == TOKEN_RBRACKET) {
-        break;
-      } else if (token->type != TOKEN_COLON) {
-        free_parsed(parsedValue);
-        free(parsedValue);
-        return (ParsedValueReturn){create_err(token->line, token->column,
-                                              token->length, file,
-                                              "Syntax Error", "expected colon"),
-                                   NULL};
-      }
-      (*index)++;
-    }
+    parsedAccess->access = parsedString.value;
   }
   (*index)++;
   return (ParsedValueReturn){no_err, parsedValue};
@@ -102,7 +48,9 @@ ParsedValueReturn parse_access(char *file, DArray *tokens, size_t *index,
 void free_parse_access(void *ptr) {
   ParsedValue *parsedValue = ptr;
   ParsedAccess *parsedAccess = parsedValue->data;
-  free_parsed(&parsedAccess->to_access);
-  darray_free(&parsedAccess->access, free_parsed);
+  free_parsed(parsedAccess->to_access);
+  free(parsedAccess->to_access);
+  free_parsed(parsedAccess->access);
+  free(parsedAccess->access);
   free(parsedAccess);
 }
