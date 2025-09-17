@@ -46,47 +46,44 @@ ArgonObject *FLOORDIVISION_FUNCTION;
 ArgonObject *BASE_CLASS___getattribute__(size_t argc, ArgonObject **argv,
                                          ArErr *err, RuntimeState *state) {
   (void)state;
-  if (argc != 3) {
-    *err = create_err(0, 0, 0, "", "Runtime Error",
-                      "__getattribute__ expects 3 arguments, got %" PRIu64);
+  if (argc != 2) {
+    *err =
+        create_err(0, 0, 0, "", "Runtime Error",
+                   "__getattribute__ expects 2 arguments, got %" PRIu64, argc);
     return ARGON_NULL;
   }
   ArgonObject *to_access = argv[0];
-  bool check_field = argv[1] == ARGON_TRUE;
-  if (check_field) {
-    ArgonObject *access = argv[2];
-    uint64_t hash;
-    if (access->value.as_str->hash_computed) {
-      hash = access->value.as_str->hash;
-    } else {
-      hash =
-          runtime_hash(access->value.as_str->data, access->value.as_str->length,
-                       access->value.as_str->prehash);
-      access->value.as_str->hash = hash;
-      access->value.as_str->hash_computed = true;
-    }
-    ArgonObject *value =
-        get_field_l(to_access, access->value.as_str->data, hash,
-                    access->value.as_str->length, true, false);
-    if (value)
-      return value;
-    ArgonObject *cls__get_attr__ = get_builtin_field_for_class(
-        get_builtin_field(to_access, __class__), __get_attr__, to_access);
-    if (cls__get_attr__) {
-      value =
-          argon_call(cls__get_attr__, 1, (ArgonObject *[]){access}, err, state);
-      if (err->exists) {
-        return ARGON_NULL;
-      }
-      return value;
-    }
-    ArgonObject *name = get_builtin_field_for_class(
-        get_builtin_field(to_access, __class__), __name__, to_access);
-    *err = create_err(
-        0, 0, 0, "", "Runtime Error", "'%.*s' object has no attribute '%.*s'",
-        (int)name->value.as_str->length, name->value.as_str->data,
-        (int)access->value.as_str->length, access->value.as_str->data);
+  ArgonObject *access = argv[1];
+  uint64_t hash;
+  if (access->value.as_str->hash_computed) {
+    hash = access->value.as_str->hash;
+  } else {
+    hash =
+        runtime_hash(access->value.as_str->data, access->value.as_str->length,
+                     access->value.as_str->prehash);
+    access->value.as_str->hash = hash;
+    access->value.as_str->hash_computed = true;
   }
+  ArgonObject *value = get_field_l(to_access, access->value.as_str->data, hash,
+                                   access->value.as_str->length, true, false);
+  if (value)
+    return value;
+  ArgonObject *cls__get_attr__ = get_builtin_field_for_class(
+      get_builtin_field(to_access, __class__), __get_attr__, to_access);
+  if (cls__get_attr__) {
+    value =
+        argon_call(cls__get_attr__, 1, (ArgonObject *[]){access}, err, state);
+    if (err->exists) {
+      return ARGON_NULL;
+    }
+    return value;
+  }
+  ArgonObject *name = get_builtin_field_for_class(
+      get_builtin_field(to_access, __class__), __name__, to_access);
+  *err = create_err(
+      0, 0, 0, "", "Runtime Error", "'%.*s' object has no attribute '%.*s'",
+      (int)name->value.as_str->length, name->value.as_str->data,
+      (int)access->value.as_str->length, access->value.as_str->data);
   return ARGON_NULL;
 }
 
@@ -310,9 +307,8 @@ ArgonObject *BASE_CLASS___string__(size_t argc, ArgonObject **argv, ArErr *err,
   return new_string_object_null_terminated(buffer);
 }
 
-
-ArgonObject *BASE_CLASS___repr__(size_t argc, ArgonObject **argv,
-                                          ArErr *err, RuntimeState *state) {
+ArgonObject *BASE_CLASS___repr__(size_t argc, ArgonObject **argv, ArErr *err,
+                                 RuntimeState *state) {
   if (argc != 1) {
     *err = create_err(0, 0, 0, "", "Runtime Error",
                       "__repr__ expects 1 arguments, got %" PRIu64, argc);
@@ -447,14 +443,15 @@ ArgonObject *ARGON_STRING_TYPE___string__(size_t argc, ArgonObject **argv,
   return argv[0];
 }
 ArgonObject *ARGON_STRING_TYPE___repr__(size_t argc, ArgonObject **argv,
-                                          ArErr *err, RuntimeState *state) {
+                                        ArErr *err, RuntimeState *state) {
   (void)state;
   if (argc != 1) {
     *err = create_err(0, 0, 0, "", "Runtime Error",
                       "__repr__ expects 1 arguments, got %" PRIu64, argc);
   }
-  char* quoted = c_quote_string(argv[0]->value.as_str->data,argv[0]->value.as_str->length);
-  ArgonObject* result = new_string_object_null_terminated(quoted);
+  char *quoted = c_quote_string(argv[0]->value.as_str->data,
+                                argv[0]->value.as_str->length);
+  ArgonObject *result = new_string_object_null_terminated(quoted);
   free(quoted);
   return result;
 }
@@ -810,10 +807,11 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       [OP_COPY_TO_REGISTER] = &&DO_COPY_TO_REGISTER,
       [OP_ADDITION] = &&DO_ADDITION,
       [OP_SUBTRACTION] = &&DO_SUBTRACTION,
-      [OP_LOAD_GETATTRIBUTE_FUNCTION] = &&DO_LOAD_GETATTRIBUTE_FUNCTION,
+      [OP_LOAD_GETATTRIBUTE_METHOD] = &&DO_LOAD_GETATTRIBUTE_METHOD,
       [OP_MULTIPLICATION] = &&DO_MULTIPLICATION,
       [OP_DIVISION] = &&DO_DIVISION,
-      [OP_NOT] = &&DO_NOT};
+      [OP_NOT] = &&DO_NOT,
+      [OP_LOAD_SETATTR_METHOD] = &&DO_LOAD_SETATTR_METHOD};
   _state.head = 0;
 
   StackFrame *currentStackFrame = ar_alloc(sizeof(StackFrame));
@@ -917,7 +915,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       state->registers[0] =
           pop_byte(translated, state) ? ARGON_TRUE : ARGON_FALSE;
       continue;
-    DO_LOAD_GETATTRIBUTE_FUNCTION:
+    DO_LOAD_GETATTRIBUTE_METHOD:
       state->registers[0] = get_builtin_field_for_class(
           get_builtin_field(state->registers[0], __class__), __getattribute__,
           state->registers[0]);
@@ -1175,6 +1173,18 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       ArgonObject *args[] = {valueA, valueB};
       state->registers[registerC] =
           ARGON_DIVISION_FUNCTION(2, args, err, state);
+      continue;
+    }
+    DO_LOAD_SETATTR_METHOD: {
+      state->registers[0] = get_builtin_field_for_class(
+          get_builtin_field(state->registers[0], __class__), __setattr__,
+          state->registers[0]);
+      if (!state->registers[0]) {
+        *err = create_err(
+            state->source_location.line, state->source_location.column,
+            state->source_location.length, state->path, "Runtime Error",
+            "unable to get __setattr__ from objects class");
+      }
       continue;
     }
     }
