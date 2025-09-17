@@ -67,7 +67,11 @@ ArErr create_err(int64_t line, int64_t column, int length, char *path,
                  const char *type, const char *fmt, ...) {
   ArErr err;
   err.exists = true;
-  strcpy(err.path, path);
+  if (path)
+    strcpy(err.path, path);
+  else {
+    err.path[0] = '\0';
+  }
   err.line = line;
   err.column = column;
   err.length = length;
