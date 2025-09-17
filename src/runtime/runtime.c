@@ -34,14 +34,13 @@
 
 ArgonObject *ARGON_METHOD_TYPE;
 Stack *Global_Scope = NULL;
-ArgonObject *GETATTRIBUTE_FUNCTION;
 ArgonObject *ADDITION_FUNCTION;
 ArgonObject *SUBTRACTION_FUNCTION;
 ArgonObject *MULTIPLY_FUNCTION;
-ArgonObject *DIVISION_FUNCTION;
+ArgonObject *DIVIDE_FUNCTION;
 ArgonObject *POWER_FUNCTION;
 ArgonObject *MODULO_FUNCTION;
-ArgonObject *FLOORDIVISION_FUNCTION;
+ArgonObject *FLOORDIVIDE_FUNCTION;
 
 ArgonObject *BASE_CLASS___getattribute__(size_t argc, ArgonObject **argv,
                                          ArErr *err, RuntimeState *state) {
@@ -164,28 +163,27 @@ ArgonObject *ARGON_MULTIPLY_FUNCTION(size_t argc, ArgonObject **argv,
   return output;
 }
 
-ArgonObject *ARGON_DIVISION_FUNCTION(size_t argc, ArgonObject **argv,
-                                     ArErr *err, RuntimeState *state) {
+ArgonObject *ARGON_DIVIDE_FUNCTION(size_t argc, ArgonObject **argv, ArErr *err,
+                                   RuntimeState *state) {
   if (argc < 1) {
-    *err =
-        create_err(0, 0, 0, "", "Runtime Error",
-                   "division expects at least 1 argument, got %" PRIu64, argc);
+    *err = create_err(0, 0, 0, "", "Runtime Error",
+                      "divide expects at least 1 argument, got %" PRIu64, argc);
     return ARGON_NULL;
   }
   ArgonObject *output = argv[0];
   for (size_t i = 1; i < argc; i++) {
-    ArgonObject *function__division__ = get_builtin_field_for_class(
-        get_builtin_field(output, __class__), __division__, output);
-    if (!function__division__) {
+    ArgonObject *function___divide__ = get_builtin_field_for_class(
+        get_builtin_field(output, __class__), __divide__, output);
+    if (!function___divide__) {
       ArgonObject *cls___name__ = get_builtin_field(output, __name__);
       *err = create_err(0, 0, 0, "", "Runtime Error",
-                        "Object '%.*s' is missing __division__ method",
+                        "Object '%.*s' is missing __divide__ method",
                         (int)cls___name__->value.as_str->length,
                         cls___name__->value.as_str->data);
       return ARGON_NULL;
     }
-    output = argon_call(function__division__, 1, (ArgonObject *[]){argv[i]},
-                        err, state);
+    output = argon_call(function___divide__, 1, (ArgonObject *[]){argv[i]}, err,
+                        state);
   }
   return output;
 }
@@ -280,6 +278,22 @@ ArgonObject *BASE_CLASS___init__(size_t argc, ArgonObject **argv, ArErr *err,
                       "__init__ expects 1 argument, got %" PRIu64, argc);
   }
   return ARGON_NULL;
+}
+
+ArgonObject *BASE_CLASS___setattr__(size_t argc, ArgonObject **argv, ArErr *err,
+                                    RuntimeState *state) {
+  (void)state;
+  if (argc != 3) {
+    *err = create_err(0, 0, 0, "", "Runtime Error",
+                      "__setattr__ expects 3 argument, got %" PRIu64, argc);
+  }
+  if (!argv[1]->value.as_str->hash)
+    argv[1]->value.as_str->hash =
+        runtime_hash(argv[1]->value.as_str->data, argv[1]->value.as_str->length,
+                     argv[1]->value.as_str->prehash);
+  add_field_l(argv[0], argv[1]->value.as_str->data, argv[1]->value.as_str->hash,
+              argv[1]->value.as_str->length, argv[2]);
+  return argv[2];
 }
 
 ArgonObject *BASE_CLASS___string__(size_t argc, ArgonObject **argv, ArErr *err,
@@ -661,17 +675,20 @@ void bootstrap_types() {
   add_builtin_field(
       ARGON_BOOL_TYPE, __number__,
       create_argon_native_function("__number__", ARGON_BOOL_TYPE___number__));
-  GETATTRIBUTE_FUNCTION =
-      create_argon_native_function("__get_attr__", BASE_CLASS___getattribute__);
   ADDITION_FUNCTION =
       create_argon_native_function("add", ARGON_ADDITION_FUNCTION);
   SUBTRACTION_FUNCTION =
       create_argon_native_function("subtract", ARGON_SUBTRACTION_FUNCTION);
   MULTIPLY_FUNCTION =
       create_argon_native_function("multiply", ARGON_MULTIPLY_FUNCTION);
-  DIVISION_FUNCTION =
-      create_argon_native_function("division", ARGON_DIVISION_FUNCTION);
-  add_builtin_field(BASE_CLASS, __getattribute__, GETATTRIBUTE_FUNCTION);
+  DIVIDE_FUNCTION =
+      create_argon_native_function("divide", ARGON_DIVIDE_FUNCTION);
+  add_builtin_field(BASE_CLASS, __getattribute__,
+                    create_argon_native_function("__getattribute__",
+                                                 BASE_CLASS___getattribute__));
+  add_builtin_field(
+      BASE_CLASS, __setattr__,
+      create_argon_native_function("__setattr__", BASE_CLASS___setattr__));
   create_ARGON_DICTIONARY_TYPE();
 }
 
@@ -692,7 +709,7 @@ void bootstrap_globals() {
   add_to_scope(Global_Scope, "add", ADDITION_FUNCTION);
   add_to_scope(Global_Scope, "subtract", SUBTRACTION_FUNCTION);
   add_to_scope(Global_Scope, "multiply", MULTIPLY_FUNCTION);
-  add_to_scope(Global_Scope, "division", DIVISION_FUNCTION);
+  add_to_scope(Global_Scope, "divide", DIVIDE_FUNCTION);
   add_to_scope(Global_Scope, "dictionary", ARGON_DICTIONARY_TYPE);
 
   ArgonObject *argon_term = new_class();
@@ -709,7 +726,7 @@ int compare_by_order(const void *a, const void *b) {
 }
 
 static inline void load_const(Translated *translated, RuntimeState *state) {
-  uint64_t to_register = pop_byte(translated, state);
+  uint8_t to_register = pop_byte(translated, state);
   size_t length = pop_bytecode(translated, state);
   uint64_t offset = pop_bytecode(translated, state);
   ArgonObject *object = new_string_object(
@@ -824,6 +841,13 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       Translated *translated = &currentStackFrame->translated;
       RuntimeState *state = &currentStackFrame->state;
       uint8_t instruction = pop_byte(translated, state);
+      // printf("instruction: %d\n", instruction);
+      // for (size_t i = 0; i < translated->bytecode.size; i++) {
+      //   if (i == state->head)
+      //     printf("\n");
+      //   printf("%d ", ((uint8_t *)translated->bytecode.data)[i]);
+      // }
+      // printf("\n");
       goto *dispatch_table[instruction];
     DO_LOAD_NULL:
       state->registers[pop_byte(translated, state)] = ARGON_NULL;
@@ -1171,8 +1195,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       }
 
       ArgonObject *args[] = {valueA, valueB};
-      state->registers[registerC] =
-          ARGON_DIVISION_FUNCTION(2, args, err, state);
+      state->registers[registerC] = ARGON_DIVIDE_FUNCTION(2, args, err, state);
       continue;
     }
     DO_LOAD_SETATTR_METHOD: {

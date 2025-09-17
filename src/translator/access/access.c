@@ -14,7 +14,7 @@ size_t translate_access(Translated *translated, ParsedAccess *access,
   push_instruction_byte(translated, OP_LOAD_GETATTRIBUTE_METHOD);
   push_instruction_byte(translated, OP_INIT_CALL);
   push_instruction_code(translated, 1);
-
+  
   translate_parsed(translated, access->access, err);
   if (err->exists)
     return 0;
