@@ -21,6 +21,7 @@ ParsedValueReturn parse_access(char *file, DArray *tokens, size_t *index,
   if (first_token->type == TOKEN_DOT) {
     ParsedAccess *parsedAccess = checked_malloc(sizeof(ParsedAccess));
     parsedAccess->to_access = to_access;
+    parsedAccess->access = NULL;
     parsedValue->type = AST_ACCESS;
     parsedValue->data = parsedAccess;
     ArErr err = error_if_finished(file, tokens, index);
@@ -30,6 +31,14 @@ ParsedValueReturn parse_access(char *file, DArray *tokens, size_t *index,
       return (ParsedValueReturn){err, NULL};
     }
     Token *token = darray_get(tokens, *index);
+    if (token->type != TOKEN_IDENTIFIER) {
+      free_parsed(parsedValue);
+      free(parsedValue);
+      return (ParsedValueReturn){create_err(token->line, token->column,
+                                            token->length, file, "Syntax Error",
+                                            "expected identifier after dot"),
+                                 NULL};
+    }
     parsedAccess->line = token->line;
     parsedAccess->column = token->column;
     parsedAccess->length = token->length;
@@ -50,7 +59,9 @@ void free_parse_access(void *ptr) {
   ParsedAccess *parsedAccess = parsedValue->data;
   free_parsed(parsedAccess->to_access);
   free(parsedAccess->to_access);
-  free_parsed(parsedAccess->access);
-  free(parsedAccess->access);
+  if (parsedAccess->access) {
+    free_parsed(parsedAccess->access);
+    free(parsedAccess->access);
+  }
   free(parsedAccess);
 }

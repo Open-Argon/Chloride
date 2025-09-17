@@ -532,7 +532,7 @@ void create_ARGON_NUMBER_TYPE() {
   add_builtin_field(ARGON_NUMBER_TYPE, __multiply__,
                     create_argon_native_function(
                         "__multiply__", ARGON_NUMBER_TYPE___multiply__));
-  add_builtin_field(ARGON_NUMBER_TYPE, __division__,
+  add_builtin_field(ARGON_NUMBER_TYPE, __divide__,
                     create_argon_native_function(
                         "__division__", ARGON_NUMBER_TYPE___division__));
   init_small_ints();

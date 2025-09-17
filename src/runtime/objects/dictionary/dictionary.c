@@ -139,7 +139,7 @@ ArgonObject *create_ARGON_DICTIONARY_TYPE___get_attr__(size_t argc,
   ArgonObject *result = hashmap_lookup_GC(object->value.as_hashmap, hash);
   if (!result) {
     *err = create_err(0, 0, 0, NULL, "Attribute Error",
-                      "Dictionary has no attribute ''");
+                      "Dictionary has no attribute '%.*s'", key->value.as_str->length, key->value.as_str->data);
     return ARGON_NULL;
   }
   return result;

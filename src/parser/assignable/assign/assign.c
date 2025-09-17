@@ -47,6 +47,7 @@ ParsedValueReturn parse_assign(char *file, DArray *tokens,
   ParsedAssign *assign = checked_malloc(sizeof(ParsedAssign));
   assign->to = assign_to;
   assign->type = token->type;
+  assign->from = NULL;
   ParsedValue *parsedValue = checked_malloc(sizeof(ParsedValue));
   parsedValue->type = AST_ASSIGN;
   parsedValue->data = assign;

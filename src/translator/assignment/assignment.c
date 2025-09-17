@@ -6,8 +6,9 @@
 
 #include "assignment.h"
 #include "../../hash_data/hash_data.h"
-#include "../../parser/assignable/identifier/identifier.h"
 #include "../../parser/assignable/access/access.h"
+#include "../../parser/assignable/identifier/identifier.h"
+#include "../../parser/string/string.h"
 #include "../translator.h"
 #include <stddef.h>
 #include <stdio.h>
@@ -21,14 +22,14 @@ size_t translate_parsed_assignment(Translated *translated,
   translated->return_jumps = NULL;
   size_t first = translate_parsed(translated, assignment->from, err);
   if (err->exists)
-    return first;
+    return 0;
   switch (assignment->to->type) {
   case AST_IDENTIFIER:;
     ParsedIdentifier *identifier = assignment->to->data;
     size_t length = strlen(identifier->name);
     size_t offset =
         arena_push(&translated->constants, identifier->name, length);
-        
+
     push_instruction_byte(translated, OP_SOURCE_LOCATION);
     push_instruction_code(translated, identifier->line);
     push_instruction_code(translated, identifier->column);
@@ -44,6 +45,31 @@ size_t translate_parsed_assignment(Translated *translated,
     break;
   case AST_ACCESS:;
     ParsedAccess *access = assignment->to->data;
+    uint8_t registerA = translated->registerAssignment++;
+    set_registers(translated, registerA);
+    push_instruction_byte(translated, OP_COPY_TO_REGISTER);
+    push_instruction_byte(translated, 0);
+    push_instruction_byte(translated, registerA);
+    translate_parsed(translated, access->to_access, err);
+    if (err->exists)
+      return 0;
+    push_instruction_byte(translated, OP_LOAD_SETATTR_METHOD);
+    push_instruction_byte(translated, OP_INIT_CALL);
+    push_instruction_code(translated, 2);
+    translate_parsed(translated, access->access, err);
+    if (err->exists)
+      return 0;
+    push_instruction_byte(translated, OP_INSERT_ARG);
+    push_instruction_code(translated, 0);
+
+    push_instruction_byte(translated, OP_COPY_TO_REGISTER);
+    push_instruction_byte(translated, registerA);
+    push_instruction_byte(translated, 0);
+    push_instruction_byte(translated, OP_INSERT_ARG);
+    push_instruction_code(translated, 1);
+
+    push_instruction_byte(translated, OP_CALL);
+    translated->registerAssignment--;
     break;
   default:
     fprintf(stderr, "panic: unsupported assignment\n");

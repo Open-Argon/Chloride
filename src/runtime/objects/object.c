@@ -39,7 +39,7 @@ const char *built_in_field_names[BUILT_IN_FIELDS_COUNT] = {
     "__string__",
     "__subtract__",
     "__multiply__",
-    "__division__",
+    "__divide__",
     "__new__",
     "__init__",
     "__boolean__",
