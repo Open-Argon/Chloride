@@ -7,6 +7,7 @@
 #include "assignment.h"
 #include "../../hash_data/hash_data.h"
 #include "../../parser/assignable/identifier/identifier.h"
+#include "../../parser/assignable/access/access.h"
 #include "../translator.h"
 #include <stddef.h>
 #include <stdio.h>
@@ -40,6 +41,9 @@ size_t translate_parsed_assignment(Translated *translated,
                           siphash64_bytes(identifier->name, length,
                                           siphash_key_fixed_for_translator));
     push_instruction_byte(translated, 0);
+    break;
+  case AST_ACCESS:;
+    ParsedAccess *access = assignment->to->data;
     break;
   default:
     fprintf(stderr, "panic: unsupported assignment\n");

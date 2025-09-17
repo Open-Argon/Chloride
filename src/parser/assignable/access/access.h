@@ -10,9 +10,8 @@
 #include "../../../lexer/token.h"  // for Token
 
 typedef struct {
-  ParsedValue to_access;
-  bool access_fields;
-  DArray access;
+  ParsedValue *to_access;
+  ParsedValue *access;
   size_t line;
   size_t column;
   size_t length;
