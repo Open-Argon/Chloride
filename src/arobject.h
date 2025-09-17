@@ -16,7 +16,11 @@ typedef enum {
   __base__,
   __class__,
   __name__,
+  __binding__,
+  __function__,
+
   BUILT_IN_ARRAY_COUNT,
+
   __add__,
   __string__,
   __subtract__,
@@ -26,14 +30,13 @@ typedef enum {
   __init__,
   __boolean__,
   __get_attr__,
-  __binding__,
-  __function__,
   field__address,
   __call__,
   __number__,
   field_log,
   field_length,
   __getattribute__,
+  __setattr__,
   __hash__,
   __repr__,
 
@@ -121,8 +124,8 @@ struct ArgonObject {
   struct built_in_slot built_in_slot[BUILT_IN_ARRAY_COUNT];
   union {
     struct as_number *as_number;
-    struct hashmap_GC* as_hashmap;
-    struct string_struct* as_str;
+    struct hashmap_GC *as_hashmap;
+    struct string_struct *as_str;
     native_fn native_fn;
     struct argon_function_struct *argon_fn;
   } value;
