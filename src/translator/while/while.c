@@ -33,6 +33,8 @@ size_t translate_parsed_while(Translated *translated, ParsedWhile *parsedWhile,
   push_instruction_code(translated, start_of_loop);
   set_instruction_code(translated, jump_index, translated->bytecode.size);
   push_instruction_byte(translated, OP_POP_SCOPE);
+  push_instruction_byte(translated, OP_LOAD_NULL);
+  push_instruction_byte(translated, 0);
   if (translated->return_jumps) {
     push_instruction_byte(translated, OP_JUMP);
     size_t skip_return = push_instruction_code(translated, 0);

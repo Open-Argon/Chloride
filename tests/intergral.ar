@@ -1,0 +1,10 @@
+let f(x) = sin(x)
+
+let intergral_aprox(n, a, b) = do
+    let h = (b-a)/n
+    let output = 0
+    for (i from 1 to n+1) do
+        output += h*f(a+i*h)
+    return output
+
+term.log(intergral_aprox(1000, 0,1))
