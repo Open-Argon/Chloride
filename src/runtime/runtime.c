@@ -280,12 +280,12 @@ ArgonObject *BASE_CLASS___init__(size_t argc, ArgonObject **argv, ArErr *err,
   return ARGON_NULL;
 }
 
-ArgonObject *BASE_CLASS___setattr__(size_t argc, ArgonObject **argv, ArErr *err,
+ArgonObject *BASE_CLASS___set_attr__(size_t argc, ArgonObject **argv, ArErr *err,
                                     RuntimeState *state) {
   (void)state;
   if (argc != 3) {
     *err = create_err(0, 0, 0, "", "Runtime Error",
-                      "__setattr__ expects 3 argument, got %" PRIu64, argc);
+                      "__set_attr__ expects 3 argument, got %" PRIu64, argc);
   }
   if (!argv[1]->value.as_str->hash)
     argv[1]->value.as_str->hash =
@@ -687,8 +687,8 @@ void bootstrap_types() {
                     create_argon_native_function("__getattribute__",
                                                  BASE_CLASS___getattribute__));
   add_builtin_field(
-      BASE_CLASS, __setattr__,
-      create_argon_native_function("__setattr__", BASE_CLASS___setattr__));
+      BASE_CLASS, __set_attr__,
+      create_argon_native_function("__set_attr__", BASE_CLASS___set_attr__));
   create_ARGON_DICTIONARY_TYPE();
 }
 
@@ -1200,13 +1200,13 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
     }
     DO_LOAD_SETATTR_METHOD: {
       state->registers[0] = get_builtin_field_for_class(
-          get_builtin_field(state->registers[0], __class__), __setattr__,
+          get_builtin_field(state->registers[0], __class__), __set_attr__,
           state->registers[0]);
       if (!state->registers[0]) {
         *err = create_err(
             state->source_location.line, state->source_location.column,
             state->source_location.length, state->path, "Runtime Error",
-            "unable to get __setattr__ from objects class");
+            "unable to get __set_attr__ from objects class");
       }
       continue;
     }

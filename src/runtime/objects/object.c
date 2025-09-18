@@ -52,7 +52,7 @@ const char *built_in_field_names[BUILT_IN_FIELDS_COUNT] = {
     "log",
     "length",
     "__getattribute__",
-    "__setattr__",
+    "__set_attr__",
     "__hash__",
     "__repr__"};
 

@@ -145,6 +145,28 @@ ArgonObject *create_ARGON_DICTIONARY_TYPE___get_attr__(size_t argc,
   return result;
 }
 
+
+ArgonObject *create_ARGON_DICTIONARY_TYPE___set_attr__(size_t argc,
+                                                       ArgonObject **argv,
+                                                       ArErr *err,
+                                                       RuntimeState *state) {
+  (void)state;
+  if (argc != 3) {
+    *err = create_err(0, 0, 0, "", "Runtime Error",
+                      "__set_attr__ expects 2 argument, got %" PRIu64, argc);
+    return ARGON_NULL;
+  }
+  ArgonObject *object = argv[0];
+  ArgonObject *key = argv[1];
+  ArgonObject *value = argv[2];
+  int64_t hash = hash_object(key, err, state);
+  if (err->exists) {
+    return ARGON_NULL;
+  }
+  hashmap_insert_GC(object->value.as_hashmap, hash, key, value, 0);
+  return value;
+}
+
 void create_ARGON_DICTIONARY_TYPE() {
   ARGON_DICTIONARY_TYPE = new_class();
   add_builtin_field(ARGON_DICTIONARY_TYPE, __name__,
@@ -156,6 +178,10 @@ void create_ARGON_DICTIONARY_TYPE() {
       ARGON_DICTIONARY_TYPE, __get_attr__,
       create_argon_native_function("__get_attr__",
                                    create_ARGON_DICTIONARY_TYPE___get_attr__));
+  add_builtin_field(
+      ARGON_DICTIONARY_TYPE, __set_attr__,
+      create_argon_native_function("__set_attr__",
+                                   create_ARGON_DICTIONARY_TYPE___set_attr__));
   add_builtin_field(ARGON_DICTIONARY_TYPE, __string__,
                     create_argon_native_function(
                         "__string__", create_ARGON_DICTIONARY_TYPE___string__));

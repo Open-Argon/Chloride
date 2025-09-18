@@ -36,7 +36,7 @@ typedef enum {
   field_log,
   field_length,
   __getattribute__,
-  __setattr__,
+  __set_attr__,
   __hash__,
   __repr__,
 
