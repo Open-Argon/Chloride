@@ -42,6 +42,39 @@ FILE *fmemopen(void *buf, size_t size, const char *mode) {
 
   return tmp;
 }
+
+typedef long ssize_t;
+
+ssize_t getline(char **lineptr, size_t *n, FILE *stream) {
+    if (!lineptr || !n || !stream) return -1;
+
+    size_t pos = 0;
+    int c;
+
+    if (*lineptr == NULL || *n == 0) {
+        *n = 128;
+        *lineptr = malloc(*n);
+        if (!*lineptr) return -1;
+    }
+
+    while ((c = fgetc(stream)) != EOF) {
+        if (pos + 1 >= *n) {
+            *n *= 2;
+            char *tmp = realloc(*lineptr, *n);
+            if (!tmp) return -1;
+            *lineptr = tmp;
+        }
+        (*lineptr)[pos++] = c;
+        if (c == '\n')
+            break;
+    }
+
+    if (pos == 0 && c == EOF)
+        return -1;
+
+    (*lineptr)[pos] = '\0';
+    return (ssize_t)pos;
+}
 #else
 #include "../external/linenoise/linenoise.h"
 #endif
