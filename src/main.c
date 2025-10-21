@@ -19,6 +19,9 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <unistd.h>
+#ifdef _WIN32
+#include <windows.h>
+#endif
 
 char *get_current_directory() {
   char *buffer = NULL;
