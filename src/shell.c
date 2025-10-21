@@ -43,7 +43,11 @@ FILE *fmemopen(void *buf, size_t size, const char *mode) {
   return tmp;
 }
 
+// Only define ssize_t if it doesn't already exist
+#ifndef _SSIZE_T_DEFINED
 typedef long ssize_t;
+#define _SSIZE_T_DEFINED
+#endif
 
 ssize_t getline(char **lineptr, size_t *n, FILE *stream) {
     if (!lineptr || !n || !stream) return -1;
