@@ -23,6 +23,7 @@
 #include <malloc.h>
 #endif
 #if defined(_WIN32) || defined(_WIN64)
+#include <windows.h>
 FILE *fmemopen(void *buf, size_t size, const char *mode) {
   if (strchr(mode, 'r') == NULL) {
     return NULL;
