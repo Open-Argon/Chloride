@@ -1,4 +1,4 @@
-term.log(global."hello world")
+term.log(global)
 let i = 1e8
 while (i) do
   i=i-1

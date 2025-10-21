@@ -33,7 +33,6 @@ typedef enum {
   field__address,
   __call__,
   __number__,
-  field_log,
   field_length,
   __getattribute__,
   __set_attr__,

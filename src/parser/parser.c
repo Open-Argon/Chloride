@@ -158,13 +158,6 @@ ParsedValueReturn parse_token_full(char *file, DArray *tokens, size_t *index,
     token = darray_get(tokens, *index);
     switch (token->type) {
     case TOKEN_ASSIGN:
-    case TOKEN_ASSIGN_CARET:
-    case TOKEN_ASSIGN_FLOORDIV:
-    case TOKEN_ASSIGN_MINUS:
-    case TOKEN_ASSIGN_MODULO:
-    case TOKEN_ASSIGN_PLUS:
-    case TOKEN_ASSIGN_SLASH:
-    case TOKEN_ASSIGN_STAR:
       output = parse_assign(file, tokens, output.value, index);
       break;
     case TOKEN_LPAREN:

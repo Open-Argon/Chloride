@@ -1,0 +1,6 @@
+let i = 10
+let x = 1
+while (i) do
+     x = x * 1e100000000
+     term.log(i=i-1)
+term.log(x)

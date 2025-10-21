@@ -32,13 +32,6 @@ int yywrap(void * unused_param) {
 ":"                 { return TOKEN_COLON; }
 
 "="                 { return TOKEN_ASSIGN; }
-"+="                { return TOKEN_ASSIGN_PLUS; }
-"-="                { return TOKEN_ASSIGN_MINUS; }
-"//="               { return TOKEN_ASSIGN_FLOORDIV; }
-"/="                { return TOKEN_ASSIGN_SLASH; }
-"%="                { return TOKEN_ASSIGN_MODULO; }
-"*="                { return TOKEN_ASSIGN_STAR; }
-"^="                { return TOKEN_ASSIGN_CARET; }
 
 "not"[ \t]+"in"     { return TOKEN_NOT_IN; }
 "in"                { return TOKEN_IN; }

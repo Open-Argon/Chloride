@@ -8,7 +8,6 @@
 #include "../../hash_data/hash_data.h"
 #include "../../parser/assignable/access/access.h"
 #include "../../parser/assignable/identifier/identifier.h"
-#include "../../parser/string/string.h"
 #include "../translator.h"
 #include <stddef.h>
 #include <stdio.h>
@@ -71,6 +70,7 @@ size_t translate_parsed_assignment(Translated *translated,
     push_instruction_byte(translated, OP_CALL);
     translated->registerAssignment--;
     break;
+  
   default:
     fprintf(stderr, "panic: unsupported assignment\n");
     exit(EXIT_FAILURE);
