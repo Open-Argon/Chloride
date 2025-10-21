@@ -95,7 +95,7 @@ ArgonObject *create_ARGON_DICTIONARY_TYPE___string__(size_t argc,
              string_object->value.as_str->length);
       string_length += string_object->value.as_str->length;
     } else {
-      char *string_obj = "<object>";
+      char *string_obj = "{...}";
       size_t length = strlen(string_obj);
       string = realloc(string, string_length + length);
       memcpy(string + string_length, string_obj, length);

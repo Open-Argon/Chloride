@@ -17,13 +17,6 @@ typedef enum {
   TOKEN_INDENT,
 
   TOKEN_ASSIGN,
-  TOKEN_ASSIGN_PLUS,
-  TOKEN_ASSIGN_MINUS,
-  TOKEN_ASSIGN_FLOORDIV,
-  TOKEN_ASSIGN_SLASH,
-  TOKEN_ASSIGN_MODULO,
-  TOKEN_ASSIGN_STAR,
-  TOKEN_ASSIGN_CARET,
 
   // Operators
   TOKEN_CARET,    // ^      (Exponentiation)
@@ -31,8 +24,8 @@ typedef enum {
   TOKEN_SLASH,    // /      (Division)
   TOKEN_FLOORDIV, // //     (Floor Division)
   TOKEN_MODULO,   // %      (Modulo)
-  TOKEN_PLUS,     // +      (Addition)
   TOKEN_MINUS,    // -      (Subtraction)
+  TOKEN_PLUS,     // +      (Addition)
   TOKEN_LT,       // <
   TOKEN_GT,       // >
   TOKEN_LE,       // <=

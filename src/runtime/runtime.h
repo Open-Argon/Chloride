@@ -91,6 +91,8 @@ Stack *create_scope(Stack *prev, bool force);
 
 void add_to_scope(Stack *stack, char *name, ArgonObject *value);
 
+void add_to_hashmap(struct hashmap_GC *hashmap, char *name, ArgonObject *value);
+
 void runtime(Translated translated, RuntimeState state, Stack *stack,
              ArErr *err);
 

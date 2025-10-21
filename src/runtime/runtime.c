@@ -31,6 +31,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#if defined(_WIN32)
+#include <windows.h>
+#else
+extern char **environ;
+#endif
 
 ArgonObject *ARGON_METHOD_TYPE;
 Stack *Global_Scope = NULL;
@@ -692,11 +697,11 @@ void bootstrap_types() {
   create_ARGON_DICTIONARY_TYPE();
 }
 
-void add_to_scope(Stack *stack, char *name, ArgonObject *value) {
+void add_to_hashmap(struct hashmap_GC *hashmap, char *name, ArgonObject *value) {
   size_t length = strlen(name);
   uint64_t hash = siphash64_bytes(name, length, siphash_key);
   ArgonObject *key = new_string_object(name, length, 0, hash);
-  hashmap_insert_GC(stack->scope, hash, key, value, 0);
+  hashmap_insert_GC(hashmap, hash, key, value, 0);
 }
 
 void bootstrap_globals() {
@@ -712,11 +717,56 @@ void bootstrap_globals() {
   add_to_scope(Global_Scope, "divide", DIVIDE_FUNCTION);
   add_to_scope(Global_Scope, "dictionary", ARGON_DICTIONARY_TYPE);
 
-  ArgonObject *argon_term = new_class();
-  add_builtin_field(argon_term, __init__, ARGON_NULL);
-  add_builtin_field(argon_term, field_log,
+  struct hashmap_GC *argon_term = createHashmap_GC();
+  add_to_hashmap(argon_term, "log",
                     create_argon_native_function("log", term_log));
-  add_to_scope(Global_Scope, "term", argon_term);
+  add_to_scope(Global_Scope, "term", create_dictionary(argon_term));
+
+
+  struct hashmap_GC *environment_variables = createHashmap_GC();
+  #if defined(_WIN32)
+    // Windows: use WinAPI
+    LPCH env = GetEnvironmentStringsA();
+    if (!env) return;
+
+    for (LPCH var = env; *var; var += strlen(var) + 1) {
+        // Each string is like "KEY=VALUE"
+        const char *equals = strchr(var, '=');
+        if (equals) {
+            size_t key_len = equals - var;
+            char key[256];
+            if (key_len >= sizeof(key))
+                key_len = sizeof(key) - 1;
+            strncpy(key, var, key_len);
+            key[key_len] = '\0';
+
+            const char *value = getenv(key);
+            add_to_hashmap(environment_variables, key,
+                    value?new_string_object_null_terminated((char *)value):ARGON_NULL);
+        }
+    }
+
+    FreeEnvironmentStringsA(env);
+#else
+    // POSIX systems: use environ
+    for (char **env = environ; *env != NULL; env++) {
+        const char *equals = strchr(*env, '=');
+        if (equals) {
+            size_t key_len = equals - *env;
+            char key[256];
+            if (key_len >= sizeof(key))
+                key_len = sizeof(key) - 1;
+            strncpy(key, *env, key_len);
+            key[key_len] = '\0';
+
+            const char *value = getenv(key);
+            add_to_hashmap(environment_variables, key,
+                    value?new_string_object_null_terminated((char *)value):ARGON_NULL);
+        }
+    }
+#endif
+
+  add_to_scope(Global_Scope, "env", create_dictionary(environment_variables));
 }
 
 int compare_by_order(const void *a, const void *b) {
@@ -798,6 +848,13 @@ Stack *create_scope(Stack *prev, bool force) {
   }
   prev->fake_new_scopes++;
   return prev;
+}
+
+void add_to_scope(Stack *stack, char *name, ArgonObject *value) {
+  size_t length = strlen(name);
+  uint64_t hash = siphash64_bytes(name, length, siphash_key);
+  ArgonObject *key = new_string_object(name, length, 0, hash);
+  hashmap_insert_GC(stack->scope, hash, key, value, 0);
 }
 
 void runtime(Translated _translated, RuntimeState _state, Stack *stack,
