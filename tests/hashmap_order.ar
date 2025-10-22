@@ -1,0 +1,6 @@
+x = {}
+x.z = 1
+x.b  = 2
+x.c = 3
+x.a = 7
+term.log(x)
