@@ -13,6 +13,8 @@
 
 extern ArgonObject *BASE_CLASS;
 
+extern const char *built_in_field_names[BUILT_IN_FIELDS_COUNT];
+
 typedef struct ArgonObject ArgonObject;
 
 ArgonObject *new_class();

@@ -1,0 +1,5 @@
+string.cool(self) = do
+  term.log(self, self.length)
+  return 10
+'hello world'.cool()
+string.cool('goodbye world')

@@ -16,11 +16,11 @@ typedef enum {
   __base__,
   __class__,
   __name__,
-  __binding__,
-  __function__,
 
   BUILT_IN_ARRAY_COUNT,
 
+  __binding__,
+  __function__,
   __add__,
   __string__,
   __subtract__,

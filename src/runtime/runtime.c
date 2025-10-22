@@ -615,7 +615,6 @@ void bootstrap_types() {
   add_builtin_field(ARGON_METHOD_TYPE, __base__, BASE_CLASS);
   add_builtin_field(ARGON_METHOD_TYPE, __name__,
                     new_string_object_null_terminated("method"));
-  create_ARGON_NUMBER_TYPE();
 
   add_builtin_field(
       BASE_CLASS, __new__,
@@ -695,6 +694,7 @@ void bootstrap_types() {
       BASE_CLASS, __set_attr__,
       create_argon_native_function("__set_attr__", BASE_CLASS___set_attr__));
   create_ARGON_DICTIONARY_TYPE();
+  create_ARGON_NUMBER_TYPE();
 }
 
 void add_to_hashmap(struct hashmap_GC *hashmap, char *name, ArgonObject *value) {
