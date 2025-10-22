@@ -199,7 +199,7 @@ ArErr parser(char *file, DArray *parsed, DArray *tokens, bool inline_flag) {
       if (expecting_new_line) {
         Token *token = darray_get(tokens, old_index);
         return create_err(token->line, token->column, token->length, file,
-                          "Syntax Error", "expected new line");
+                          "Syntax Error", "invalid syntax");
       }
       expecting_new_line = true;
       darray_push(parsed, parsed_code.value);

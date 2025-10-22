@@ -189,6 +189,7 @@ size_t translate_parsed(Translated *translated, ParsedValue *parsedValue,
 
     push_instruction_byte(translated, OP_LOAD_SETITEM_METHOD);
     uint8_t setitemRegister = translated->registerAssignment++;
+    set_registers(translated, translated->registerAssignment);
 
     push_instruction_byte(translated, OP_COPY_TO_REGISTER);
     push_instruction_byte(translated, 0);
