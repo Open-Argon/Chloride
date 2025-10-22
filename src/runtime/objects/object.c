@@ -35,6 +35,8 @@ const char *built_in_field_names[BUILT_IN_FIELDS_COUNT] = {
     "__class__",
     "__name__",
     "", // above is anything that gets stored in built in slots
+    "__binding__",
+    "__function__",
     "__add__",
     "__string__",
     "__subtract__",
@@ -44,8 +46,6 @@ const char *built_in_field_names[BUILT_IN_FIELDS_COUNT] = {
     "__init__",
     "__boolean__",
     "__get_attr__",
-    "__binding__",
-    "__function__",
     "address",
     "__call__",
     "__number__",
