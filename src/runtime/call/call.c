@@ -132,36 +132,58 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
                         new_string_object(key.data, key.length, 0, hash), value,
                         0);
     }
-    StackFrame new_stackFrame = {
-        {object->value.argon_fn->translated.registerCount,
-         object->value.argon_fn->translated.registerAssignment,
-         NULL,
-         {object->value.argon_fn->bytecode, sizeof(uint8_t),
-          object->value.argon_fn->bytecode_length,
-          object->value.argon_fn->bytecode_length, false},
-         object->value.argon_fn->translated.constants,
-         object->value.argon_fn->translated.path},
-        {ar_alloc(object->value.argon_fn->translated.registerCount *
-                  sizeof(ArgonObject *)),
-         0,
-         object->value.argon_fn->translated.path,
-         NULL,
-         state->currentStackFramePointer,
-         {},
-         {}},
-        scope,
-        *state->currentStackFramePointer,
-        (*state->currentStackFramePointer)->depth + 1};
-    for (size_t i = 0; i < new_stackFrame.translated.registerCount; i++) {
-      new_stackFrame.state.registers[i] = NULL;
-    }
     if (CStackFrame) {
+      StackFrame new_stackFrame = {
+          {object->value.argon_fn->translated.registerCount,
+           object->value.argon_fn->translated.registerAssignment,
+           NULL,
+           {object->value.argon_fn->bytecode, sizeof(uint8_t),
+            object->value.argon_fn->bytecode_length,
+            object->value.argon_fn->bytecode_length, false},
+           object->value.argon_fn->translated.constants,
+           object->value.argon_fn->translated.path},
+          {ar_alloc(object->value.argon_fn->translated.registerCount *
+                    sizeof(ArgonObject *)),
+           0,
+           object->value.argon_fn->translated.path,
+           NULL,
+           state->currentStackFramePointer,
+           {},
+           {}},
+          scope,
+          *state->currentStackFramePointer,
+          (*state->currentStackFramePointer)->depth + 1};
+      for (size_t i = 0; i < new_stackFrame.translated.registerCount; i++) {
+        new_stackFrame.state.registers[i] = NULL;
+      }
       runtime(new_stackFrame.translated, new_stackFrame.state,
               new_stackFrame.stack, err);
       state->registers[0] = new_stackFrame.state.registers[0];
     } else {
       StackFrame *currentStackFrame = ar_alloc(sizeof(StackFrame));
-      *currentStackFrame = new_stackFrame;
+      *currentStackFrame = (StackFrame){
+          {object->value.argon_fn->translated.registerCount,
+           object->value.argon_fn->translated.registerAssignment,
+           NULL,
+           {object->value.argon_fn->bytecode, sizeof(uint8_t),
+            object->value.argon_fn->bytecode_length,
+            object->value.argon_fn->bytecode_length, false},
+           object->value.argon_fn->translated.constants,
+           object->value.argon_fn->translated.path},
+          {ar_alloc(object->value.argon_fn->translated.registerCount *
+                    sizeof(ArgonObject *)),
+           0,
+           object->value.argon_fn->translated.path,
+           NULL,
+           state->currentStackFramePointer,
+           {},
+           {}},
+          scope,
+          *state->currentStackFramePointer,
+          (*state->currentStackFramePointer)->depth + 1};
+      for (size_t i = 0; i < (*currentStackFrame).translated.registerCount; i++) {
+        (*currentStackFrame).state.registers[i] = NULL;
+      }
       *state->currentStackFramePointer = currentStackFrame;
       if ((*state->currentStackFramePointer)->depth >= 10000) {
         double logval =

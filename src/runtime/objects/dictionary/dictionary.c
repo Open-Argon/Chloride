@@ -146,14 +146,36 @@ ArgonObject *create_ARGON_DICTIONARY_TYPE___get_attr__(size_t argc,
 }
 
 
-ArgonObject *create_ARGON_DICTIONARY_TYPE___set_attr__(size_t argc,
+ArgonObject *create_ARGON_DICTIONARY_TYPE___setattr__(size_t argc,
                                                        ArgonObject **argv,
                                                        ArErr *err,
                                                        RuntimeState *state) {
   (void)state;
   if (argc != 3) {
     *err = create_err(0, 0, 0, "", "Runtime Error",
-                      "__set_attr__ expects 2 argument, got %" PRIu64, argc);
+                      "__setattr__ expects 2 argument, got %" PRIu64, argc);
+    return ARGON_NULL;
+  }
+  ArgonObject *object = argv[0];
+  ArgonObject *key = argv[1];
+  ArgonObject *value = argv[2];
+  int64_t hash = hash_object(key, err, state);
+  if (err->exists) {
+    return ARGON_NULL;
+  }
+  hashmap_insert_GC(object->value.as_hashmap, hash, key, value, 0);
+  return value;
+}
+
+
+ArgonObject *create_ARGON_DICTIONARY_TYPE___setitem__(size_t argc,
+                                                       ArgonObject **argv,
+                                                       ArErr *err,
+                                                       RuntimeState *state) {
+  (void)state;
+  if (argc != 3) {
+    *err = create_err(0, 0, 0, "", "Runtime Error",
+                      "__setitem__ expects 2 argument, got %" PRIu64, argc);
     return ARGON_NULL;
   }
   ArgonObject *object = argv[0];
@@ -179,9 +201,13 @@ void create_ARGON_DICTIONARY_TYPE() {
       create_argon_native_function("__get_attr__",
                                    create_ARGON_DICTIONARY_TYPE___get_attr__));
   add_builtin_field(
-      ARGON_DICTIONARY_TYPE, __set_attr__,
-      create_argon_native_function("__set_attr__",
-                                   create_ARGON_DICTIONARY_TYPE___set_attr__));
+      ARGON_DICTIONARY_TYPE, __setattr__,
+      create_argon_native_function("__setattr__",
+                                   create_ARGON_DICTIONARY_TYPE___setattr__));
+  add_builtin_field(
+      ARGON_DICTIONARY_TYPE, __setitem__,
+      create_argon_native_function("__setitem__",
+                                   create_ARGON_DICTIONARY_TYPE___setitem__));
   add_builtin_field(ARGON_DICTIONARY_TYPE, __string__,
                     create_argon_native_function(
                         "__string__", create_ARGON_DICTIONARY_TYPE___string__));

@@ -1,0 +1,16 @@
+let h = 1e-1000
+let diff(f) = (x) = (f(x + h) - f(x)) / h
+
+
+let f(x) = x*x*x*x*x*x*x*x*x*x+2*x*x*x*x*x*x*x*x*x+3*x*x*x*x*x*x*x*x+4*x*x*x*x*x*x*x+5*x*x*x*x*x*x+6*x*x*x*x*x+7*x*x*x*x+8*x*x*x+9*x*x+10*x+11
+let x = 100
+let d = 0
+
+do
+  while (true) do
+      let n = f(x)
+      term.log("f"+string(d)+"("+string(x)+") = "+string(n))
+      if (n) do
+        f = diff(f)
+        d = d + 1
+      else return

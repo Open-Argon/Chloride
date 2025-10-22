@@ -84,12 +84,22 @@ ParsedValueReturn parse_assign(char *file, DArray *tokens,
     return (ParsedValueReturn){err, NULL};
   }
   (*index)++;
+  ArErr err = error_if_finished(file, tokens, index);
+  if (err.exists) {
+    free_parsed(assign_to);
+    free(assign_to);
+    return (ParsedValueReturn){err, NULL};
+  }
   token = darray_get(tokens, *index);
   ParsedValueReturn from = parse_token(file, tokens, index, true);
   if (from.err.exists) {
+    free_parsed(assign_to);
+    free(assign_to);
     return from;
   }
   if (!from.value) {
+    free_parsed(assign_to);
+    free(assign_to);
     return (ParsedValueReturn){create_err(token->line, token->column,
                                           token->length, file, "Syntax Error",
                                           "expected body"),
@@ -110,12 +120,6 @@ ParsedValueReturn parse_assign(char *file, DArray *tokens,
   ParsedValue *parsedValue = checked_malloc(sizeof(ParsedValue));
   parsedValue->type = AST_ASSIGN;
   parsedValue->data = assign;
-  ArErr err = error_if_finished(file, tokens, index);
-  if (err.exists) {
-    free_parsed(parsedValue);
-    free(parsedValue);
-    return (ParsedValueReturn){err, NULL};
-  }
   assign->from = from.value;
   return (ParsedValueReturn){no_err, parsedValue};
 }

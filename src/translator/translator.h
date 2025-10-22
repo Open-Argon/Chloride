@@ -40,7 +40,9 @@ typedef enum {
   OP_MULTIPLICATION,
   OP_DIVISION,
   OP_NOT,
-  OP_LOAD_SETATTR_METHOD
+  OP_LOAD_SETATTR_METHOD,
+  OP_CREATE_DICTIONARY,
+  OP_LOAD_SETITEM_METHOD
 } OperationType;
 
 void arena_resize(ConstantArena *arena, size_t new_size);

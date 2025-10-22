@@ -41,7 +41,7 @@ const char *built_in_field_names[BUILT_IN_FIELDS_COUNT] = {
     "__string__",
     "__subtract__",
     "__multiply__",
-    "__divide__", 
+    "__divide__",
     "__new__",
     "__init__",
     "__boolean__",
@@ -51,7 +51,8 @@ const char *built_in_field_names[BUILT_IN_FIELDS_COUNT] = {
     "__number__",
     "length",
     "__getattribute__",
-    "__set_attr__",
+    "__setattr__",
+    "__setitem__",
     "__hash__",
     "__repr__"};
 
@@ -77,9 +78,7 @@ int64_t hash_object(ArgonObject *object, ArErr *err, RuntimeState *state) {
   ArgonObject *hash_function = get_builtin_field_for_class(
       get_builtin_field(object, __class__), __hash__, object);
   if (!hash_function) {
-    *err = create_err(err->line, err->column, err->length, err->path,
-                      "Hash Error", "objects class has no __hash__ method");
-    return 0;
+    return (int64_t)object;
   }
   ArgonObject *hash_result = argon_call(hash_function, 0, NULL, err, state);
   if (hash_result->type != TYPE_NUMBER ||
