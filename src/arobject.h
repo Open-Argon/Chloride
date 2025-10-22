@@ -35,7 +35,8 @@ typedef enum {
   __number__,
   field_length,
   __getattribute__,
-  __set_attr__,
+  __setattr__,
+  __setitem__,
   __hash__,
   __repr__,
 

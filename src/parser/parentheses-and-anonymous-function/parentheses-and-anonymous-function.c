@@ -47,6 +47,7 @@ ParsedValueReturn parse_parentheses(char *file, DArray *tokens, size_t *index) {
                                               "Syntax Error", "expected comma"),
                                    NULL};
       }
+      (*index)++;
       skip_newlines_and_indents(tokens, index);
       err = error_if_finished(file, tokens, index);
       if (err.exists) {

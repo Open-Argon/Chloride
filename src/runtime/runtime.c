@@ -285,12 +285,12 @@ ArgonObject *BASE_CLASS___init__(size_t argc, ArgonObject **argv, ArErr *err,
   return ARGON_NULL;
 }
 
-ArgonObject *BASE_CLASS___set_attr__(size_t argc, ArgonObject **argv, ArErr *err,
+ArgonObject *BASE_CLASS___setattr__(size_t argc, ArgonObject **argv, ArErr *err,
                                     RuntimeState *state) {
   (void)state;
   if (argc != 3) {
     *err = create_err(0, 0, 0, "", "Runtime Error",
-                      "__set_attr__ expects 3 argument, got %" PRIu64, argc);
+                      "__setattr__ expects 3 argument, got %" PRIu64, argc);
   }
   if (!argv[1]->value.as_str->hash)
     argv[1]->value.as_str->hash =
@@ -691,13 +691,14 @@ void bootstrap_types() {
                     create_argon_native_function("__getattribute__",
                                                  BASE_CLASS___getattribute__));
   add_builtin_field(
-      BASE_CLASS, __set_attr__,
-      create_argon_native_function("__set_attr__", BASE_CLASS___set_attr__));
+      BASE_CLASS, __setattr__,
+      create_argon_native_function("__setattr__", BASE_CLASS___setattr__));
   create_ARGON_DICTIONARY_TYPE();
   create_ARGON_NUMBER_TYPE();
 }
 
-void add_to_hashmap(struct hashmap_GC *hashmap, char *name, ArgonObject *value) {
+void add_to_hashmap(struct hashmap_GC *hashmap, char *name,
+                    ArgonObject *value) {
   size_t length = strlen(name);
   uint64_t hash = siphash64_bytes(name, length, siphash_key);
   ArgonObject *key = new_string_object(name, length, 0, hash);
@@ -719,51 +720,53 @@ void bootstrap_globals() {
 
   struct hashmap_GC *argon_term = createHashmap_GC();
   add_to_hashmap(argon_term, "log",
-                    create_argon_native_function("log", term_log));
+                 create_argon_native_function("log", term_log));
   add_to_scope(Global_Scope, "term", create_dictionary(argon_term));
 
-
   struct hashmap_GC *environment_variables = createHashmap_GC();
-  #if defined(_WIN32)
-    // Windows: use WinAPI
-    LPCH env = GetEnvironmentStringsA();
-    if (!env) return;
+#if defined(_WIN32)
+  // Windows: use WinAPI
+  LPCH env = GetEnvironmentStringsA();
+  if (!env)
+    return;
 
-    for (LPCH var = env; *var; var += strlen(var) + 1) {
-        // Each string is like "KEY=VALUE"
-        const char *equals = strchr(var, '=');
-        if (equals) {
-            size_t key_len = equals - var;
-            char key[256];
-            if (key_len >= sizeof(key))
-                key_len = sizeof(key) - 1;
-            strncpy(key, var, key_len);
-            key[key_len] = '\0';
+  for (LPCH var = env; *var; var += strlen(var) + 1) {
+    // Each string is like "KEY=VALUE"
+    const char *equals = strchr(var, '=');
+    if (equals) {
+      size_t key_len = equals - var;
+      char key[256];
+      if (key_len >= sizeof(key))
+        key_len = sizeof(key) - 1;
+      strncpy(key, var, key_len);
+      key[key_len] = '\0';
 
-            const char *value = getenv(key);
-            add_to_hashmap(environment_variables, key,
-                    value?new_string_object_null_terminated((char *)value):ARGON_NULL);
-        }
+      const char *value = getenv(key);
+      add_to_hashmap(environment_variables, key,
+                     value ? new_string_object_null_terminated((char *)value)
+                           : ARGON_NULL);
     }
+  }
 
-    FreeEnvironmentStringsA(env);
+  FreeEnvironmentStringsA(env);
 #else
-    // POSIX systems: use environ
-    for (char **env = environ; *env != NULL; env++) {
-        const char *equals = strchr(*env, '=');
-        if (equals) {
-            size_t key_len = equals - *env;
-            char key[256];
-            if (key_len >= sizeof(key))
-                key_len = sizeof(key) - 1;
-            strncpy(key, *env, key_len);
-            key[key_len] = '\0';
+  // POSIX systems: use environ
+  for (char **env = environ; *env != NULL; env++) {
+    const char *equals = strchr(*env, '=');
+    if (equals) {
+      size_t key_len = equals - *env;
+      char key[256];
+      if (key_len >= sizeof(key))
+        key_len = sizeof(key) - 1;
+      strncpy(key, *env, key_len);
+      key[key_len] = '\0';
 
-            const char *value = getenv(key);
-            add_to_hashmap(environment_variables, key,
-                    value?new_string_object_null_terminated((char *)value):ARGON_NULL);
-        }
+      const char *value = getenv(key);
+      add_to_hashmap(environment_variables, key,
+                     value ? new_string_object_null_terminated((char *)value)
+                           : ARGON_NULL);
     }
+  }
 #endif
 
   add_to_scope(Global_Scope, "env", create_dictionary(environment_variables));
@@ -885,7 +888,9 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       [OP_MULTIPLICATION] = &&DO_MULTIPLICATION,
       [OP_DIVISION] = &&DO_DIVISION,
       [OP_NOT] = &&DO_NOT,
-      [OP_LOAD_SETATTR_METHOD] = &&DO_LOAD_SETATTR_METHOD};
+      [OP_LOAD_SETATTR_METHOD] = &&DO_LOAD_SETATTR_METHOD,
+      [OP_CREATE_DICTIONARY] = &&DO_CREATE_DICTIONARY,
+      [OP_LOAD_SETITEM_METHOD] = &&DO_LOAD_SETITEM_METHOD};
   _state.head = 0;
 
   StackFrame *currentStackFrame = ar_alloc(sizeof(StackFrame));
@@ -1257,13 +1262,29 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
     }
     DO_LOAD_SETATTR_METHOD: {
       state->registers[0] = get_builtin_field_for_class(
-          get_builtin_field(state->registers[0], __class__), __set_attr__,
+          get_builtin_field(state->registers[0], __class__), __setattr__,
           state->registers[0]);
       if (!state->registers[0]) {
         *err = create_err(
             state->source_location.line, state->source_location.column,
             state->source_location.length, state->path, "Runtime Error",
-            "unable to get __set_attr__ from objects class");
+            "unable to get __setattr__ from objects class");
+      }
+      continue;
+    }
+    DO_CREATE_DICTIONARY: {
+      state->registers[0] = create_dictionary(createHashmap_GC());
+      continue;
+    }
+    DO_LOAD_SETITEM_METHOD: {
+      state->registers[0] = get_builtin_field_for_class(
+          get_builtin_field(state->registers[0], __class__), __setitem__,
+          state->registers[0]);
+      if (!state->registers[0]) {
+        *err = create_err(
+            state->source_location.line, state->source_location.column,
+            state->source_location.length, state->path, "Runtime Error",
+            "unable to get __setitem__ from objects class");
       }
       continue;
     }

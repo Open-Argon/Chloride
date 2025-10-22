@@ -6,6 +6,7 @@
 
 #include "translator.h"
 #include "../hash_data/hash_data.h"
+#include "../parser/dictionary/dictionary.h"
 #include "../parser/not/not.h"
 #include "access/access.h"
 #include "assignment/assignment.h"
@@ -176,6 +177,66 @@ size_t translate_parsed(Translated *translated, ParsedValue *parsedValue,
       push_instruction_byte(translated, OP_NOT);
     return first;
   }
+  case AST_DICTIONARY: {
+    DArray *dictionaryDarray = parsedValue->data;
+
+    size_t first = push_instruction_byte(translated, OP_CREATE_DICTIONARY);
+    uint8_t dictionaryRegister = translated->registerAssignment++;
+
+    push_instruction_byte(translated, OP_COPY_TO_REGISTER);
+    push_instruction_byte(translated, 0);
+    push_instruction_byte(translated, dictionaryRegister);
+
+    push_instruction_byte(translated, OP_LOAD_SETITEM_METHOD);
+    uint8_t setitemRegister = translated->registerAssignment++;
+
+    push_instruction_byte(translated, OP_COPY_TO_REGISTER);
+    push_instruction_byte(translated, 0);
+    push_instruction_byte(translated, setitemRegister);
+
+    for (size_t i = 0; i < dictionaryDarray->size; i++) {
+      ParsedDictionaryEntry *entry = darray_get(dictionaryDarray, i);
+      if (i != 0) {
+        push_instruction_byte(translated, OP_COPY_TO_REGISTER);
+        push_instruction_byte(translated, setitemRegister);
+        push_instruction_byte(translated, 0);
+      }
+      push_instruction_byte(translated, OP_INIT_CALL);
+      push_instruction_code(translated, 2);
+
+      translate_parsed(translated, entry->key, err);
+      if (err->exists)
+        return first;
+
+      push_instruction_byte(translated, OP_INSERT_ARG);
+      push_instruction_code(translated, 0);
+
+      translate_parsed(translated, entry->value, err);
+      if (err->exists)
+        return first;
+
+      push_instruction_byte(translated, OP_INSERT_ARG);
+      push_instruction_code(translated, 1);
+
+      push_instruction_byte(translated, OP_CALL);
+    }
+
+    push_instruction_byte(translated, OP_COPY_TO_REGISTER);
+    push_instruction_byte(translated, dictionaryRegister);
+    push_instruction_byte(translated, 0);
+
+    push_instruction_byte(translated, OP_LOAD_NULL);
+    push_instruction_byte(translated, dictionaryRegister);
+
+    push_instruction_byte(translated, OP_LOAD_NULL);
+    push_instruction_byte(translated, setitemRegister);
+
+    translated->registerAssignment-=2;
+    return first;
+  }
+  default:
+    fprintf(stderr, "panic: undefined translation\n");
+    exit(EXIT_FAILURE);
   }
   return 0;
 }

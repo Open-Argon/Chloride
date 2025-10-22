@@ -11,6 +11,7 @@
 #include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdint.h>
 
 ArgonObject *ARGON_NUMBER_TYPE;
 
@@ -268,6 +269,64 @@ ArgonObject *ARGON_NUMBER_TYPE___multiply__(size_t argc, ArgonObject **argv,
   }
 }
 
+
+
+static inline uint64_t mix64(uint64_t x) {
+    x ^= x >> 33;
+    x *= 0xff51afd7ed558ccdULL;
+    x ^= x >> 33;
+    x *= 0xc4ceb9fe1a85ec53ULL;
+    x ^= x >> 33;
+    return x;
+}
+
+uint64_t hash_mpz(const mpz_t z) {
+    // Export to raw bytes (big-endian for consistency)
+    size_t count;
+    unsigned char *data = mpz_export(NULL, &count, 1, 1, 1, 0, z);
+
+    // FNV-1a over bytes
+    uint64_t h = 1469598103934665603ULL;
+    for (size_t i = 0; i < count; i++) {
+        h ^= data[i];
+        h *= 1099511628211ULL;
+    }
+
+    // Include sign bit
+    if (mpz_sgn(z) < 0)
+        h = ~h;
+
+    // Free the temporary buffer allocated by mpz_export
+    free(data);
+
+    return mix64(h);
+}
+
+uint64_t hash_mpq(mpq_t q) {
+    uint64_t h_num = hash_mpz(mpq_numref(q));
+    uint64_t h_den = hash_mpz(mpq_denref(q));
+
+    // Combine using a standard 64-bit hash mix (boost-style)
+    uint64_t h = h_num ^ (h_den + 0x9e3779b97f4a7c15ULL + (h_num << 6) + (h_num >> 2));
+    return mix64(h);
+}
+
+ArgonObject *ARGON_NUMBER_TYPE___hash__(size_t argc, ArgonObject **argv,
+                                        ArErr *err, RuntimeState *state) {
+  (void)state;
+  if (argc != 1) {
+    *err = create_err(0, 0, 0, "", "Runtime Error",
+                      "__hash__ expects 1 arguments, got %" PRIu64, argc);
+  }
+  uint64_t hash;
+  if (argv[0]->value.as_number->is_int64) {
+    hash = mix64(argv[0]->value.as_number->n.i64);
+  } else {
+    hash = hash_mpq(*argv[0]->value.as_number->n.mpq);
+  }
+  return new_number_object_from_int64(hash);
+}
+
 ArgonObject *ARGON_NUMBER_TYPE___division__(size_t argc, ArgonObject **argv,
                                             ArErr *err, RuntimeState *state) {
   (void)state;
@@ -497,7 +556,6 @@ void init_small_ints() {
   for (int64_t i = 0; i <= small_ints_max - small_ints_min; i++) {
     int64_t n = i + small_ints_min;
     small_ints[i].type = TYPE_NUMBER;
-    small_ints[i].built_in_slot_length = 0;
     small_ints[i].dict = NULL;
     small_ints[i].value.as_number = &small_ints_as_number[i];
     add_builtin_field(&small_ints[i], __class__, ARGON_NUMBER_TYPE);
@@ -520,6 +578,9 @@ void create_ARGON_NUMBER_TYPE() {
   add_builtin_field(
       ARGON_NUMBER_TYPE, __number__,
       create_argon_native_function("__number__", ARGON_NUMBER_TYPE___number__));
+  add_builtin_field(
+      ARGON_NUMBER_TYPE, __hash__,
+      create_argon_native_function("__hash__", ARGON_NUMBER_TYPE___hash__));
   add_builtin_field(ARGON_NUMBER_TYPE, __boolean__,
                     create_argon_native_function(
                         "__boolean__", ARGON_NUMBER_TYPE___boolean__));

@@ -122,11 +122,11 @@ sets the source location onto the runtime
 
 ## OP_LOAD_GETATTRIBUTE_METHOD
 
-loads the \_\_getattribute\_\_ method from the objects class in register 1 and put it into register 1
+loads the \_\_getattribute\_\_ method from the objects class in register 0 and put it into register 0
 
 ## OP_LOAD_BOOL
 
-loads a boolean into register 1
+loads a boolean into register 0
 
 1. byte representing true or false (1 or 0) *
 
@@ -187,4 +187,12 @@ inverts the boolean value in register 0.
 
 ## OP_LOAD_SETATTR_METHOD
 
-loads the \_\_setattr\_\_ method from the objects class in register 1 and put it into register 1
+loads the \_\_setattr\_\_ method from the objects class in register 0 and put it into register 0
+
+## OP_CREATE_DICTIONARY
+
+create a dictionary object into register 0.
+
+## OP_LOAD_SETITEM_METHOD
+
+loads the \_\_setitem\_\_ method from the objects class in register 0 and put it into register 0
