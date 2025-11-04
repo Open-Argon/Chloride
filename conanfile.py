@@ -16,12 +16,15 @@ class ArgonConan(ConanFile):
     # Remove tool_requires, no flex from Conan
     requires = [
         "gmp/6.3.0",
-        "bdwgc/8.2.8"
+        "bdwgc/8.2.6"
     ]
 
     default_options = {
         "gmp/*:shared": False,
-        "bdwgc/*:shared": False
+        "bdwgc/*:shared": False,
+        "bdwgc/*:parallel_mark": False,
+        "bdwgc/*:threads": True,
+        "bdwgc/*:disable_debug": True,
     }
 
     def layout(self):

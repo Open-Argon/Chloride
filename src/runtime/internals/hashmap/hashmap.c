@@ -27,13 +27,15 @@ struct hashmap_GC *createHashmap_GC() {
 }
 
 static int compare_node_asc(const void *a, const void *b) {
-    const struct node_GC *na = (const struct node_GC *)a;
-    const struct node_GC *nb = (const struct node_GC *)b;
+  const struct node_GC *na = (const struct node_GC *)a;
+  const struct node_GC *nb = (const struct node_GC *)b;
 
-    // Ascending order (smallest order first)
-    if (na->order < nb->order) return -1;
-    if (na->order > nb->order) return 1;
-    return 0;
+  // Ascending order (smallest order first)
+  if (na->order < nb->order)
+    return -1;
+  if (na->order > nb->order)
+    return 1;
+  return 0;
 }
 
 void hashmap_GC_to_array(struct hashmap_GC *t, struct node_GC **array,
@@ -51,13 +53,16 @@ void hashmap_GC_to_array(struct hashmap_GC *t, struct node_GC **array,
   }
 
   for (size_t i = 0; i < t->size; i++) {
-    if (!t->list[i])
-      continue;
     if (*array_length >= array_size) {
       array_size *= 2;
       *array = ar_realloc(*array, array_size * sizeof(struct node_GC));
     }
-    (*array)[(*array_length)++] = *t->list[i];
+    struct node_GC *list = t->list[i];
+    struct node_GC *temp = list;
+    while (temp) {
+      (*array)[(*array_length)++] = *t->list[i];
+      temp = temp->next;
+    }
   }
 
   qsort(*array, *array_length, sizeof(struct node_GC), compare_node_asc);
