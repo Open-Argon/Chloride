@@ -4,3 +4,10 @@ x.b  = 2
 x.c = 3
 x.a = 7
 term.log(x)
+
+let y = {'p':1}
+y.z = 1
+y.b  = 2
+y.c = 3
+y.a = 7
+term.log(y)

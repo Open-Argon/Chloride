@@ -11,6 +11,7 @@
 #include <math.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -133,6 +134,7 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
                         0);
     }
     if (CStackFrame) {
+      ArgonObject * registers[UINT8_MAX];
       StackFrame new_stackFrame = {
           {object->value.argon_fn->translated.registerCount,
            object->value.argon_fn->translated.registerAssignment,
@@ -142,8 +144,7 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
             object->value.argon_fn->bytecode_length, false},
            object->value.argon_fn->translated.constants,
            object->value.argon_fn->translated.path},
-          {ar_alloc(object->value.argon_fn->translated.registerCount *
-                    sizeof(ArgonObject *)),
+          {registers,
            0,
            object->value.argon_fn->translated.path,
            NULL,
@@ -160,7 +161,8 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
               new_stackFrame.stack, err);
       state->registers[0] = new_stackFrame.state.registers[0];
     } else {
-      StackFrame *currentStackFrame = ar_alloc(sizeof(StackFrame));
+      StackFrame *currentStackFrame = ar_alloc(sizeof(StackFrame)+object->value.argon_fn->translated.registerCount *
+                    sizeof(ArgonObject *));
       *currentStackFrame = (StackFrame){
           {object->value.argon_fn->translated.registerCount,
            object->value.argon_fn->translated.registerAssignment,
@@ -170,8 +172,7 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
             object->value.argon_fn->bytecode_length, false},
            object->value.argon_fn->translated.constants,
            object->value.argon_fn->translated.path},
-          {ar_alloc(object->value.argon_fn->translated.registerCount *
-                    sizeof(ArgonObject *)),
+          {(ArgonObject **)((char*)currentStackFrame+sizeof(StackFrame)),
            0,
            object->value.argon_fn->translated.path,
            NULL,

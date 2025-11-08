@@ -400,7 +400,7 @@ Translated load_argon_file(char *path, ArErr *err) {
   Translated gc_translated = {
       translated.registerCount, translated.registerAssignment, NULL, {}, {},
       translated.path};
-  gc_translated.bytecode.data = ar_alloc_atomic(translated.bytecode.capacity);
+  gc_translated.bytecode.data = ar_alloc_atomic(translated.bytecode.capacity+translated.constants.capacity);
   memcpy(gc_translated.bytecode.data, translated.bytecode.data,
          translated.bytecode.capacity);
   gc_translated.bytecode.element_size = translated.bytecode.element_size;
@@ -408,7 +408,7 @@ Translated load_argon_file(char *path, ArErr *err) {
   gc_translated.bytecode.resizable = false;
   gc_translated.bytecode.capacity =
       translated.bytecode.size * translated.bytecode.element_size;
-  gc_translated.constants.data = ar_alloc_atomic(translated.constants.capacity);
+  gc_translated.constants.data = gc_translated.bytecode.data+translated.bytecode.capacity;
   memcpy(gc_translated.constants.data, translated.constants.data,
          translated.constants.capacity);
   gc_translated.constants.size = translated.constants.size;
@@ -453,7 +453,8 @@ Stack *ar_import(char *current_directory, char *path_relative, ArErr *err) {
     return NULL;
   }
   clock_t start = clock(), end;
-  RuntimeState state = init_runtime_state(translated, path);
+  ArgonObject * registers[UINT8_MAX];
+  RuntimeState state = init_runtime_state(translated, path, registers);
   Stack *main_scope = create_scope(Global_Scope, true);
   runtime(translated, state, main_scope, err);
   if (err->exists) {
