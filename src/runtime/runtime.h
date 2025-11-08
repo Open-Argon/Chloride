@@ -85,7 +85,7 @@ static inline uint64_t pop_bytecode(Translated *translated,
 static inline void run_instruction(Translated *translated, RuntimeState *state,
                                    struct Stack **stack, ArErr *err);
 
-RuntimeState init_runtime_state(Translated translated, char *path);
+RuntimeState init_runtime_state(Translated translated, char *path, ArgonObject * registers[UINT8_MAX]);
 
 Stack *create_scope(Stack *prev, bool force);
 

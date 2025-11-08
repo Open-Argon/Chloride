@@ -826,9 +826,9 @@ static inline void load_variable(Translated *translated, RuntimeState *state,
   return;
 }
 
-RuntimeState init_runtime_state(Translated translated, char *path) {
+RuntimeState init_runtime_state(Translated translated, char *path, ArgonObject * registers[UINT8_MAX]) {
   RuntimeState runtime = {
-      ar_alloc(translated.registerCount * sizeof(ArgonObject *)),
+      registers,
       0,
       path,
       NULL,

@@ -150,7 +150,8 @@ int execute_code(FILE *stream, char *path, Stack *scope,
   translated.constants.capacity = __translated.constants.capacity;
   darray_free(&__translated.bytecode, NULL);
   free(__translated.constants.data);
-  *runtime_state = init_runtime_state(translated, path);
+  ArgonObject * registers[UINT8_MAX];
+  *runtime_state = init_runtime_state(translated, path, registers);
   runtime(translated, *runtime_state, scope, &err);
   if (err.exists) {
     output_err(err);
