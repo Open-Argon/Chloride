@@ -45,7 +45,7 @@ ArgonObject *create_ARGON_DICTIONARY_TYPE___string__(size_t argc,
   ArgonObject *object = argv[0];
   size_t string_length = 0;
   char *string = NULL;
-  struct node_GC *keys;
+  struct node_GC **keys;
   size_t keys_length;
   hashmap_GC_to_array(object->value.as_hashmap, &keys, &keys_length);
   char *string_obj = "{";
@@ -54,9 +54,9 @@ ArgonObject *create_ARGON_DICTIONARY_TYPE___string__(size_t argc,
   memcpy(string + string_length, string_obj, length);
   string_length += length;
   for (size_t i = 0; i < keys_length; i++) {
-    struct node_GC node = keys[i];
-    ArgonObject *key = node.key;
-    ArgonObject *value = node.val;
+    struct node_GC* node = keys[i];
+    ArgonObject *key = node->key;
+    ArgonObject *value = node->val;
 
     ArgonObject *string_convert_method = get_builtin_field_for_class(
         get_builtin_field(key, __class__), __repr__, key);

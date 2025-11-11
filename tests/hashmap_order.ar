@@ -5,9 +5,19 @@ x.c = 3
 x.a = 7
 term.log(x)
 
-let y = {'p':1}
-y.z = 1
+let y = {}
+y.a = 1
 y.b  = 2
 y.c = 3
-y.a = 7
+y.d = 7
+y.e  = 2
+y.f = 3
+y.g = 7
+y.h = 1
+y.i  = 2
+y.j = 3
+y.k = 7
+y.l  = 2
+y.m = 3
+y.n = 7
 term.log(y)
