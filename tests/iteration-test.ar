@@ -1,6 +1,3 @@
-#term.log(global)
-let i = 1e7
+let i = 0
 while (true) do
-  term.log(global)
-  #i=i-1
-  #term.log(i)
+  string(global)
