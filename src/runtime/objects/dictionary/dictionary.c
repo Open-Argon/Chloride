@@ -54,8 +54,7 @@ ArgonObject *create_ARGON_DICTIONARY_TYPE___string__(size_t argc,
   memcpy(string + string_length, string_obj, length);
   string_length += length;
   for (size_t i = 0; i < keys_length; i++) {
-    struct node_GC* node = keys[i];
-    if (!node) { fprintf(stderr, "NULL node at %zu\n", i); continue; }
+    struct node_GC *node = keys[i];
     ArgonObject *key = node->key;
     ArgonObject *value = node->val;
 

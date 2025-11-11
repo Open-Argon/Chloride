@@ -7,11 +7,11 @@
 #include "memory.h"
 #include <gc.h>
 #include <gc/gc.h>
+#include <pthread.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h> // for malloc/free (temp arena fallback)
 #include <string.h>
-#include <pthread.h>
 
 void *checked_malloc(size_t size) {
   void *ptr = malloc(size);
@@ -22,14 +22,15 @@ void *checked_malloc(size_t size) {
   return ptr;
 }
 
-struct allocation*memory_allocations = NULL;
+struct allocation *memory_allocations = NULL;
 size_t memory_allocations_size = 0;
 pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 
 void ar_memory_init() {
   GC_INIT();
   // memory_allocations_size = 8;
-  // memory_allocations = malloc(memory_allocations_size*sizeof(struct allocation));
+  // memory_allocations = malloc(memory_allocations_size*sizeof(struct
+  // allocation));
 }
 
 void ar_memory_shutdown() {
@@ -41,9 +42,23 @@ void ar_memory_shutdown() {
   // free(memory_allocations);
 }
 
-void *ar_alloc(size_t size) { return GC_MALLOC(size); }
+void *ar_alloc(size_t size) {
+  void *ptr = GC_MALLOC(size);
+  if (!ptr) {
+    fprintf(stderr, "panic: unable to allocate memory\n");
+    exit(EXIT_FAILURE);
+  }
+  return ptr;
+}
 
-void *ar_realloc(void *old, size_t size) { return GC_REALLOC(old, size); }
+void *ar_realloc(void *old, size_t size) {
+  void *ptr = GC_REALLOC(old, size);
+  if (!ptr) {
+    fprintf(stderr, "panic: unable to allocate memory\n");
+    exit(EXIT_FAILURE);
+  }
+  return ptr;
+}
 
 void ar_finalizer(void *obj, GC_finalization_proc fn, void *client_data,
                   GC_finalization_proc *old_fn, void **old_client_data) {
