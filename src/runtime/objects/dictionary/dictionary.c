@@ -45,16 +45,15 @@ ArgonObject *create_ARGON_DICTIONARY_TYPE___string__(size_t argc,
   ArgonObject *object = argv[0];
   size_t string_length = 0;
   char *string = NULL;
-  struct node_GC **keys;
-  size_t keys_length;
-  hashmap_GC_to_array(object->value.as_hashmap, &keys, &keys_length);
+  size_t nodes_length;
+  struct node_GC ** nodes = hashmap_GC_to_array(object->value.as_hashmap, &nodes_length);
   char *string_obj = "{";
   size_t length = strlen(string_obj);
   string = realloc(string, string_length + length);
   memcpy(string + string_length, string_obj, length);
   string_length += length;
-  for (size_t i = 0; i < keys_length; i++) {
-    struct node_GC *node = keys[i];
+  for (size_t i = 0; i < nodes_length; i++) {
+    struct node_GC *node = nodes[i];
     ArgonObject *key = node->key;
     ArgonObject *value = node->val;
 
@@ -105,7 +104,7 @@ ArgonObject *create_ARGON_DICTIONARY_TYPE___string__(size_t argc,
       string_length += length;
     }
 
-    if (i != keys_length - 1) {
+    if (i != nodes_length - 1) {
       char *string_obj = ", ";
       size_t length = strlen(string_obj);
       string = realloc(string, string_length + length);
