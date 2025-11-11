@@ -8,6 +8,7 @@
 
 #include "../../../memory.h"
 #include <gc/gc.h>
+#include <inttypes.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -27,8 +28,8 @@ struct hashmap_GC *createHashmap_GC() {
 }
 
 static int compare_node_asc(const void *a, const void *b) {
-  const struct node_GC *na = (const struct node_GC *)a;
-  const struct node_GC *nb = (const struct node_GC *)b;
+  const struct node_GC *na = *((const struct node_GC **)a);
+  const struct node_GC *nb = *((const struct node_GC **)b);
 
   // Ascending order (smallest order first)
   if (na->order < nb->order)
@@ -38,34 +39,34 @@ static int compare_node_asc(const void *a, const void *b) {
   return 0;
 }
 
-void hashmap_GC_to_array(struct hashmap_GC *t, struct node_GC **array,
+void hashmap_GC_to_array(struct hashmap_GC *t, struct node_GC ***array,
                          size_t *array_length) {
   size_t array_size = 8;
   *array_length = 0;
-  *array = ar_alloc(array_size * sizeof(struct node_GC));
+  *array = ar_alloc(array_size * sizeof(struct node_GC *));
 
   for (size_t i = 0; i < t->inline_count; i++) {
     if (*array_length >= array_size) {
       array_size *= 2;
-      *array = ar_realloc(*array, array_size * sizeof(struct node_GC));
+      *array = ar_realloc(*array, array_size * sizeof(struct node_GC *));
     }
-    (*array)[(*array_length)++] = t->inline_values[i];
+    (*array)[(*array_length)++] = &t->inline_values[i];
   }
 
   for (size_t i = 0; i < t->size; i++) {
     if (*array_length >= array_size) {
       array_size *= 2;
-      *array = ar_realloc(*array, array_size * sizeof(struct node_GC));
+      *array = ar_realloc(*array, array_size * sizeof(struct node_GC *));
     }
     struct node_GC *list = t->list[i];
     struct node_GC *temp = list;
     while (temp) {
-      (*array)[(*array_length)++] = *t->list[i];
+      (*array)[(*array_length)++] = temp;
       temp = temp->next;
     }
   }
 
-  qsort(*array, *array_length, sizeof(struct node_GC), compare_node_asc);
+  qsort(*array, *array_length, sizeof(struct node_GC *), compare_node_asc);
 }
 
 void clear_hashmap_GC(struct hashmap_GC *t) {

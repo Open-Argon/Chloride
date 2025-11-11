@@ -91,7 +91,7 @@ void handle_sigint(int sig) {
 }
 
 int execute_code(FILE *stream, char *path, Stack *scope,
-                 RuntimeState *runtime_state) {
+                 ArgonObject * registers[UINT8_MAX], RuntimeState* runtime_state) {
   if (!stream) {
     perror("fmemopen");
     return 1;
@@ -150,7 +150,6 @@ int execute_code(FILE *stream, char *path, Stack *scope,
   translated.constants.capacity = __translated.constants.capacity;
   darray_free(&__translated.bytecode, NULL);
   free(__translated.constants.data);
-  ArgonObject * registers[UINT8_MAX];
   *runtime_state = init_runtime_state(translated, path, registers);
   runtime(translated, *runtime_state, scope, &err);
   if (err.exists) {
@@ -212,13 +211,14 @@ char *read_all_stdin(size_t *out_len) {
 int shell() {
 
   Stack *main_scope = create_scope(Global_Scope, true);
+  ArgonObject * registers[UINT8_MAX];
 
   if (!isatty(STDIN_FILENO)) {
     RuntimeState runtime_state;
     size_t len;
     char *data = read_all_stdin(&len);
     FILE *file = fmemopen(data, len, "r");
-    int resp = execute_code(file, "<stdin>", main_scope, &runtime_state);
+    int resp = execute_code(file, "<stdin>", main_scope, registers, &runtime_state);
     fclose(file);
     free(data);
     return resp;
@@ -308,12 +308,12 @@ int shell() {
     totranslate[totranslatelength] = '\0';
     RuntimeState runtime_state;
     FILE *file = fmemopen((void *)totranslate, totranslatelength, "r");
-    int resp = execute_code(file, "<shell>", main_scope, &runtime_state);
+    int resp = execute_code(file, "<shell>", main_scope, registers, &runtime_state);
     fclose(file);
     if (resp) {
       continue;
     }
-    if (runtime_state.registers[0]&&runtime_state.registers[0] != ARGON_NULL) {
+    if (registers[0]&&registers[0] != ARGON_NULL) {
       ArErr err = no_err;
       argon_call(output_object, 1,
                  (ArgonObject *[]){runtime_state.registers[0]}, &err,

@@ -33,8 +33,8 @@ struct hashmap_GC *createHashmap_GC();
 
 void clear_hashmap_GC(struct hashmap_GC *t);
 
-void hashmap_GC_to_array(struct hashmap_GC *t, struct node_GC**array,
-                           size_t *array_length);
+void hashmap_GC_to_array(struct hashmap_GC *t, struct node_GC ***array,
+                         size_t *array_length);
 
 int hashCode_GC(struct hashmap_GC *t, uint64_t hash);
 
