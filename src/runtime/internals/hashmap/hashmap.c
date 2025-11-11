@@ -39,18 +39,18 @@ static int compare_node_asc(const void *a, const void *b) {
   return 0;
 }
 
-void hashmap_GC_to_array(struct hashmap_GC *t, struct node_GC ***array,
+struct node_GC ** hashmap_GC_to_array(struct hashmap_GC *t,
                          size_t *array_length) {
   size_t array_size = 8;
   *array_length = 0;
-  *array = ar_alloc(array_size * sizeof(struct node_GC*));
+  struct node_GC ** array = ar_alloc(array_size * sizeof(struct node_GC*));
 
   for (size_t i = 0; i < t->inline_count; i++) {
     if (*array_length >= array_size) {
       array_size *= 2;
-      *array = ar_realloc(*array, array_size * sizeof(struct node_GC*));
+      array = ar_realloc(array, array_size * sizeof(struct node_GC*));
     }
-    (*array)[(*array_length)++] = &t->inline_values[i];
+    array[(*array_length)++] = &t->inline_values[i];
   }
 
   for (size_t i = 0; i < t->size; i++) {
@@ -59,14 +59,15 @@ void hashmap_GC_to_array(struct hashmap_GC *t, struct node_GC ***array,
     while (temp) {
       if (*array_length >= array_size) {
         array_size *= 2;
-        *array = ar_realloc(*array, array_size * sizeof(struct node_GC*));
+        array = ar_realloc(array, array_size * sizeof(struct node_GC*));
       }
-      (*array)[(*array_length)++] = temp;
+      array[(*array_length)++] = temp;
       temp = temp->next;
     }
   }
 
-  qsort(*array, *array_length, sizeof(struct node_GC*), compare_node_asc);
+  qsort(array, *array_length, sizeof(struct node_GC*), compare_node_asc);
+  return array;
 }
 
 void clear_hashmap_GC(struct hashmap_GC *t) {
