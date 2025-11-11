@@ -50,34 +50,37 @@ typedef long ssize_t;
 #endif
 
 ssize_t getline(char **lineptr, size_t *n, FILE *stream) {
-    if (!lineptr || !n || !stream) return -1;
+  if (!lineptr || !n || !stream)
+    return -1;
 
-    size_t pos = 0;
-    int c;
+  size_t pos = 0;
+  int c;
 
-    if (*lineptr == NULL || *n == 0) {
-        *n = 128;
-        *lineptr = malloc(*n);
-        if (!*lineptr) return -1;
-    }
+  if (*lineptr == NULL || *n == 0) {
+    *n = 128;
+    *lineptr = malloc(*n);
+    if (!*lineptr)
+      return -1;
+  }
 
-    while ((c = fgetc(stream)) != EOF) {
-        if (pos + 1 >= *n) {
-            *n *= 2;
-            char *tmp = realloc(*lineptr, *n);
-            if (!tmp) return -1;
-            *lineptr = tmp;
-        }
-        (*lineptr)[pos++] = c;
-        if (c == '\n')
-            break;
-    }
-
-    if (pos == 0 && c == EOF)
+  while ((c = fgetc(stream)) != EOF) {
+    if (pos + 1 >= *n) {
+      *n *= 2;
+      char *tmp = realloc(*lineptr, *n);
+      if (!tmp)
         return -1;
+      *lineptr = tmp;
+    }
+    (*lineptr)[pos++] = c;
+    if (c == '\n')
+      break;
+  }
 
-    (*lineptr)[pos] = '\0';
-    return (ssize_t)pos;
+  if (pos == 0 && c == EOF)
+    return -1;
+
+  (*lineptr)[pos] = '\0';
+  return (ssize_t)pos;
 }
 #else
 #include "../external/linenoise/linenoise.h"
@@ -91,7 +94,7 @@ void handle_sigint(int sig) {
 }
 
 int execute_code(FILE *stream, char *path, Stack *scope,
-                 ArgonObject * registers[UINT8_MAX], RuntimeState* runtime_state) {
+                 RuntimeState *runtime_state) {
   if (!stream) {
     perror("fmemopen");
     return 1;
@@ -150,7 +153,7 @@ int execute_code(FILE *stream, char *path, Stack *scope,
   translated.constants.capacity = __translated.constants.capacity;
   darray_free(&__translated.bytecode, NULL);
   free(__translated.constants.data);
-  *runtime_state = init_runtime_state(translated, path, registers);
+  *runtime_state = init_runtime_state(translated, path);
   runtime(translated, *runtime_state, scope, &err);
   if (err.exists) {
     output_err(err);
@@ -209,16 +212,14 @@ char *read_all_stdin(size_t *out_len) {
 }
 
 int shell() {
-
   Stack *main_scope = create_scope(Global_Scope, true);
-  ArgonObject * registers[UINT8_MAX];
 
   if (!isatty(STDIN_FILENO)) {
     RuntimeState runtime_state;
     size_t len;
     char *data = read_all_stdin(&len);
     FILE *file = fmemopen(data, len, "r");
-    int resp = execute_code(file, "<stdin>", main_scope, registers, &runtime_state);
+    int resp = execute_code(file, "<stdin>", main_scope, &runtime_state);
     fclose(file);
     free(data);
     return resp;
@@ -308,12 +309,13 @@ int shell() {
     totranslate[totranslatelength] = '\0';
     RuntimeState runtime_state;
     FILE *file = fmemopen((void *)totranslate, totranslatelength, "r");
-    int resp = execute_code(file, "<shell>", main_scope, registers, &runtime_state);
+    int resp = execute_code(file, "<shell>", main_scope, &runtime_state);
     fclose(file);
     if (resp) {
       continue;
     }
-    if (registers[0]&&registers[0] != ARGON_NULL) {
+    if (runtime_state.registers[0] &&
+        runtime_state.registers[0] != ARGON_NULL) {
       ArErr err = no_err;
       argon_call(output_object, 1,
                  (ArgonObject *[]){runtime_state.registers[0]}, &err,

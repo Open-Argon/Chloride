@@ -453,8 +453,7 @@ Stack *ar_import(char *current_directory, char *path_relative, ArErr *err) {
     return NULL;
   }
   clock_t start = clock(), end;
-  ArgonObject * registers[UINT8_MAX];
-  RuntimeState state = init_runtime_state(translated, path, registers);
+  RuntimeState state = init_runtime_state(translated, path);
   Stack *main_scope = create_scope(Global_Scope, true);
   runtime(translated, state, main_scope, err);
   if (err->exists) {

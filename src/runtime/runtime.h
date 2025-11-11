@@ -15,6 +15,8 @@
 #define likely(x) __builtin_expect(!!(x), 1)
 #define unlikely(x) __builtin_expect(!!(x), 0)
 
+#define MAX_REGISTERS 256
+
 extern ArgonObject *ARGON_METHOD_TYPE;
 extern Stack *Global_Scope;
 
@@ -85,7 +87,7 @@ static inline uint64_t pop_bytecode(Translated *translated,
 static inline void run_instruction(Translated *translated, RuntimeState *state,
                                    struct Stack **stack, ArErr *err);
 
-RuntimeState init_runtime_state(Translated translated, char *path, ArgonObject * registers[UINT8_MAX]);
+RuntimeState init_runtime_state(Translated translated, char *path);
 
 Stack *create_scope(Stack *prev, bool force);
 

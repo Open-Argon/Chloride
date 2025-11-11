@@ -1,5 +1,6 @@
 #term.log(global)
 let i = 1e7
-while (i) do
-  i=i-1
-  term.log(i)
+while (true) do
+  term.log(global)
+  #i=i-1
+  #term.log(i)
