@@ -55,8 +55,12 @@ ArgonObject *create_ARGON_DICTIONARY_TYPE___string__(size_t argc,
   string_length += length;
   for (size_t i = 0; i < keys_length; i++) {
     struct node_GC* node = keys[i];
+    if (!node) { fprintf(stderr, "NULL node at %zu\n", i); continue; }
     ArgonObject *key = node->key;
     ArgonObject *value = node->val;
+
+    if (!key) { fprintf(stderr, "NULL key at node %zu\n", i); continue; }
+    if (!value) { fprintf(stderr, "NULL value at node %zu\n", i); continue; }
 
     ArgonObject *string_convert_method = get_builtin_field_for_class(
         get_builtin_field(key, __class__), __repr__, key);
