@@ -1,0 +1,10 @@
+let factorial(x) = do
+    let n = x-1
+    if (n) return x*factorial(n)
+    return 1
+
+let loop = 501
+let x = 500
+while (x) do
+    factorial(loop-x)
+    x=x-1
