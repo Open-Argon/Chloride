@@ -46,3 +46,14 @@ The result is a more consistent execution model, lower memory usage, and improve
 - Provide a stable, maintainable interpreter core.  
 - Keep the implementation straightforward so that future language features can be built cleanly on top of it.  
 - Serve as the reference interpreter for Argon going forward.
+
+
+## Project Status
+
+Chloride is still under active development.
+The object model is largely complete, but several core language features are missing or experimental. Basic control flow constructs such as for loops are not implemented yet, partly because the older syntax was confusing and may be replaced with something clearer. While backwards compatibility is a goal, perfect compatibility is unlikely, especially where new syntax or improved semantics resolve long-standing issues in argon-v3.
+
+The interpreter currently contains known performance issues and occasional segmentation faults, and part of the development process is identifying and removing these. The intention is to stabilise the runtime, finalise the syntax, and avoid any further major redesigns. The hope is that Chloride becomes both the long-term Argon interpreter and the last large rewrite the language needs.
+
+# Licence
+GNU General Public License v3.0
