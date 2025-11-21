@@ -4,7 +4,12 @@ SPDX-FileCopyrightText: 2025 William Bell
 SPDX-License-Identifier: GPL-3.0-or-later
 -->
 
-# Chloride
+<div align="center">
+<p>
+    <img width="150" src="logo/logo.png">
+</p>
+<h1>Chloride</h1>
+</div>
 
 Chloride is the new C-based interpreter for the Argon programming language.  
 It is designed as a drop-in replacement for the older Go implementation (argon-v3), while introducing a more efficient runtime and a cleaner, more consistent object model.
