@@ -43,6 +43,15 @@ static inline uint64_t htole64(uint64_t x) { return x; }
 #elif defined(__linux__)
 #include <endian.h>
 #include <malloc.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
+
+int is_regular_file(const char *path) {
+  struct stat path_stat;
+  stat(path, &path_stat);
+  return S_ISREG(path_stat.st_mode);
+}
 #elif defined(__APPLE__)
 #include <libkern/OSByteOrder.h>
 #define htole32(x) OSSwapHostToLittleInt32(x)
@@ -93,11 +102,11 @@ const uint32_t version_number = 0;
 const char version_string[] = "4.0.0";
 
 bool file_exists(const char *path) {
-    struct stat st;
-    if (stat(path, &st) == 0) {
-        return S_ISREG(st.st_mode); // true only if it's a regular file
-    }
-    return false; // doesn't exist, or stat failed
+  struct stat st;
+  if (stat(path, &st) == 0) {
+    return S_ISREG(st.st_mode); // true only if it's a regular file
+  }
+  return false; // doesn't exist, or stat failed
 }
 
 static inline void write_and_hash(FILE *file, XXH64_state_t *state,
@@ -285,7 +294,6 @@ Translated load_argon_file(char *path, ArErr *err) {
                 sizeof(cache_file_path));
   cwk_path_change_extension(cache_file_path, BYTECODE_EXTENTION,
                             cache_file_path, sizeof(cache_file_path));
-
   FILE *file = fopen(path, "r");
   if (!file) {
     *err = create_err(0, 0, 0, NULL, "File Error", "Unable to open file '%s'",
@@ -400,7 +408,8 @@ Translated load_argon_file(char *path, ArErr *err) {
   Translated gc_translated = {
       translated.registerCount, translated.registerAssignment, NULL, {}, {},
       translated.path};
-  gc_translated.bytecode.data = ar_alloc_atomic(translated.bytecode.capacity+translated.constants.capacity);
+  gc_translated.bytecode.data = ar_alloc_atomic(translated.bytecode.capacity +
+                                                translated.constants.capacity);
   memcpy(gc_translated.bytecode.data, translated.bytecode.data,
          translated.bytecode.capacity);
   gc_translated.bytecode.element_size = translated.bytecode.element_size;
@@ -408,7 +417,8 @@ Translated load_argon_file(char *path, ArErr *err) {
   gc_translated.bytecode.resizable = false;
   gc_translated.bytecode.capacity =
       translated.bytecode.size * translated.bytecode.element_size;
-  gc_translated.constants.data = gc_translated.bytecode.data+translated.bytecode.capacity;
+  gc_translated.constants.data =
+      gc_translated.bytecode.data + translated.bytecode.capacity;
   memcpy(gc_translated.constants.data, translated.constants.data,
          translated.constants.capacity);
   gc_translated.constants.size = translated.constants.size;
@@ -422,8 +432,8 @@ Translated load_argon_file(char *path, ArErr *err) {
 }
 
 const char *PRE_PATHS_TO_TEST[] = {"", "", "argon_modules", "argon_modules"};
-const char *POST_PATHS_TO_TEST[sizeof(PRE_PATHS_TO_TEST)/sizeof(char *)] = {"", "init.ar", "",
-                                                             "init.ar"};
+const char *POST_PATHS_TO_TEST[sizeof(PRE_PATHS_TO_TEST) / sizeof(char *)] = {
+    "", "init.ar", "", "init.ar"};
 
 struct hashmap *importing_hash_table = NULL;
 struct hashmap_GC *imported_hash_table = NULL;
@@ -431,8 +441,9 @@ struct hashmap_GC *imported_hash_table = NULL;
 Stack *ar_import(char *current_directory, char *path_relative, ArErr *err) {
   char path[FILENAME_MAX];
   bool found = false;
-  for (size_t i = 0; i < sizeof(PRE_PATHS_TO_TEST)/sizeof(char *); i++) {
-    cwk_path_get_absolute(current_directory, PRE_PATHS_TO_TEST[i], path, sizeof(path));
+  for (size_t i = 0; i < sizeof(PRE_PATHS_TO_TEST) / sizeof(char *); i++) {
+    cwk_path_get_absolute(current_directory, PRE_PATHS_TO_TEST[i], path,
+                          sizeof(path));
     cwk_path_get_absolute(path, path_relative, path, sizeof(path));
     cwk_path_get_absolute(path, POST_PATHS_TO_TEST[i], path, sizeof(path));
     if (file_exists(path)) {
@@ -445,9 +456,10 @@ Stack *ar_import(char *current_directory, char *path_relative, ArErr *err) {
                       path_relative);
     return NULL;
   }
-  if (!importing_hash_table) importing_hash_table = createHashmap();
+  if (!importing_hash_table)
+    importing_hash_table = createHashmap();
   uint64_t hash = siphash64_bytes(path, strlen(path), siphash_key);
-  hashmap_insert(importing_hash_table, hash, path, (void*)true, 0);
+  hashmap_insert(importing_hash_table, hash, path, (void *)true, 0);
   Translated translated = load_argon_file(path, err);
   if (err->exists) {
     return NULL;
@@ -462,8 +474,9 @@ Stack *ar_import(char *current_directory, char *path_relative, ArErr *err) {
   end = clock();
   double time_spent = (double)(end - start) / CLOCKS_PER_SEC;
   fprintf(stderr, "Execution time taken: %f seconds\n", time_spent);
-  hashmap_insert(importing_hash_table, hash, path, (void*)false, 0);
-  if (!imported_hash_table) imported_hash_table = createHashmap_GC();
+  hashmap_insert(importing_hash_table, hash, path, (void *)false, 0);
+  if (!imported_hash_table)
+    imported_hash_table = createHashmap_GC();
   hashmap_insert_GC(imported_hash_table, hash, path, main_scope, 0);
   return main_scope;
 }

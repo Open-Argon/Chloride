@@ -40,6 +40,7 @@ typedef enum {
   AST_NUMBER,
   AST_IF,
   AST_ACCESS,
+  AST_ITEM_ACCESS,
   AST_CALL,
   AST_DECLARATION,
   AST_NULL,

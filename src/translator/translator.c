@@ -9,6 +9,8 @@
 #include "../parser/dictionary/dictionary.h"
 #include "../parser/not/not.h"
 #include "access/access.h"
+#include "../parser/assignable/item/item.h"
+#include "item_access/item_access.h"
 #include "assignment/assignment.h"
 #include "call/call.h"
 #include "declaration/declaration.h"
@@ -163,6 +165,8 @@ size_t translate_parsed(Translated *translated, ParsedValue *parsedValue,
                                  err);
   case AST_ACCESS:
     return translate_access(translated, (ParsedAccess *)parsedValue->data, err);
+  case AST_ITEM_ACCESS:
+    return translate_item_access(translated, (ParsedItemAccess *)parsedValue->data, err);
   case AST_OPERATION:
     return translate_operation(translated, (ParsedOperation *)parsedValue->data,
                                err);
