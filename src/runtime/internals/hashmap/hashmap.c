@@ -7,7 +7,7 @@
 #include "hashmap.h"
 
 #include "../../../memory.h"
-#include <gc/gc.h>
+#include <gc.h>
 #include <inttypes.h>
 #include <stddef.h>
 #include <stdint.h>

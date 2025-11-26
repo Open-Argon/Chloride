@@ -193,6 +193,10 @@ loads the \_\_setattr\_\_ method from the objects class in register 0 and put it
 
 create a dictionary object into register 0.
 
+## OP_LOAD_GETITEM_METHOD
+
+loads the \_\_getitem\_\_ method from the objects class in register 0 and put it into register 0
+
 ## OP_LOAD_SETITEM_METHOD
 
 loads the \_\_setitem\_\_ method from the objects class in register 0 and put it into register 0

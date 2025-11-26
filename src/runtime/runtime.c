@@ -22,7 +22,7 @@
 #include "objects/term/term.h"
 #include "objects/type/type.h"
 #include <fcntl.h>
-#include <gc/gc.h>
+#include <gc.h>
 #include <gmp.h>
 #include <inttypes.h>
 #include <stddef.h>
@@ -72,11 +72,11 @@ ArgonObject *BASE_CLASS___getattribute__(size_t argc, ArgonObject **argv,
                                    access->value.as_str->length, true, false);
   if (value)
     return value;
-  ArgonObject *cls__get_attr__ = get_builtin_field_for_class(
-      get_builtin_field(to_access, __class__), __get_attr__, to_access);
-  if (cls__get_attr__) {
+  ArgonObject *cls__getattr__ = get_builtin_field_for_class(
+      get_builtin_field(to_access, __class__), __getattr__, to_access);
+  if (cls__getattr__) {
     value =
-        argon_call(cls__get_attr__, 1, (ArgonObject *[]){access}, err, state);
+        argon_call(cls__getattr__, 1, (ArgonObject *[]){access}, err, state);
     if (err->exists) {
       return ARGON_NULL;
     }
@@ -890,7 +890,8 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       [OP_NOT] = &&DO_NOT,
       [OP_LOAD_SETATTR_METHOD] = &&DO_LOAD_SETATTR_METHOD,
       [OP_CREATE_DICTIONARY] = &&DO_CREATE_DICTIONARY,
-      [OP_LOAD_SETITEM_METHOD] = &&DO_LOAD_SETITEM_METHOD};
+      [OP_LOAD_SETITEM_METHOD] = &&DO_LOAD_SETITEM_METHOD,
+      [OP_LOAD_GETITEM_METHOD] = &&DO_LOAD_GETITEM_METHOD};
   _state.head = 0;
 
   StackFrame *currentStackFrame = ar_alloc(sizeof(StackFrame));
@@ -1285,6 +1286,18 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
             state->source_location.line, state->source_location.column,
             state->source_location.length, state->path, "Runtime Error",
             "unable to get __setitem__ from objects class");
+      }
+      continue;
+    }
+    DO_LOAD_GETITEM_METHOD: {
+      state->registers[0] = get_builtin_field_for_class(
+          get_builtin_field(state->registers[0], __class__), __getitem__,
+          state->registers[0]);
+      if (!state->registers[0]) {
+        *err = create_err(
+            state->source_location.line, state->source_location.column,
+            state->source_location.length, state->path, "Runtime Error",
+            "unable to get __getitem__ from objects class");
       }
       continue;
     }
