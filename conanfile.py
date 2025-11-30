@@ -27,9 +27,6 @@ class ArgonConan(ConanFile):
         "bdwgc/*:disable_debug": True,
     }
 
-
-    
-
     def layout(self):
         self.folders.source = "."
         self.folders.build = "build"
