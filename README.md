@@ -14,6 +14,24 @@ SPDX-License-Identifier: GPL-3.0-or-later
 Chloride is the new C-based interpreter for the Argon programming language.  
 It is designed as a drop-in replacement for the older Go implementation (argon-v3), while introducing a more efficient runtime and a cleaner, more consistent object model.
 
+## Build
+
+Currently, builds are only being made for linux x86_64 at [the projects Jenklins instance](https://jenkins.wbell.dev/job/chloride/). 
+
+If this does not satify your requirements, feel free to build for your platform. the dependancies are `conan`, `flex`, `cmake` and `gcc`.
+
+install using conan.
+```
+conan install . --build=missing
+```
+
+and finally build using conan.
+```
+conan build .
+```
+
+the final build can be found in `build/bin`.
+
 ## Overview
 
 Chloride aims to remain as interchangeable with argon-v3 as possible.  
