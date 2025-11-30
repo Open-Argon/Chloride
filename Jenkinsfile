@@ -13,7 +13,9 @@ pipeline {
             sh '''
                         python3 -m venv /tmp/venv
                         . /tmp/venv/bin/activate
-                        git 
+                        apt update
+                        apt upgrade
+                        apt install -y cmake flex python3 python3-pip python3-venv
                         pip install --upgrade pip
                         pip install conan
                     '''
