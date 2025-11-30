@@ -230,8 +230,9 @@ int shell() {
 
   signal(SIGINT, handle_sigint);
 
-  printf("Argon (Chloride %s)\nType \"license\" for more information.\n",
-         version_string);
+  printf("Chloride %s Copyright (C) 2025  William Bell
+This program comes with ABSOLUTELY NO WARRANTY; for details type `license'.
+This is free software, and you are welcome to redistribute it under certain conditions; type `license' for details.")
 
   ArgonObject *output_object = create_argon_native_function("log", term_log);
   char *totranslate = NULL;
