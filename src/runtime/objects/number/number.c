@@ -139,8 +139,9 @@ ArgonObject *ARGON_NUMBER_TYPE___negation__(size_t argc, ArgonObject **argv,
   mpq_t result;
   mpq_init(result);
   mpq_neg(result, *argv[0]->value.as_number->n.mpq);
-  return new_number_object(result);
+  ArgonObject *output = new_number_object(result);
   mpq_clear(result);
+  return output;
 }
 
 ArgonObject *ARGON_NUMBER_TYPE___add__(size_t argc, ArgonObject **argv,
@@ -1276,8 +1277,34 @@ ArgonObject *new_number_object_from_double(double d) {
   return object;
 }
 
+static inline uint64_t hash_u64(uint64_t h, uint64_t x) {
+    x ^= x >> 33;
+    x *= 0xff51afd7ed558ccdULL;
+    x ^= x >> 33;
+    x *= 0xc4ceb9fe1a85ec53ULL;
+    x ^= x >> 33;
+    return h ^ (x + 0x9e3779b97f4a7c15ULL + (h << 6) + (h >> 2));
+}
+
+uint64_t make_id(
+    size_t num_size,
+    size_t num_pos,
+    bool is_int,
+    size_t den_size,
+    size_t den_pos
+) {
+    uint64_t h = 0;
+    h = hash_u64(h, num_size);
+    h = hash_u64(h, num_pos);
+    h = hash_u64(h, is_int);
+    if (!is_int) {
+        h = hash_u64(h, den_size);
+        h = hash_u64(h, den_pos);
+    }
+    return h;
+}
+
 void load_number(Translated *translated, RuntimeState *state) {
-  size_t cache_pos = state->head;
   uint8_t to_register = pop_byte(translated, state);
   uint8_t is_int64 = pop_byte(translated, state);
   ArgonObject *cache_number = NULL;
@@ -1285,7 +1312,7 @@ void load_number(Translated *translated, RuntimeState *state) {
     int64_t num = pop_bytecode(translated, state);
     bool small_num = num < small_ints_min || num > small_ints_max;
     if (small_num) {
-      cache_number = hashmap_lookup_GC(load_number_cache, cache_pos);
+      cache_number = hashmap_lookup_GC(load_number_cache, num);
     }
     if (cache_number) {
       state->registers[to_register] = cache_number;
@@ -1293,13 +1320,25 @@ void load_number(Translated *translated, RuntimeState *state) {
     }
     state->registers[to_register] = new_number_object_from_int64(num);
     if (small_num) {
-      hashmap_insert_GC(load_number_cache, cache_pos, NULL,
+      hashmap_insert_GC(load_number_cache, num, NULL,
                         state->registers[to_register], 0);
     }
     return;
   }
+  size_t num_size = pop_bytecode(translated, state);
+  size_t num_pos = pop_bytecode(translated, state);
+  bool is_int = pop_byte(translated, state);
+  size_t den_size=0;
+  size_t den_pos=0;
+  if (!is_int) {
+    den_size=pop_bytecode(translated, state);
+    den_pos=pop_bytecode(translated, state);
+  }
 
-  cache_number = hashmap_lookup_GC(load_number_cache, cache_pos);
+  uint64_t uuid = make_id(num_size,num_pos,is_int,den_size,den_pos);
+
+
+  cache_number = hashmap_lookup_GC(load_number_cache, uuid);
   if (cache_number) {
     state->registers[to_register] = cache_number;
     state->head += 16;
@@ -1308,8 +1347,7 @@ void load_number(Translated *translated, RuntimeState *state) {
     }
     return;
   }
-  size_t num_size = pop_bytecode(translated, state);
-  size_t num_pos = pop_bytecode(translated, state);
+
   mpq_t r;
   mpq_init(r);
   mpz_t num;
@@ -1318,12 +1356,7 @@ void load_number(Translated *translated, RuntimeState *state) {
              arena_get(&translated->constants, num_pos));
   mpq_set_num(r, num);
   mpz_clear(num);
-
-  bool is_int = pop_byte(translated, state);
-
   if (!is_int) {
-    size_t den_size = pop_bytecode(translated, state);
-    size_t den_pos = pop_bytecode(translated, state);
     mpz_t den;
     mpz_init(den);
     mpz_import(den, den_size, 1, 1, 0, 0,
@@ -1335,9 +1368,7 @@ void load_number(Translated *translated, RuntimeState *state) {
   }
 
   state->registers[to_register] = new_number_object(r);
-  printf("big cache start: %zu\n", cache_pos);
-  hashmap_insert_GC(load_number_cache, cache_pos, NULL,
+  hashmap_insert_GC(load_number_cache, uuid, NULL,
                     state->registers[to_register], 0);
-  printf("big cache end: %zu\n", cache_pos);
   mpq_clear(r);
 }
