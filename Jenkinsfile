@@ -57,10 +57,10 @@ pipeline {
               cp LICENSE.txt build/bin/
 
               # Create tarball with the contents of build/bin at the root
-              tar -czf chloride.tar.gz -C build/bin .
+              tar -czf chloride-linux-x86_64.tar.gz -C build/bin .
           '''
           // Archive the tarball
-          archiveArtifacts artifacts: 'chloride.tar.gz', allowEmptyArchive: false
+          archiveArtifacts artifacts: 'chloride-linux-x86_64.tar.gz', allowEmptyArchive: false
         }
       }
     }
