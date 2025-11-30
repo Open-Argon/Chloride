@@ -189,11 +189,14 @@ ArgonObject *get_field_l(ArgonObject *target, char *name, uint64_t hash,
       return target->built_in_slot[i].value;
     }
   }
-  if (!target->dict)
+  if (target->dict) {
+    ArgonObject *object = hashmap_lookup_GC(target->dict, hash);
+    if (!recursive || object)
+      return object;
+  }
+  if (!recursive) {
     return NULL;
-  ArgonObject *object = hashmap_lookup_GC(target->dict, hash);
-  if (!recursive || object)
-    return object;
+  }
   ArgonObject *binding = target;
   if (disable_method_wrapper)
     binding = NULL;

@@ -78,6 +78,7 @@ ArgonObject *BASE_CLASS___getattribute__(size_t argc, ArgonObject **argv,
   }
   ArgonObject *value = get_field_l(to_access, access->value.as_str->data, hash,
                                    access->value.as_str->length, true, false);
+                                   
   if (value)
     return value;
 
