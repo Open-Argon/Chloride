@@ -30,6 +30,7 @@ pipeline {
           }
         }
       }
+      
 
 
         stage('Detect Tag') {
