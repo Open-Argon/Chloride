@@ -115,6 +115,7 @@ pipeline {
                 }
 
             } else {
+                currentBuild.result = "UNSTABLE"
                 echo "Regular commit → marking as dev build"
                 currentBuild.description = "Dev Build"
             }
