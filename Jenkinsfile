@@ -26,6 +26,11 @@ pipeline {
             }
 
             // update submodules
+            sh '''
+              git fetch --tags
+              latest_tag=$(git describe --tags --abbrev=0)
+              git checkout tags/$latest_tag
+            '''
             sh 'git submodule update --init --recursive'
           }
         }
