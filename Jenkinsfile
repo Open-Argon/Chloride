@@ -30,11 +30,15 @@ pipeline {
           }
         }
       }
-      
+
 
         stage('Detect Tag') {
       steps {
         script {
+          echo "REF from Gitea: ${env.GITEA_REF}"
+          echo "GIT_BRANCH: ${env.GIT_BRANCH}"
+          echo "GIT_TAG: ${env.GIT_TAG}"
+
           def ref = sh(script: "git rev-parse --symbolic-full-name HEAD", returnStdout: true).trim()
           if (ref.startsWith('refs/tags/')) {
             def tag = ref.replace('refs/tags/', '')
