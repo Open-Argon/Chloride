@@ -26,8 +26,13 @@ pipeline {
 
             // Expose for other stages
             env.TAG_NAME = tag
-                    } else {
-            echo "Regular branch build: ${env.GIT_BRANCH}"
+          } else {
+            // Normal branch push = DEV build
+            def branchName = env.GIT_BRANCH.replace("refs/heads/", "")
+            echo "Regular branch build: ${branchName}"
+
+            // Mark display name as a dev build
+            currentBuild.displayName = "#${env.BUILD_NUMBER} DEV-${branchName}"
           }
         }
       }
@@ -88,4 +93,32 @@ pipeline {
           }
         }
     }
+  
+  post {
+    always {
+        script {
+            // Automatically detects full ref name
+            def ref = sh(script: "git rev-parse --symbolic-full-name HEAD", returnStdout: true).trim()
+
+            if (ref.startsWith("refs/tags/")) {
+                // Extract tag name
+                def tag = ref.replace("refs/tags/", "")
+                echo "Detected tag: ${tag}"
+
+                if (tag.toLowerCase().contains("unstable")) {
+                    echo "Unstable tag detected"
+                    currentBuild.result = "UNSTABLE"
+                } else {
+                    echo "Stable tagged build"
+                    currentBuild.description = "Stable"
+                    currentBuild.result = "SUCCESS"
+                }
+
+            } else {
+                echo "Regular commit → marking as dev build"
+                currentBuild.description = "Dev Build"
+            }
+        }
+    }
+  }
 }
