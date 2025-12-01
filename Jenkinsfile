@@ -15,8 +15,9 @@ pipeline {
         stage('Detect Tag') {
       steps {
         script {
-          if (env.GIT_BRANCH?.startsWith('refs/tags/')) {
-            def tag = env.GIT_BRANCH.replace('refs/tags/', '')
+          def ref = sh(script: "git rev-parse --symbolic-full-name HEAD", returnStdout: true).trim()
+          if (ref.startsWith('refs/tags/')) {
+            def tag = ref.replace('refs/tags/', '')
             echo "Tag detected: ${tag}"
 
             if (tag.toLowerCase().contains('unsable')) {
@@ -28,7 +29,7 @@ pipeline {
             env.TAG_NAME = tag
           } else {
             // Normal branch push = DEV build
-            def branchName = env.GIT_BRANCH.replace("refs/heads/", "")
+            def branchName = ref.replace("refs/heads/", "")
             echo "Regular branch build: ${branchName}"
 
             // Mark display name as a dev build
