@@ -79,20 +79,33 @@ pipeline {
       }
         }
 
-        stage('Archive Build Artifacts') {
-          steps {
-            sh '''
-                # Copy LICENSE.txt into build/bin
-                cp LICENSE.txt build/bin/
+stage('Archive Build Artifacts') {
+    steps {
+        script {
+            // Determine platform
+            def os = sh(returnStdout: true, script: 'uname -s').trim().toLowerCase()
+            def arch = sh(returnStdout: true, script: 'uname -m').trim().toLowerCase()
 
-                # Create tarball with the contents of build/bin at the root
-                tar -czf chloride-linux-x86_64.tar.gz -C build/bin .
-            '''
-            // Archive the tarball
-            archiveArtifacts artifacts: 'chloride-linux-x86_64.tar.gz', allowEmptyArchive: false
-          }
+            // Determine version (tag or "dev")
+            def version = env.TAG_NAME ?: "dev"
+
+            // Construct file name
+            env.OUTPUT_FILE = "chloride-${version}-${os}-${arch}.tar.gz"
+
+            echo "Packaging as: ${env.OUTPUT_FILE}"
         }
+
+        sh '''
+            # Ensure LICENSE.txt is in the output directory
+            cp LICENSE.txt build/bin/
+
+            # Create tarball with auto-generated name
+            tar -czf "$OUTPUT_FILE" -C build/bin .
+        '''
+
+        archiveArtifacts artifacts: "${env.OUTPUT_FILE}", allowEmptyArchive: false
     }
+}
   
   post {
     always {
