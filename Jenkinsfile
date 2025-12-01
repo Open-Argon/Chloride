@@ -6,11 +6,30 @@ pipeline {
     }
     stages {
         stage('Checkout') {
-      steps {
-        checkout scm
-        sh 'git submodule update --init --recursive'
-      }
+          steps {
+          script {
+            // Detect if this is a tag build via Jenkins-supplied vars
+            if (env.GIT_TAG) {
+              echo "Checking out tag: ${env.GIT_TAG}"
+              checkout([
+                $class: 'GitSCM',
+                branches: [[name: "refs/tags/${env.GIT_TAG}"]],
+                userRemoteConfigs: [[url: scm.userRemoteConfigs[0].url]],
+                doGenerateSubmoduleConfigurations: false,
+                extensions: [
+                  [$class: 'SubmoduleUpdate', recursiveSubmodules: true]
+                ]
+              ])
+            } else {
+              echo "Checking out normal branch"
+              checkout scm
+            }
+
+            // update submodules
+            sh 'git submodule update --init --recursive'
+          }
         }
+      }
 
         stage('Detect Tag') {
       steps {
