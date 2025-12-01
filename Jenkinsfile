@@ -45,6 +45,7 @@ pipeline {
           }
 
           // Expose for other stages
+          currentBuild.displayName = "#${env.BUILD_NUMBER} ${tag}"
           env.TAG_NAME = tag
         }
       }
