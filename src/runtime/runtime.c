@@ -100,12 +100,13 @@ ArgonObject *ARGON_ADDITION_FUNCTION(size_t argc, ArgonObject **argv,
   }
   ArgonObject *output = argv[0];
   for (size_t i = 1; i < argc; i++) {
+    ArgonObject *object_class = get_builtin_field(output, __class__);
     ArgonObject *object__add__ = get_builtin_field_for_class(
-        get_builtin_field(output, __class__), __add__, output);
+        object_class, __add__, output);
     if (!object__add__) {
-      ArgonObject *cls___name__ = get_builtin_field(output, __name__);
+      ArgonObject *cls___name__ = get_builtin_field(object_class, __name__);
       *err = create_err(0, 0, 0, "", "Runtime Error",
-                        "Object '%.*s' is missing __add__ method",
+                        "Object of type '%.*s' is missing __add__ method",
                         (int)cls___name__->value.as_str->length,
                         cls___name__->value.as_str->data);
       return ARGON_NULL;
@@ -126,12 +127,13 @@ ArgonObject *ARGON_SUBTRACTION_FUNCTION(size_t argc, ArgonObject **argv,
   }
   ArgonObject *output = argv[0];
   for (size_t i = 1; i < argc; i++) {
+    ArgonObject *object_class = get_builtin_field(output, __class__);
     ArgonObject *function__subtract__ = get_builtin_field_for_class(
-        get_builtin_field(output, __class__), __subtract__, output);
+        object_class, __subtract__, output);
     if (!function__subtract__) {
-      ArgonObject *cls___name__ = get_builtin_field(output, __name__);
+      ArgonObject *cls___name__ = get_builtin_field(object_class, __name__);
       *err = create_err(0, 0, 0, "", "Runtime Error",
-                        "Object '%.*s' is missing __subtract__ method",
+                        "Object of type '%.*s' is missing __subtract__ method",
                         (int)cls___name__->value.as_str->length,
                         cls___name__->value.as_str->data);
       return ARGON_NULL;
@@ -152,12 +154,13 @@ ArgonObject *ARGON_MULTIPLY_FUNCTION(size_t argc, ArgonObject **argv,
   }
   ArgonObject *output = argv[0];
   for (size_t i = 1; i < argc; i++) {
+    ArgonObject *object_class = get_builtin_field(output, __class__);
     ArgonObject *function__multiply__ = get_builtin_field_for_class(
-        get_builtin_field(output, __class__), __multiply__, output);
+        object_class, __multiply__, output);
     if (!function__multiply__) {
-      ArgonObject *cls___name__ = get_builtin_field(output, __name__);
+      ArgonObject *cls___name__ = get_builtin_field(object_class, __name__);
       *err = create_err(0, 0, 0, "", "Runtime Error",
-                        "Object '%.*s' is missing __multiply__ method",
+                        "Object of type '%.*s' is missing __multiply__ method",
                         (int)cls___name__->value.as_str->length,
                         cls___name__->value.as_str->data);
       return ARGON_NULL;
@@ -177,12 +180,13 @@ ArgonObject *ARGON_DIVIDE_FUNCTION(size_t argc, ArgonObject **argv, ArErr *err,
   }
   ArgonObject *output = argv[0];
   for (size_t i = 1; i < argc; i++) {
+    ArgonObject *object_class = get_builtin_field(output, __class__);
     ArgonObject *function___divide__ = get_builtin_field_for_class(
-        get_builtin_field(output, __class__), __divide__, output);
+        object_class, __divide__, output);
     if (!function___divide__) {
-      ArgonObject *cls___name__ = get_builtin_field(output, __name__);
+      ArgonObject *cls___name__ = get_builtin_field(object_class, __name__);
       *err = create_err(0, 0, 0, "", "Runtime Error",
-                        "Object '%.*s' is missing __divide__ method",
+                        "Object of type '%.*s' is missing __divide__ method",
                         (int)cls___name__->value.as_str->length,
                         cls___name__->value.as_str->data);
       return ARGON_NULL;
