@@ -6,7 +6,6 @@
 
 #include "memory.h"
 #include <gc.h>
-#include <gc/gc.h>
 #include <pthread.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -20,6 +19,15 @@ void *checked_malloc(size_t size) {
     exit(EXIT_FAILURE);
   }
   return ptr;
+}
+
+void *checked_realloc(void *ptr, size_t size) {
+  void *new_ptr = realloc(ptr, size);
+  if (!new_ptr) {
+    fprintf(stderr, "fatal error: failed to allocate %zu bytes\n", size);
+    exit(EXIT_FAILURE);
+  }
+  return new_ptr;
 }
 
 struct allocation *memory_allocations = NULL;

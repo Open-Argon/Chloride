@@ -9,7 +9,7 @@
 
 #include <stddef.h> // for size_t
 #include <stdbool.h>
-#include <gc/gc.h>
+#include <gc.h>
 
 // GC-managed allocations
 
@@ -37,5 +37,6 @@ void ar_memory_init();
 void ar_memory_shutdown();
 
 void *checked_malloc(size_t size);
+void *checked_realloc(void *ptr, size_t size);
 
 #endif // ARGON_MEMORY_H
