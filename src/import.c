@@ -1,3 +1,10 @@
+/*
+ * SPDX-FileCopyrightText: 2026 2025 William Bell
+ * SPDX-FileCopyrightText: 2026, 2025 William Bell
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
 #include "../external/cwalk/include/cwalk.h"
 #include "../external/xxhash/xxhash.h"
 #include "arobject.h"

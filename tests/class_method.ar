@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2025 William Bell
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 string.cool(self) = do
   term.log(self, self.length)
   return 10

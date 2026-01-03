@@ -1,7 +1,7 @@
 <!--
-SPDX-FileCopyrightText: 2025 William Bell
+SPDX-FileCopyrightText: 2026 William Bell
 
-SPDX-License-Identifier: GPL-1.0-or-later
+SPDX-License-Identifier: CC-BY-SA-4.0
 -->
 
 # Bytecode Specification
