@@ -122,14 +122,14 @@ ArgonObject *create_ARGON_DICTIONARY_TYPE___string__(size_t argc,
   return result;
 }
 
-ArgonObject *create_ARGON_DICTIONARY_TYPE___get_attr__(size_t argc,
+ArgonObject *create_ARGON_DICTIONARY_TYPE___getattr__(size_t argc,
                                                        ArgonObject **argv,
                                                        ArErr *err,
                                                        RuntimeState *state) {
   (void)state;
   if (argc != 2) {
     *err = create_err(0, 0, 0, "", "Runtime Error",
-                      "__get_attr__ expects 2 argument, got %" PRIu64, argc);
+                      "__getattr__ expects 2 argument, got %" PRIu64, argc);
     return ARGON_NULL;
   }
   ArgonObject *object = argv[0];
@@ -169,6 +169,32 @@ ArgonObject *create_ARGON_DICTIONARY_TYPE___setattr__(size_t argc,
   return value;
 }
 
+ArgonObject *create_ARGON_DICTIONARY_TYPE___getitem__(size_t argc,
+                                                       ArgonObject **argv,
+                                                       ArErr *err,
+                                                       RuntimeState *state) {
+  (void)state;
+  if (argc != 2) {
+    *err = create_err(0, 0, 0, "", "Runtime Error",
+                      "__getitem__ expects 2 argument, got %" PRIu64, argc);
+    return ARGON_NULL;
+  }
+  ArgonObject *object = argv[0];
+  ArgonObject *key = argv[1];
+  int64_t hash = hash_object(key, err, state);
+  if (err->exists) {
+    return ARGON_NULL;
+  }
+  ArgonObject *result = hashmap_lookup_GC(object->value.as_hashmap, hash);
+  if (!result) {
+    char *object_str = argon_object_to_null_terminated_string(key, err, state);
+    
+    *err = create_err(0, 0, 0, NULL, "Attribute Error",
+                      "Dictionary has no item '%s'", object_str);
+    return ARGON_NULL;
+  }
+  return result;
+}
 
 ArgonObject *create_ARGON_DICTIONARY_TYPE___setitem__(size_t argc,
                                                        ArgonObject **argv,
@@ -199,9 +225,9 @@ void create_ARGON_DICTIONARY_TYPE() {
                     create_argon_native_function(
                         "__init__", create_ARGON_DICTIONARY_TYPE___init__));
   add_builtin_field(
-      ARGON_DICTIONARY_TYPE, __get_attr__,
-      create_argon_native_function("__get_attr__",
-                                   create_ARGON_DICTIONARY_TYPE___get_attr__));
+      ARGON_DICTIONARY_TYPE, __getattr__,
+      create_argon_native_function("__getattr__",
+                                   create_ARGON_DICTIONARY_TYPE___getattr__));
   add_builtin_field(
       ARGON_DICTIONARY_TYPE, __setattr__,
       create_argon_native_function("__setattr__",
@@ -210,6 +236,10 @@ void create_ARGON_DICTIONARY_TYPE() {
       ARGON_DICTIONARY_TYPE, __setitem__,
       create_argon_native_function("__setitem__",
                                    create_ARGON_DICTIONARY_TYPE___setitem__));
+  add_builtin_field(
+      ARGON_DICTIONARY_TYPE, __getitem__,
+      create_argon_native_function("__getitem__",
+                                   create_ARGON_DICTIONARY_TYPE___getitem__));
   add_builtin_field(ARGON_DICTIONARY_TYPE, __string__,
                     create_argon_native_function(
                         "__string__", create_ARGON_DICTIONARY_TYPE___string__));

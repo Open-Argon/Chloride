@@ -11,6 +11,7 @@
 #include "assignable/assign/assign.h"
 #include "assignable/call/call.h"
 #include "assignable/identifier/identifier.h"
+#include "assignable/item/item.h"
 #include "declaration/declaration.h"
 #include "dictionary/dictionary.h"
 #include "dowrap/dowrap.h"
@@ -164,8 +165,10 @@ ParsedValueReturn parse_token_full(char *file, DArray *tokens, size_t *index,
       output = parse_call(file, tokens, index, output.value);
       break;
     case TOKEN_DOT:
-    case TOKEN_LBRACKET:
       output = parse_access(file, tokens, index, output.value);
+      break;
+    case TOKEN_LBRACKET:
+      output = parse_item_access(file, tokens, index, output.value);
       break;
       SWITCH_OPERATIONS
       if (process_operations) {
@@ -240,6 +243,9 @@ void free_parsed(void *ptr) {
     break;
   case AST_ACCESS:
     free_parse_access(parsed);
+    break;
+  case AST_ITEM_ACCESS:
+    free_parse_item_access(parsed);
     break;
   case AST_NULL:
   case AST_BOOLEAN:
