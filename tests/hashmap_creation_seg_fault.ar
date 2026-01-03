@@ -1,2 +1,6 @@
+# SPDX-FileCopyrightText: 2025 William Bell
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 while (true) do
     {"z": 1, "b": 2, "c": 3, "a": 7}
