@@ -104,12 +104,27 @@ char *argon_object_to_null_terminated_string(ArgonObject *object, ArErr *err,
   if (err->exists)
     return NULL;
 
+  if (string_object->type != TYPE_STRING)
+    return "<object>";
 
-  if (string_object->type != TYPE_STRING) return "<object>";
-
-  char *string = ar_alloc(string_object->value.as_str->length+1);
+  char *string = ar_alloc(string_object->value.as_str->length + 1);
   string[string_object->value.as_str->length] = '\0';
-  memcpy(string, string_object->value.as_str->data, string_object->value.as_str->length);
+  memcpy(string, string_object->value.as_str->data,
+         string_object->value.as_str->length);
+  return string;
+}
+
+char *argon_string_to_c_string_malloc(ArgonObject *object, ArErr *err,
+                                      RuntimeState *state) {
+  (void)state;
+  (void)err;
+
+  if (object->type != TYPE_STRING)
+    return NULL;
+
+  char *string = malloc(object->value.as_str->length + 1);
+  string[object->value.as_str->length] = '\0';
+  memcpy(string, object->value.as_str->data, object->value.as_str->length);
   return string;
 }
 

@@ -19,7 +19,9 @@ ArgonObject *ARGON_DICTIONARY_TYPE = NULL;
 ArgonObject *create_ARGON_DICTIONARY_TYPE___init__(size_t argc,
                                                    ArgonObject **argv,
                                                    ArErr *err,
-                                                   RuntimeState *state) {
+                                                   RuntimeState *state,
+                                                   ArgonNativeAPI *api) {
+  (void)api;
   (void)state;
   if (argc != 1) {
     *err = create_err(0, 0, 0, "", "Runtime Error",
@@ -35,7 +37,9 @@ ArgonObject *create_ARGON_DICTIONARY_TYPE___init__(size_t argc,
 ArgonObject *create_ARGON_DICTIONARY_TYPE___string__(size_t argc,
                                                      ArgonObject **argv,
                                                      ArErr *err,
-                                                     RuntimeState *state) {
+                                                     RuntimeState *state,
+                                                     ArgonNativeAPI *api) {
+  (void)api;
   (void)state;
   if (argc != 1) {
     *err = create_err(0, 0, 0, "", "Runtime Error",
@@ -46,7 +50,8 @@ ArgonObject *create_ARGON_DICTIONARY_TYPE___string__(size_t argc,
   size_t string_length = 0;
   char *string = NULL;
   size_t nodes_length;
-  struct node_GC ** nodes = hashmap_GC_to_array(object->value.as_hashmap, &nodes_length);
+  struct node_GC **nodes =
+      hashmap_GC_to_array(object->value.as_hashmap, &nodes_length);
   char *string_obj = "{";
   size_t length = strlen(string_obj);
   string = realloc(string, string_length + length);
@@ -57,8 +62,14 @@ ArgonObject *create_ARGON_DICTIONARY_TYPE___string__(size_t argc,
     ArgonObject *key = node->key;
     ArgonObject *value = node->val;
 
-    if (!key) { fprintf(stderr, "NULL key at node %zu\n", i); continue; }
-    if (!value) { fprintf(stderr, "NULL value at node %zu\n", i); continue; }
+    if (!key) {
+      fprintf(stderr, "NULL key at node %zu\n", i);
+      continue;
+    }
+    if (!value) {
+      fprintf(stderr, "NULL value at node %zu\n", i);
+      continue;
+    }
 
     ArgonObject *string_convert_method = get_builtin_field_for_class(
         get_builtin_field(key, __class__), __repr__, key);
@@ -117,15 +128,17 @@ ArgonObject *create_ARGON_DICTIONARY_TYPE___string__(size_t argc,
   string = realloc(string, string_length + length);
   memcpy(string + string_length, string_obj, length);
   string_length += length;
-  ArgonObject* result = new_string_object(string, string_length, 0, 0);
+  ArgonObject *result = new_string_object(string, string_length, 0, 0);
   free(string);
   return result;
 }
 
 ArgonObject *create_ARGON_DICTIONARY_TYPE___getattr__(size_t argc,
-                                                       ArgonObject **argv,
-                                                       ArErr *err,
-                                                       RuntimeState *state) {
+                                                      ArgonObject **argv,
+                                                      ArErr *err,
+                                                      RuntimeState *state,
+                                                      ArgonNativeAPI *api) {
+  (void)api;
   (void)state;
   if (argc != 2) {
     *err = create_err(0, 0, 0, "", "Runtime Error",
@@ -141,17 +154,19 @@ ArgonObject *create_ARGON_DICTIONARY_TYPE___getattr__(size_t argc,
   ArgonObject *result = hashmap_lookup_GC(object->value.as_hashmap, hash);
   if (!result) {
     *err = create_err(0, 0, 0, NULL, "Attribute Error",
-                      "Dictionary has no attribute '%.*s'", key->value.as_str->length, key->value.as_str->data);
+                      "Dictionary has no attribute '%.*s'",
+                      key->value.as_str->length, key->value.as_str->data);
     return ARGON_NULL;
   }
   return result;
 }
 
-
 ArgonObject *create_ARGON_DICTIONARY_TYPE___setattr__(size_t argc,
-                                                       ArgonObject **argv,
-                                                       ArErr *err,
-                                                       RuntimeState *state) {
+                                                      ArgonObject **argv,
+                                                      ArErr *err,
+                                                      RuntimeState *state,
+                                                      ArgonNativeAPI *api) {
+  (void)api;
   (void)state;
   if (argc != 3) {
     *err = create_err(0, 0, 0, "", "Runtime Error",
@@ -170,9 +185,11 @@ ArgonObject *create_ARGON_DICTIONARY_TYPE___setattr__(size_t argc,
 }
 
 ArgonObject *create_ARGON_DICTIONARY_TYPE___getitem__(size_t argc,
-                                                       ArgonObject **argv,
-                                                       ArErr *err,
-                                                       RuntimeState *state) {
+                                                      ArgonObject **argv,
+                                                      ArErr *err,
+                                                      RuntimeState *state,
+                                                      ArgonNativeAPI *api) {
+  (void)api;
   (void)state;
   if (argc != 2) {
     *err = create_err(0, 0, 0, "", "Runtime Error",
@@ -188,7 +205,7 @@ ArgonObject *create_ARGON_DICTIONARY_TYPE___getitem__(size_t argc,
   ArgonObject *result = hashmap_lookup_GC(object->value.as_hashmap, hash);
   if (!result) {
     char *object_str = argon_object_to_null_terminated_string(key, err, state);
-    
+
     *err = create_err(0, 0, 0, NULL, "Attribute Error",
                       "Dictionary has no item '%s'", object_str);
     return ARGON_NULL;
@@ -197,13 +214,15 @@ ArgonObject *create_ARGON_DICTIONARY_TYPE___getitem__(size_t argc,
 }
 
 ArgonObject *create_ARGON_DICTIONARY_TYPE___setitem__(size_t argc,
-                                                       ArgonObject **argv,
-                                                       ArErr *err,
-                                                       RuntimeState *state) {
+                                                      ArgonObject **argv,
+                                                      ArErr *err,
+                                                      RuntimeState *state,
+                                                      ArgonNativeAPI *api) {
+  (void)api;
   (void)state;
   if (argc != 3) {
     *err = create_err(0, 0, 0, "", "Runtime Error",
-                      "__setitem__ expects 2 argument, got %" PRIu64, argc);
+                      "__setitem__ expects 3 argument, got %" PRIu64, argc);
     return ARGON_NULL;
   }
   ArgonObject *object = argv[0];

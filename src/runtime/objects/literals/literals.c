@@ -4,9 +4,9 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+#include "literals.h"
 #include "../object.h"
 #include <string.h>
-#include "literals.h"
 
 ArgonObject *ARGON_NULL_TYPE = NULL;
 ArgonObject *ARGON_NULL = NULL;

@@ -49,8 +49,34 @@ typedef struct RuntimeState RuntimeState;
 
 typedef struct ArgonObject ArgonObject; // forward declaration
 
+typedef struct ArgonNativeAPI ArgonNativeAPI;
+
+typedef struct hashmap_GC hashmap_GC;
+
 typedef ArgonObject *(*native_fn)(size_t argc, ArgonObject **argv, ArErr *err,
-                                  RuntimeState *state);
+                                  RuntimeState *state, ArgonNativeAPI *api);
+
+struct ArgonNativeAPI {
+  void (*register_ArgonObject)(hashmap_GC *reg, char *name, ArgonObject *obj);
+  ArgonObject *(*create_argon_native_function)(char *name, native_fn);
+  ArgonObject *(*throw_argon_error)( ArErr*err,const char *type, const char *fmt, ...);
+  bool(*is_error)( ArErr*err);
+
+  ArgonObject *(*i64_to_argon)(int64_t);
+  ArgonObject *(*double_to_argon)(double);
+  ArgonObject *(*num_and_den_to_argon)(int64_t n, uint64_t d);
+
+  int64_t (*argon_to_i64)(ArgonObject *, ArErr*);
+  double (*argon_to_double)(ArgonObject *, ArErr*);
+  struct number (*argon_to_num_and_den)(ArgonObject *, ArErr*);
+
+  ArgonObject *ARGON_NULL;
+  ArgonObject *ARGON_TRUE;
+  ArgonObject *ARGON_FALSE;
+  // int64_t (*argon_as_i64)(ArgonObject *);
+  // void (*argon_register_function)(ArgonObject *, const char *, native_fn,
+  // int);
+};
 
 typedef enum ArgonType {
   TYPE_NULL,

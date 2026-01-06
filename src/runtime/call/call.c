@@ -15,6 +15,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "../api/api.h"
 
 #if defined(_WIN32)
 #ifndef _WIN32_WINNT
@@ -207,7 +208,7 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
       return;
     }
   } else if (object->type == TYPE_NATIVE_FUNCTION) {
-    state->registers[0] = object->value.native_fn(argc, argv, err, state);
+    state->registers[0] = object->value.native_fn(argc, argv, err, state, &native_api);
     if (err->exists && strlen(err->path) == 0) {
       err->line = state->source_location.line;
       err->column = state->source_location.column;

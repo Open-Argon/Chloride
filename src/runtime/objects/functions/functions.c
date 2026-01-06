@@ -33,9 +33,12 @@ void load_argon_function(Translated *translated, RuntimeState *state,
                     new_string_object(arena_get(&translated->constants, offset),
                                       length, 0, 0));
   uint64_t number_of_parameters = pop_bytecode(translated, state);
-  object->value.argon_fn = ar_alloc(sizeof(struct argon_function_struct)+number_of_parameters *
-               sizeof(struct string_struct));
-  object->value.argon_fn->parameters = (struct string_struct*)((char*)object->value.argon_fn+sizeof(struct argon_function_struct));
+  object->value.argon_fn =
+      ar_alloc(sizeof(struct argon_function_struct) +
+               number_of_parameters * sizeof(struct string_struct));
+  object->value.argon_fn->parameters =
+      (struct string_struct *)((char *)object->value.argon_fn +
+                               sizeof(struct argon_function_struct));
   object->value.argon_fn->translated = *translated;
   object->value.argon_fn->number_of_parameters = number_of_parameters;
   for (size_t i = 0; i < object->value.argon_fn->number_of_parameters; i++) {

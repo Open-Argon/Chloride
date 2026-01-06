@@ -9,6 +9,7 @@
 #include "../hash_data/hash_data.h"
 #include "../parser/number/number.h"
 #include "../translator/translator.h"
+#include "api/api.h"
 #include "assignment/assignment.h"
 #include "call/call.h"
 #include "declaration/declaration.h"
@@ -21,6 +22,7 @@
 #include "objects/string/string.h"
 #include "objects/term/term.h"
 #include "objects/type/type.h"
+#include "native_loader/native_loader.h"
 #include <fcntl.h>
 #include <gc.h>
 #include <gmp.h>
@@ -48,8 +50,9 @@ ArgonObject *MODULO_FUNCTION;
 ArgonObject *FLOORDIVIDE_FUNCTION;
 
 ArgonObject *BASE_CLASS___getattribute__(size_t argc, ArgonObject **argv,
-                                         ArErr *err, RuntimeState *state) {
+                                         ArErr *err, RuntimeState *state, ArgonNativeAPI *api) {
   (void)state;
+  (void)api;
   if (argc != 2) {
     *err =
         create_err(0, 0, 0, "", "Runtime Error",
@@ -92,7 +95,8 @@ ArgonObject *BASE_CLASS___getattribute__(size_t argc, ArgonObject **argv,
 }
 
 ArgonObject *ARGON_ADDITION_FUNCTION(size_t argc, ArgonObject **argv,
-                                     ArErr *err, RuntimeState *state) {
+                                     ArErr *err, RuntimeState *state, ArgonNativeAPI *api) {
+  (void)api;
   if (argc < 1) {
     *err = create_err(0, 0, 0, "", "Runtime Error",
                       "add expects at least 1 argument, got %" PRIu64, argc);
@@ -118,7 +122,8 @@ ArgonObject *ARGON_ADDITION_FUNCTION(size_t argc, ArgonObject **argv,
 }
 
 ArgonObject *ARGON_SUBTRACTION_FUNCTION(size_t argc, ArgonObject **argv,
-                                        ArErr *err, RuntimeState *state) {
+                                        ArErr *err, RuntimeState *state, ArgonNativeAPI *api) {
+  (void)api;
   if (argc < 1) {
     *err =
         create_err(0, 0, 0, "", "Runtime Error",
@@ -145,7 +150,8 @@ ArgonObject *ARGON_SUBTRACTION_FUNCTION(size_t argc, ArgonObject **argv,
 }
 
 ArgonObject *ARGON_MULTIPLY_FUNCTION(size_t argc, ArgonObject **argv,
-                                     ArErr *err, RuntimeState *state) {
+                                     ArErr *err, RuntimeState *state, ArgonNativeAPI *api) {
+  (void)api;
   if (argc < 1) {
     *err =
         create_err(0, 0, 0, "", "Runtime Error",
@@ -172,7 +178,8 @@ ArgonObject *ARGON_MULTIPLY_FUNCTION(size_t argc, ArgonObject **argv,
 }
 
 ArgonObject *ARGON_DIVIDE_FUNCTION(size_t argc, ArgonObject **argv, ArErr *err,
-                                   RuntimeState *state) {
+                                   RuntimeState *state, ArgonNativeAPI *api) {
+  (void)api;
   if (argc < 1) {
     *err = create_err(0, 0, 0, "", "Runtime Error",
                       "divide expects at least 1 argument, got %" PRIu64, argc);
@@ -198,7 +205,8 @@ ArgonObject *ARGON_DIVIDE_FUNCTION(size_t argc, ArgonObject **argv, ArErr *err,
 }
 
 ArgonObject *ARGON_TYPE_TYPE___call__(size_t argc, ArgonObject **argv,
-                                      ArErr *err, RuntimeState *state) {
+                                      ArErr *err, RuntimeState *state, ArgonNativeAPI *api) {
+  (void)api;
   (void)state;
   if (argc < 1) {
     *err =
@@ -231,7 +239,7 @@ ArgonObject *ARGON_TYPE_TYPE___call__(size_t argc, ArgonObject **argv,
   ArgonObject *ARGON_TYPE_TYPE___call___args[] = {ARGON_TYPE_TYPE, new_object};
   ArgonObject *new_object_class = ARGON_TYPE_TYPE___call__(
       sizeof(ARGON_TYPE_TYPE___call___args) / sizeof(ArgonObject *),
-      ARGON_TYPE_TYPE___call___args, err, state);
+      ARGON_TYPE_TYPE___call___args, err, state, &native_api);
   if (new_object_class != ARGON_NULL && new_object_class == cls) {
     ArgonObject *cls___init__ =
         get_builtin_field_for_class(argv[0], __init__, new_object);
@@ -252,7 +260,8 @@ ArgonObject *ARGON_TYPE_TYPE___call__(size_t argc, ArgonObject **argv,
 }
 
 ArgonObject *BASE_CLASS_address(size_t argc, ArgonObject **argv, ArErr *err,
-                                RuntimeState *state) {
+                                RuntimeState *state, ArgonNativeAPI *api) {
+  (void)api;
   (void)state;
   if (argc < 1) {
     *err =
@@ -266,7 +275,8 @@ ArgonObject *BASE_CLASS_address(size_t argc, ArgonObject **argv, ArErr *err,
 }
 
 ArgonObject *BASE_CLASS___new__(size_t argc, ArgonObject **argv, ArErr *err,
-                                RuntimeState *state) {
+                                RuntimeState *state, ArgonNativeAPI *api) {
+  (void)api;
   (void)state;
   if (argc < 1) {
     *err =
@@ -279,7 +289,8 @@ ArgonObject *BASE_CLASS___new__(size_t argc, ArgonObject **argv, ArErr *err,
 }
 
 ArgonObject *BASE_CLASS___init__(size_t argc, ArgonObject **argv, ArErr *err,
-                                 RuntimeState *state) {
+                                 RuntimeState *state, ArgonNativeAPI *api) {
+  (void)api;
   (void)state;
   (void)argv;
   if (argc != 1) {
@@ -290,7 +301,8 @@ ArgonObject *BASE_CLASS___init__(size_t argc, ArgonObject **argv, ArErr *err,
 }
 
 ArgonObject *BASE_CLASS___setattr__(size_t argc, ArgonObject **argv, ArErr *err,
-                                    RuntimeState *state) {
+                                    RuntimeState *state, ArgonNativeAPI *api) {
+  (void)api;
   (void)state;
   if (argc != 3) {
     *err = create_err(0, 0, 0, "", "Runtime Error",
@@ -306,7 +318,8 @@ ArgonObject *BASE_CLASS___setattr__(size_t argc, ArgonObject **argv, ArErr *err,
 }
 
 ArgonObject *BASE_CLASS___string__(size_t argc, ArgonObject **argv, ArErr *err,
-                                   RuntimeState *state) {
+                                   RuntimeState *state, ArgonNativeAPI *api) {
+  (void)api;
   (void)state;
   if (argc != 1) {
     *err = create_err(0, 0, 0, "", "Runtime Error",
@@ -331,7 +344,8 @@ ArgonObject *BASE_CLASS___string__(size_t argc, ArgonObject **argv, ArErr *err,
 }
 
 ArgonObject *BASE_CLASS___repr__(size_t argc, ArgonObject **argv, ArErr *err,
-                                 RuntimeState *state) {
+                                 RuntimeState *state, ArgonNativeAPI *api) {
+  (void)api;
   if (argc != 1) {
     *err = create_err(0, 0, 0, "", "Runtime Error",
                       "__repr__ expects 1 arguments, got %" PRIu64, argc);
@@ -342,7 +356,8 @@ ArgonObject *BASE_CLASS___repr__(size_t argc, ArgonObject **argv, ArErr *err,
 }
 
 ArgonObject *BASE_CLASS___boolean__(size_t argc, ArgonObject **argv, ArErr *err,
-                                    RuntimeState *state) {
+                                    RuntimeState *state, ArgonNativeAPI *api) {
+  (void)api;
   (void)argv;
   (void)state;
   if (argc != 1) {
@@ -353,7 +368,8 @@ ArgonObject *BASE_CLASS___boolean__(size_t argc, ArgonObject **argv, ArErr *err,
 }
 
 ArgonObject *ARGON_STRING_TYPE___init__(size_t argc, ArgonObject **argv,
-                                        ArErr *err, RuntimeState *state) {
+                                        ArErr *err, RuntimeState *state, ArgonNativeAPI *api) {
+  (void)api;
   if (argc != 2) {
     *err = create_err(0, 0, 0, "", "Runtime Error",
                       "__init__ expects 2 arguments, got %" PRIu64, argc);
@@ -380,7 +396,8 @@ ArgonObject *ARGON_STRING_TYPE___init__(size_t argc, ArgonObject **argv,
 }
 
 ArgonObject *ARGON_BOOL_TYPE___new__(size_t argc, ArgonObject **argv,
-                                     ArErr *err, RuntimeState *state) {
+                                     ArErr *err, RuntimeState *state, ArgonNativeAPI *api) {
+  (void)api;
   if (argc != 2) {
     *err = create_err(0, 0, 0, "", "Runtime Error",
                       "__new__ expects 2 arguments, got %" PRIu64, argc);
@@ -408,7 +425,8 @@ ArgonObject *ARGON_BOOL_TYPE___new__(size_t argc, ArgonObject **argv,
 }
 
 ArgonObject *ARGON_STRING_TYPE___add__(size_t argc, ArgonObject **argv,
-                                       ArErr *err, RuntimeState *state) {
+                                       ArErr *err, RuntimeState *state, ArgonNativeAPI *api) {
+  (void)api;
   (void)state;
   if (argc != 2) {
     *err = create_err(0, 0, 0, "", "Runtime Error",
@@ -434,7 +452,8 @@ ArgonObject *ARGON_STRING_TYPE___add__(size_t argc, ArgonObject **argv,
 }
 
 ArgonObject *ARGON_BOOL_TYPE___string__(size_t argc, ArgonObject **argv,
-                                        ArErr *err, RuntimeState *state) {
+                                        ArErr *err, RuntimeState *state, ArgonNativeAPI *api) {
+  (void)api;
   (void)state;
   if (argc != 1) {
     *err = create_err(0, 0, 0, "", "Runtime Error",
@@ -446,7 +465,8 @@ ArgonObject *ARGON_BOOL_TYPE___string__(size_t argc, ArgonObject **argv,
 }
 
 ArgonObject *ARGON_BOOL_TYPE___number__(size_t argc, ArgonObject **argv,
-                                        ArErr *err, RuntimeState *state) {
+                                        ArErr *err, RuntimeState *state, ArgonNativeAPI *api) {
+  (void)api;
   (void)state;
   if (argc != 1) {
     *err = create_err(0, 0, 0, "", "Runtime Error",
@@ -457,7 +477,8 @@ ArgonObject *ARGON_BOOL_TYPE___number__(size_t argc, ArgonObject **argv,
 }
 
 ArgonObject *ARGON_STRING_TYPE___string__(size_t argc, ArgonObject **argv,
-                                          ArErr *err, RuntimeState *state) {
+                                          ArErr *err, RuntimeState *state, ArgonNativeAPI *api) {
+  (void)api;
   (void)state;
   if (argc != 1) {
     *err = create_err(0, 0, 0, "", "Runtime Error",
@@ -466,7 +487,8 @@ ArgonObject *ARGON_STRING_TYPE___string__(size_t argc, ArgonObject **argv,
   return argv[0];
 }
 ArgonObject *ARGON_STRING_TYPE___repr__(size_t argc, ArgonObject **argv,
-                                        ArErr *err, RuntimeState *state) {
+                                        ArErr *err, RuntimeState *state, ArgonNativeAPI *api) {
+  (void)api;
   (void)state;
   if (argc != 1) {
     *err = create_err(0, 0, 0, "", "Runtime Error",
@@ -479,7 +501,8 @@ ArgonObject *ARGON_STRING_TYPE___repr__(size_t argc, ArgonObject **argv,
   return result;
 }
 ArgonObject *ARGON_STRING_TYPE___hash__(size_t argc, ArgonObject **argv,
-                                        ArErr *err, RuntimeState *state) {
+                                        ArErr *err, RuntimeState *state, ArgonNativeAPI *api) {
+  (void)api;
   (void)state;
   if (argc != 1) {
     *err = create_err(0, 0, 0, "", "Runtime Error",
@@ -499,7 +522,8 @@ ArgonObject *ARGON_STRING_TYPE___hash__(size_t argc, ArgonObject **argv,
 }
 
 ArgonObject *ARGON_STRING_TYPE___number__(size_t argc, ArgonObject **argv,
-                                          ArErr *err, RuntimeState *state) {
+                                          ArErr *err, RuntimeState *state, ArgonNativeAPI *api) {
+  (void)api;
   (void)state;
   if (argc != 1) {
     *err = create_err(0, 0, 0, "", "Runtime Error",
@@ -523,7 +547,8 @@ ArgonObject *ARGON_STRING_TYPE___number__(size_t argc, ArgonObject **argv,
 }
 
 ArgonObject *ARGON_STRING_TYPE___boolean__(size_t argc, ArgonObject **argv,
-                                           ArErr *err, RuntimeState *state) {
+                                           ArErr *err, RuntimeState *state, ArgonNativeAPI *api) {
+  (void)api;
   (void)state;
   if (argc != 1) {
     *err = create_err(0, 0, 0, "", "Runtime Error",
@@ -533,7 +558,8 @@ ArgonObject *ARGON_STRING_TYPE___boolean__(size_t argc, ArgonObject **argv,
 }
 
 ArgonObject *ARGON_BOOL_TYPE___boolean__(size_t argc, ArgonObject **argv,
-                                         ArErr *err, RuntimeState *state) {
+                                         ArErr *err, RuntimeState *state, ArgonNativeAPI *api) {
+  (void)api;
   (void)state;
   if (argc != 1) {
     *err = create_err(0, 0, 0, "", "Runtime Error",
@@ -543,7 +569,8 @@ ArgonObject *ARGON_BOOL_TYPE___boolean__(size_t argc, ArgonObject **argv,
 }
 
 ArgonObject *ARGON_NULL_TYPE___boolean__(size_t argc, ArgonObject **argv,
-                                         ArErr *err, RuntimeState *state) {
+                                         ArErr *err, RuntimeState *state, ArgonNativeAPI *api) {
+  (void)api;
   (void)argv;
   (void)state;
   if (argc != 1) {
@@ -553,7 +580,8 @@ ArgonObject *ARGON_NULL_TYPE___boolean__(size_t argc, ArgonObject **argv,
   return ARGON_FALSE;
 }
 ArgonObject *ARGON_NULL_TYPE___number__(size_t argc, ArgonObject **argv,
-                                        ArErr *err, RuntimeState *state) {
+                                        ArErr *err, RuntimeState *state, ArgonNativeAPI *api) {
+  (void)api;
   (void)argv;
   (void)state;
   if (argc != 1) {
@@ -563,7 +591,8 @@ ArgonObject *ARGON_NULL_TYPE___number__(size_t argc, ArgonObject **argv,
   return new_number_object_from_int64(0);
 }
 ArgonObject *ARGON_NULL_TYPE___string__(size_t argc, ArgonObject **argv,
-                                        ArErr *err, RuntimeState *state) {
+                                        ArErr *err, RuntimeState *state, ArgonNativeAPI *api) {
+  (void)api;
   (void)argv;
   (void)state;
   if (argc != 1) {
@@ -699,6 +728,10 @@ void bootstrap_types() {
       create_argon_native_function("__setattr__", BASE_CLASS___setattr__));
   create_ARGON_DICTIONARY_TYPE();
   create_ARGON_NUMBER_TYPE();
+
+  native_api.ARGON_NULL = ARGON_NULL;
+  native_api.ARGON_TRUE = ARGON_TRUE;
+  native_api.ARGON_FALSE = ARGON_FALSE;
 }
 
 void add_to_hashmap(struct hashmap_GC *hashmap, char *name,
@@ -726,6 +759,8 @@ void bootstrap_globals() {
   add_to_hashmap(argon_term, "log",
                  create_argon_native_function("log", term_log));
   add_to_scope(Global_Scope, "term", create_dictionary(argon_term));
+  add_to_scope(Global_Scope, "load_native_code",
+                 create_argon_native_function("load_native_code", ARGON_LOAD_NATIVE_CODE));
 
   struct hashmap_GC *environment_variables = createHashmap_GC();
 #if defined(_WIN32)
@@ -947,7 +982,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
         continue;
       }
       ArgonObject *args[] = {ARGON_BOOL_TYPE, state->registers[0]};
-      state->registers[0] = ARGON_BOOL_TYPE___new__(2, args, err, state);
+      state->registers[0] = ARGON_BOOL_TYPE___new__(2, args, err, state, NULL);
       continue;
     }
     DO_JUMP_IF_FALSE: {
@@ -1080,7 +1115,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
 
       ArgonObject *args[] = {valueA, valueB};
       state->registers[registerC] =
-          ARGON_ADDITION_FUNCTION(2, args, err, state);
+          ARGON_ADDITION_FUNCTION(2, args, err, state, &native_api);
       continue;
     }
     DO_SUBTRACTION: {
@@ -1141,7 +1176,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
 
       ArgonObject *args[] = {valueA, valueB};
       state->registers[registerC] =
-          ARGON_SUBTRACTION_FUNCTION(2, args, err, state);
+          ARGON_SUBTRACTION_FUNCTION(2, args, err, state, &native_api);
       continue;
     }
     DO_MULTIPLICATION: {
@@ -1202,7 +1237,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
 
       ArgonObject *args[] = {valueA, valueB};
       state->registers[registerC] =
-          ARGON_MULTIPLY_FUNCTION(2, args, err, state);
+          ARGON_MULTIPLY_FUNCTION(2, args, err, state, &native_api);
       continue;
     }
     DO_DIVISION: {
@@ -1262,7 +1297,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       }
 
       ArgonObject *args[] = {valueA, valueB};
-      state->registers[registerC] = ARGON_DIVIDE_FUNCTION(2, args, err, state);
+      state->registers[registerC] = ARGON_DIVIDE_FUNCTION(2, args, err, state, &native_api);
       continue;
     }
     DO_LOAD_SETATTR_METHOD: {

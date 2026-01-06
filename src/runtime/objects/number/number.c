@@ -9,9 +9,9 @@
 #include "../string/string.h"
 #include <gmp.h>
 #include <inttypes.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
-#include <stdint.h>
 
 ArgonObject *ARGON_NUMBER_TYPE;
 
@@ -24,10 +24,12 @@ ArgonObject *ARGON_NUMBER_TYPE;
 #include <string.h>
 
 /* change SIGNIFICANT_DIGITS to taste (15 mimics double-ish behaviour) */
-#define SIGNIFICANT_DIGITS 15
+#define SIGNIFICANT_DIGITS 16
 
 ArgonObject *ARGON_NUMBER_TYPE___new__(size_t argc, ArgonObject **argv,
-                                       ArErr *err, RuntimeState *state) {
+                                       ArErr *err, RuntimeState *state,
+                                       ArgonNativeAPI *api) {
+  (void)api;
   if (argc != 2) {
     *err = create_err(0, 0, 0, "", "Runtime Error",
                       "__new__ expects 2 arguments, got %" PRIu64, argc);
@@ -36,7 +38,7 @@ ArgonObject *ARGON_NUMBER_TYPE___new__(size_t argc, ArgonObject **argv,
   ArgonObject *self = argv[0];
   ArgonObject *object = argv[1];
 
-  self->type = TYPE_STRING;
+  self->type = TYPE_NUMBER;
   ArgonObject *boolean_convert_method = get_builtin_field_for_class(
       get_builtin_field(object, __class__), __number__, object);
   if (boolean_convert_method) {
@@ -55,7 +57,9 @@ ArgonObject *ARGON_NUMBER_TYPE___new__(size_t argc, ArgonObject **argv,
 }
 
 ArgonObject *ARGON_NUMBER_TYPE___number__(size_t argc, ArgonObject **argv,
-                                          ArErr *err, RuntimeState *state) {
+                                          ArErr *err, RuntimeState *state,
+                                          ArgonNativeAPI *api) {
+  (void)api;
   (void)state;
   if (argc != 1) {
     *err = create_err(0, 0, 0, "", "Runtime Error",
@@ -66,7 +70,9 @@ ArgonObject *ARGON_NUMBER_TYPE___number__(size_t argc, ArgonObject **argv,
 }
 
 ArgonObject *ARGON_NUMBER_TYPE___boolean__(size_t argc, ArgonObject **argv,
-                                           ArErr *err, RuntimeState *state) {
+                                           ArErr *err, RuntimeState *state,
+                                           ArgonNativeAPI *api) {
+  (void)api;
   (void)state;
   if (argc != 1) {
     *err = create_err(0, 0, 0, "", "Runtime Error",
@@ -77,7 +83,9 @@ ArgonObject *ARGON_NUMBER_TYPE___boolean__(size_t argc, ArgonObject **argv,
 }
 
 ArgonObject *ARGON_NUMBER_TYPE___add__(size_t argc, ArgonObject **argv,
-                                       ArErr *err, RuntimeState *state) {
+                                       ArErr *err, RuntimeState *state,
+                                       ArgonNativeAPI *api) {
+  (void)api;
   (void)state;
   if (argc != 2) {
     *err = create_err(0, 0, 0, "", "Runtime Error",
@@ -93,7 +101,8 @@ ArgonObject *ARGON_NUMBER_TYPE___add__(size_t argc, ArgonObject **argv,
         type_name->value.as_str->length, type_name->value.as_str->data);
     return ARGON_NULL;
   }
-  if (argv[0]->value.as_number->is_int64 && argv[1]->value.as_number->is_int64) {
+  if (argv[0]->value.as_number->is_int64 &&
+      argv[1]->value.as_number->is_int64) {
     int64_t a = argv[0]->value.as_number->n.i64;
     int64_t b = argv[1]->value.as_number->n.i64;
     bool gonna_overflow = (a > 0 && b > 0 && a > INT64_MAX - b) ||
@@ -140,7 +149,9 @@ ArgonObject *ARGON_NUMBER_TYPE___add__(size_t argc, ArgonObject **argv,
 }
 
 ArgonObject *ARGON_NUMBER_TYPE___subtract__(size_t argc, ArgonObject **argv,
-                                            ArErr *err, RuntimeState *state) {
+                                            ArErr *err, RuntimeState *state,
+                                            ArgonNativeAPI *api) {
+  (void)api;
   (void)state;
   if (argc != 2) {
     *err = create_err(0, 0, 0, "", "Runtime Error",
@@ -157,7 +168,8 @@ ArgonObject *ARGON_NUMBER_TYPE___subtract__(size_t argc, ArgonObject **argv,
     return ARGON_NULL;
   }
 
-  if (argv[0]->value.as_number->is_int64 && argv[1]->value.as_number->is_int64) {
+  if (argv[0]->value.as_number->is_int64 &&
+      argv[1]->value.as_number->is_int64) {
     int64_t a = argv[0]->value.as_number->n.i64;
     int64_t b = argv[1]->value.as_number->n.i64;
     int64_t neg_a = -a;
@@ -205,7 +217,9 @@ ArgonObject *ARGON_NUMBER_TYPE___subtract__(size_t argc, ArgonObject **argv,
 }
 
 ArgonObject *ARGON_NUMBER_TYPE___multiply__(size_t argc, ArgonObject **argv,
-                                            ArErr *err, RuntimeState *state) {
+                                            ArErr *err, RuntimeState *state,
+                                            ArgonNativeAPI *api) {
+  (void)api;
   (void)state;
   if (argc != 2) {
     *err = create_err(0, 0, 0, "", "Runtime Error",
@@ -222,7 +236,8 @@ ArgonObject *ARGON_NUMBER_TYPE___multiply__(size_t argc, ArgonObject **argv,
     return ARGON_NULL;
   }
 
-  if (argv[0]->value.as_number->is_int64 && argv[1]->value.as_number->is_int64) {
+  if (argv[0]->value.as_number->is_int64 &&
+      argv[1]->value.as_number->is_int64) {
     int64_t a = argv[0]->value.as_number->n.i64;
     int64_t b = argv[1]->value.as_number->n.i64;
     bool gonna_overflow =
@@ -269,50 +284,51 @@ ArgonObject *ARGON_NUMBER_TYPE___multiply__(size_t argc, ArgonObject **argv,
   }
 }
 
-
-
 static inline uint64_t mix64(uint64_t x) {
-    x ^= x >> 33;
-    x *= 0xff51afd7ed558ccdULL;
-    x ^= x >> 33;
-    x *= 0xc4ceb9fe1a85ec53ULL;
-    x ^= x >> 33;
-    return x;
+  x ^= x >> 33;
+  x *= 0xff51afd7ed558ccdULL;
+  x ^= x >> 33;
+  x *= 0xc4ceb9fe1a85ec53ULL;
+  x ^= x >> 33;
+  return x;
 }
 
 uint64_t hash_mpz(const mpz_t z) {
-    // Export to raw bytes (big-endian for consistency)
-    size_t count;
-    unsigned char *data = mpz_export(NULL, &count, 1, 1, 1, 0, z);
+  // Export to raw bytes (big-endian for consistency)
+  size_t count;
+  unsigned char *data = mpz_export(NULL, &count, 1, 1, 1, 0, z);
 
-    // FNV-1a over bytes
-    uint64_t h = 1469598103934665603ULL;
-    for (size_t i = 0; i < count; i++) {
-        h ^= data[i];
-        h *= 1099511628211ULL;
-    }
+  // FNV-1a over bytes
+  uint64_t h = 1469598103934665603ULL;
+  for (size_t i = 0; i < count; i++) {
+    h ^= data[i];
+    h *= 1099511628211ULL;
+  }
 
-    // Include sign bit
-    if (mpz_sgn(z) < 0)
-        h = ~h;
+  // Include sign bit
+  if (mpz_sgn(z) < 0)
+    h = ~h;
 
-    // Free the temporary buffer allocated by mpz_export
-    free(data);
+  // Free the temporary buffer allocated by mpz_export
+  free(data);
 
-    return mix64(h);
+  return mix64(h);
 }
 
 uint64_t hash_mpq(mpq_t q) {
-    uint64_t h_num = hash_mpz(mpq_numref(q));
-    uint64_t h_den = hash_mpz(mpq_denref(q));
+  uint64_t h_num = hash_mpz(mpq_numref(q));
+  uint64_t h_den = hash_mpz(mpq_denref(q));
 
-    // Combine using a standard 64-bit hash mix (boost-style)
-    uint64_t h = h_num ^ (h_den + 0x9e3779b97f4a7c15ULL + (h_num << 6) + (h_num >> 2));
-    return mix64(h);
+  // Combine using a standard 64-bit hash mix (boost-style)
+  uint64_t h =
+      h_num ^ (h_den + 0x9e3779b97f4a7c15ULL + (h_num << 6) + (h_num >> 2));
+  return mix64(h);
 }
 
 ArgonObject *ARGON_NUMBER_TYPE___hash__(size_t argc, ArgonObject **argv,
-                                        ArErr *err, RuntimeState *state) {
+                                        ArErr *err, RuntimeState *state,
+                                        ArgonNativeAPI *api) {
+  (void)api;
   (void)state;
   if (argc != 1) {
     *err = create_err(0, 0, 0, "", "Runtime Error",
@@ -328,7 +344,9 @@ ArgonObject *ARGON_NUMBER_TYPE___hash__(size_t argc, ArgonObject **argv,
 }
 
 ArgonObject *ARGON_NUMBER_TYPE___division__(size_t argc, ArgonObject **argv,
-                                            ArErr *err, RuntimeState *state) {
+                                            ArErr *err, RuntimeState *state,
+                                            ArgonNativeAPI *api) {
+  (void)api;
   (void)state;
   if (argc != 2) {
     *err = create_err(0, 0, 0, "", "Runtime Error",
@@ -344,7 +362,8 @@ ArgonObject *ARGON_NUMBER_TYPE___division__(size_t argc, ArgonObject **argv,
         type_name->value.as_str->length, type_name->value.as_str->data);
     return ARGON_NULL;
   }
-  if (argv[0]->value.as_number->is_int64 && argv[1]->value.as_number->is_int64) {
+  if (argv[0]->value.as_number->is_int64 &&
+      argv[1]->value.as_number->is_int64) {
     int64_t a = argv[0]->value.as_number->n.i64;
     int64_t b = argv[1]->value.as_number->n.i64;
     if (!b) {
@@ -391,7 +410,9 @@ ArgonObject *ARGON_NUMBER_TYPE___division__(size_t argc, ArgonObject **argv,
 }
 
 ArgonObject *ARGON_NUMBER_TYPE___string__(size_t argc, ArgonObject **argv,
-                                          ArErr *err, RuntimeState *state) {
+                                          ArErr *err, RuntimeState *state,
+                                          ArgonNativeAPI *api) {
+  (void)api;
   (void)state;
   if (argc != 1) {
     *err = create_err(0, 0, 0, "", "Runtime Error",
