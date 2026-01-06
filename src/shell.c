@@ -9,7 +9,7 @@
 #include "./runtime/objects/term/term.h"
 #include "./runtime/runtime.h"
 #include "./translator/translator.h"
-#include "LICENSE_c.h"
+#include "LICENSE.h"
 #include "import.h"
 #include "runtime/objects/literals/literals.h"
 #include "runtime/objects/string/string.h"
@@ -230,7 +230,7 @@ int shell() {
 
   signal(SIGINT, handle_sigint);
 
-  printf("Chloride %s Copyright (C) 2025  William Bell\n"
+  printf("Chloride %s Copyright (C) 2025 William Bell\n"
 "This program comes with ABSOLUTELY NO WARRANTY; for details type `license'.\n"
 "This is free software, and you are welcome to redistribute it under certain conditions; type `license' for details.\n", version_string);
 

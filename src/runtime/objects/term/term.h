@@ -11,6 +11,6 @@
 #include "../../runtime.h"
 
 ArgonObject *term_log(size_t argc, ArgonObject **argv, ArErr *err,
-                      RuntimeState *state);
+                      RuntimeState *state, ArgonNativeAPI *api);
 
 #endif // runtime_term_H
