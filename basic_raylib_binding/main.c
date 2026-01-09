@@ -88,7 +88,7 @@ ArgonObject *Argon_ClearBackground(size_t argc, ArgonObject **argv,
 }
 
 ArgonObject *Argon_DrawText(size_t argc, ArgonObject **argv, ArgonError *err,
-                              ArgonState *state, ArgonNativeAPI *api) {
+                            ArgonState *state, ArgonNativeAPI *api) {
   if (api->fix_to_arg_size(5, argc, err)) {
     return api->ARGON_NULL;
   }
@@ -111,25 +111,24 @@ ArgonObject *Argon_DrawText(size_t argc, ArgonObject **argv, ArgonError *err,
   if (api->is_error(err)) {
     return api->ARGON_NULL;
   }
-  
+
   struct string color = api->argon_to_string(argv[4], err);
   if (api->is_error(err)) {
     return api->ARGON_NULL;
   }
   Color color_ray = *(Color *)color.data;
-  
+
   char *text_c = malloc(text.length + 1);
   text_c[text.length] = '\0';
   memcpy(text_c, text.data, text.length);
 
-  DrawText(text_c, posX,posY,fontSize,color_ray);
+  DrawText(text_c, posX, posY, fontSize, color_ray);
   free(text_c);
   return api->ARGON_NULL;
 }
 
-ArgonObject *Argon_EndDrawing(size_t argc, ArgonObject **argv,
-                                ArgonError *err, ArgonState *state,
-                                ArgonNativeAPI *api) {
+ArgonObject *Argon_EndDrawing(size_t argc, ArgonObject **argv, ArgonError *err,
+                              ArgonState *state, ArgonNativeAPI *api) {
   if (api->fix_to_arg_size(0, argc, err)) {
     return api->ARGON_NULL;
   }
@@ -137,9 +136,8 @@ ArgonObject *Argon_EndDrawing(size_t argc, ArgonObject **argv,
   return api->ARGON_NULL;
 }
 
-ArgonObject *Argon_CloseWindow(size_t argc, ArgonObject **argv,
-                                ArgonError *err, ArgonState *state,
-                                ArgonNativeAPI *api) {
+ArgonObject *Argon_CloseWindow(size_t argc, ArgonObject **argv, ArgonError *err,
+                               ArgonState *state, ArgonNativeAPI *api) {
   if (api->fix_to_arg_size(0, argc, err)) {
     return api->ARGON_NULL;
   }
@@ -169,28 +167,32 @@ void argon_module_init(ArgonState *vm, ArgonNativeAPI *api,
   api->register_ArgonObject(
       reg, "InitWindow",
       api->create_argon_native_function("InitWindow", Argon_InitWindow));
+
   api->register_ArgonObject(
       reg, "SetTargetFPS",
       api->create_argon_native_function("SetTargetFPS", Argon_SetTargetFPS));
+
   api->register_ArgonObject(reg, "WindowShouldClose",
                             api->create_argon_native_function(
                                 "WindowShouldClose", Argon_WindowShouldClose));
-  api->register_ArgonObject(reg, "WindowShouldClose",
-                            api->create_argon_native_function(
-                                "WindowShouldClose", Argon_WindowShouldClose));
-  api->register_ArgonObject(reg, "BeginDrawing",
-                            api->create_argon_native_function(
-                                "BeginDrawing", Argon_BeginDrawing));
+
+  api->register_ArgonObject(
+      reg, "BeginDrawing",
+      api->create_argon_native_function("BeginDrawing", Argon_BeginDrawing));
+
   api->register_ArgonObject(reg, "ClearBackground",
                             api->create_argon_native_function(
                                 "ClearBackground", Argon_ClearBackground));
-  api->register_ArgonObject(reg, "DrawText",
-                            api->create_argon_native_function(
-                                "DrawText", Argon_DrawText));
-  api->register_ArgonObject(reg, "EndDrawing",
-                            api->create_argon_native_function(
-                                "EndDrawing", Argon_EndDrawing));
-  api->register_ArgonObject(reg, "CloseWindow",
-                            api->create_argon_native_function(
-                                "CloseWindow", Argon_CloseWindow));
+
+  api->register_ArgonObject(
+      reg, "DrawText",
+      api->create_argon_native_function("DrawText", Argon_DrawText));
+
+  api->register_ArgonObject(
+      reg, "EndDrawing",
+      api->create_argon_native_function("EndDrawing", Argon_EndDrawing));
+
+  api->register_ArgonObject(
+      reg, "CloseWindow",
+      api->create_argon_native_function("CloseWindow", Argon_CloseWindow));
 }
