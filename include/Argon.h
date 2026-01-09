@@ -14,8 +14,8 @@ extern "C" {
 #include <stddef.h>
 #endif
 
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 #define ARGON_NATIVE_API_VERSION 1
 
@@ -33,9 +33,14 @@ typedef ArgonObject *(*native_fn)(size_t argc, ArgonObject **argv,
                                   ArgonError *err, ArgonState *state,
                                   ArgonNativeAPI *api);
 
-struct number {
+struct rational {
   int64_t n;
   int64_t d;
+};
+
+struct string {
+  char *data;
+  uint64_t length;
 };
 
 struct ArgonNativeAPI {
@@ -46,19 +51,21 @@ struct ArgonNativeAPI {
                                     const char *fmt, ...);
   bool (*is_error)(ArgonError *err);
 
+  // numbers
   ArgonObject *(*i64_to_argon)(int64_t);
   ArgonObject *(*double_to_argon)(double);
-  ArgonObject *(*num_and_den_to_argon)(int64_t n, uint64_t d);
+  ArgonObject *(*rational_to_argon)(struct rational);
+  ArgonObject *(*string_to_argon)(struct string);
 
   int64_t (*argon_to_i64)(ArgonObject *, ArgonError *);
   double (*argon_to_double)(ArgonObject *, ArgonError *);
-  struct number (*argon_to_num_and_den)(ArgonObject *, ArgonError *);
+  struct rational (*argon_to_rational)(ArgonObject *, ArgonError *);
+  struct string (*argon_to_string)(ArgonObject *, ArgonError *);
 
+  // literals
   ArgonObject *ARGON_NULL;
   ArgonObject *ARGON_TRUE;
   ArgonObject *ARGON_FALSE;
-  // void (*argon_register_function)(ArgonObject *, const char *, native_fn,
-  // int);
 };
 
 __attribute__((visibility("default"))) void

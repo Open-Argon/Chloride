@@ -14,6 +14,7 @@
 #include "call/call.h"
 #include "declaration/declaration.h"
 #include "internals/hashmap/hashmap.h"
+#include "native_loader/native_loader.h"
 #include "objects/dictionary/dictionary.h"
 #include "objects/functions/functions.h"
 #include "objects/literals/literals.h"
@@ -22,7 +23,6 @@
 #include "objects/string/string.h"
 #include "objects/term/term.h"
 #include "objects/type/type.h"
-#include "native_loader/native_loader.h"
 #include <fcntl.h>
 #include <gc.h>
 #include <gmp.h>
@@ -50,7 +50,8 @@ ArgonObject *MODULO_FUNCTION;
 ArgonObject *FLOORDIVIDE_FUNCTION;
 
 ArgonObject *BASE_CLASS___getattribute__(size_t argc, ArgonObject **argv,
-                                         ArErr *err, RuntimeState *state, ArgonNativeAPI *api) {
+                                         ArErr *err, RuntimeState *state,
+                                         ArgonNativeAPI *api) {
   (void)state;
   (void)api;
   if (argc != 2) {
@@ -75,6 +76,7 @@ ArgonObject *BASE_CLASS___getattribute__(size_t argc, ArgonObject **argv,
                                    access->value.as_str->length, true, false);
   if (value)
     return value;
+
   ArgonObject *cls__getattr__ = get_builtin_field_for_class(
       get_builtin_field(to_access, __class__), __getattr__, to_access);
   if (cls__getattr__) {
@@ -95,7 +97,8 @@ ArgonObject *BASE_CLASS___getattribute__(size_t argc, ArgonObject **argv,
 }
 
 ArgonObject *ARGON_ADDITION_FUNCTION(size_t argc, ArgonObject **argv,
-                                     ArErr *err, RuntimeState *state, ArgonNativeAPI *api) {
+                                     ArErr *err, RuntimeState *state,
+                                     ArgonNativeAPI *api) {
   (void)api;
   if (argc < 1) {
     *err = create_err(0, 0, 0, "", "Runtime Error",
@@ -105,8 +108,8 @@ ArgonObject *ARGON_ADDITION_FUNCTION(size_t argc, ArgonObject **argv,
   ArgonObject *output = argv[0];
   for (size_t i = 1; i < argc; i++) {
     ArgonObject *object_class = get_builtin_field(output, __class__);
-    ArgonObject *object__add__ = get_builtin_field_for_class(
-        object_class, __add__, output);
+    ArgonObject *object__add__ =
+        get_builtin_field_for_class(object_class, __add__, output);
     if (!object__add__) {
       ArgonObject *cls___name__ = get_builtin_field(object_class, __name__);
       *err = create_err(0, 0, 0, "", "Runtime Error",
@@ -122,7 +125,8 @@ ArgonObject *ARGON_ADDITION_FUNCTION(size_t argc, ArgonObject **argv,
 }
 
 ArgonObject *ARGON_SUBTRACTION_FUNCTION(size_t argc, ArgonObject **argv,
-                                        ArErr *err, RuntimeState *state, ArgonNativeAPI *api) {
+                                        ArErr *err, RuntimeState *state,
+                                        ArgonNativeAPI *api) {
   (void)api;
   if (argc < 1) {
     *err =
@@ -133,8 +137,8 @@ ArgonObject *ARGON_SUBTRACTION_FUNCTION(size_t argc, ArgonObject **argv,
   ArgonObject *output = argv[0];
   for (size_t i = 1; i < argc; i++) {
     ArgonObject *object_class = get_builtin_field(output, __class__);
-    ArgonObject *function__subtract__ = get_builtin_field_for_class(
-        object_class, __subtract__, output);
+    ArgonObject *function__subtract__ =
+        get_builtin_field_for_class(object_class, __subtract__, output);
     if (!function__subtract__) {
       ArgonObject *cls___name__ = get_builtin_field(object_class, __name__);
       *err = create_err(0, 0, 0, "", "Runtime Error",
@@ -150,7 +154,8 @@ ArgonObject *ARGON_SUBTRACTION_FUNCTION(size_t argc, ArgonObject **argv,
 }
 
 ArgonObject *ARGON_MULTIPLY_FUNCTION(size_t argc, ArgonObject **argv,
-                                     ArErr *err, RuntimeState *state, ArgonNativeAPI *api) {
+                                     ArErr *err, RuntimeState *state,
+                                     ArgonNativeAPI *api) {
   (void)api;
   if (argc < 1) {
     *err =
@@ -161,8 +166,8 @@ ArgonObject *ARGON_MULTIPLY_FUNCTION(size_t argc, ArgonObject **argv,
   ArgonObject *output = argv[0];
   for (size_t i = 1; i < argc; i++) {
     ArgonObject *object_class = get_builtin_field(output, __class__);
-    ArgonObject *function__multiply__ = get_builtin_field_for_class(
-        object_class, __multiply__, output);
+    ArgonObject *function__multiply__ =
+        get_builtin_field_for_class(object_class, __multiply__, output);
     if (!function__multiply__) {
       ArgonObject *cls___name__ = get_builtin_field(object_class, __name__);
       *err = create_err(0, 0, 0, "", "Runtime Error",
@@ -188,8 +193,8 @@ ArgonObject *ARGON_DIVIDE_FUNCTION(size_t argc, ArgonObject **argv, ArErr *err,
   ArgonObject *output = argv[0];
   for (size_t i = 1; i < argc; i++) {
     ArgonObject *object_class = get_builtin_field(output, __class__);
-    ArgonObject *function___divide__ = get_builtin_field_for_class(
-        object_class, __divide__, output);
+    ArgonObject *function___divide__ =
+        get_builtin_field_for_class(object_class, __divide__, output);
     if (!function___divide__) {
       ArgonObject *cls___name__ = get_builtin_field(object_class, __name__);
       *err = create_err(0, 0, 0, "", "Runtime Error",
@@ -205,7 +210,8 @@ ArgonObject *ARGON_DIVIDE_FUNCTION(size_t argc, ArgonObject **argv, ArErr *err,
 }
 
 ArgonObject *ARGON_TYPE_TYPE___call__(size_t argc, ArgonObject **argv,
-                                      ArErr *err, RuntimeState *state, ArgonNativeAPI *api) {
+                                      ArErr *err, RuntimeState *state,
+                                      ArgonNativeAPI *api) {
   (void)api;
   (void)state;
   if (argc < 1) {
@@ -368,7 +374,8 @@ ArgonObject *BASE_CLASS___boolean__(size_t argc, ArgonObject **argv, ArErr *err,
 }
 
 ArgonObject *ARGON_STRING_TYPE___init__(size_t argc, ArgonObject **argv,
-                                        ArErr *err, RuntimeState *state, ArgonNativeAPI *api) {
+                                        ArErr *err, RuntimeState *state,
+                                        ArgonNativeAPI *api) {
   (void)api;
   if (argc != 2) {
     *err = create_err(0, 0, 0, "", "Runtime Error",
@@ -396,7 +403,8 @@ ArgonObject *ARGON_STRING_TYPE___init__(size_t argc, ArgonObject **argv,
 }
 
 ArgonObject *ARGON_BOOL_TYPE___new__(size_t argc, ArgonObject **argv,
-                                     ArErr *err, RuntimeState *state, ArgonNativeAPI *api) {
+                                     ArErr *err, RuntimeState *state,
+                                     ArgonNativeAPI *api) {
   (void)api;
   if (argc != 2) {
     *err = create_err(0, 0, 0, "", "Runtime Error",
@@ -425,7 +433,8 @@ ArgonObject *ARGON_BOOL_TYPE___new__(size_t argc, ArgonObject **argv,
 }
 
 ArgonObject *ARGON_STRING_TYPE___add__(size_t argc, ArgonObject **argv,
-                                       ArErr *err, RuntimeState *state, ArgonNativeAPI *api) {
+                                       ArErr *err, RuntimeState *state,
+                                       ArgonNativeAPI *api) {
   (void)api;
   (void)state;
   if (argc != 2) {
@@ -452,7 +461,8 @@ ArgonObject *ARGON_STRING_TYPE___add__(size_t argc, ArgonObject **argv,
 }
 
 ArgonObject *ARGON_BOOL_TYPE___string__(size_t argc, ArgonObject **argv,
-                                        ArErr *err, RuntimeState *state, ArgonNativeAPI *api) {
+                                        ArErr *err, RuntimeState *state,
+                                        ArgonNativeAPI *api) {
   (void)api;
   (void)state;
   if (argc != 1) {
@@ -465,7 +475,8 @@ ArgonObject *ARGON_BOOL_TYPE___string__(size_t argc, ArgonObject **argv,
 }
 
 ArgonObject *ARGON_BOOL_TYPE___number__(size_t argc, ArgonObject **argv,
-                                        ArErr *err, RuntimeState *state, ArgonNativeAPI *api) {
+                                        ArErr *err, RuntimeState *state,
+                                        ArgonNativeAPI *api) {
   (void)api;
   (void)state;
   if (argc != 1) {
@@ -477,7 +488,8 @@ ArgonObject *ARGON_BOOL_TYPE___number__(size_t argc, ArgonObject **argv,
 }
 
 ArgonObject *ARGON_STRING_TYPE___string__(size_t argc, ArgonObject **argv,
-                                          ArErr *err, RuntimeState *state, ArgonNativeAPI *api) {
+                                          ArErr *err, RuntimeState *state,
+                                          ArgonNativeAPI *api) {
   (void)api;
   (void)state;
   if (argc != 1) {
@@ -487,7 +499,8 @@ ArgonObject *ARGON_STRING_TYPE___string__(size_t argc, ArgonObject **argv,
   return argv[0];
 }
 ArgonObject *ARGON_STRING_TYPE___repr__(size_t argc, ArgonObject **argv,
-                                        ArErr *err, RuntimeState *state, ArgonNativeAPI *api) {
+                                        ArErr *err, RuntimeState *state,
+                                        ArgonNativeAPI *api) {
   (void)api;
   (void)state;
   if (argc != 1) {
@@ -501,7 +514,8 @@ ArgonObject *ARGON_STRING_TYPE___repr__(size_t argc, ArgonObject **argv,
   return result;
 }
 ArgonObject *ARGON_STRING_TYPE___hash__(size_t argc, ArgonObject **argv,
-                                        ArErr *err, RuntimeState *state, ArgonNativeAPI *api) {
+                                        ArErr *err, RuntimeState *state,
+                                        ArgonNativeAPI *api) {
   (void)api;
   (void)state;
   if (argc != 1) {
@@ -522,7 +536,8 @@ ArgonObject *ARGON_STRING_TYPE___hash__(size_t argc, ArgonObject **argv,
 }
 
 ArgonObject *ARGON_STRING_TYPE___number__(size_t argc, ArgonObject **argv,
-                                          ArErr *err, RuntimeState *state, ArgonNativeAPI *api) {
+                                          ArErr *err, RuntimeState *state,
+                                          ArgonNativeAPI *api) {
   (void)api;
   (void)state;
   if (argc != 1) {
@@ -547,7 +562,8 @@ ArgonObject *ARGON_STRING_TYPE___number__(size_t argc, ArgonObject **argv,
 }
 
 ArgonObject *ARGON_STRING_TYPE___boolean__(size_t argc, ArgonObject **argv,
-                                           ArErr *err, RuntimeState *state, ArgonNativeAPI *api) {
+                                           ArErr *err, RuntimeState *state,
+                                           ArgonNativeAPI *api) {
   (void)api;
   (void)state;
   if (argc != 1) {
@@ -558,7 +574,8 @@ ArgonObject *ARGON_STRING_TYPE___boolean__(size_t argc, ArgonObject **argv,
 }
 
 ArgonObject *ARGON_BOOL_TYPE___boolean__(size_t argc, ArgonObject **argv,
-                                         ArErr *err, RuntimeState *state, ArgonNativeAPI *api) {
+                                         ArErr *err, RuntimeState *state,
+                                         ArgonNativeAPI *api) {
   (void)api;
   (void)state;
   if (argc != 1) {
@@ -569,7 +586,8 @@ ArgonObject *ARGON_BOOL_TYPE___boolean__(size_t argc, ArgonObject **argv,
 }
 
 ArgonObject *ARGON_NULL_TYPE___boolean__(size_t argc, ArgonObject **argv,
-                                         ArErr *err, RuntimeState *state, ArgonNativeAPI *api) {
+                                         ArErr *err, RuntimeState *state,
+                                         ArgonNativeAPI *api) {
   (void)api;
   (void)argv;
   (void)state;
@@ -580,7 +598,8 @@ ArgonObject *ARGON_NULL_TYPE___boolean__(size_t argc, ArgonObject **argv,
   return ARGON_FALSE;
 }
 ArgonObject *ARGON_NULL_TYPE___number__(size_t argc, ArgonObject **argv,
-                                        ArErr *err, RuntimeState *state, ArgonNativeAPI *api) {
+                                        ArErr *err, RuntimeState *state,
+                                        ArgonNativeAPI *api) {
   (void)api;
   (void)argv;
   (void)state;
@@ -591,7 +610,8 @@ ArgonObject *ARGON_NULL_TYPE___number__(size_t argc, ArgonObject **argv,
   return new_number_object_from_int64(0);
 }
 ArgonObject *ARGON_NULL_TYPE___string__(size_t argc, ArgonObject **argv,
-                                        ArErr *err, RuntimeState *state, ArgonNativeAPI *api) {
+                                        ArErr *err, RuntimeState *state,
+                                        ArgonNativeAPI *api) {
   (void)api;
   (void)argv;
   (void)state;
@@ -759,8 +779,9 @@ void bootstrap_globals() {
   add_to_hashmap(argon_term, "log",
                  create_argon_native_function("log", term_log));
   add_to_scope(Global_Scope, "term", create_dictionary(argon_term));
-  add_to_scope(Global_Scope, "load_native_code",
-                 create_argon_native_function("load_native_code", ARGON_LOAD_NATIVE_CODE));
+  add_to_scope(
+      Global_Scope, "load_native_code",
+      create_argon_native_function("load_native_code", ARGON_LOAD_NATIVE_CODE));
 
   struct hashmap_GC *environment_variables = createHashmap_GC();
 #if defined(_WIN32)
@@ -1297,7 +1318,8 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       }
 
       ArgonObject *args[] = {valueA, valueB};
-      state->registers[registerC] = ARGON_DIVIDE_FUNCTION(2, args, err, state, &native_api);
+      state->registers[registerC] =
+          ARGON_DIVIDE_FUNCTION(2, args, err, state, &native_api);
       continue;
     }
     DO_LOAD_SETATTR_METHOD: {
