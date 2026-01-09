@@ -16,7 +16,10 @@ let y = 0
 
 let yd = 1
 
+let frame = 0
+
 while (!raylib.WindowShouldClose()) do
+  term.log("frame:",frame, {x,y})
   raylib.BeginDrawing()
   
   raylib.ClearBackground(raylib.WHITE)
@@ -33,5 +36,8 @@ while (!raylib.WindowShouldClose()) do
 
   if (!(y - height+20) || !(y)) yd = 0-yd
 
+  frame=frame+1
 
 raylib.CloseWindow()
+
+term.log("bye :)")
