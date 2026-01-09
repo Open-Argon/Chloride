@@ -29,8 +29,6 @@ CFLAGS  = $(ARCHFLAGS) -Wall -Wextra -Wno-unused-function \
 
 LDFLAGS = -lgc -lgmp -lm
 
-.PHONY: full-debug
-
 # ------------------------------------------------------------
 # Default target
 # ------------------------------------------------------------
