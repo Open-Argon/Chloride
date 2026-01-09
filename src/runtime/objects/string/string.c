@@ -114,11 +114,7 @@ char *argon_object_to_null_terminated_string(ArgonObject *object, ArErr *err,
   return string;
 }
 
-char *argon_string_to_c_string_malloc(ArgonObject *object, ArErr *err,
-                                      RuntimeState *state) {
-  (void)state;
-  (void)err;
-
+char *argon_string_to_c_string_malloc(ArgonObject *object) {
   if (object->type != TYPE_STRING)
     return NULL;
 

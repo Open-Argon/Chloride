@@ -1,0 +1,11 @@
+let code = load_native_code("native_code_example/test.so")
+
+term.log(code)
+
+code.hello_world()
+
+term.log(code.int_add(100,200))
+term.log(code.double_add(0.1,0.2))
+term.log(code.rational_add(1/2,1/3))
+
+term.log(code.yooo("Chloride"))

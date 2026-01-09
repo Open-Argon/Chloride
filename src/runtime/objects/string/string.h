@@ -26,6 +26,5 @@ ArgonObject *new_string_object(char *data, size_t length, uint64_t prehash,
 
 ArgonObject *new_string_object_null_terminated(char *data);
 
-char *argon_string_to_c_string_malloc(ArgonObject *object, ArErr *err,
-                                             RuntimeState *state);
+char *argon_string_to_c_string_malloc(ArgonObject *object);
 #endif // STRING_OBJ_H

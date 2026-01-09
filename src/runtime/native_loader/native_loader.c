@@ -25,7 +25,7 @@ ArgonObject *ARGON_LOAD_NATIVE_CODE(size_t argc, ArgonObject **argv, ArErr *err,
   }
 
   ArgonObject *path = argv[0];
-  char *path_c = argon_string_to_c_string_malloc(path, err, state);
+  char *path_c = argon_string_to_c_string_malloc(path);
 
   void *handle = dlopen(path_c, RTLD_NOW | RTLD_LOCAL);
 

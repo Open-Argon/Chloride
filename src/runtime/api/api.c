@@ -7,10 +7,12 @@
 #include "../objects/functions/functions.h"
 #include "../objects/literals/literals.h"
 #include "../objects/number/number.h"
+#include "../objects/string/string.h"
 #include "../runtime.h"
 #include <gmp.h>
 #include <math.h>
 #include <stdarg.h>
+#include <string.h>
 
 ArgonObject *throw_argon_error(ArErr *err, const char *type, const char *fmt,
                                ...) {
@@ -32,14 +34,14 @@ int64_t argon_to_i64(ArgonObject *obj, ArErr *err) {
   return obj->value.as_number->n.i64;
 }
 
-struct number argon_to_num_and_den(ArgonObject *obj, ArErr *err) {
+struct rational argon_to_num_and_den(ArgonObject *obj, ArErr *err) {
   if (obj->type != TYPE_NUMBER) {
     throw_argon_error(err, "Runtime Error", "expected number");
-    return (struct number){0, 0};
+    return (struct rational){0, 0};
   }
 
   if (obj->value.as_number->is_int64) {
-    return (struct number){obj->value.as_number->n.i64, 1};
+    return (struct rational){obj->value.as_number->n.i64, 1};
   }
 
   mpq_t *q = obj->value.as_number->n.mpq;
@@ -49,18 +51,18 @@ struct number argon_to_num_and_den(ArgonObject *obj, ArErr *err) {
 
   if (!mpz_fits_slong_p(num)) {
     throw_argon_error(err, "Runtime Error", "numerator does not fit int64");
-    return (struct number){0, 0};
+    return (struct rational){0, 0};
   }
 
   if (!mpz_fits_ulong_p(den)) {
     throw_argon_error(err, "Runtime Error", "denominator does not fit uint64");
-    return (struct number){0, 0};
+    return (struct rational){0, 0};
   }
 
   int64_t n = (int64_t)mpz_get_si(num);
   uint64_t d = (uint64_t)mpz_get_ui(den);
 
-  return (struct number){n, d};
+  return (struct rational){n, d};
 }
 
 double argon_to_double(ArgonObject *obj, ArErr *err) {
@@ -77,7 +79,6 @@ double argon_to_double(ArgonObject *obj, ArErr *err) {
 
   double d = mpq_get_d(*q);
 
-  /* Optional but strongly recommended */
   if (!isfinite(d)) {
     throw_argon_error(err, "Runtime Error",
                       "number cannot be represented as double");
@@ -91,6 +92,23 @@ bool is_error(ArErr*err) {
   return err->exists;
 }
 
+ArgonObject* rational_to_argon(struct rational r){
+  return new_number_object_from_num_and_den(r.n, r.d);
+}
+
+ArgonObject* string_to_argon(struct string str) {
+  return new_string_object(str.data, str.length, 0, 0);
+}
+
+struct string argon_to_string(ArgonObject*obj, ArErr * err) {
+  if (obj->type != TYPE_STRING) {
+    throw_argon_error(err, "Runtime Error", "expected string");
+    return (struct string){NULL, 0};
+  }
+  
+  return (struct string){obj->value.as_str->data, obj->value.as_str->length};
+}
+
 ArgonNativeAPI native_api = {
     .register_ArgonObject = add_to_hashmap,
     .create_argon_native_function = create_argon_native_function,
@@ -99,9 +117,11 @@ ArgonNativeAPI native_api = {
 
     .i64_to_argon = new_number_object_from_int64,
     .double_to_argon = new_number_object_from_double,
-    .num_and_den_to_argon = new_number_object_from_num_and_den,
+    .rational_to_argon = rational_to_argon,
+    .string_to_argon=string_to_argon,
 
     .argon_to_i64 = argon_to_i64,
     .argon_to_double = argon_to_double,
-    .argon_to_num_and_den = argon_to_num_and_den,
+    .argon_to_rational = argon_to_num_and_den,
+    .argon_to_string=argon_to_string,
 };

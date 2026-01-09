@@ -56,26 +56,39 @@ typedef struct hashmap_GC hashmap_GC;
 typedef ArgonObject *(*native_fn)(size_t argc, ArgonObject **argv, ArErr *err,
                                   RuntimeState *state, ArgonNativeAPI *api);
 
-struct ArgonNativeAPI {
-  void (*register_ArgonObject)(hashmap_GC *reg, char *name, ArgonObject *obj);
-  ArgonObject *(*create_argon_native_function)(char *name, native_fn);
-  ArgonObject *(*throw_argon_error)( ArErr*err,const char *type, const char *fmt, ...);
-  bool(*is_error)( ArErr*err);
+struct rational {
+  int64_t n;
+  int64_t d;
+};
 
+struct string {
+  char * data;
+  uint64_t length;
+};
+
+struct ArgonNativeAPI {
+  void (*register_ArgonObject)(hashmap_GC *reg, char *name,
+                               ArgonObject *obj);
+  ArgonObject *(*create_argon_native_function)(char *name, native_fn);
+  ArgonObject *(*throw_argon_error)(ArErr *err, const char *type,
+                                    const char *fmt, ...);
+  bool (*is_error)(ArErr *err);
+
+  // numbers
   ArgonObject *(*i64_to_argon)(int64_t);
   ArgonObject *(*double_to_argon)(double);
-  ArgonObject *(*num_and_den_to_argon)(int64_t n, uint64_t d);
+  ArgonObject *(*rational_to_argon)(struct rational);
+  ArgonObject *(*string_to_argon)(struct string);
 
-  int64_t (*argon_to_i64)(ArgonObject *, ArErr*);
-  double (*argon_to_double)(ArgonObject *, ArErr*);
-  struct number (*argon_to_num_and_den)(ArgonObject *, ArErr*);
+  int64_t (*argon_to_i64)(ArgonObject *, ArErr *);
+  double (*argon_to_double)(ArgonObject *, ArErr *);
+  struct rational (*argon_to_rational)(ArgonObject *, ArErr *);
+  struct string (*argon_to_string)(ArgonObject *, ArErr *);
 
+  // literals
   ArgonObject *ARGON_NULL;
   ArgonObject *ARGON_TRUE;
   ArgonObject *ARGON_FALSE;
-  // int64_t (*argon_as_i64)(ArgonObject *);
-  // void (*argon_register_function)(ArgonObject *, const char *, native_fn,
-  // int);
 };
 
 typedef enum ArgonType {
