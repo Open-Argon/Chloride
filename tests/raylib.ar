@@ -2,18 +2,36 @@ let raylib = load_native_code("basic_raylib_binding/raylib.so")
 
 term.log(raylib)
 
-raylib.InitWindow(800, 450, "Hello Raylib")
+let width = 800, height = 450
+
+raylib.InitWindow(width, height, "Hello Raylib")
 
 raylib.SetTargetFPS(60)
+
+let x = 0
+
+let xd = 1
+
+let y = 0
+
+let yd = 1
 
 while (!raylib.WindowShouldClose()) do
   raylib.BeginDrawing()
   
   raylib.ClearBackground(raylib.WHITE)
   
-  raylib.DrawText("Hello world from Argon", 190, 200, 20, raylib.BLACK)
+  raylib.DrawText("Hello world from Argon", x, y, 20, raylib.BLACK)
 
   raylib.EndDrawing()
+
+  x=x+xd
+
+  y=y+yd
+
+  if (!(x - width+235) || !(x)) xd = 0-xd
+
+  if (!(y - height+20) || !(y)) yd = 0-yd
 
 
 raylib.CloseWindow()
