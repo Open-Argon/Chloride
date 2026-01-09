@@ -1,0 +1,19 @@
+let raylib = load_native_code("basic_raylib_binding/raylib.so")
+
+term.log(raylib)
+
+raylib.InitWindow(800, 450, "Hello Raylib")
+
+raylib.SetTargetFPS(60)
+
+while (!raylib.WindowShouldClose()) do
+  raylib.BeginDrawing()
+  
+  raylib.ClearBackground(raylib.WHITE)
+  
+  raylib.DrawText("Hello world from Argon", 190, 200, 20, raylib.BLACK)
+
+  raylib.EndDrawing()
+
+
+raylib.CloseWindow()

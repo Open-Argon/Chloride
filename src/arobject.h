@@ -11,6 +11,7 @@
 #include "runtime/internals/dynamic_array_armem/darray_armem.h"
 #include "runtime/internals/hashmap/hashmap.h"
 #include <gmp.h>
+#include <stddef.h>
 
 typedef enum {
   __base__,
@@ -73,6 +74,7 @@ struct ArgonNativeAPI {
   ArgonObject *(*throw_argon_error)(ArErr *err, const char *type,
                                     const char *fmt, ...);
   bool (*is_error)(ArErr *err);
+  bool (*fix_to_arg_size)(size_t limit, size_t argc, ArErr *err);
 
   // numbers
   ArgonObject *(*i64_to_argon)(int64_t);

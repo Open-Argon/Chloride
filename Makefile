@@ -29,6 +29,8 @@ CFLAGS  = $(ARCHFLAGS) -Wall -Wextra -Wno-unused-function \
 
 LDFLAGS = -lgc -lgmp -lm
 
+.PHONY: full-debug
+
 # ------------------------------------------------------------
 # Default target
 # ------------------------------------------------------------
@@ -52,7 +54,7 @@ $(BUILD_DIR)/%.o: %.c
 # ------------------------------------------------------------
 $(BINARY): $(LEXER_C) $(LEXER_H) $(OBJFILES)
 	mkdir -p bin
-	gcc -O3 -o $(BINARY) $(OBJFILES) $(LDFLAGS) -s
+	gcc -O3 -o $(BINARY) $(OBJFILES) $(LDFLAGS) -s $(CFLAGS)
 
 # ------------------------------------------------------------
 # Variants
