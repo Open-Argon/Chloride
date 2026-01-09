@@ -76,14 +76,32 @@ ArErr create_err(int64_t line, int64_t column, int length, char *path,
   err.column = column;
   err.length = length;
 
-  // Copy error type safely
   snprintf(err.type, sizeof(err.type), "%s", (char *)type);
 
-  // Format error message
   va_list args;
   va_start(args, fmt);
   vsnprintf(err.message, sizeof(err.message), fmt, args);
   va_end(args);
+
+  return err;
+}
+
+ArErr vcreate_err(int64_t line, int64_t column, int length, char *path,
+                  const char *type, const char *fmt, va_list args) {
+  ArErr err;
+  err.exists = true;
+
+  if (path)
+    strcpy(err.path, path);
+  else
+    err.path[0] = '\0';
+
+  err.line = line;
+  err.column = column;
+  err.length = length;
+
+  snprintf(err.type, sizeof(err.type), "%s", type);
+  vsnprintf(err.message, sizeof(err.message), fmt, args);
 
   return err;
 }

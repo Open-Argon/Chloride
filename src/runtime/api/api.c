@@ -13,6 +13,7 @@
 #include <math.h>
 #include <stdarg.h>
 #include <string.h>
+#include <inttypes.h>
 
 ArgonObject *throw_argon_error(ArErr *err, const char *type, const char *fmt,
                                ...) {
@@ -21,6 +22,14 @@ ArgonObject *throw_argon_error(ArErr *err, const char *type, const char *fmt,
   *err = create_err(0, 0, 0, "", type, fmt, args);
   va_end(args);
   return ARGON_NULL;
+}
+
+bool fix_to_arg_size(size_t fix, size_t argc, ArErr *err) {
+  if (fix!=argc) {
+    throw_argon_error(err, "Runtime Error", "expects %" PRIu64" argument(s), got %" PRIu64, fix, argc);
+    return true;
+  }
+  return false;
 }
 
 int64_t argon_to_i64(ArgonObject *obj, ArErr *err) {
@@ -114,6 +123,7 @@ ArgonNativeAPI native_api = {
     .create_argon_native_function = create_argon_native_function,
     .throw_argon_error = throw_argon_error,
     .is_error=is_error,
+    .fix_to_arg_size=fix_to_arg_size,
 
     .i64_to_argon = new_number_object_from_int64,
     .double_to_argon = new_number_object_from_double,

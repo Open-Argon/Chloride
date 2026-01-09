@@ -50,6 +50,7 @@ struct ArgonNativeAPI {
   ArgonObject *(*throw_argon_error)(ArgonError *err, const char *type,
                                     const char *fmt, ...);
   bool (*is_error)(ArgonError *err);
+  bool (*fix_to_arg_size)(size_t limit, size_t argc, ArgonError *err);
 
   // numbers
   ArgonObject *(*i64_to_argon)(int64_t);
