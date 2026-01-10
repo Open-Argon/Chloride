@@ -9,6 +9,7 @@
 #include "../string/string.h"
 #include <gmp.h>
 #include <inttypes.h>
+#include <mpfr.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
@@ -280,6 +281,139 @@ ArgonObject *ARGON_NUMBER_TYPE___multiply__(size_t argc, ArgonObject **argv,
     ArgonObject *result = new_number_object(a_GMP);
     mpq_clear(a_GMP);
     mpq_clear(b_GMP);
+    return result;
+  }
+}
+
+ArgonObject *ARGON_NUMBER_TYPE___exponent__(size_t argc, ArgonObject **argv,
+                                            ArErr *err, RuntimeState *state,
+                                            ArgonNativeAPI *api) {
+  (void)api;
+  (void)state;
+  if (argc != 2) {
+    *err = create_err(0, 0, 0, "", "Runtime Error",
+                      "__exponent__ expects 2 arguments, got %" PRIu64, argc);
+    return ARGON_NULL;
+  }
+  if (argv[1]->type != TYPE_NUMBER) {
+    ArgonObject *type_name = get_builtin_field_for_class(
+        get_builtin_field(argv[1], __class__), __name__, argv[1]);
+    *err = create_err(
+        0, 0, 0, "", "Runtime Error",
+        "__exponent__ cannot perform multiplication between number and %.*s",
+        type_name->value.as_str->length, type_name->value.as_str->data);
+    return ARGON_NULL;
+  }
+
+  /* ---------- fast int64 ^ int64 path ---------- */
+  if (argv[0]->value.as_number->is_int64 &&
+      argv[1]->value.as_number->is_int64) {
+
+    int64_t base = argv[0]->value.as_number->n.i64;
+    int64_t exp = argv[1]->value.as_number->n.i64;
+
+    /* negative exponent → rational */
+    if (exp < 0) {
+      mpq_t a, b, r;
+      mpq_init(a);
+      mpq_init(b);
+      mpq_init(r);
+
+      mpq_set_si(a, base, 1);
+      mpq_set_si(b, exp, 1);
+
+      mpq_pow_q(r, a, b);
+
+      ArgonObject *result = new_number_object(r);
+
+      mpq_clear(a);
+      mpq_clear(b);
+      mpq_clear(r);
+      return result;
+    }
+
+    /* exp >= 0 → try int64 exponentiation */
+    bool overflow = false;
+    int64_t result = 1;
+    int64_t a = base;
+    int64_t e = exp;
+
+    while (e > 0) {
+      if (e & 1) {
+        if (__builtin_mul_overflow(result, a, &result)) {
+          overflow = true;
+          break;
+        }
+      }
+      e >>= 1;
+      if (e && __builtin_mul_overflow(a, a, &a)) {
+        overflow = true;
+        break;
+      }
+    }
+
+    if (!overflow) {
+      return new_number_object_from_int64(result);
+    }
+
+    /* overflow → fall through to GMP */
+  }
+
+  /* ---------- GMP / rational path ---------- */
+  {
+    mpq_t a_GMP, b_GMP, r;
+    mpq_init(a_GMP);
+    mpq_init(b_GMP);
+    mpq_init(r);
+
+    /* load base */
+    if (argv[0]->value.as_number->is_int64)
+      mpq_set_si(a_GMP, argv[0]->value.as_number->n.i64, 1);
+    else
+      mpq_set(a_GMP, *argv[0]->value.as_number->n.mpq);
+
+    /* load exponent */
+    if (argv[1]->value.as_number->is_int64)
+      mpq_set_si(b_GMP, argv[1]->value.as_number->n.i64, 1);
+    else
+      mpq_set(b_GMP, *argv[1]->value.as_number->n.mpq);
+
+    /* ---------- REAL-NUMBER DOMAIN CHECK ---------- */
+
+    /* 0^0 or 0^negative */
+    if (mpq_sgn(a_GMP) == 0 && mpq_sgn(b_GMP) <= 0) {
+      *err =
+          create_err(state->source_location.line, state->source_location.column,
+                     state->source_location.length, state->path, "Math Error",
+                     "0 cannot be raised to zero or a negative power");
+
+      mpq_clear(a_GMP);
+      mpq_clear(b_GMP);
+      mpq_clear(r);
+      return ARGON_NULL;
+    }
+
+    /* negative base with non-integer exponent → complex */
+    if (mpq_sgn(a_GMP) < 0 && mpz_cmp_ui(mpq_denref(b_GMP), 1) != 0) {
+      *err = create_err(
+          state->source_location.line, state->source_location.column,
+          state->source_location.length, state->path, "Math Error",
+          "Negative base with fractional exponent is not a real number");
+
+      mpq_clear(a_GMP);
+      mpq_clear(b_GMP);
+      mpq_clear(r);
+      return ARGON_NULL;
+    }
+
+    /* ---------- SAFE TO COMPUTE ---------- */
+
+    mpq_pow_q(r, a_GMP, b_GMP);
+    ArgonObject *result = new_number_object(r);
+
+    mpq_clear(a_GMP);
+    mpq_clear(b_GMP);
+    mpq_clear(r);
     return result;
   }
 }
@@ -614,6 +748,9 @@ void create_ARGON_NUMBER_TYPE() {
   add_builtin_field(ARGON_NUMBER_TYPE, __multiply__,
                     create_argon_native_function(
                         "__multiply__", ARGON_NUMBER_TYPE___multiply__));
+  add_builtin_field(ARGON_NUMBER_TYPE, __exponent__,
+                    create_argon_native_function(
+                        "__exponent__", ARGON_NUMBER_TYPE___exponent__));
   add_builtin_field(ARGON_NUMBER_TYPE, __divide__,
                     create_argon_native_function(
                         "__division__", ARGON_NUMBER_TYPE___division__));
@@ -690,6 +827,82 @@ bool double_to_int64(double x, int64_t *out) {
     return true;
   }
   return false;
+}
+
+static void mpq_pow_z(mpq_t rop, const mpq_t base, const mpz_t exp) {
+  mpq_t result, tmp;
+  mpz_t e;
+
+  mpq_init(result);
+  mpq_init(tmp);
+  mpz_init_set(e, exp);
+
+  mpq_set_ui(result, 1, 1); // result = 1
+  mpq_set(tmp, base);
+
+  int negative = mpz_sgn(e) < 0;
+  if (negative) {
+    mpz_neg(e, e);
+  }
+
+  while (mpz_cmp_ui(e, 0) > 0) {
+    if (mpz_odd_p(e)) {
+      mpq_mul(result, result, tmp);
+    }
+    mpq_mul(tmp, tmp, tmp);
+    mpz_fdiv_q_2exp(e, e, 1);
+  }
+
+  if (negative) {
+    mpq_inv(result, result);
+  }
+
+  mpq_set(rop, result);
+
+  mpq_clear(result);
+  mpq_clear(tmp);
+  mpz_clear(e);
+}
+
+void mpq_pow_q(mpq_t rop, const mpq_t e, const mpq_t n) {
+  // Case 1: integer exponent → exact
+  if (mpz_cmp_ui(mpq_denref(n), 1) == 0) {
+    mpq_pow_z(rop, e, mpq_numref(n));
+    return;
+  }
+
+  // n = p / q
+  mpz_t p, q;
+  mpz_init_set(p, mpq_numref(n));
+  mpz_init_set(q, mpq_denref(n));
+
+  // Precision policy
+  mpfr_prec_t prec = 256;
+  prec += mpz_sizeinbase(mpq_numref(e), 2);
+  prec += mpz_sizeinbase(mpq_denref(e), 2);
+  prec += mpz_sizeinbase(p, 2);
+
+  mpfr_t fe, root;
+  mpfr_init2(fe, prec);
+  mpfr_init2(root, prec);
+
+  // fe = e
+  mpfr_set_q(fe, e, MPFR_RNDN);
+
+  // root = e^(1/q)
+  unsigned long q_ui = mpz_get_ui(q);
+  mpfr_rootn_ui(root, fe, q_ui, MPFR_RNDN);
+
+  // root = root^p
+  mpfr_pow_z(root, root, p, MPFR_RNDN);
+
+  // Convert to rational approximation
+  mpfr_get_q(rop, root);
+
+  mpfr_clear(fe);
+  mpfr_clear(root);
+  mpz_clear(p);
+  mpz_clear(q);
 }
 
 ArgonObject *new_number_object(mpq_t number) {

@@ -24,4 +24,6 @@ ArgonObject *new_number_object_from_num_and_den(int64_t n, uint64_t d);
 
 ArgonObject *new_number_object_from_int64(int64_t i64);
 
+void mpq_pow_q(mpq_t rop, const mpq_t e, const mpq_t n);
+
 #endif // RUNTIME_NUMBER_H

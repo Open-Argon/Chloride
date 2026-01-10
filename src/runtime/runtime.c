@@ -44,6 +44,7 @@ Stack *Global_Scope = NULL;
 ArgonObject *ADDITION_FUNCTION;
 ArgonObject *SUBTRACTION_FUNCTION;
 ArgonObject *MULTIPLY_FUNCTION;
+ArgonObject *EXPONENT_FUNCTION;
 ArgonObject *DIVIDE_FUNCTION;
 ArgonObject *POWER_FUNCTION;
 ArgonObject *MODULO_FUNCTION;
@@ -154,6 +155,35 @@ ArgonObject *ARGON_SUBTRACTION_FUNCTION(size_t argc, ArgonObject **argv,
 }
 
 ArgonObject *ARGON_MULTIPLY_FUNCTION(size_t argc, ArgonObject **argv,
+                                     ArErr *err, RuntimeState *state,
+                                     ArgonNativeAPI *api) {
+  (void)api;
+  if (argc < 1) {
+    *err =
+        create_err(0, 0, 0, "", "Runtime Error",
+                   "multiply expects at least 1 argument, got %" PRIu64, argc);
+    return ARGON_NULL;
+  }
+  ArgonObject *output = argv[0];
+  for (size_t i = 1; i < argc; i++) {
+    ArgonObject *object_class = get_builtin_field(output, __class__);
+    ArgonObject *function__multiply__ =
+        get_builtin_field_for_class(object_class, __multiply__, output);
+    if (!function__multiply__) {
+      ArgonObject *cls___name__ = get_builtin_field(object_class, __name__);
+      *err = create_err(0, 0, 0, "", "Runtime Error",
+                        "Object of type '%.*s' is missing __multiply__ method",
+                        (int)cls___name__->value.as_str->length,
+                        cls___name__->value.as_str->data);
+      return ARGON_NULL;
+    }
+    output = argon_call(function__multiply__, 1, (ArgonObject *[]){argv[i]},
+                        err, state);
+  }
+  return output;
+}
+
+ArgonObject *ARGON_EXPONENT_FUNCTION(size_t argc, ArgonObject **argv,
                                      ArErr *err, RuntimeState *state,
                                      ArgonNativeAPI *api) {
   (void)api;
@@ -738,6 +768,8 @@ void bootstrap_types() {
       create_argon_native_function("subtract", ARGON_SUBTRACTION_FUNCTION);
   MULTIPLY_FUNCTION =
       create_argon_native_function("multiply", ARGON_MULTIPLY_FUNCTION);
+  EXPONENT_FUNCTION =
+      create_argon_native_function("multiply", ARGON_EXPONENT_FUNCTION);
   DIVIDE_FUNCTION =
       create_argon_native_function("divide", ARGON_DIVIDE_FUNCTION);
   add_builtin_field(BASE_CLASS, __getattribute__,
@@ -772,6 +804,7 @@ void bootstrap_globals() {
   add_to_scope(Global_Scope, "add", ADDITION_FUNCTION);
   add_to_scope(Global_Scope, "subtract", SUBTRACTION_FUNCTION);
   add_to_scope(Global_Scope, "multiply", MULTIPLY_FUNCTION);
+  add_to_scope(Global_Scope, "exponent", EXPONENT_FUNCTION);
   add_to_scope(Global_Scope, "divide", DIVIDE_FUNCTION);
   add_to_scope(Global_Scope, "dictionary", ARGON_DICTIONARY_TYPE);
 
@@ -946,6 +979,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       [OP_SUBTRACTION] = &&DO_SUBTRACTION,
       [OP_LOAD_GETATTRIBUTE_METHOD] = &&DO_LOAD_GETATTRIBUTE_METHOD,
       [OP_MULTIPLICATION] = &&DO_MULTIPLICATION,
+      [OP_EXPONENTIATION] = &&DO_EXPONENTIATION,
       [OP_DIVISION] = &&DO_DIVISION,
       [OP_NOT] = &&DO_NOT,
       [OP_LOAD_SETATTR_METHOD] = &&DO_LOAD_SETATTR_METHOD,
@@ -1136,7 +1170,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
 
       ArgonObject *args[] = {valueA, valueB};
       state->registers[registerC] =
-          ARGON_ADDITION_FUNCTION(2, args, err, state, &native_api);
+          argon_call(ADDITION_FUNCTION, 2, args, err, state);
       continue;
     }
     DO_SUBTRACTION: {
@@ -1197,7 +1231,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
 
       ArgonObject *args[] = {valueA, valueB};
       state->registers[registerC] =
-          ARGON_SUBTRACTION_FUNCTION(2, args, err, state, &native_api);
+          argon_call(SUBTRACTION_FUNCTION, 2, args, err, state);
       continue;
     }
     DO_MULTIPLICATION: {
@@ -1258,9 +1292,140 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
 
       ArgonObject *args[] = {valueA, valueB};
       state->registers[registerC] =
-          ARGON_MULTIPLY_FUNCTION(2, args, err, state, &native_api);
+          argon_call(MULTIPLY_FUNCTION, 2, args, err, state);
       continue;
     }
+    DO_EXPONENTIATION: {
+      uint8_t registerA = pop_byte(translated, state);
+      uint8_t registerB = pop_byte(translated, state);
+      uint8_t registerC = pop_byte(translated, state);
+
+      ArgonObject *valueA = state->registers[registerA];
+      ArgonObject *valueB = state->registers[registerB];
+
+      if (likely(valueA->type == TYPE_NUMBER && valueB->type == TYPE_NUMBER)) {
+
+        /* ---------- fast int64 ^ int64 path ---------- */
+        if (likely(valueA->value.as_number->is_int64 &&
+                   valueB->value.as_number->is_int64)) {
+
+          int64_t base = valueA->value.as_number->n.i64;
+          int64_t exp = valueB->value.as_number->n.i64;
+
+          /* negative exponent → rational */
+          if (exp < 0) {
+            mpq_t a, b, r;
+            mpq_init(a);
+            mpq_init(b);
+            mpq_init(r);
+
+            mpq_set_si(a, base, 1);
+            mpq_set_si(b, exp, 1);
+
+            mpq_pow_q(r, a, b);
+
+            state->registers[registerC] = new_number_object(r);
+
+            mpq_clear(a);
+            mpq_clear(b);
+            mpq_clear(r);
+            continue;
+          }
+
+          /* exp >= 0 → try int64 exponentiation */
+          bool overflow = false;
+          int64_t result = 1;
+          int64_t a = base;
+          int64_t e = exp;
+
+          while (e > 0) {
+            if (e & 1) {
+              if (__builtin_mul_overflow(result, a, &result)) {
+                overflow = true;
+                break;
+              }
+            }
+            e >>= 1;
+            if (e && __builtin_mul_overflow(a, a, &a)) {
+              overflow = true;
+              break;
+            }
+          }
+
+          if (!overflow) {
+            state->registers[registerC] = new_number_object_from_int64(result);
+            continue;
+          }
+
+          /* overflow → fall through to GMP */
+        }
+
+        /* ---------- GMP / rational path ---------- */
+        {
+          mpq_t a_GMP, b_GMP, r;
+          mpq_init(a_GMP);
+          mpq_init(b_GMP);
+          mpq_init(r);
+
+          /* load base */
+          if (valueA->value.as_number->is_int64)
+            mpq_set_si(a_GMP, valueA->value.as_number->n.i64, 1);
+          else
+            mpq_set(a_GMP, *valueA->value.as_number->n.mpq);
+
+          /* load exponent */
+          if (valueB->value.as_number->is_int64)
+            mpq_set_si(b_GMP, valueB->value.as_number->n.i64, 1);
+          else
+            mpq_set(b_GMP, *valueB->value.as_number->n.mpq);
+
+          /* ---------- REAL-NUMBER DOMAIN CHECK ---------- */
+
+          /* 0^0 or 0^negative */
+          if (mpq_sgn(a_GMP) == 0 && mpq_sgn(b_GMP) <= 0) {
+            *err = create_err(
+                state->source_location.line, state->source_location.column,
+                state->source_location.length, state->path, "Math Error",
+                "0 cannot be raised to zero or a negative power");
+
+            mpq_clear(a_GMP);
+            mpq_clear(b_GMP);
+            mpq_clear(r);
+            continue;
+          }
+
+          /* negative base with non-integer exponent → complex */
+          if (mpq_sgn(a_GMP) < 0 && mpz_cmp_ui(mpq_denref(b_GMP), 1) != 0) {
+            *err = create_err(
+                state->source_location.line, state->source_location.column,
+                state->source_location.length, state->path, "Math Error",
+                "Negative base with fractional exponent is not a real number");
+
+            mpq_clear(a_GMP);
+            mpq_clear(b_GMP);
+            mpq_clear(r);
+            continue;
+          }
+
+          /* ---------- SAFE TO COMPUTE ---------- */
+
+          mpq_pow_q(r, a_GMP, b_GMP);
+          state->registers[registerC] = new_number_object(r);
+
+          mpq_clear(a_GMP);
+          mpq_clear(b_GMP);
+          mpq_clear(r);
+          continue;
+        }
+      }
+
+      /* ---------- fallback to dynamic dispatch ---------- */
+      ArgonObject *args[] = {valueA, valueB};
+      state->registers[registerC] =
+          argon_call(EXPONENT_FUNCTION, 2, args, err, state);
+      continue;
+    }
+
     DO_DIVISION: {
       uint8_t registerA = pop_byte(translated, state);
       uint8_t registerB = pop_byte(translated, state);
@@ -1319,7 +1484,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
 
       ArgonObject *args[] = {valueA, valueB};
       state->registers[registerC] =
-          ARGON_DIVIDE_FUNCTION(2, args, err, state, &native_api);
+          argon_call(DIVIDE_FUNCTION, 2, args, err, state);
       continue;
     }
     DO_LOAD_SETATTR_METHOD: {

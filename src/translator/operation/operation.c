@@ -77,6 +77,9 @@ size_t translate_operation(Translated *translated, ParsedOperation *operation,
     case TOKEN_STAR:;
       push_instruction_byte(translated, OP_MULTIPLICATION);
       break;
+    case TOKEN_CARET:;
+      push_instruction_byte(translated, OP_EXPONENTIATION);
+      break;
     case TOKEN_SLASH:;
       push_instruction_byte(translated, OP_DIVISION);
       break;

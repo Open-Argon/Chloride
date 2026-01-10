@@ -173,6 +173,14 @@ performs an multiplication between register A and register B, storing the result
 2. the register B (*)
 2. the register C (*)
 
+## OP_EXPONENTIATION
+
+performs an exponentiation between register A and register B, storing the result in register C
+
+1. the register A (*)
+2. the register B (*)
+2. the register C (*)
+
 ## OP_DIVISION
 
 performs an division between register A and register B, storing the result in register C
