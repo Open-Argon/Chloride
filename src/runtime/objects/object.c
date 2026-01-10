@@ -42,7 +42,9 @@ const char *built_in_field_names[BUILT_IN_FIELDS_COUNT] = {
     "__subtract__",
     "__multiply__",
     "__exponent__",
-    "__divide__",
+    "__division__",
+    "__floor_division__",
+    "__modulo__",
     "__new__",
     "__init__",
     "__boolean__",
@@ -137,7 +139,7 @@ void add_field_l(ArgonObject *target, char *name, uint64_t hash, size_t length,
   }
   if (!target->dict)
     target->dict = createHashmap_GC();
-  char *name_copy = ar_alloc(length);
+  char *name_copy = ar_alloc_atomic(length);
   memcpy(name_copy, name, length);
   name_copy[length] = '\0';
   hashmap_insert_GC(target->dict, hash, name_copy, object, 0);
