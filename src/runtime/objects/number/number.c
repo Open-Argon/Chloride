@@ -24,8 +24,49 @@ ArgonObject *ARGON_NUMBER_TYPE;
 #include <stdlib.h>
 #include <string.h>
 
-/* change SIGNIFICANT_DIGITS to taste (15 mimics double-ish behaviour) */
 #define SIGNIFICANT_DIGITS 16
+
+
+void mpq_fdiv(mpq_t result, const mpq_t a, const mpq_t b) {
+  mpq_t tmp;
+  mpq_init(tmp);
+
+  // tmp = a / b
+  mpq_div(tmp, a, b);
+  mpq_canonicalize(tmp);
+
+  // floor(tmp) = floor(num / den)
+  mpz_t q;
+  mpz_init(q);
+
+  mpz_fdiv_q(q, mpq_numref(tmp), mpq_denref(tmp));
+
+  // result = q / 1
+  mpq_set_z(result, q);
+
+  mpz_clear(q);
+  mpq_clear(tmp);
+}
+
+void mpq_fmod(mpq_t result, const mpq_t a, const mpq_t b) {
+  // result = a - b * floor(a / b)
+
+  mpq_t q, tmp;
+  mpq_init(q);
+  mpq_init(tmp);
+
+  // q = floor(a / b)   (integer-valued mpq)
+  mpq_fdiv(q, a, b);
+
+  // tmp = b * q
+  mpq_mul(tmp, b, q);
+
+  // result = a - tmp
+  mpq_sub(result, a, tmp);
+
+  mpq_clear(q);
+  mpq_clear(tmp);
+}
 
 ArgonObject *ARGON_NUMBER_TYPE___new__(size_t argc, ArgonObject **argv,
                                        ArErr *err, RuntimeState *state,
@@ -543,6 +584,144 @@ ArgonObject *ARGON_NUMBER_TYPE___division__(size_t argc, ArgonObject **argv,
   }
 }
 
+ArgonObject *ARGON_NUMBER_TYPE___floor_division__(size_t argc,
+                                                  ArgonObject **argv,
+                                                  ArErr *err,
+                                                  RuntimeState *state,
+                                                  ArgonNativeAPI *api) {
+  (void)api;
+  (void)state;
+  if (argc != 2) {
+    *err = create_err(0, 0, 0, "", "Runtime Error",
+                      "__floor_division__ expects 2 arguments, got %" PRIu64,
+                      argc);
+    return ARGON_NULL;
+  }
+  if (argv[1]->type != TYPE_NUMBER) {
+    ArgonObject *type_name = get_builtin_field_for_class(
+        get_builtin_field(argv[1], __class__), __name__, argv[1]);
+    *err = create_err(
+        0, 0, 0, "", "Runtime Error",
+        "__floor_division__ cannot perform floor division between number and %.*s",
+        type_name->value.as_str->length, type_name->value.as_str->data);
+    return ARGON_NULL;
+  }
+  if (argv[0]->value.as_number->is_int64 &&
+      argv[1]->value.as_number->is_int64) {
+    int64_t a = argv[0]->value.as_number->n.i64;
+    int64_t b = argv[1]->value.as_number->n.i64;
+    if (!b) {
+      *err =
+          create_err(state->source_location.line, state->source_location.column,
+                     state->source_location.length, state->path,
+                     "Zero Division Error", "floor division by zero");
+      return NULL;
+    }
+    return new_number_object_from_int64(a / b);
+  } else if (!argv[0]->value.as_number->is_int64 &&
+             !argv[1]->value.as_number->is_int64) {
+    mpq_t r;
+    mpq_init(r);
+    mpq_fdiv(r, *argv[0]->value.as_number->n.mpq,
+            *argv[1]->value.as_number->n.mpq);
+    ArgonObject *result = new_number_object(r);
+    mpq_clear(r);
+    return result;
+  } else {
+    mpq_t a_GMP, b_GMP;
+    mpq_init(a_GMP);
+    mpq_init(b_GMP);
+    if (argv[0]->value.as_number->is_int64) {
+      mpq_set_si(a_GMP, argv[0]->value.as_number->n.i64, 1);
+      mpq_set(b_GMP, *argv[1]->value.as_number->n.mpq);
+    } else {
+      mpq_set(a_GMP, *argv[0]->value.as_number->n.mpq);
+      if (!argv[1]->value.as_number->n.i64) {
+        *err = create_err(state->source_location.line,
+                          state->source_location.column,
+                          state->source_location.length, state->path,
+                          "Zero Division Error", "floor division by zero");
+        return NULL;
+      }
+      mpq_set_si(b_GMP, argv[1]->value.as_number->n.i64, 1);
+    }
+    mpq_fdiv(a_GMP, a_GMP, b_GMP);
+    ArgonObject *result = new_number_object(a_GMP);
+    mpq_clear(a_GMP);
+    mpq_clear(b_GMP);
+    return result;
+  }
+}
+
+ArgonObject *ARGON_NUMBER_TYPE___modulo__(size_t argc,
+                                                  ArgonObject **argv,
+                                                  ArErr *err,
+                                                  RuntimeState *state,
+                                                  ArgonNativeAPI *api) {
+  (void)api;
+  (void)state;
+  if (argc != 2) {
+    *err = create_err(0, 0, 0, "", "Runtime Error",
+                      "__modulo__ expects 2 arguments, got %" PRIu64,
+                      argc);
+    return ARGON_NULL;
+  }
+  if (argv[1]->type != TYPE_NUMBER) {
+    ArgonObject *type_name = get_builtin_field_for_class(
+        get_builtin_field(argv[1], __class__), __name__, argv[1]);
+    *err = create_err(
+        0, 0, 0, "", "Runtime Error",
+        "__modulo__ cannot perform modulo between number and %.*s",
+        type_name->value.as_str->length, type_name->value.as_str->data);
+    return ARGON_NULL;
+  }
+  if (argv[0]->value.as_number->is_int64 &&
+      argv[1]->value.as_number->is_int64) {
+    int64_t a = argv[0]->value.as_number->n.i64;
+    int64_t b = argv[1]->value.as_number->n.i64;
+    if (!b) {
+      *err =
+          create_err(state->source_location.line, state->source_location.column,
+                     state->source_location.length, state->path,
+                     "Zero Division Error", "modulo by zero");
+      return NULL;
+    }
+    return new_number_object_from_int64(a % b);
+  } else if (!argv[0]->value.as_number->is_int64 &&
+             !argv[1]->value.as_number->is_int64) {
+    mpq_t r;
+    mpq_init(r);
+    mpq_fmod(r, *argv[0]->value.as_number->n.mpq,
+            *argv[1]->value.as_number->n.mpq);
+    ArgonObject *result = new_number_object(r);
+    mpq_clear(r);
+    return result;
+  } else {
+    mpq_t a_GMP, b_GMP;
+    mpq_init(a_GMP);
+    mpq_init(b_GMP);
+    if (argv[0]->value.as_number->is_int64) {
+      mpq_set_si(a_GMP, argv[0]->value.as_number->n.i64, 1);
+      mpq_set(b_GMP, *argv[1]->value.as_number->n.mpq);
+    } else {
+      mpq_set(a_GMP, *argv[0]->value.as_number->n.mpq);
+      if (!argv[1]->value.as_number->n.i64) {
+        *err = create_err(state->source_location.line,
+                          state->source_location.column,
+                          state->source_location.length, state->path,
+                          "Zero Division Error", "modulo by zero");
+        return NULL;
+      }
+      mpq_set_si(b_GMP, argv[1]->value.as_number->n.i64, 1);
+    }
+    mpq_fmod(a_GMP, a_GMP, b_GMP);
+    ArgonObject *result = new_number_object(a_GMP);
+    mpq_clear(a_GMP);
+    mpq_clear(b_GMP);
+    return result;
+  }
+}
+
 ArgonObject *ARGON_NUMBER_TYPE___string__(size_t argc, ArgonObject **argv,
                                           ArErr *err, RuntimeState *state,
                                           ArgonNativeAPI *api) {
@@ -751,9 +930,15 @@ void create_ARGON_NUMBER_TYPE() {
   add_builtin_field(ARGON_NUMBER_TYPE, __exponent__,
                     create_argon_native_function(
                         "__exponent__", ARGON_NUMBER_TYPE___exponent__));
-  add_builtin_field(ARGON_NUMBER_TYPE, __divide__,
+  add_builtin_field(ARGON_NUMBER_TYPE, __division__,
                     create_argon_native_function(
                         "__division__", ARGON_NUMBER_TYPE___division__));
+  add_builtin_field(ARGON_NUMBER_TYPE, __floor_division__,
+                    create_argon_native_function(
+                        "__floor_division__", ARGON_NUMBER_TYPE___floor_division__));
+  add_builtin_field(ARGON_NUMBER_TYPE, __modulo__,
+                    create_argon_native_function(
+                        "__modulo__", ARGON_NUMBER_TYPE___modulo__));
   init_small_ints();
 }
 

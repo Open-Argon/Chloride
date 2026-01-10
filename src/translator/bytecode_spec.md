@@ -189,6 +189,22 @@ performs an division between register A and register B, storing the result in re
 2. the register B (*)
 2. the register C (*)
 
+## OP_FLOOR_DIVISION
+
+performs an floor division between register A and register B, storing the result in register C
+
+1. the register A (*)
+2. the register B (*)
+2. the register C (*)
+
+## OP_MODULO
+
+performs an modulo between register A and register B, storing the result in register C
+
+1. the register A (*)
+2. the register B (*)
+2. the register C (*)
+
 ## OP_NOT
 
 inverts the boolean value in register 0.

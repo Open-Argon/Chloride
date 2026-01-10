@@ -46,9 +46,8 @@ ArgonObject *SUBTRACTION_FUNCTION;
 ArgonObject *MULTIPLY_FUNCTION;
 ArgonObject *EXPONENT_FUNCTION;
 ArgonObject *DIVIDE_FUNCTION;
-ArgonObject *POWER_FUNCTION;
+ArgonObject *FLOOR_DIVIDE_FUNCTION;
 ArgonObject *MODULO_FUNCTION;
-ArgonObject *FLOORDIVIDE_FUNCTION;
 
 ArgonObject *BASE_CLASS___getattribute__(size_t argc, ArgonObject **argv,
                                          ArErr *err, RuntimeState *state,
@@ -224,7 +223,7 @@ ArgonObject *ARGON_DIVIDE_FUNCTION(size_t argc, ArgonObject **argv, ArErr *err,
   for (size_t i = 1; i < argc; i++) {
     ArgonObject *object_class = get_builtin_field(output, __class__);
     ArgonObject *function___divide__ =
-        get_builtin_field_for_class(object_class, __divide__, output);
+        get_builtin_field_for_class(object_class, __division__, output);
     if (!function___divide__) {
       ArgonObject *cls___name__ = get_builtin_field(object_class, __name__);
       *err = create_err(0, 0, 0, "", "Runtime Error",
@@ -234,6 +233,60 @@ ArgonObject *ARGON_DIVIDE_FUNCTION(size_t argc, ArgonObject **argv, ArErr *err,
       return ARGON_NULL;
     }
     output = argon_call(function___divide__, 1, (ArgonObject *[]){argv[i]}, err,
+                        state);
+  }
+  return output;
+}
+
+ArgonObject *ARGON_FLOOR_DIVIDE_FUNCTION(size_t argc, ArgonObject **argv, ArErr *err,
+                                   RuntimeState *state, ArgonNativeAPI *api) {
+  (void)api;
+  if (argc < 1) {
+    *err = create_err(0, 0, 0, "", "Runtime Error",
+                      "floor divide expects at least 1 argument, got %" PRIu64, argc);
+    return ARGON_NULL;
+  }
+  ArgonObject *output = argv[0];
+  for (size_t i = 1; i < argc; i++) {
+    ArgonObject *object_class = get_builtin_field(output, __class__);
+    ArgonObject *function___floor_divide__ =
+        get_builtin_field_for_class(object_class, __floor_division__, output);
+    if (!function___floor_divide__) {
+      ArgonObject *cls___name__ = get_builtin_field(object_class, __name__);
+      *err = create_err(0, 0, 0, "", "Runtime Error",
+                        "Object of type '%.*s' is missing __floor_divide__ method",
+                        (int)cls___name__->value.as_str->length,
+                        cls___name__->value.as_str->data);
+      return ARGON_NULL;
+    }
+    output = argon_call(function___floor_divide__, 1, (ArgonObject *[]){argv[i]}, err,
+                        state);
+  }
+  return output;
+}
+
+ArgonObject *ARGON_MODULO_FUNCTION(size_t argc, ArgonObject **argv, ArErr *err,
+                                   RuntimeState *state, ArgonNativeAPI *api) {
+  (void)api;
+  if (argc < 1) {
+    *err = create_err(0, 0, 0, "", "Runtime Error",
+                      "floor divide expects at least 1 argument, got %" PRIu64, argc);
+    return ARGON_NULL;
+  }
+  ArgonObject *output = argv[0];
+  for (size_t i = 1; i < argc; i++) {
+    ArgonObject *object_class = get_builtin_field(output, __class__);
+    ArgonObject *function___modulo__ =
+        get_builtin_field_for_class(object_class, __modulo__, output);
+    if (!function___modulo__) {
+      ArgonObject *cls___name__ = get_builtin_field(object_class, __name__);
+      *err = create_err(0, 0, 0, "", "Runtime Error",
+                        "Object of type '%.*s' is missing __modulo__ method",
+                        (int)cls___name__->value.as_str->length,
+                        cls___name__->value.as_str->data);
+      return ARGON_NULL;
+    }
+    output = argon_call(function___modulo__, 1, (ArgonObject *[]){argv[i]}, err,
                         state);
   }
   return output;
@@ -772,6 +825,10 @@ void bootstrap_types() {
       create_argon_native_function("multiply", ARGON_EXPONENT_FUNCTION);
   DIVIDE_FUNCTION =
       create_argon_native_function("divide", ARGON_DIVIDE_FUNCTION);
+  FLOOR_DIVIDE_FUNCTION =
+      create_argon_native_function("floor_divide", ARGON_FLOOR_DIVIDE_FUNCTION);
+  MODULO_FUNCTION =
+      create_argon_native_function("modulo", ARGON_MODULO_FUNCTION);
   add_builtin_field(BASE_CLASS, __getattribute__,
                     create_argon_native_function("__getattribute__",
                                                  BASE_CLASS___getattribute__));
@@ -806,6 +863,8 @@ void bootstrap_globals() {
   add_to_scope(Global_Scope, "multiply", MULTIPLY_FUNCTION);
   add_to_scope(Global_Scope, "exponent", EXPONENT_FUNCTION);
   add_to_scope(Global_Scope, "divide", DIVIDE_FUNCTION);
+  add_to_scope(Global_Scope, "floor_divide", FLOOR_DIVIDE_FUNCTION);
+  add_to_scope(Global_Scope, "modulo", MODULO_FUNCTION);
   add_to_scope(Global_Scope, "dictionary", ARGON_DICTIONARY_TYPE);
 
   struct hashmap_GC *argon_term = createHashmap_GC();
@@ -981,6 +1040,8 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       [OP_MULTIPLICATION] = &&DO_MULTIPLICATION,
       [OP_EXPONENTIATION] = &&DO_EXPONENTIATION,
       [OP_DIVISION] = &&DO_DIVISION,
+      [OP_FLOOR_DIVISION] = &&DO_FLOOR_DIVISION,
+      [OP_MODULO] = &&DO_MODULO,
       [OP_NOT] = &&DO_NOT,
       [OP_LOAD_SETATTR_METHOD] = &&DO_LOAD_SETATTR_METHOD,
       [OP_CREATE_DICTIONARY] = &&DO_CREATE_DICTIONARY,
@@ -1487,6 +1548,131 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
           argon_call(DIVIDE_FUNCTION, 2, args, err, state);
       continue;
     }
+
+    DO_FLOOR_DIVISION: {
+      uint8_t registerA = pop_byte(translated, state);
+      uint8_t registerB = pop_byte(translated, state);
+      uint8_t registerC = pop_byte(translated, state);
+
+      ArgonObject *valueA = state->registers[registerA];
+      ArgonObject *valueB = state->registers[registerB];
+
+      if (likely(valueA->type == TYPE_NUMBER && valueB->type == TYPE_NUMBER)) {
+        if (likely(valueA->value.as_number->is_int64 &&
+                   valueB->value.as_number->is_int64)) {
+          int64_t a = valueA->value.as_number->n.i64;
+          int64_t b = valueB->value.as_number->n.i64;
+          if (!b) {
+            *err = create_err(state->source_location.line,
+                              state->source_location.column,
+                              state->source_location.length, state->path,
+                              "Zero Division Error", "floor division by zero");
+            continue;
+          }
+          state->registers[registerC] =
+              new_number_object_from_int64(a/b);
+        } else if (!valueA->value.as_number->is_int64 &&
+                   !valueB->value.as_number->is_int64) {
+          mpq_t r;
+          mpq_init(r);
+          mpq_fdiv(r, *valueA->value.as_number->n.mpq,
+                  *valueB->value.as_number->n.mpq);
+          state->registers[registerC] = new_number_object(r);
+          mpq_clear(r);
+        } else {
+          mpq_t a_GMP, b_GMP;
+          mpq_init(a_GMP);
+          mpq_init(b_GMP);
+          if (valueA->value.as_number->is_int64) {
+            mpq_set_si(a_GMP, valueA->value.as_number->n.i64, 1);
+            mpq_set(b_GMP, *valueB->value.as_number->n.mpq);
+          } else {
+            mpq_set(a_GMP, *valueA->value.as_number->n.mpq);
+            if (!valueB->value.as_number->n.i64) {
+              *err = create_err(state->source_location.line,
+                                state->source_location.column,
+                                state->source_location.length, state->path,
+                                "Zero Division Error", "floor division by zero");
+              continue;
+            }
+            mpq_set_si(b_GMP, valueB->value.as_number->n.i64, 1);
+          }
+          mpq_fdiv(a_GMP, a_GMP, b_GMP);
+          state->registers[registerC] = new_number_object(a_GMP);
+          mpq_clear(a_GMP);
+          mpq_clear(b_GMP);
+        }
+        continue;
+      }
+
+      ArgonObject *args[] = {valueA, valueB};
+      state->registers[registerC] =
+          argon_call(FLOOR_DIVIDE_FUNCTION, 2, args, err, state);
+      continue;
+    }
+
+    DO_MODULO: {
+      uint8_t registerA = pop_byte(translated, state);
+      uint8_t registerB = pop_byte(translated, state);
+      uint8_t registerC = pop_byte(translated, state);
+
+      ArgonObject *valueA = state->registers[registerA];
+      ArgonObject *valueB = state->registers[registerB];
+
+      if (likely(valueA->type == TYPE_NUMBER && valueB->type == TYPE_NUMBER)) {
+        if (likely(valueA->value.as_number->is_int64 &&
+                   valueB->value.as_number->is_int64)) {
+          int64_t a = valueA->value.as_number->n.i64;
+          int64_t b = valueB->value.as_number->n.i64;
+          if (!b) {
+            *err = create_err(state->source_location.line,
+                              state->source_location.column,
+                              state->source_location.length, state->path,
+                              "Zero Division Error", "modulo by zero");
+            continue;
+          }
+          state->registers[registerC] =
+              new_number_object_from_int64(a%b);
+        } else if (!valueA->value.as_number->is_int64 &&
+                   !valueB->value.as_number->is_int64) {
+          mpq_t r;
+          mpq_init(r);
+          mpq_fmod(r, *valueA->value.as_number->n.mpq,
+                  *valueB->value.as_number->n.mpq);
+          state->registers[registerC] = new_number_object(r);
+          mpq_clear(r);
+        } else {
+          mpq_t a_GMP, b_GMP;
+          mpq_init(a_GMP);
+          mpq_init(b_GMP);
+          if (valueA->value.as_number->is_int64) {
+            mpq_set_si(a_GMP, valueA->value.as_number->n.i64, 1);
+            mpq_set(b_GMP, *valueB->value.as_number->n.mpq);
+          } else {
+            mpq_set(a_GMP, *valueA->value.as_number->n.mpq);
+            if (!valueB->value.as_number->n.i64) {
+              *err = create_err(state->source_location.line,
+                                state->source_location.column,
+                                state->source_location.length, state->path,
+                                "Zero Division Error", "modulo by zero");
+              continue;
+            }
+            mpq_set_si(b_GMP, valueB->value.as_number->n.i64, 1);
+          }
+          mpq_fmod(a_GMP, a_GMP, b_GMP);
+          state->registers[registerC] = new_number_object(a_GMP);
+          mpq_clear(a_GMP);
+          mpq_clear(b_GMP);
+        }
+        continue;
+      }
+
+      ArgonObject *args[] = {valueA, valueB};
+      state->registers[registerC] =
+          argon_call(MODULO_FUNCTION, 2, args, err, state);
+      continue;
+    }
+
     DO_LOAD_SETATTR_METHOD: {
       state->registers[0] = get_builtin_field_for_class(
           get_builtin_field(state->registers[0], __class__), __setattr__,
