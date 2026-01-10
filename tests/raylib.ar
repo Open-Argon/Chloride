@@ -22,9 +22,9 @@ while (!raylib.WindowShouldClose()) do
   term.log("frame:",frame, {x,y})
   raylib.BeginDrawing()
   
-  raylib.ClearBackground(raylib.WHITE)
+  raylib.ClearBackground(raylib.BLACK)
   
-  raylib.DrawText("Hello world from Argon", x, y, 20, raylib.BLACK)
+  raylib.DrawText("Hello world from Argon", x, y, 20, raylib.WHITE)
 
   raylib.EndDrawing()
 

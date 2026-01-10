@@ -27,7 +27,7 @@ CFLAGS  = $(ARCHFLAGS) -Wall -Wextra -Wno-unused-function \
           -Iexternal/cwalk/include \
           -Iexternal/libdye/include
 
-LDFLAGS = -lgc -lgmp -lm
+LDFLAGS = -lgc -lgmp -lm -lmpfr
 
 # ------------------------------------------------------------
 # Default target

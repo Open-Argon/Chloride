@@ -26,6 +26,7 @@ typedef enum {
   __string__,
   __subtract__,
   __multiply__,
+  __exponent__,
   __divide__,
   __new__,
   __init__,
