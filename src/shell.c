@@ -230,9 +230,10 @@ int shell() {
 
   signal(SIGINT, handle_sigint);
 
-  printf("Chloride %s Copyright (C) 2025 William Bell\n"
-"This program comes with ABSOLUTELY NO WARRANTY; for details type `license'.\n"
-"This is free software, and you are welcome to redistribute it under certain conditions; type `license' for details.\n", version_string);
+  printf("Chloride %s Copyright (C) 2026 William Bell\n"
+"This program comes with ABSOLUTELY NO WARRANTY; for details type \"license\".\n"
+"This is libre (freedom-respecting) software released under the GNU GPL Version 3 or later,\n"
+"and you are welcome to redistribute it under certain conditions; type \"license\" for details.\n\n", version_string);
 
   ArgonObject *output_object = create_argon_native_function("log", term_log);
   char *totranslate = NULL;
