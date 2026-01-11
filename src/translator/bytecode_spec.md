@@ -151,7 +151,7 @@ copies the value from one register to another
 
 ## OP_ADDITION
 
-performs an addition between register A and register B, storing the result in register C
+performs addition between register A and register B, storing the result in register C
 
 1. the register A (*)
 2. the register B (*)
@@ -159,7 +159,7 @@ performs an addition between register A and register B, storing the result in re
 
 ## OP_SUBTRACTION
 
-performs an subtraction between register A and register B, storing the result in register C
+performs subtraction between register A and register B, storing the result in register C
 
 1. the register A (*)
 2. the register B (*)
@@ -167,7 +167,7 @@ performs an subtraction between register A and register B, storing the result in
 
 ## OP_MULTIPLICATION
 
-performs an multiplication between register A and register B, storing the result in register C
+performs multiplication between register A and register B, storing the result in register C
 
 1. the register A (*)
 2. the register B (*)
@@ -175,7 +175,7 @@ performs an multiplication between register A and register B, storing the result
 
 ## OP_EXPONENTIATION
 
-performs an exponentiation between register A and register B, storing the result in register C
+performs exponentiation between register A and register B, storing the result in register C
 
 1. the register A (*)
 2. the register B (*)
@@ -183,7 +183,7 @@ performs an exponentiation between register A and register B, storing the result
 
 ## OP_DIVISION
 
-performs an division between register A and register B, storing the result in register C
+performs division between register A and register B, storing the result in register C
 
 1. the register A (*)
 2. the register B (*)
@@ -191,7 +191,7 @@ performs an division between register A and register B, storing the result in re
 
 ## OP_FLOOR_DIVISION
 
-performs an floor division between register A and register B, storing the result in register C
+performs floor division between register A and register B, storing the result in register C
 
 1. the register A (*)
 2. the register B (*)
@@ -199,7 +199,39 @@ performs an floor division between register A and register B, storing the result
 
 ## OP_MODULO
 
-performs an modulo between register A and register B, storing the result in register C
+performs modulo between register A and register B, storing the result in register C
+
+1. the register A (*)
+2. the register B (*)
+2. the register C (*)
+
+## OP_EQUAL
+
+performs equality between register A and register B, storing the result in register C
+
+1. the register A (*)
+2. the register B (*)
+2. the register C (*)
+
+## OP_NOT_EQUAL
+
+performs not equality between register A and register B, storing the result in register C
+
+1. the register A (*)
+2. the register B (*)
+2. the register C (*)
+
+## OP_LESS_THAN
+
+performs a less than operation between register A and register B, storing the result in register C
+
+1. the register A (*)
+2. the register B (*)
+2. the register C (*)
+
+## OP_GREATER_THAN
+
+performs a greater than operation between register A and register B, storing the result in register C
 
 1. the register A (*)
 2. the register B (*)
@@ -208,6 +240,10 @@ performs an modulo between register A and register B, storing the result in regi
 ## OP_NOT
 
 inverts the boolean value in register 0.
+
+## OP_NEGATION
+
+calls the \_\_negation\_\_ method on the value in register 0 and storing it in register 0.
 
 ## OP_LOAD_SETATTR_METHOD
 

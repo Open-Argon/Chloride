@@ -19,6 +19,7 @@
 #include "if/if.h"
 #include "list/list.h"
 #include "literals/literals.h"
+#include "negation/negation.h"
 #include "number/number.h"
 #include "operations/operations.h"
 #include "parentheses-and-anonymous-function/parentheses-and-anonymous-function.h"
@@ -130,6 +131,9 @@ ParsedValueReturn parse_token_full(char *file, DArray *tokens, size_t *index,
     break;
   case TOKEN_DO:
     output = parse_dowrap(file, tokens, index);
+    break;
+  case TOKEN_MINUS:
+    output = parse_negation(file, tokens, index);
     break;
   case TOKEN_LBRACKET:
     output = parse_list(file, tokens, index);
@@ -276,6 +280,9 @@ void free_parsed(void *ptr) {
     break;
   case AST_TO_BOOL:
     free_not(parsed);
+    break;
+  case AST_NEGATION:
+    free_negation(parsed);
     break;
   }
 }

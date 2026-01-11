@@ -25,6 +25,7 @@
 #include "objects/type/type.h"
 #include <fcntl.h>
 #include <gc.h>
+#include <gmp-x86_64.h>
 #include <gmp.h>
 #include <inttypes.h>
 #include <stddef.h>
@@ -48,6 +49,10 @@ ArgonObject *EXPONENT_FUNCTION;
 ArgonObject *DIVIDE_FUNCTION;
 ArgonObject *FLOOR_DIVIDE_FUNCTION;
 ArgonObject *MODULO_FUNCTION;
+ArgonObject *EQUAL_FUNCTION;
+ArgonObject *NOT_EQUAL_FUNCTION;
+ArgonObject *LESS_THAN_FUNCTION;
+ArgonObject *GREATER_THAN_FUNCTION;
 
 ArgonObject *BASE_CLASS___getattribute__(size_t argc, ArgonObject **argv,
                                          ArErr *err, RuntimeState *state,
@@ -238,12 +243,14 @@ ArgonObject *ARGON_DIVIDE_FUNCTION(size_t argc, ArgonObject **argv, ArErr *err,
   return output;
 }
 
-ArgonObject *ARGON_FLOOR_DIVIDE_FUNCTION(size_t argc, ArgonObject **argv, ArErr *err,
-                                   RuntimeState *state, ArgonNativeAPI *api) {
+ArgonObject *ARGON_FLOOR_DIVIDE_FUNCTION(size_t argc, ArgonObject **argv,
+                                         ArErr *err, RuntimeState *state,
+                                         ArgonNativeAPI *api) {
   (void)api;
   if (argc < 1) {
     *err = create_err(0, 0, 0, "", "Runtime Error",
-                      "floor divide expects at least 1 argument, got %" PRIu64, argc);
+                      "floor_divide expects at least 1 argument, got %" PRIu64,
+                      argc);
     return ARGON_NULL;
   }
   ArgonObject *output = argv[0];
@@ -253,14 +260,15 @@ ArgonObject *ARGON_FLOOR_DIVIDE_FUNCTION(size_t argc, ArgonObject **argv, ArErr 
         get_builtin_field_for_class(object_class, __floor_division__, output);
     if (!function___floor_divide__) {
       ArgonObject *cls___name__ = get_builtin_field(object_class, __name__);
-      *err = create_err(0, 0, 0, "", "Runtime Error",
-                        "Object of type '%.*s' is missing __floor_divide__ method",
-                        (int)cls___name__->value.as_str->length,
-                        cls___name__->value.as_str->data);
+      *err =
+          create_err(0, 0, 0, "", "Runtime Error",
+                     "Object of type '%.*s' is missing __floor_divide__ method",
+                     (int)cls___name__->value.as_str->length,
+                     cls___name__->value.as_str->data);
       return ARGON_NULL;
     }
-    output = argon_call(function___floor_divide__, 1, (ArgonObject *[]){argv[i]}, err,
-                        state);
+    output = argon_call(function___floor_divide__, 1,
+                        (ArgonObject *[]){argv[i]}, err, state);
   }
   return output;
 }
@@ -270,7 +278,7 @@ ArgonObject *ARGON_MODULO_FUNCTION(size_t argc, ArgonObject **argv, ArErr *err,
   (void)api;
   if (argc < 1) {
     *err = create_err(0, 0, 0, "", "Runtime Error",
-                      "floor divide expects at least 1 argument, got %" PRIu64, argc);
+                      "modulo expects at least 1 argument, got %" PRIu64, argc);
     return ARGON_NULL;
   }
   ArgonObject *output = argv[0];
@@ -288,6 +296,121 @@ ArgonObject *ARGON_MODULO_FUNCTION(size_t argc, ArgonObject **argv, ArErr *err,
     }
     output = argon_call(function___modulo__, 1, (ArgonObject *[]){argv[i]}, err,
                         state);
+  }
+  return output;
+}
+
+ArgonObject *ARGON_EQUAL_FUNCTION(size_t argc, ArgonObject **argv, ArErr *err,
+                                  RuntimeState *state, ArgonNativeAPI *api) {
+  (void)api;
+  if (argc < 1) {
+    *err = create_err(0, 0, 0, "", "Runtime Error",
+                      "equal expects at least 1 argument, got %" PRIu64, argc);
+    return ARGON_NULL;
+  }
+  ArgonObject *output = argv[0];
+  for (size_t i = 1; i < argc; i++) {
+    ArgonObject *object_class = get_builtin_field(output, __class__);
+    ArgonObject *function___equal__ =
+        get_builtin_field_for_class(object_class, __equal__, output);
+    if (!function___equal__) {
+      ArgonObject *cls___name__ = get_builtin_field(object_class, __name__);
+      *err = create_err(0, 0, 0, "", "Runtime Error",
+                        "Object of type '%.*s' is missing __equal__ method",
+                        (int)cls___name__->value.as_str->length,
+                        cls___name__->value.as_str->data);
+      return ARGON_NULL;
+    }
+    output = argon_call(function___equal__, 1, (ArgonObject *[]){argv[i]}, err,
+                        state);
+  }
+  return output;
+}
+
+ArgonObject *ARGON_NOT_EQUAL_FUNCTION(size_t argc, ArgonObject **argv,
+                                      ArErr *err, RuntimeState *state,
+                                      ArgonNativeAPI *api) {
+  (void)api;
+  if (argc < 1) {
+    *err =
+        create_err(0, 0, 0, "", "Runtime Error",
+                   "not_equal expects at least 1 argument, got %" PRIu64, argc);
+    return ARGON_NULL;
+  }
+  ArgonObject *output = argv[0];
+  for (size_t i = 1; i < argc; i++) {
+    ArgonObject *object_class = get_builtin_field(output, __class__);
+    ArgonObject *function___not_equal__ =
+        get_builtin_field_for_class(object_class, __not_equal__, output);
+    if (!function___not_equal__) {
+      ArgonObject *cls___name__ = get_builtin_field(object_class, __name__);
+      *err = create_err(0, 0, 0, "", "Runtime Error",
+                        "Object of type '%.*s' is missing __not_equal__ method",
+                        (int)cls___name__->value.as_str->length,
+                        cls___name__->value.as_str->data);
+      return ARGON_NULL;
+    }
+    output = argon_call(function___not_equal__, 1, (ArgonObject *[]){argv[i]},
+                        err, state);
+  }
+  return output;
+}
+
+ArgonObject *ARGON_LESS_THAN_FUNCTION(size_t argc, ArgonObject **argv,
+                                      ArErr *err, RuntimeState *state,
+                                      ArgonNativeAPI *api) {
+  (void)api;
+  if (argc < 1) {
+    *err =
+        create_err(0, 0, 0, "", "Runtime Error",
+                   "less_than expects at least 1 argument, got %" PRIu64, argc);
+    return ARGON_NULL;
+  }
+  ArgonObject *output = argv[0];
+  for (size_t i = 1; i < argc; i++) {
+    ArgonObject *object_class = get_builtin_field(output, __class__);
+    ArgonObject *function___less_than__ =
+        get_builtin_field_for_class(object_class, __less_than__, output);
+    if (!function___less_than__) {
+      ArgonObject *cls___name__ = get_builtin_field(object_class, __name__);
+      *err = create_err(0, 0, 0, "", "Runtime Error",
+                        "Object of type '%.*s' is missing __less_than__ method",
+                        (int)cls___name__->value.as_str->length,
+                        cls___name__->value.as_str->data);
+      return ARGON_NULL;
+    }
+    output = argon_call(function___less_than__, 1, (ArgonObject *[]){argv[i]},
+                        err, state);
+  }
+  return output;
+}
+
+ArgonObject *ARGON_GREATER_THAN_FUNCTION(size_t argc, ArgonObject **argv,
+                                         ArErr *err, RuntimeState *state,
+                                         ArgonNativeAPI *api) {
+  (void)api;
+  if (argc < 1) {
+    *err = create_err(0, 0, 0, "", "Runtime Error",
+                      "greater_than expects at least 1 argument, got %" PRIu64,
+                      argc);
+    return ARGON_NULL;
+  }
+  ArgonObject *output = argv[0];
+  for (size_t i = 1; i < argc; i++) {
+    ArgonObject *object_class = get_builtin_field(output, __class__);
+    ArgonObject *function___greater_than__ =
+        get_builtin_field_for_class(object_class, __greater_than__, output);
+    if (!function___greater_than__) {
+      ArgonObject *cls___name__ = get_builtin_field(object_class, __name__);
+      *err =
+          create_err(0, 0, 0, "", "Runtime Error",
+                     "Object of type '%.*s' is missing __greater_than__ method",
+                     (int)cls___name__->value.as_str->length,
+                     cls___name__->value.as_str->data);
+      return ARGON_NULL;
+    }
+    output = argon_call(function___greater_than__, 1,
+                        (ArgonObject *[]){argv[i]}, err, state);
   }
   return output;
 }
@@ -412,7 +535,7 @@ ArgonObject *BASE_CLASS___string__(size_t argc, ArgonObject **argv, ArErr *err,
   (void)state;
   if (argc != 1) {
     *err = create_err(0, 0, 0, "", "Runtime Error",
-                      "__string__ expects 1 arguments, got %" PRIu64, argc);
+                      "__string__ expects 1 argument, got %" PRIu64, argc);
   }
 
   ArgonObject *object_name =
@@ -437,7 +560,7 @@ ArgonObject *BASE_CLASS___repr__(size_t argc, ArgonObject **argv, ArErr *err,
   (void)api;
   if (argc != 1) {
     *err = create_err(0, 0, 0, "", "Runtime Error",
-                      "__repr__ expects 1 arguments, got %" PRIu64, argc);
+                      "__repr__ expects 1 argument, got %" PRIu64, argc);
   }
   ArgonObject *string_method = get_builtin_field_for_class(
       get_builtin_field(argv[0], __class__), __string__, argv[0]);
@@ -451,9 +574,34 @@ ArgonObject *BASE_CLASS___boolean__(size_t argc, ArgonObject **argv, ArErr *err,
   (void)state;
   if (argc != 1) {
     *err = create_err(0, 0, 0, "", "Runtime Error",
-                      "__boolean__ expects 1 arguments, got %" PRIu64, argc);
+                      "__boolean__ expects 1 argument, got %" PRIu64, argc);
   }
   return ARGON_TRUE;
+}
+
+ArgonObject *BASE_CLASS___equal__(size_t argc, ArgonObject **argv, ArErr *err,
+                                  RuntimeState *state, ArgonNativeAPI *api) {
+  (void)api;
+  (void)argv;
+  (void)state;
+  if (argc != 2) {
+    *err = create_err(0, 0, 0, "", "Runtime Error",
+                      "__equal__ expects 2 arguments, got %" PRIu64, argc);
+  }
+  return argv[0] == argv[1] ? ARGON_TRUE : ARGON_FALSE;
+}
+
+ArgonObject *BASE_CLASS___not_equal__(size_t argc, ArgonObject **argv,
+                                      ArErr *err, RuntimeState *state,
+                                      ArgonNativeAPI *api) {
+  (void)api;
+  (void)argv;
+  (void)state;
+  if (argc != 2) {
+    *err = create_err(0, 0, 0, "", "Runtime Error",
+                      "__boolean__ expects 2 arguments, got %" PRIu64, argc);
+  }
+  return argv[0] != argv[1] ? ARGON_TRUE : ARGON_FALSE;
 }
 
 ArgonObject *ARGON_STRING_TYPE___init__(size_t argc, ArgonObject **argv,
@@ -550,7 +698,7 @@ ArgonObject *ARGON_BOOL_TYPE___string__(size_t argc, ArgonObject **argv,
   (void)state;
   if (argc != 1) {
     *err = create_err(0, 0, 0, "", "Runtime Error",
-                      "__string__ expects 1 arguments, got %" PRIu64, argc);
+                      "__string__ expects 1 argument, got %" PRIu64, argc);
     return ARGON_NULL;
   }
   return new_string_object_null_terminated(argv[0] == ARGON_TRUE ? "true"
@@ -564,7 +712,7 @@ ArgonObject *ARGON_BOOL_TYPE___number__(size_t argc, ArgonObject **argv,
   (void)state;
   if (argc != 1) {
     *err = create_err(0, 0, 0, "", "Runtime Error",
-                      "__number__ expects 1 arguments, got %" PRIu64, argc);
+                      "__number__ expects 1 argument, got %" PRIu64, argc);
     return ARGON_NULL;
   }
   return new_number_object_from_int64(argv[0] == ARGON_TRUE);
@@ -577,7 +725,7 @@ ArgonObject *ARGON_STRING_TYPE___string__(size_t argc, ArgonObject **argv,
   (void)state;
   if (argc != 1) {
     *err = create_err(0, 0, 0, "", "Runtime Error",
-                      "__string__ expects 1 arguments, got %" PRIu64, argc);
+                      "__string__ expects 1 argument, got %" PRIu64, argc);
   }
   return argv[0];
 }
@@ -588,7 +736,7 @@ ArgonObject *ARGON_STRING_TYPE___repr__(size_t argc, ArgonObject **argv,
   (void)state;
   if (argc != 1) {
     *err = create_err(0, 0, 0, "", "Runtime Error",
-                      "__repr__ expects 1 arguments, got %" PRIu64, argc);
+                      "__repr__ expects 1 argument, got %" PRIu64, argc);
   }
   char *quoted = c_quote_string(argv[0]->value.as_str->data,
                                 argv[0]->value.as_str->length);
@@ -603,7 +751,7 @@ ArgonObject *ARGON_STRING_TYPE___hash__(size_t argc, ArgonObject **argv,
   (void)state;
   if (argc != 1) {
     *err = create_err(0, 0, 0, "", "Runtime Error",
-                      "__hash__ expects 1 arguments, got %" PRIu64, argc);
+                      "__hash__ expects 1 argument, got %" PRIu64, argc);
   }
   uint64_t hash;
   if (argv[0]->value.as_str->hash_computed) {
@@ -625,7 +773,7 @@ ArgonObject *ARGON_STRING_TYPE___number__(size_t argc, ArgonObject **argv,
   (void)state;
   if (argc != 1) {
     *err = create_err(0, 0, 0, "", "Runtime Error",
-                      "__number__ expects 1 arguments, got %" PRIu64, argc);
+                      "__number__ expects 1 argument, got %" PRIu64, argc);
     return ARGON_NULL;
   }
 
@@ -651,7 +799,7 @@ ArgonObject *ARGON_STRING_TYPE___boolean__(size_t argc, ArgonObject **argv,
   (void)state;
   if (argc != 1) {
     *err = create_err(0, 0, 0, "", "Runtime Error",
-                      "__boolean__ expects 1 arguments, got %" PRIu64, argc);
+                      "__boolean__ expects 1 argument, got %" PRIu64, argc);
   }
   return argv[0]->value.as_str->length == 0 ? ARGON_FALSE : ARGON_TRUE;
 }
@@ -663,7 +811,7 @@ ArgonObject *ARGON_BOOL_TYPE___boolean__(size_t argc, ArgonObject **argv,
   (void)state;
   if (argc != 1) {
     *err = create_err(0, 0, 0, "", "Runtime Error",
-                      "__boolean__ expects 1 arguments, got %" PRIu64, argc);
+                      "__boolean__ expects 1 argument, got %" PRIu64, argc);
   }
   return argv[0];
 }
@@ -676,7 +824,7 @@ ArgonObject *ARGON_NULL_TYPE___boolean__(size_t argc, ArgonObject **argv,
   (void)state;
   if (argc != 1) {
     *err = create_err(0, 0, 0, "", "Runtime Error",
-                      "__boolean__ expects 1 arguments, got %" PRIu64, argc);
+                      "__boolean__ expects 1 argument, got %" PRIu64, argc);
   }
   return ARGON_FALSE;
 }
@@ -688,7 +836,7 @@ ArgonObject *ARGON_NULL_TYPE___number__(size_t argc, ArgonObject **argv,
   (void)state;
   if (argc != 1) {
     *err = create_err(0, 0, 0, "", "Runtime Error",
-                      "__boolean__ expects 1 arguments, got %" PRIu64, argc);
+                      "__boolean__ expects 1 argument, got %" PRIu64, argc);
   }
   return new_number_object_from_int64(0);
 }
@@ -700,7 +848,7 @@ ArgonObject *ARGON_NULL_TYPE___string__(size_t argc, ArgonObject **argv,
   (void)state;
   if (argc != 1) {
     *err = create_err(0, 0, 0, "", "Runtime Error",
-                      "__boolean__ expects 1 arguments, got %" PRIu64, argc);
+                      "__boolean__ expects 1 argument, got %" PRIu64, argc);
   }
   return new_string_object_null_terminated("null");
 }
@@ -810,6 +958,9 @@ void bootstrap_types() {
       BASE_CLASS, __boolean__,
       create_argon_native_function("__boolean__", BASE_CLASS___boolean__));
   add_builtin_field(
+      BASE_CLASS, __equal__,
+      create_argon_native_function("__equal__", BASE_CLASS___equal__));
+  add_builtin_field(
       ARGON_BOOL_TYPE, __string__,
       create_argon_native_function("__string__", ARGON_BOOL_TYPE___string__));
   add_builtin_field(
@@ -829,6 +980,11 @@ void bootstrap_types() {
       create_argon_native_function("floor_divide", ARGON_FLOOR_DIVIDE_FUNCTION);
   MODULO_FUNCTION =
       create_argon_native_function("modulo", ARGON_MODULO_FUNCTION);
+  EQUAL_FUNCTION = create_argon_native_function("equal", ARGON_EQUAL_FUNCTION);
+  NOT_EQUAL_FUNCTION =
+      create_argon_native_function("not_equal", ARGON_NOT_EQUAL_FUNCTION);
+  LESS_THAN_FUNCTION =
+      create_argon_native_function("less_than", ARGON_LESS_THAN_FUNCTION);
   add_builtin_field(BASE_CLASS, __getattribute__,
                     create_argon_native_function("__getattribute__",
                                                  BASE_CLASS___getattribute__));
@@ -858,6 +1014,8 @@ void bootstrap_globals() {
   add_to_scope(Global_Scope, "type", ARGON_TYPE_TYPE);
   add_to_scope(Global_Scope, "boolean", ARGON_BOOL_TYPE);
   add_to_scope(Global_Scope, "number", ARGON_NUMBER_TYPE);
+  add_to_scope(Global_Scope, "dictionary", ARGON_DICTIONARY_TYPE);
+
   add_to_scope(Global_Scope, "add", ADDITION_FUNCTION);
   add_to_scope(Global_Scope, "subtract", SUBTRACTION_FUNCTION);
   add_to_scope(Global_Scope, "multiply", MULTIPLY_FUNCTION);
@@ -865,7 +1023,9 @@ void bootstrap_globals() {
   add_to_scope(Global_Scope, "divide", DIVIDE_FUNCTION);
   add_to_scope(Global_Scope, "floor_divide", FLOOR_DIVIDE_FUNCTION);
   add_to_scope(Global_Scope, "modulo", MODULO_FUNCTION);
-  add_to_scope(Global_Scope, "dictionary", ARGON_DICTIONARY_TYPE);
+  add_to_scope(Global_Scope, "equal", EQUAL_FUNCTION);
+  add_to_scope(Global_Scope, "not_equal", NOT_EQUAL_FUNCTION);
+  add_to_scope(Global_Scope, "less_than", LESS_THAN_FUNCTION);
 
   struct hashmap_GC *argon_term = createHashmap_GC();
   add_to_hashmap(argon_term, "log",
@@ -1041,8 +1201,13 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       [OP_EXPONENTIATION] = &&DO_EXPONENTIATION,
       [OP_DIVISION] = &&DO_DIVISION,
       [OP_FLOOR_DIVISION] = &&DO_FLOOR_DIVISION,
+      [OP_EQUAL] = &&DO_EQUAL,
+      [OP_NOT_EQUAL] = &&DO_NOT_EQUAL,
+      [OP_LESS_THAN] = &&DO_LESS_THAN,
+      [OP_GREATER_THAN] = &&DO_GREATER_THAN,
       [OP_MODULO] = &&DO_MODULO,
       [OP_NOT] = &&DO_NOT,
+      [OP_NEGATION] = &&DO_NEGATION,
       [OP_LOAD_SETATTR_METHOD] = &&DO_LOAD_SETATTR_METHOD,
       [OP_CREATE_DICTIONARY] = &&DO_CREATE_DICTIONARY,
       [OP_LOAD_SETITEM_METHOD] = &&DO_LOAD_SETITEM_METHOD,
@@ -1157,6 +1322,20 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       state->registers[0] =
           pop_byte(translated, state) ? ARGON_TRUE : ARGON_FALSE;
       continue;
+    DO_NEGATION:;
+      ArgonObject *negation_function = get_builtin_field_for_class(
+          get_builtin_field(state->registers[0], __class__), __negation__,
+          state->registers[0]);
+      if (!state->registers[0]) {
+        *err = create_err(
+            state->source_location.line, state->source_location.column,
+            state->source_location.length, state->path, "Runtime Error",
+            "unable to get __negation__ from objects class");
+        continue;
+      }
+      ArgonObject *args[] = {};
+      argon_call(negation_function, 0, args, err, state);
+      continue;
     DO_LOAD_GETATTRIBUTE_METHOD:
       state->registers[0] = get_builtin_field_for_class(
           get_builtin_field(state->registers[0], __class__), __getattribute__,
@@ -1182,7 +1361,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       ArgonObject *valueA = state->registers[registerA];
       ArgonObject *valueB = state->registers[registerB];
 
-      if (likely(valueA->type == TYPE_NUMBER && valueB->type == TYPE_NUMBER)) {
+      if (valueA->type == TYPE_NUMBER && valueB->type == TYPE_NUMBER) {
         if (likely(valueA->value.as_number->is_int64 &&
                    valueB->value.as_number->is_int64)) {
           int64_t a = valueA->value.as_number->n.i64;
@@ -1242,7 +1421,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       ArgonObject *valueA = state->registers[registerA];
       ArgonObject *valueB = state->registers[registerB];
 
-      if (likely(valueA->type == TYPE_NUMBER && valueB->type == TYPE_NUMBER)) {
+      if (valueA->type == TYPE_NUMBER && valueB->type == TYPE_NUMBER) {
         if (likely(valueA->value.as_number->is_int64 &&
                    valueB->value.as_number->is_int64)) {
           int64_t a = valueA->value.as_number->n.i64;
@@ -1303,7 +1482,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       ArgonObject *valueA = state->registers[registerA];
       ArgonObject *valueB = state->registers[registerB];
 
-      if (likely(valueA->type == TYPE_NUMBER && valueB->type == TYPE_NUMBER)) {
+      if (valueA->type == TYPE_NUMBER && valueB->type == TYPE_NUMBER) {
         if (likely(valueA->value.as_number->is_int64 &&
                    valueB->value.as_number->is_int64)) {
           int64_t a = valueA->value.as_number->n.i64;
@@ -1364,7 +1543,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       ArgonObject *valueA = state->registers[registerA];
       ArgonObject *valueB = state->registers[registerB];
 
-      if (likely(valueA->type == TYPE_NUMBER && valueB->type == TYPE_NUMBER)) {
+      if (valueA->type == TYPE_NUMBER && valueB->type == TYPE_NUMBER) {
 
         /* ---------- fast int64 ^ int64 path ---------- */
         if (likely(valueA->value.as_number->is_int64 &&
@@ -1495,7 +1674,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       ArgonObject *valueA = state->registers[registerA];
       ArgonObject *valueB = state->registers[registerB];
 
-      if (likely(valueA->type == TYPE_NUMBER && valueB->type == TYPE_NUMBER)) {
+      if (valueA->type == TYPE_NUMBER && valueB->type == TYPE_NUMBER) {
         if (likely(valueA->value.as_number->is_int64 &&
                    valueB->value.as_number->is_int64)) {
           int64_t a = valueA->value.as_number->n.i64;
@@ -1557,7 +1736,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       ArgonObject *valueA = state->registers[registerA];
       ArgonObject *valueB = state->registers[registerB];
 
-      if (likely(valueA->type == TYPE_NUMBER && valueB->type == TYPE_NUMBER)) {
+      if (valueA->type == TYPE_NUMBER && valueB->type == TYPE_NUMBER) {
         if (likely(valueA->value.as_number->is_int64 &&
                    valueB->value.as_number->is_int64)) {
           int64_t a = valueA->value.as_number->n.i64;
@@ -1569,14 +1748,13 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
                               "Zero Division Error", "floor division by zero");
             continue;
           }
-          state->registers[registerC] =
-              new_number_object_from_int64(a/b);
+          state->registers[registerC] = new_number_object_from_int64(a / b);
         } else if (!valueA->value.as_number->is_int64 &&
                    !valueB->value.as_number->is_int64) {
           mpq_t r;
           mpq_init(r);
           mpq_fdiv(r, *valueA->value.as_number->n.mpq,
-                  *valueB->value.as_number->n.mpq);
+                   *valueB->value.as_number->n.mpq);
           state->registers[registerC] = new_number_object(r);
           mpq_clear(r);
         } else {
@@ -1589,10 +1767,10 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
           } else {
             mpq_set(a_GMP, *valueA->value.as_number->n.mpq);
             if (!valueB->value.as_number->n.i64) {
-              *err = create_err(state->source_location.line,
-                                state->source_location.column,
-                                state->source_location.length, state->path,
-                                "Zero Division Error", "floor division by zero");
+              *err = create_err(
+                  state->source_location.line, state->source_location.column,
+                  state->source_location.length, state->path,
+                  "Zero Division Error", "floor division by zero");
               continue;
             }
             mpq_set_si(b_GMP, valueB->value.as_number->n.i64, 1);
@@ -1619,7 +1797,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       ArgonObject *valueA = state->registers[registerA];
       ArgonObject *valueB = state->registers[registerB];
 
-      if (likely(valueA->type == TYPE_NUMBER && valueB->type == TYPE_NUMBER)) {
+      if (valueA->type == TYPE_NUMBER && valueB->type == TYPE_NUMBER) {
         if (likely(valueA->value.as_number->is_int64 &&
                    valueB->value.as_number->is_int64)) {
           int64_t a = valueA->value.as_number->n.i64;
@@ -1631,14 +1809,13 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
                               "Zero Division Error", "modulo by zero");
             continue;
           }
-          state->registers[registerC] =
-              new_number_object_from_int64(a%b);
+          state->registers[registerC] = new_number_object_from_int64(a % b);
         } else if (!valueA->value.as_number->is_int64 &&
                    !valueB->value.as_number->is_int64) {
           mpq_t r;
           mpq_init(r);
           mpq_fmod(r, *valueA->value.as_number->n.mpq,
-                  *valueB->value.as_number->n.mpq);
+                   *valueB->value.as_number->n.mpq);
           state->registers[registerC] = new_number_object(r);
           mpq_clear(r);
         } else {
@@ -1670,6 +1847,178 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       ArgonObject *args[] = {valueA, valueB};
       state->registers[registerC] =
           argon_call(MODULO_FUNCTION, 2, args, err, state);
+      continue;
+    }
+
+    DO_EQUAL: {
+      uint8_t registerA = pop_byte(translated, state);
+      uint8_t registerB = pop_byte(translated, state);
+      uint8_t registerC = pop_byte(translated, state);
+
+      ArgonObject *valueA = state->registers[registerA];
+      ArgonObject *valueB = state->registers[registerB];
+
+      if (valueA->type == TYPE_NUMBER && valueB->type == TYPE_NUMBER) {
+        if (likely(valueA->value.as_number->is_int64 &&
+                   valueB->value.as_number->is_int64)) {
+          int64_t a = valueA->value.as_number->n.i64;
+          int64_t b = valueB->value.as_number->n.i64;
+          state->registers[registerC] = a == b ? ARGON_TRUE : ARGON_FALSE;
+        } else if (!valueA->value.as_number->is_int64 &&
+                   !valueB->value.as_number->is_int64) {
+          state->registers[registerC] =
+              mpq_cmp(*valueA->value.as_number->n.mpq,
+                      *valueB->value.as_number->n.mpq) == 0
+                  ? ARGON_TRUE
+                  : ARGON_FALSE;
+        } else if (valueA->value.as_number->is_int64) {
+          state->registers[registerC] =
+              mpq_cmp_ui(*valueB->value.as_number->n.mpq,
+                         valueA->value.as_number->n.i64, 1) == 0
+                  ? ARGON_TRUE
+                  : ARGON_FALSE;
+        } else {
+          state->registers[registerC] =
+              mpq_cmp_ui(*valueA->value.as_number->n.mpq,
+                         valueB->value.as_number->n.i64, 1) == 0
+                  ? ARGON_TRUE
+                  : ARGON_FALSE;
+        }
+        continue;
+      }
+
+      ArgonObject *args[] = {valueA, valueB};
+      state->registers[registerC] =
+          argon_call(EQUAL_FUNCTION, 2, args, err, state);
+      continue;
+    }
+
+    DO_NOT_EQUAL: {
+      uint8_t registerA = pop_byte(translated, state);
+      uint8_t registerB = pop_byte(translated, state);
+      uint8_t registerC = pop_byte(translated, state);
+
+      ArgonObject *valueA = state->registers[registerA];
+      ArgonObject *valueB = state->registers[registerB];
+
+      if (valueA->type == TYPE_NUMBER && valueB->type == TYPE_NUMBER) {
+        if (likely(valueA->value.as_number->is_int64 &&
+                   valueB->value.as_number->is_int64)) {
+          int64_t a = valueA->value.as_number->n.i64;
+          int64_t b = valueB->value.as_number->n.i64;
+          state->registers[registerC] = a != b ? ARGON_TRUE : ARGON_FALSE;
+        } else if (!valueA->value.as_number->is_int64 &&
+                   !valueB->value.as_number->is_int64) {
+          state->registers[registerC] =
+              mpq_cmp(*valueA->value.as_number->n.mpq,
+                      *valueB->value.as_number->n.mpq) != 0
+                  ? ARGON_TRUE
+                  : ARGON_FALSE;
+        } else if (valueA->value.as_number->is_int64) {
+          state->registers[registerC] =
+              mpq_cmp_ui(*valueB->value.as_number->n.mpq,
+                         valueA->value.as_number->n.i64, 1) != 0
+                  ? ARGON_TRUE
+                  : ARGON_FALSE;
+        } else {
+          state->registers[registerC] =
+              mpq_cmp_ui(*valueA->value.as_number->n.mpq,
+                         valueB->value.as_number->n.i64, 1) != 0
+                  ? ARGON_TRUE
+                  : ARGON_FALSE;
+        }
+        continue;
+      }
+
+      ArgonObject *args[] = {valueA, valueB};
+      state->registers[registerC] =
+          argon_call(NOT_EQUAL_FUNCTION, 2, args, err, state);
+      continue;
+    }
+
+    DO_LESS_THAN: {
+      uint8_t registerA = pop_byte(translated, state);
+      uint8_t registerB = pop_byte(translated, state);
+      uint8_t registerC = pop_byte(translated, state);
+
+      ArgonObject *valueA = state->registers[registerA];
+      ArgonObject *valueB = state->registers[registerB];
+
+      if (valueA->type == TYPE_NUMBER && valueB->type == TYPE_NUMBER) {
+        if (likely(valueA->value.as_number->is_int64 &&
+                   valueB->value.as_number->is_int64)) {
+          int64_t a = valueA->value.as_number->n.i64;
+          int64_t b = valueB->value.as_number->n.i64;
+          state->registers[registerC] = a < b ? ARGON_TRUE : ARGON_FALSE;
+        } else if (!valueA->value.as_number->is_int64 &&
+                   !valueB->value.as_number->is_int64) {
+          state->registers[registerC] =
+              mpq_cmp(*valueA->value.as_number->n.mpq,
+                      *valueB->value.as_number->n.mpq) < 0
+                  ? ARGON_TRUE
+                  : ARGON_FALSE;
+        } else if (valueA->value.as_number->is_int64) {
+          state->registers[registerC] =
+              mpq_cmp_ui(*valueB->value.as_number->n.mpq,
+                         valueA->value.as_number->n.i64, 1) > 0
+                  ? ARGON_TRUE
+                  : ARGON_FALSE;
+        } else {
+          state->registers[registerC] =
+              mpq_cmp_ui(*valueA->value.as_number->n.mpq,
+                         valueB->value.as_number->n.i64, 1) < 0
+                  ? ARGON_TRUE
+                  : ARGON_FALSE;
+        }
+        continue;
+      }
+
+      ArgonObject *args[] = {valueA, valueB};
+      state->registers[registerC] =
+          argon_call(LESS_THAN_FUNCTION, 2, args, err, state);
+      continue;
+    }
+
+    DO_GREATER_THAN: {
+      uint8_t registerA = pop_byte(translated, state);
+      uint8_t registerB = pop_byte(translated, state);
+      uint8_t registerC = pop_byte(translated, state);
+
+      ArgonObject *valueA = state->registers[registerA];
+      ArgonObject *valueB = state->registers[registerB];
+
+      if (valueA->type == TYPE_NUMBER && valueB->type == TYPE_NUMBER) {
+        if (likely(valueA->value.as_number->is_int64 &&
+                   valueB->value.as_number->is_int64)) {
+          int64_t a = valueA->value.as_number->n.i64;
+          int64_t b = valueB->value.as_number->n.i64;
+          state->registers[registerC] = a > b ? ARGON_TRUE : ARGON_FALSE;
+        } else if (!valueA->value.as_number->is_int64 &&
+                   !valueB->value.as_number->is_int64) {
+          state->registers[registerC] =
+              mpq_cmp(*valueA->value.as_number->n.mpq,
+                      *valueB->value.as_number->n.mpq) > 0
+                  ? ARGON_TRUE
+                  : ARGON_FALSE;
+        } else if (valueA->value.as_number->is_int64) {
+          state->registers[registerC] =
+              mpq_cmp_ui(*valueB->value.as_number->n.mpq,
+                         valueA->value.as_number->n.i64, 1) < 0
+                  ? ARGON_TRUE
+                  : ARGON_FALSE;
+        } else {
+          state->registers[registerC] =
+              mpq_cmp_ui(*valueA->value.as_number->n.mpq,
+                         valueB->value.as_number->n.i64, 1) > 0
+                  ? ARGON_TRUE
+                  : ARGON_FALSE;
+        }
+        continue;
+      }
+
+      ArgonObject *args[] = {valueA, valueB};
+      state->registers[registerC] =
+          argon_call(GREATER_THAN_FUNCTION, 2, args, err, state);
       continue;
     }
 
