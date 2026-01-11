@@ -16,7 +16,7 @@ let speedX = 1
 let speedY = speedX
 
 let abs(x)=do
-  if (x<0) return 0-x
+  if (x<0) return -x
   return x
 
 while (!raylib.WindowShouldClose()) do

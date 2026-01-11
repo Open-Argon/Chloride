@@ -58,7 +58,7 @@ const char *built_in_field_names[BUILT_IN_FIELDS_COUNT] = {
     "__number__",
     "length",
     "__getattribute__",
-  "__negation__",
+    "__negation__",
     "__setattr__",
     "__getitem__",
     "__setitem__",
