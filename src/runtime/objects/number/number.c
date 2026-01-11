@@ -123,6 +123,26 @@ ArgonObject *ARGON_NUMBER_TYPE___boolean__(size_t argc, ArgonObject **argv,
   return argv[0]->as_bool ? ARGON_FALSE : ARGON_TRUE;
 }
 
+ArgonObject *ARGON_NUMBER_TYPE___negation__(size_t argc, ArgonObject **argv,
+                                            ArErr *err, RuntimeState *state,
+                                            ArgonNativeAPI *api) {
+  (void)api;
+  (void)state;
+  if (argc != 1) {
+    *err = create_err(0, 0, 0, "", "Runtime Error",
+                      "__negation__ expects 1 arguments, got %" PRIu64, argc);
+    return ARGON_NULL;
+  }
+  if (argv[0]->value.as_number->is_int64) {
+    return new_number_object_from_int64(-argv[0]->value.as_number->n.i64);
+  }
+  mpq_t result;
+  mpq_init(result);
+  mpq_neg(result, *argv[0]->value.as_number->n.mpq);
+  return new_number_object(result);
+  mpq_clear(result);
+}
+
 ArgonObject *ARGON_NUMBER_TYPE___add__(size_t argc, ArgonObject **argv,
                                        ArErr *err, RuntimeState *state,
                                        ArgonNativeAPI *api) {
@@ -994,6 +1014,9 @@ void create_ARGON_NUMBER_TYPE() {
   add_builtin_field(ARGON_NUMBER_TYPE, __boolean__,
                     create_argon_native_function(
                         "__boolean__", ARGON_NUMBER_TYPE___boolean__));
+  add_builtin_field(ARGON_NUMBER_TYPE, __negation__,
+                    create_argon_native_function(
+                        "__negation__", ARGON_NUMBER_TYPE___negation__));
   add_builtin_field(
       ARGON_NUMBER_TYPE, __add__,
       create_argon_native_function("__add__", ARGON_NUMBER_TYPE___add__));

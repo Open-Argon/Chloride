@@ -1322,7 +1322,20 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       state->registers[0] =
           pop_byte(translated, state) ? ARGON_TRUE : ARGON_FALSE;
       continue;
-    DO_NEGATION:;
+    DO_NEGATION:
+      if (state->registers[0]->type == TYPE_NUMBER) {
+        ArgonObject *value = state->registers[0];
+        if (likely(value->value.as_number->is_int64)) {
+          int64_t a = value->value.as_number->n.i64;
+          state->registers[0] = new_number_object_from_int64(-a);
+          continue;
+        }
+        mpq_t result;
+        mpq_init(result);
+        mpq_neg(result, *value->value.as_number->n.mpq);
+        state->registers[0] = new_number_object(result);
+        mpq_clear(result);
+      }
       ArgonObject *negation_function = get_builtin_field_for_class(
           get_builtin_field(state->registers[0], __class__), __negation__,
           state->registers[0]);

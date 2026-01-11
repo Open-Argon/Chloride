@@ -37,4 +37,6 @@ ParsedValueReturn parse_negation(char *file, DArray *tokens, size_t *index) {
 
 void free_negation(void *ptr) {
   ParsedValue *parsedValue = ptr;
+  free_parsed(parsedValue->data);
+  free(parsedValue->data);
 }
