@@ -2,6 +2,6 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-let i = 1e7
-while (i) do
-  i=i-1
+let i = 0
+while (i<1e7) do
+  i=i+1

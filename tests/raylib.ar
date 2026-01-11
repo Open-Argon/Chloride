@@ -4,37 +4,33 @@ term.log(raylib)
 
 let width = 800, height = 450
 
+let maxX = width -235, maxY = height-20
+
+let frame = 0
+
 raylib.InitWindow(width, height, "Hello Raylib")
 
 raylib.SetTargetFPS(60)
 
-let x = 0
+let speedX = 1
+let speedY = speedX
 
-let xd = 1
-
-let y = 0
-
-let yd = 1
-
-let frame = 0
+let abs(x)=do
+  if (x<0) return 0-x
+  return x
 
 while (!raylib.WindowShouldClose()) do
-  term.log("frame:",frame, {x,y})
+  term.log("frame:",frame)
   raylib.BeginDrawing()
   
   raylib.ClearBackground(raylib.BLACK)
+
+  let x = maxX - abs(((frame * speedX) % (2 * maxX)) - maxX)
+  let y = maxY - abs(((frame * speedY) % (2 * maxY)) - maxY)
   
   raylib.DrawText("Hello world from Argon", x, y, 20, raylib.WHITE)
 
   raylib.EndDrawing()
-
-  x=x+xd
-
-  y=y+yd
-
-  if (!(x - width+235) || !(x)) xd = 0-xd
-
-  if (!(y - height+20) || !(y)) yd = 0-yd
 
   frame=frame+1
 

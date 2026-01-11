@@ -143,6 +143,11 @@ size_t translate_parsed(Translated *translated, ParsedValue *parsedValue,
     output = push_instruction_byte(translated, OP_LOAD_BOOL);
     push_instruction_byte(translated, (bool)parsedValue->data);
     return output;
+  case AST_NEGATION:
+    set_registers(translated, 1);
+    output = translate_parsed(translated, parsedValue->data, err);
+    push_instruction_byte(translated, OP_NEGATION);
+    return output;
   case AST_FUNCTION:
     return translate_parsed_function(translated,
                                      (ParsedFunction *)parsedValue->data, err);

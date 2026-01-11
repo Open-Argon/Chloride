@@ -52,7 +52,8 @@ typedef enum {
   AST_FUNCTION,
   AST_RETURN,
   AST_WHILE,
-  AST_TO_BOOL
+  AST_TO_BOOL,
+  AST_NEGATION
 } ValueType;
 
 extern const char *ValueTypeNames[];

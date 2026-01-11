@@ -26,7 +26,6 @@ ArgonObject *ARGON_NUMBER_TYPE;
 
 #define SIGNIFICANT_DIGITS 16
 
-
 void mpq_fdiv(mpq_t result, const mpq_t a, const mpq_t b) {
   mpq_t tmp;
   mpq_init(tmp);
@@ -600,10 +599,11 @@ ArgonObject *ARGON_NUMBER_TYPE___floor_division__(size_t argc,
   if (argv[1]->type != TYPE_NUMBER) {
     ArgonObject *type_name = get_builtin_field_for_class(
         get_builtin_field(argv[1], __class__), __name__, argv[1]);
-    *err = create_err(
-        0, 0, 0, "", "Runtime Error",
-        "__floor_division__ cannot perform floor division between number and %.*s",
-        type_name->value.as_str->length, type_name->value.as_str->data);
+    *err = create_err(0, 0, 0, "", "Runtime Error",
+                      "__floor_division__ cannot perform floor division "
+                      "between number and %.*s",
+                      type_name->value.as_str->length,
+                      type_name->value.as_str->data);
     return ARGON_NULL;
   }
   if (argv[0]->value.as_number->is_int64 &&
@@ -623,7 +623,7 @@ ArgonObject *ARGON_NUMBER_TYPE___floor_division__(size_t argc,
     mpq_t r;
     mpq_init(r);
     mpq_fdiv(r, *argv[0]->value.as_number->n.mpq,
-            *argv[1]->value.as_number->n.mpq);
+             *argv[1]->value.as_number->n.mpq);
     ArgonObject *result = new_number_object(r);
     mpq_clear(r);
     return result;
@@ -653,17 +653,14 @@ ArgonObject *ARGON_NUMBER_TYPE___floor_division__(size_t argc,
   }
 }
 
-ArgonObject *ARGON_NUMBER_TYPE___modulo__(size_t argc,
-                                                  ArgonObject **argv,
-                                                  ArErr *err,
-                                                  RuntimeState *state,
-                                                  ArgonNativeAPI *api) {
+ArgonObject *ARGON_NUMBER_TYPE___modulo__(size_t argc, ArgonObject **argv,
+                                          ArErr *err, RuntimeState *state,
+                                          ArgonNativeAPI *api) {
   (void)api;
   (void)state;
   if (argc != 2) {
     *err = create_err(0, 0, 0, "", "Runtime Error",
-                      "__modulo__ expects 2 arguments, got %" PRIu64,
-                      argc);
+                      "__modulo__ expects 2 arguments, got %" PRIu64, argc);
     return ARGON_NULL;
   }
   if (argv[1]->type != TYPE_NUMBER) {
@@ -692,7 +689,7 @@ ArgonObject *ARGON_NUMBER_TYPE___modulo__(size_t argc,
     mpq_t r;
     mpq_init(r);
     mpq_fmod(r, *argv[0]->value.as_number->n.mpq,
-            *argv[1]->value.as_number->n.mpq);
+             *argv[1]->value.as_number->n.mpq);
     ArgonObject *result = new_number_object(r);
     mpq_clear(r);
     return result;
@@ -719,6 +716,82 @@ ArgonObject *ARGON_NUMBER_TYPE___modulo__(size_t argc,
     mpq_clear(a_GMP);
     mpq_clear(b_GMP);
     return result;
+  }
+}
+
+ArgonObject *ARGON_NUMBER_TYPE___equal__(size_t argc, ArgonObject **argv,
+                                         ArErr *err, RuntimeState *state,
+                                         ArgonNativeAPI *api) {
+  (void)api;
+  (void)state;
+  if (argc != 2) {
+    *err = create_err(0, 0, 0, "", "Runtime Error",
+                      "__equal__ expects 2 arguments, got %" PRIu64, argc);
+    return ARGON_NULL;
+  }
+  if (argv[1]->type != TYPE_NUMBER) {
+    return ARGON_FALSE;
+  }
+  if (likely(argv[0]->value.as_number->is_int64 &&
+             argv[1]->value.as_number->is_int64)) {
+    int64_t a = argv[0]->value.as_number->n.i64;
+    int64_t b = argv[1]->value.as_number->n.i64;
+    return a == b ? ARGON_TRUE : ARGON_FALSE;
+  } else if (!argv[0]->value.as_number->is_int64 &&
+             !argv[1]->value.as_number->is_int64) {
+
+    return mpq_cmp(*argv[0]->value.as_number->n.mpq,
+                   *argv[1]->value.as_number->n.mpq) == 0
+               ? ARGON_TRUE
+               : ARGON_FALSE;
+  } else if (argv[0]->value.as_number->is_int64) {
+    return mpq_cmp_ui(*argv[1]->value.as_number->n.mpq,
+                      argv[0]->value.as_number->n.i64, 1) == 0
+               ? ARGON_TRUE
+               : ARGON_FALSE;
+  } else {
+    return mpq_cmp_ui(*argv[0]->value.as_number->n.mpq,
+                      argv[1]->value.as_number->n.i64, 1) == 0
+               ? ARGON_TRUE
+               : ARGON_FALSE;
+  }
+}
+
+ArgonObject *ARGON_NUMBER_TYPE___not_equal__(size_t argc, ArgonObject **argv,
+                                             ArErr *err, RuntimeState *state,
+                                             ArgonNativeAPI *api) {
+  (void)api;
+  (void)state;
+  if (argc != 2) {
+    *err = create_err(0, 0, 0, "", "Runtime Error",
+                      "__not_equal__ expects 2 arguments, got %" PRIu64, argc);
+    return ARGON_NULL;
+  }
+  if (argv[1]->type != TYPE_NUMBER) {
+    return ARGON_TRUE;
+  }
+  if (likely(argv[0]->value.as_number->is_int64 &&
+             argv[1]->value.as_number->is_int64)) {
+    int64_t a = argv[0]->value.as_number->n.i64;
+    int64_t b = argv[1]->value.as_number->n.i64;
+    return a != b ? ARGON_TRUE : ARGON_FALSE;
+  } else if (!argv[0]->value.as_number->is_int64 &&
+             !argv[1]->value.as_number->is_int64) {
+
+    return mpq_cmp(*argv[0]->value.as_number->n.mpq,
+                   *argv[1]->value.as_number->n.mpq) != 0
+               ? ARGON_TRUE
+               : ARGON_FALSE;
+  } else if (argv[0]->value.as_number->is_int64) {
+    return mpq_cmp_ui(*argv[1]->value.as_number->n.mpq,
+                      argv[0]->value.as_number->n.i64, 1) != 0
+               ? ARGON_TRUE
+               : ARGON_FALSE;
+  } else {
+    return mpq_cmp_ui(*argv[0]->value.as_number->n.mpq,
+                      argv[1]->value.as_number->n.i64, 1) != 0
+               ? ARGON_TRUE
+               : ARGON_FALSE;
   }
 }
 
@@ -886,7 +959,10 @@ ArgonObject *ARGON_NUMBER_TYPE___string__(size_t argc, ArgonObject **argv,
 ArgonObject small_ints[small_ints_max - small_ints_min + 1];
 struct as_number small_ints_as_number[small_ints_max - small_ints_min + 1];
 
+hashmap_GC *load_number_cache;
+
 void init_small_ints() {
+  load_number_cache = createHashmap_GC();
   for (int64_t i = 0; i <= small_ints_max - small_ints_min; i++) {
     int64_t n = i + small_ints_min;
     small_ints[i].type = TYPE_NUMBER;
@@ -933,12 +1009,19 @@ void create_ARGON_NUMBER_TYPE() {
   add_builtin_field(ARGON_NUMBER_TYPE, __division__,
                     create_argon_native_function(
                         "__division__", ARGON_NUMBER_TYPE___division__));
-  add_builtin_field(ARGON_NUMBER_TYPE, __floor_division__,
+  add_builtin_field(
+      ARGON_NUMBER_TYPE, __floor_division__,
+      create_argon_native_function("__floor_division__",
+                                   ARGON_NUMBER_TYPE___floor_division__));
+  add_builtin_field(
+      ARGON_NUMBER_TYPE, __modulo__,
+      create_argon_native_function("__modulo__", ARGON_NUMBER_TYPE___modulo__));
+  add_builtin_field(
+      ARGON_NUMBER_TYPE, __equal__,
+      create_argon_native_function("__equal__", ARGON_NUMBER_TYPE___equal__));
+  add_builtin_field(ARGON_NUMBER_TYPE, __not_equal__,
                     create_argon_native_function(
-                        "__floor_division__", ARGON_NUMBER_TYPE___floor_division__));
-  add_builtin_field(ARGON_NUMBER_TYPE, __modulo__,
-                    create_argon_native_function(
-                        "__modulo__", ARGON_NUMBER_TYPE___modulo__));
+                        "__not_equal__", ARGON_NUMBER_TYPE___not_equal__));
   init_small_ints();
 }
 
@@ -1171,11 +1254,35 @@ ArgonObject *new_number_object_from_double(double d) {
 }
 
 void load_number(Translated *translated, RuntimeState *state) {
+  size_t cache_pos = state->head;
   uint8_t to_register = pop_byte(translated, state);
   uint8_t is_int64 = pop_byte(translated, state);
+  ArgonObject *cache_number = NULL;
   if (is_int64) {
-    state->registers[to_register] =
-        new_number_object_from_int64(pop_bytecode(translated, state));
+    int64_t num = pop_bytecode(translated, state);
+    bool small_num = num < small_ints_min || num > small_ints_max;
+    if (small_num) {
+      cache_number = hashmap_lookup_GC(load_number_cache, cache_pos);
+    }
+    if (cache_number) {
+      state->registers[to_register] = cache_number;
+      return;
+    }
+    state->registers[to_register] = new_number_object_from_int64(num);
+    if (small_num) {
+      hashmap_insert_GC(load_number_cache, cache_pos, NULL,
+                        state->registers[to_register], 0);
+    }
+    return;
+  }
+
+  cache_number = hashmap_lookup_GC(load_number_cache, cache_pos);
+  if (cache_number) {
+    state->registers[to_register] = cache_number;
+    state->head += 16;
+    if (!pop_byte(translated, state)) {
+      state->head += 16;
+    }
     return;
   }
   size_t num_size = pop_bytecode(translated, state);
@@ -1205,5 +1312,9 @@ void load_number(Translated *translated, RuntimeState *state) {
   }
 
   state->registers[to_register] = new_number_object(r);
+  printf("big cache start: %zu\n", cache_pos);
+  hashmap_insert_GC(load_number_cache, cache_pos, NULL,
+                    state->registers[to_register], 0);
+  printf("big cache end: %zu\n", cache_pos);
   mpq_clear(r);
 }
