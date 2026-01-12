@@ -16,11 +16,13 @@ class ArgonConan(ConanFile):
     # Remove tool_requires, no flex from Conan
     requires = [
         "gmp/6.3.0",
-        "bdwgc/8.2.6"
+        "bdwgc/8.2.6",
+        "mpfr/4.2.2"
     ]
 
     default_options = {
         "gmp/*:shared": False,
+        "mpfr/*:shared": False,
         "bdwgc/*:shared": False,
         "bdwgc/*:parallel_mark": False,
         "bdwgc/*:threads": True,
