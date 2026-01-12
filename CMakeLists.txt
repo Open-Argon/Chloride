@@ -58,12 +58,14 @@ set_target_properties(argon PROPERTIES
 # Step 6: Conan libraries
 find_package(BDWgc REQUIRED)
 find_package(gmp REQUIRED)
+find_package(mpfr REQUIRED)
 
 target_compile_options(argon PRIVATE -O3 -Wall -Wextra -Wno-unused-function -s)
 
 target_link_libraries(argon PRIVATE
     BDWgc::BDWgc
     gmp::gmp
+    mpfr::mpfr
     m
     $<$<PLATFORM_ID:Windows>:bcrypt>
 )
