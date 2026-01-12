@@ -76,11 +76,30 @@ ArgonObject *BASE_CLASS___getattribute__(size_t argc, ArgonObject **argv,
     access->value.as_str->hash = hash;
     access->value.as_str->hash_computed = true;
   }
-  ArgonObject *value = get_field_l(to_access, access->value.as_str->data, hash,
-                                   access->value.as_str->length, true, false);
-                                   
+  char *name_text = access->value.as_str->data;
+  size_t name_len = access->value.as_str->length;
+
+  ArgonObject *value =
+      get_field_l(to_access, name_text, hash, name_len, true, false);
+
   if (value)
     return value;
+
+  size_t getter_len = name_len + 4; // "get_" = 4
+  char *getter_name = malloc(getter_len);
+
+  memcpy(getter_name, "get_", 4);
+  memcpy(getter_name + 4, name_text, name_len);
+
+  /* If your get_field_l needs a hash, recompute it */
+  uint64_t getter_hash =
+      runtime_hash(getter_name, getter_len, 0);
+
+  ArgonObject *getter =
+      get_field_l(to_access, getter_name, getter_hash, getter_len, true, false);
+  free(getter_name);
+  if (getter)
+    return argon_call(getter, 0, (ArgonObject *[]){}, err, state);
 
   ArgonObject *cls__getattr__ = get_builtin_field_for_class(
       get_builtin_field(to_access, __class__), __getattr__, to_access);
@@ -520,6 +539,27 @@ ArgonObject *BASE_CLASS___setattr__(size_t argc, ArgonObject **argv, ArErr *err,
     *err = create_err(0, 0, 0, "", "Runtime Error",
                       "__setattr__ expects 3 argument, got %" PRIu64, argc);
   }
+
+
+  char *name_text = argv[1]->value.as_str->data;
+  size_t name_len = argv[1]->value.as_str->length;
+
+  size_t setter_len = name_len + 4; // "get_" = 4
+  char *setter_name = malloc(setter_len);
+
+  memcpy(setter_name, "set_", 4);
+  memcpy(setter_name + 4, name_text, name_len);
+
+  /* If your get_field_l needs a hash, recompute it */
+  uint64_t setter_hash =
+      runtime_hash(setter_name, setter_len, 0);
+
+  ArgonObject *setter =
+      get_field_l(argv[0], setter_name, setter_hash, setter_len, true, false);
+  free(setter_name);
+  if (setter)
+    return argon_call(setter, 1, (ArgonObject *[]){argv[2]}, err, state);
+
   if (!argv[1]->value.as_str->hash)
     argv[1]->value.as_str->hash =
         runtime_hash(argv[1]->value.as_str->data, argv[1]->value.as_str->length,
@@ -925,6 +965,12 @@ void bootstrap_types() {
       ARGON_STRING_TYPE, __hash__,
       create_argon_native_function("__hash__", ARGON_STRING_TYPE___hash__));
   add_builtin_field(
+      ARGON_STRING_TYPE, get_length,
+      create_argon_native_function("get_length", ARGON_STRING_TYPE_get_length));
+  add_builtin_field(
+      ARGON_STRING_TYPE, set_length,
+      create_argon_native_function("set_length", ARGON_STRING_TYPE_set_length));
+  add_builtin_field(
       ARGON_STRING_TYPE, __add__,
       create_argon_native_function("__add__", ARGON_STRING_TYPE___add__));
   add_builtin_field(
@@ -1111,7 +1157,8 @@ uint64_t runtime_hash(const void *data, size_t len, uint64_t prehash) {
     }
   }
   uint64_t hash = siphash64_bytes(data, len, siphash_key);
-  hashmap_insert(runtime_hash_table, prehash, 0, (void *)hash, 0);
+  if (prehash)
+    hashmap_insert(runtime_hash_table, prehash, 0, (void *)hash, 0);
   return hash;
 }
 
@@ -1146,7 +1193,8 @@ RuntimeState init_runtime_state(Translated translated, char *path) {
       NULL,
       NULL,
       {0, 0, 0},
-      {}};
+      {},
+      createHashmap_GC()};
   for (size_t i = 0; i < translated.registerCount; i++) {
     runtime.registers[i] = NULL;
   }

@@ -50,6 +50,7 @@ typedef struct RuntimeState {
   StackFrame **currentStackFramePointer;
   SourceLocation source_location;
   DArray catch_errors; // ErrorCatch[]
+  hashmap_GC *load_number_cache;
 } RuntimeState;
 
 typedef struct StackFrame {
