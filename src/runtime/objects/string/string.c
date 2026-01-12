@@ -8,6 +8,8 @@
 #include "../../call/call.h"
 #include "../number/number.h"
 #include "../object.h"
+#include "../literals/literals.h"
+#include <inttypes.h>
 #include <ctype.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -64,9 +66,38 @@ char *c_quote_string(const char *input, size_t len) {
   return out;
 }
 
+ArgonObject *ARGON_STRING_TYPE_get_length(size_t argc, ArgonObject **argv,
+                                        ArErr *err, RuntimeState *state,
+                                        ArgonNativeAPI *api) {
+  (void)api;
+  (void)state;
+  if (argc != 1) {
+    *err = create_err(0, 0, 0, "", "Runtime Error",
+                      "get_length expects 1 argument, got %" PRIu64, argc);
+    return ARGON_NULL;
+  }
+  return new_number_object_from_int64(argv[0]->value.as_str->length);
+}
+
+ArgonObject *ARGON_STRING_TYPE_set_length(size_t argc, ArgonObject **argv,
+                                        ArErr *err, RuntimeState *state,
+                                        ArgonNativeAPI *api) {
+  (void)api;
+  (void)state;
+  (void)argv;
+  if (argc != 2) {
+    *err = create_err(0, 0, 0, "", "Runtime Error",
+                      "set_length expects 2 arguments, got %" PRIu64, argc);
+    return ARGON_NULL;
+  }
+
+  *err = create_err(0, 0, 0, "", "Runtime Error",
+                    "attribute 'length' is immutable");
+  return ARGON_NULL;
+}
+
 void init_string(ArgonObject *object, char *data, size_t length,
                  uint64_t prehash, uint64_t hash) {
-  add_builtin_field(object, field_length, new_number_object_from_int64(length));
   object->type = TYPE_STRING;
   object->value.as_str = ar_alloc(sizeof(struct string_struct));
   object->value.as_str->data = data;

@@ -6,6 +6,7 @@
 
 #include "call.h"
 #include "../../hash_data/hash_data.h"
+#include "../api/api.h"
 #include "../objects/string/string.h"
 #include <inttypes.h>
 #include <math.h>
@@ -15,7 +16,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "../api/api.h"
 
 #if defined(_WIN32)
 #ifndef _WIN32_WINNT
@@ -135,7 +135,8 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
                         0);
     }
     if (CStackFrame) {
-      ArgonObject * registers[MAX_REGISTERS]; // fixed on the stack for speed purposes
+      ArgonObject
+          *registers[MAX_REGISTERS]; // fixed on the stack for speed purposes
       StackFrame new_stackFrame = {
           {object->value.argon_fn->translated.registerCount,
            object->value.argon_fn->translated.registerAssignment,
@@ -151,7 +152,8 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
            NULL,
            state->currentStackFramePointer,
            {},
-           {}},
+           {},
+           state->load_number_cache},
           scope,
           *state->currentStackFramePointer,
           (*state->currentStackFramePointer)->depth + 1};
@@ -162,8 +164,10 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
               new_stackFrame.stack, err);
       state->registers[0] = new_stackFrame.state.registers[0];
     } else {
-      StackFrame *currentStackFrame = ar_alloc(sizeof(StackFrame)+object->value.argon_fn->translated.registerCount *
-                    sizeof(ArgonObject *));
+      StackFrame *currentStackFrame =
+          ar_alloc(sizeof(StackFrame) +
+                   object->value.argon_fn->translated.registerCount *
+                       sizeof(ArgonObject *));
       *currentStackFrame = (StackFrame){
           {object->value.argon_fn->translated.registerCount,
            object->value.argon_fn->translated.registerAssignment,
@@ -173,17 +177,19 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
             object->value.argon_fn->bytecode_length, false},
            object->value.argon_fn->translated.constants,
            object->value.argon_fn->translated.path},
-          {(ArgonObject **)((char*)currentStackFrame+sizeof(StackFrame)),
+          {(ArgonObject **)((char *)currentStackFrame + sizeof(StackFrame)),
            0,
            object->value.argon_fn->translated.path,
            NULL,
            state->currentStackFramePointer,
            {},
-           {}},
+           {},
+           state->load_number_cache},
           scope,
           *state->currentStackFramePointer,
           (*state->currentStackFramePointer)->depth + 1};
-      for (size_t i = 0; i < (*currentStackFrame).translated.registerCount; i++) {
+      for (size_t i = 0; i < (*currentStackFrame).translated.registerCount;
+           i++) {
         (*currentStackFrame).state.registers[i] = NULL;
       }
       *state->currentStackFramePointer = currentStackFrame;
@@ -208,7 +214,8 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
       return;
     }
   } else if (object->type == TYPE_NATIVE_FUNCTION) {
-    state->registers[0] = object->value.native_fn(argc, argv, err, state, &native_api);
+    state->registers[0] =
+        object->value.native_fn(argc, argv, err, state, &native_api);
     if (err->exists && strlen(err->path) == 0) {
       err->line = state->source_location.line;
       err->column = state->source_location.column;

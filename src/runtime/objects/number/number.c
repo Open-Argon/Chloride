@@ -980,10 +980,7 @@ ArgonObject *ARGON_NUMBER_TYPE___string__(size_t argc, ArgonObject **argv,
 ArgonObject small_ints[small_ints_max - small_ints_min + 1];
 struct as_number small_ints_as_number[small_ints_max - small_ints_min + 1];
 
-hashmap_GC *load_number_cache;
-
 void init_small_ints() {
-  load_number_cache = createHashmap_GC();
   for (int64_t i = 0; i <= small_ints_max - small_ints_min; i++) {
     int64_t n = i + small_ints_min;
     small_ints[i].type = TYPE_NUMBER;
@@ -1312,7 +1309,7 @@ void load_number(Translated *translated, RuntimeState *state) {
     int64_t num = pop_bytecode(translated, state);
     bool small_num = num < small_ints_min || num > small_ints_max;
     if (small_num) {
-      cache_number = hashmap_lookup_GC(load_number_cache, num);
+      cache_number = hashmap_lookup_GC(state->load_number_cache, num);
     }
     if (cache_number) {
       state->registers[to_register] = cache_number;
@@ -1320,7 +1317,7 @@ void load_number(Translated *translated, RuntimeState *state) {
     }
     state->registers[to_register] = new_number_object_from_int64(num);
     if (small_num) {
-      hashmap_insert_GC(load_number_cache, num, NULL,
+      hashmap_insert_GC(state->load_number_cache, num, NULL,
                         state->registers[to_register], 0);
     }
     return;
@@ -1338,7 +1335,7 @@ void load_number(Translated *translated, RuntimeState *state) {
   uint64_t uuid = make_id(num_size,num_pos,is_int,den_size,den_pos);
 
 
-  cache_number = hashmap_lookup_GC(load_number_cache, uuid);
+  cache_number = hashmap_lookup_GC(state->load_number_cache, uuid);
   if (cache_number) {
     state->registers[to_register] = cache_number;
     state->head += 16;
@@ -1368,7 +1365,7 @@ void load_number(Translated *translated, RuntimeState *state) {
   }
 
   state->registers[to_register] = new_number_object(r);
-  hashmap_insert_GC(load_number_cache, uuid, NULL,
+  hashmap_insert_GC(state->load_number_cache, uuid, NULL,
                     state->registers[to_register], 0);
   mpq_clear(r);
 }

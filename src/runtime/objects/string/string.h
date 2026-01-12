@@ -27,4 +27,12 @@ ArgonObject *new_string_object(char *data, size_t length, uint64_t prehash,
 ArgonObject *new_string_object_null_terminated(char *data);
 
 char *argon_string_to_c_string_malloc(ArgonObject *object);
+
+ArgonObject *ARGON_STRING_TYPE_get_length(size_t argc, ArgonObject **argv,
+                                        ArErr *err, RuntimeState *state,
+                                        ArgonNativeAPI *api);
+
+ArgonObject *ARGON_STRING_TYPE_set_length(size_t argc, ArgonObject **argv,
+                                        ArErr *err, RuntimeState *state,
+                                        ArgonNativeAPI *api);
 #endif // STRING_OBJ_H
