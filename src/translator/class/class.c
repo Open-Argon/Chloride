@@ -10,7 +10,8 @@
 
 size_t translate_parsed_class(Translated *translated, ParsedClass *parsedClass,
                               ArErr *err) {
-  set_registers(translated, 1);
+  uint8_t parentRegister = translated->registerAssignment++;
+  set_registers(translated, translated->registerAssignment);
 
   size_t length = strlen(parsedClass->name);
   size_t identifier_pos =
@@ -19,7 +20,12 @@ size_t translate_parsed_class(Translated *translated, ParsedClass *parsedClass,
   char *init_object_name = "this";
   size_t init_object_name_length = strlen(init_object_name);
   size_t init_object_name_pos =
-      arena_push(&translated->constants, parsedClass->name, length);
+      arena_push(&translated->constants, init_object_name, init_object_name_length);
+  
+  char *class_parent = "super";
+  size_t class_parent_length = strlen(class_parent);
+  size_t class_parent_pos =
+      arena_push(&translated->constants, class_parent, class_parent_length);
 
   size_t first;
   if (parsedClass->parent) {
@@ -30,6 +36,10 @@ size_t translate_parsed_class(Translated *translated, ParsedClass *parsedClass,
 
   if (err->exists)
     return 0;
+
+  push_instruction_byte(translated, OP_COPY_TO_REGISTER);
+  push_instruction_byte(translated, 0);
+  push_instruction_byte(translated, parentRegister);
 
   push_instruction_byte(translated, OP_SOURCE_LOCATION);
   push_instruction_code(translated, parsedClass->line);
@@ -53,6 +63,17 @@ size_t translate_parsed_class(Translated *translated, ParsedClass *parsedClass,
   darray_init(&return_jumps, sizeof(size_t));
   DArray *old_return_jumps = translated->return_jumps;
   translated->return_jumps = &return_jumps;
+
+  push_instruction_byte(translated, OP_DECLARE);
+  push_instruction_code(translated, class_parent_length);
+  push_instruction_code(translated, class_parent_pos);
+  push_instruction_code(
+      translated, siphash64_bytes(class_parent, class_parent_length,
+                                  siphash_key_fixed_for_translator));
+  push_instruction_byte(translated, parentRegister);
+  
+  push_instruction_byte(translated, OP_LOAD_NULL);
+  push_instruction_byte(translated, parentRegister);
 
   push_instruction_byte(translated, OP_DECLARE);
   push_instruction_code(translated, init_object_name_length);
