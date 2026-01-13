@@ -120,7 +120,7 @@ ArgonObject *ARGON_NUMBER_TYPE___boolean__(size_t argc, ArgonObject **argv,
                       "__boolean__ expects 1 arguments, got %" PRIu64, argc);
     return ARGON_NULL;
   }
-  return argv[0]->as_bool ? ARGON_FALSE : ARGON_TRUE;
+  return argv[0]->as_bool ? ARGON_TRUE : ARGON_FALSE;
 }
 
 ArgonObject *ARGON_NUMBER_TYPE___negation__(size_t argc, ArgonObject **argv,
@@ -816,6 +816,182 @@ ArgonObject *ARGON_NUMBER_TYPE___not_equal__(size_t argc, ArgonObject **argv,
   }
 }
 
+ArgonObject *ARGON_NUMBER_TYPE___less_than__(size_t argc, ArgonObject **argv,
+                                             ArErr *err, RuntimeState *state,
+                                             ArgonNativeAPI *api) {
+  (void)api;
+  (void)state;
+  if (argc != 2) {
+    *err = create_err(0, 0, 0, "", "Runtime Error",
+                      "__less_than__ expects 2 arguments, got %" PRIu64, argc);
+    return ARGON_NULL;
+  }
+  if (argv[1]->type != TYPE_NUMBER) {
+    ArgonObject *type_name = get_builtin_field_for_class(
+        get_builtin_field(argv[1], __class__), __name__, argv[1]);
+    *err = create_err(
+        0, 0, 0, "", "Runtime Error",
+        "cannot perform < between number and %.*s",
+        type_name->value.as_str->length, type_name->value.as_str->data);
+    return ARGON_NULL;
+  }
+  if (likely(argv[0]->value.as_number->is_int64 &&
+             argv[1]->value.as_number->is_int64)) {
+    int64_t a = argv[0]->value.as_number->n.i64;
+    int64_t b = argv[1]->value.as_number->n.i64;
+    return a < b ? ARGON_TRUE : ARGON_FALSE;
+  } else if (!argv[0]->value.as_number->is_int64 &&
+             !argv[1]->value.as_number->is_int64) {
+
+    return mpq_cmp(*argv[0]->value.as_number->n.mpq,
+                   *argv[1]->value.as_number->n.mpq) < 0
+               ? ARGON_TRUE
+               : ARGON_FALSE;
+  } else if (argv[0]->value.as_number->is_int64) {
+    return mpq_cmp_ui(*argv[1]->value.as_number->n.mpq,
+                      argv[0]->value.as_number->n.i64, 1) > 0
+               ? ARGON_TRUE
+               : ARGON_FALSE;
+  } else {
+    return mpq_cmp_ui(*argv[0]->value.as_number->n.mpq,
+                      argv[1]->value.as_number->n.i64, 1) < 0
+               ? ARGON_TRUE
+               : ARGON_FALSE;
+  }
+}
+
+ArgonObject *ARGON_NUMBER_TYPE___less_than_equal__(size_t argc, ArgonObject **argv,
+                                             ArErr *err, RuntimeState *state,
+                                             ArgonNativeAPI *api) {
+  (void)api;
+  (void)state;
+  if (argc != 2) {
+    *err = create_err(0, 0, 0, "", "Runtime Error",
+                      "__less_than_equal__ expects 2 arguments, got %" PRIu64, argc);
+    return ARGON_NULL;
+  }
+  if (argv[1]->type != TYPE_NUMBER) {
+    ArgonObject *type_name = get_builtin_field_for_class(
+        get_builtin_field(argv[1], __class__), __name__, argv[1]);
+    *err = create_err(
+        0, 0, 0, "", "Runtime Error",
+        "cannot perform <= between number and %.*s",
+        type_name->value.as_str->length, type_name->value.as_str->data);
+    return ARGON_NULL;
+  }
+  if (likely(argv[0]->value.as_number->is_int64 &&
+             argv[1]->value.as_number->is_int64)) {
+    int64_t a = argv[0]->value.as_number->n.i64;
+    int64_t b = argv[1]->value.as_number->n.i64;
+    return a <= b ? ARGON_TRUE : ARGON_FALSE;
+  } else if (!argv[0]->value.as_number->is_int64 &&
+             !argv[1]->value.as_number->is_int64) {
+
+    return mpq_cmp(*argv[0]->value.as_number->n.mpq,
+                   *argv[1]->value.as_number->n.mpq) <= 0
+               ? ARGON_TRUE
+               : ARGON_FALSE;
+  } else if (argv[0]->value.as_number->is_int64) {
+    return mpq_cmp_ui(*argv[1]->value.as_number->n.mpq,
+                      argv[0]->value.as_number->n.i64, 1) >= 0
+               ? ARGON_TRUE
+               : ARGON_FALSE;
+  } else {
+    return mpq_cmp_ui(*argv[0]->value.as_number->n.mpq,
+                      argv[1]->value.as_number->n.i64, 1) <= 0
+               ? ARGON_TRUE
+               : ARGON_FALSE;
+  }
+}
+
+ArgonObject *ARGON_NUMBER_TYPE___greater_than__(size_t argc, ArgonObject **argv,
+                                             ArErr *err, RuntimeState *state,
+                                             ArgonNativeAPI *api) {
+  (void)api;
+  (void)state;
+  if (argc != 2) {
+    *err = create_err(0, 0, 0, "", "Runtime Error",
+                      "__greater_than__ expects 2 arguments, got %" PRIu64, argc);
+    return ARGON_NULL;
+  }
+  if (argv[1]->type != TYPE_NUMBER) {
+    ArgonObject *type_name = get_builtin_field_for_class(
+        get_builtin_field(argv[1], __class__), __name__, argv[1]);
+    *err = create_err(
+        0, 0, 0, "", "Runtime Error",
+        "cannot perform > between number and %.*s",
+        type_name->value.as_str->length, type_name->value.as_str->data);
+    return ARGON_NULL;
+  }
+  if (likely(argv[0]->value.as_number->is_int64 &&
+             argv[1]->value.as_number->is_int64)) {
+    int64_t a = argv[0]->value.as_number->n.i64;
+    int64_t b = argv[1]->value.as_number->n.i64;
+    return a > b ? ARGON_TRUE : ARGON_FALSE;
+  } else if (!argv[0]->value.as_number->is_int64 &&
+             !argv[1]->value.as_number->is_int64) {
+
+    return mpq_cmp(*argv[0]->value.as_number->n.mpq,
+                   *argv[1]->value.as_number->n.mpq) > 0
+               ? ARGON_TRUE
+               : ARGON_FALSE;
+  } else if (argv[0]->value.as_number->is_int64) {
+    return mpq_cmp_ui(*argv[1]->value.as_number->n.mpq,
+                      argv[0]->value.as_number->n.i64, 1) < 0
+               ? ARGON_TRUE
+               : ARGON_FALSE;
+  } else {
+    return mpq_cmp_ui(*argv[0]->value.as_number->n.mpq,
+                      argv[1]->value.as_number->n.i64, 1) > 0
+               ? ARGON_TRUE
+               : ARGON_FALSE;
+  }
+}
+
+ArgonObject *ARGON_NUMBER_TYPE___greater_than_equal__(size_t argc, ArgonObject **argv,
+                                             ArErr *err, RuntimeState *state,
+                                             ArgonNativeAPI *api) {
+  (void)api;
+  (void)state;
+  if (argc != 2) {
+    *err = create_err(0, 0, 0, "", "Runtime Error",
+                      "__greater_than_equal__ expects 2 arguments, got %" PRIu64, argc);
+    return ARGON_NULL;
+  }
+  if (argv[1]->type != TYPE_NUMBER) {
+    ArgonObject *type_name = get_builtin_field_for_class(
+        get_builtin_field(argv[1], __class__), __name__, argv[1]);
+    *err = create_err(
+        0, 0, 0, "", "Runtime Error",
+        "cannot perform >= between number and %.*s",
+        type_name->value.as_str->length, type_name->value.as_str->data);
+    return ARGON_NULL;
+  }
+  if (likely(argv[0]->value.as_number->is_int64 &&
+             argv[1]->value.as_number->is_int64)) {
+    int64_t a = argv[0]->value.as_number->n.i64;
+    int64_t b = argv[1]->value.as_number->n.i64;
+    return a >= b ? ARGON_TRUE : ARGON_FALSE;
+  } else if (!argv[0]->value.as_number->is_int64 &&
+             !argv[1]->value.as_number->is_int64) {
+
+    return mpq_cmp(*argv[0]->value.as_number->n.mpq,
+                   *argv[1]->value.as_number->n.mpq) >= 0
+               ? ARGON_TRUE
+               : ARGON_FALSE;
+  } else if (argv[0]->value.as_number->is_int64) {
+    return mpq_cmp_ui(*argv[1]->value.as_number->n.mpq,
+                      argv[0]->value.as_number->n.i64, 1) <= 0
+               ? ARGON_TRUE
+               : ARGON_FALSE;
+  } else {
+    return mpq_cmp_ui(*argv[0]->value.as_number->n.mpq,
+                      argv[1]->value.as_number->n.i64, 1) >= 0
+               ? ARGON_TRUE
+               : ARGON_FALSE;
+  }
+}
+
 ArgonObject *ARGON_NUMBER_TYPE___string__(size_t argc, ArgonObject **argv,
                                           ArErr *err, RuntimeState *state,
                                           ArgonNativeAPI *api) {
@@ -1043,6 +1219,18 @@ void create_ARGON_NUMBER_TYPE() {
   add_builtin_field(ARGON_NUMBER_TYPE, __not_equal__,
                     create_argon_native_function(
                         "__not_equal__", ARGON_NUMBER_TYPE___not_equal__));
+  add_builtin_field(ARGON_NUMBER_TYPE, __less_than__,
+                    create_argon_native_function(
+                        "__less_than__", ARGON_NUMBER_TYPE___less_than__));
+  add_builtin_field(ARGON_NUMBER_TYPE, __less_than_equal__,
+                    create_argon_native_function(
+                        "__less_than_equal__", ARGON_NUMBER_TYPE___less_than_equal__));
+  add_builtin_field(ARGON_NUMBER_TYPE, __greater_than__,
+                    create_argon_native_function(
+                        "__greater_than__", ARGON_NUMBER_TYPE___greater_than__));
+  add_builtin_field(ARGON_NUMBER_TYPE, __greater_than_equal__,
+                    create_argon_native_function(
+                        "__greater_than_equal__", ARGON_NUMBER_TYPE___greater_than_equal__));
   init_small_ints();
 }
 

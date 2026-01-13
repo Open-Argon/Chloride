@@ -12,6 +12,7 @@
 #include "assignable/call/call.h"
 #include "assignable/identifier/identifier.h"
 #include "assignable/item/item.h"
+#include "class/class.h"
 #include "declaration/declaration.h"
 #include "dictionary/dictionary.h"
 #include "dowrap/dowrap.h"
@@ -20,12 +21,12 @@
 #include "list/list.h"
 #include "literals/literals.h"
 #include "negation/negation.h"
+#include "not/not.h"
 #include "number/number.h"
 #include "operations/operations.h"
 #include "parentheses-and-anonymous-function/parentheses-and-anonymous-function.h"
 #include "return/return.h"
 #include "string/string.h"
-#include "not/not.h"
 #include "while/while.h"
 #include <gmp.h>
 #include <stdbool.h>
@@ -83,6 +84,8 @@ ParsedValueReturn parse_token_full(char *file, DArray *tokens, size_t *index,
       return parse_return(file, tokens, index);
     case TOKEN_LET:
       return parse_declaration(file, tokens, index);
+    case TOKEN_CLASS:
+      return parse_class(file, tokens, index);
     default:
       break;
     };
@@ -283,6 +286,9 @@ void free_parsed(void *ptr) {
     break;
   case AST_NEGATION:
     free_negation(parsed);
+    break;
+  case AST_CLASS:
+    free_class(parsed);
     break;
   }
 }

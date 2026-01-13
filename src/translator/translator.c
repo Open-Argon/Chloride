@@ -6,18 +6,19 @@
 
 #include "translator.h"
 #include "../hash_data/hash_data.h"
+#include "../parser/assignable/item/item.h"
 #include "../parser/dictionary/dictionary.h"
 #include "../parser/not/not.h"
 #include "access/access.h"
-#include "../parser/assignable/item/item.h"
-#include "item_access/item_access.h"
 #include "assignment/assignment.h"
 #include "call/call.h"
+#include "class/class.h"
 #include "declaration/declaration.h"
 #include "dowrap/dowrap.h"
 #include "function/function.h"
 #include "identifier/identifier.h"
 #include "if/if.h"
+#include "item_access/item_access.h"
 #include "number/number.h"
 #include "operation/operation.h"
 #include "return/return.h"
@@ -171,13 +172,17 @@ size_t translate_parsed(Translated *translated, ParsedValue *parsedValue,
   case AST_ACCESS:
     return translate_access(translated, (ParsedAccess *)parsedValue->data, err);
   case AST_ITEM_ACCESS:
-    return translate_item_access(translated, (ParsedItemAccess *)parsedValue->data, err);
+    return translate_item_access(translated,
+                                 (ParsedItemAccess *)parsedValue->data, err);
   case AST_OPERATION:
     return translate_operation(translated, (ParsedOperation *)parsedValue->data,
                                err);
   case AST_ASSIGN:
     return translate_parsed_assignment(translated,
                                        (ParsedAssign *)parsedValue->data, err);
+  case AST_CLASS:
+    return translate_parsed_class(translated, (ParsedClass *)parsedValue->data,
+                                  err);
   case AST_TO_BOOL: {
     size_t first = translate_parsed(
         translated, ((ParsedToBool *)parsedValue->data)->value, err);
@@ -241,13 +246,12 @@ size_t translate_parsed(Translated *translated, ParsedValue *parsedValue,
     push_instruction_byte(translated, OP_LOAD_NULL);
     push_instruction_byte(translated, setitemRegister);
 
-    translated->registerAssignment-=2;
+    translated->registerAssignment -= 2;
     return first;
   }
-  default:
-    fprintf(stderr, "panic: undefined translation\n");
-    exit(EXIT_FAILURE);
   }
+  fprintf(stderr, "panic: undefined translation\n");
+  exit(EXIT_FAILURE);
   return 0;
 }
 
