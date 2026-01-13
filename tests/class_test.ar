@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2025 William Bell
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 class name do
   cls.__init__(self) = do
     term.log("hello world")
@@ -5,11 +9,11 @@ class name do
 term.log(name)
 term.log(name())
 
-class test(string) do
+class test(name) do
   cls.wow(self) = do
     term.log(self)
 
-test("wow").wow()
+test().wow()
 
 
 class some_public_private_statics do
@@ -23,9 +27,11 @@ term.log(some_public_private_statics.some_public)
 
 let some_public_private_statics_instance = some_public_private_statics()
 
-term.log(type(some_public_private_statics_instance).some_public)
+
+
+term.log(type(some_public_private_statics_instance).some_public = 10)
 
 term.log(some_public_private_statics_instance.the_private)
 
-#term.log(some_public_private_statics.some_private) # will error
-#term.log(some_private) # will also error
+term.log(some_public_private_statics.some_private) # will error
+term.log(some_private) # will also error

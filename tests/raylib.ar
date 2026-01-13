@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2025 William Bell
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 let raylib = load_native_code("basic_raylib_binding/raylib.so")
 
 term.log(raylib)
