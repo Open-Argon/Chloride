@@ -16,7 +16,7 @@ size_t translate_parsed_class(Translated *translated, ParsedClass *parsedClass,
   size_t identifier_pos =
       arena_push(&translated->constants, parsedClass->name, length);
 
-  char *init_object_name = "cls";
+  char *init_object_name = "this";
   size_t init_object_name_length = strlen(init_object_name);
   size_t init_object_name_pos =
       arena_push(&translated->constants, parsedClass->name, length);

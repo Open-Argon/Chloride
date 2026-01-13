@@ -3,24 +3,24 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 class name do
-  cls.__init__(self) = do
+  this.__init__(self) = do
     term.log("hello world")
 
 term.log(name)
 term.log(name())
 
 class test(name) do
-  cls.wow(self) = do
+  this.wow(self) = do
     term.log(self)
 
 test().wow()
 
 
 class some_public_private_statics do
-  cls.some_public = "hello im public"
+  this.some_public = "hello im public"
   let some_private = "hello im private"
 
-  cls.get_the_private(self) = do
+  this.get_the_private(self) = do
     return some_private
 
 term.log(some_public_private_statics.some_public)
