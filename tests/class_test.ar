@@ -1,0 +1,31 @@
+class name do
+  cls.__init__(self) = do
+    term.log("hello world")
+
+term.log(name)
+term.log(name())
+
+class test(string) do
+  cls.wow(self) = do
+    term.log(self)
+
+test("wow").wow()
+
+
+class some_public_private_statics do
+  cls.some_public = "hello im public"
+  let some_private = "hello im private"
+
+  cls.get_the_private(self) = do
+    return some_private
+
+term.log(some_public_private_statics.some_public)
+
+let some_public_private_statics_instance = some_public_private_statics()
+
+term.log(type(some_public_private_statics_instance).some_public)
+
+term.log(some_public_private_statics_instance.the_private)
+
+#term.log(some_public_private_statics.some_private) # will error
+#term.log(some_private) # will also error

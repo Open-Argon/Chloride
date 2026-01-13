@@ -51,7 +51,9 @@ ArgonObject *MODULO_FUNCTION;
 ArgonObject *EQUAL_FUNCTION;
 ArgonObject *NOT_EQUAL_FUNCTION;
 ArgonObject *LESS_THAN_FUNCTION;
+ArgonObject *LESS_THAN_EQUAL_FUNCTION;
 ArgonObject *GREATER_THAN_FUNCTION;
+ArgonObject *GREATER_THAN_EQUAL_FUNCTION;
 
 ArgonObject *BASE_CLASS___getattribute__(size_t argc, ArgonObject **argv,
                                          ArErr *err, RuntimeState *state,
@@ -92,17 +94,18 @@ ArgonObject *BASE_CLASS___getattribute__(size_t argc, ArgonObject **argv,
   memcpy(getter_name + 4, name_text, name_len);
 
   /* If your get_field_l needs a hash, recompute it */
-  uint64_t getter_hash =
-      runtime_hash(getter_name, getter_len, 0);
+  uint64_t getter_hash = runtime_hash(getter_name, getter_len, 0);
 
-  ArgonObject *getter =
-      get_field_l(to_access, getter_name, getter_hash, getter_len, true, false);
+  ArgonObject *class_to_access = get_builtin_field(to_access, __class__);
+
+  ArgonObject *getter = get_field_for_class_l(
+      class_to_access, getter_name, getter_hash, getter_len, to_access);
   free(getter_name);
   if (getter)
     return argon_call(getter, 0, (ArgonObject *[]){}, err, state);
 
-  ArgonObject *cls__getattr__ = get_builtin_field_for_class(
-      get_builtin_field(to_access, __class__), __getattr__, to_access);
+  ArgonObject *cls__getattr__ =
+      get_builtin_field_for_class(class_to_access, __getattr__, to_access);
   if (cls__getattr__) {
     value =
         argon_call(cls__getattr__, 1, (ArgonObject *[]){access}, err, state);
@@ -111,8 +114,8 @@ ArgonObject *BASE_CLASS___getattribute__(size_t argc, ArgonObject **argv,
     }
     return value;
   }
-  ArgonObject *name = get_builtin_field_for_class(
-      get_builtin_field(to_access, __class__), __name__, to_access);
+  ArgonObject *name =
+      get_builtin_field_for_class(class_to_access, __name__, to_access);
   *err = create_err(
       0, 0, 0, "", "Runtime Error", "'%.*s' object has no attribute '%.*s'",
       (int)name->value.as_str->length, name->value.as_str->data,
@@ -434,6 +437,66 @@ ArgonObject *ARGON_GREATER_THAN_FUNCTION(size_t argc, ArgonObject **argv,
   return output;
 }
 
+ArgonObject *ARGON_LESS_THAN_EQUAL_FUNCTION(size_t argc, ArgonObject **argv,
+                                            ArErr *err, RuntimeState *state,
+                                            ArgonNativeAPI *api) {
+  (void)api;
+  if (argc < 1) {
+    *err = create_err(
+        0, 0, 0, "", "Runtime Error",
+        "less_than_equal expects at least 1 argument, got %" PRIu64, argc);
+    return ARGON_NULL;
+  }
+  ArgonObject *output = argv[0];
+  for (size_t i = 1; i < argc; i++) {
+    ArgonObject *object_class = get_builtin_field(output, __class__);
+    ArgonObject *function___less_than_equal__ =
+        get_builtin_field_for_class(object_class, __less_than_equal__, output);
+    if (!function___less_than_equal__) {
+      ArgonObject *cls___name__ = get_builtin_field(object_class, __name__);
+      *err = create_err(
+          0, 0, 0, "", "Runtime Error",
+          "Object of type '%.*s' is missing __less_than_equal__ method",
+          (int)cls___name__->value.as_str->length,
+          cls___name__->value.as_str->data);
+      return ARGON_NULL;
+    }
+    output = argon_call(function___less_than_equal__, 1,
+                        (ArgonObject *[]){argv[i]}, err, state);
+  }
+  return output;
+}
+
+ArgonObject *ARGON_GREATER_THAN_EQUAL_FUNCTION(size_t argc, ArgonObject **argv,
+                                               ArErr *err, RuntimeState *state,
+                                               ArgonNativeAPI *api) {
+  (void)api;
+  if (argc < 1) {
+    *err = create_err(
+        0, 0, 0, "", "Runtime Error",
+        "greater_than_equal expects at least 1 argument, got %" PRIu64, argc);
+    return ARGON_NULL;
+  }
+  ArgonObject *output = argv[0];
+  for (size_t i = 1; i < argc; i++) {
+    ArgonObject *object_class = get_builtin_field(output, __class__);
+    ArgonObject *function___greater_than_equal__ = get_builtin_field_for_class(
+        object_class, __greater_than_equal__, output);
+    if (!function___greater_than_equal__) {
+      ArgonObject *cls___name__ = get_builtin_field(object_class, __name__);
+      *err = create_err(
+          0, 0, 0, "", "Runtime Error",
+          "Object of type '%.*s' is missing __greater_than_equal__ method",
+          (int)cls___name__->value.as_str->length,
+          cls___name__->value.as_str->data);
+      return ARGON_NULL;
+    }
+    output = argon_call(function___greater_than_equal__, 1,
+                        (ArgonObject *[]){argv[i]}, err, state);
+  }
+  return output;
+}
+
 ArgonObject *ARGON_TYPE_TYPE___call__(size_t argc, ArgonObject **argv,
                                       ArErr *err, RuntimeState *state,
                                       ArgonNativeAPI *api) {
@@ -540,7 +603,6 @@ ArgonObject *BASE_CLASS___setattr__(size_t argc, ArgonObject **argv, ArErr *err,
                       "__setattr__ expects 3 argument, got %" PRIu64, argc);
   }
 
-
   char *name_text = argv[1]->value.as_str->data;
   size_t name_len = argv[1]->value.as_str->length;
 
@@ -551,11 +613,11 @@ ArgonObject *BASE_CLASS___setattr__(size_t argc, ArgonObject **argv, ArErr *err,
   memcpy(setter_name + 4, name_text, name_len);
 
   /* If your get_field_l needs a hash, recompute it */
-  uint64_t setter_hash =
-      runtime_hash(setter_name, setter_len, 0);
+  uint64_t setter_hash = runtime_hash(setter_name, setter_len, 0);
 
   ArgonObject *setter =
-      get_field_l(argv[0], setter_name, setter_hash, setter_len, true, false);
+      get_field_for_class_l(get_builtin_field(argv[0], __class__), setter_name,
+                            setter_hash, setter_len, argv[0]);
   free(setter_name);
   if (setter)
     return argon_call(setter, 1, (ArgonObject *[]){argv[2]}, err, state);
@@ -1031,6 +1093,12 @@ void bootstrap_types() {
       create_argon_native_function("not_equal", ARGON_NOT_EQUAL_FUNCTION);
   LESS_THAN_FUNCTION =
       create_argon_native_function("less_than", ARGON_LESS_THAN_FUNCTION);
+  LESS_THAN_EQUAL_FUNCTION = create_argon_native_function(
+      "less_than_equal", ARGON_LESS_THAN_EQUAL_FUNCTION);
+  GREATER_THAN_FUNCTION =
+      create_argon_native_function("greater_than", ARGON_GREATER_THAN_FUNCTION);
+  GREATER_THAN_EQUAL_FUNCTION = create_argon_native_function(
+      "greater_than_equal", ARGON_GREATER_THAN_EQUAL_FUNCTION);
   add_builtin_field(BASE_CLASS, __getattribute__,
                     create_argon_native_function("__getattribute__",
                                                  BASE_CLASS___getattribute__));
@@ -1056,6 +1124,7 @@ void add_to_hashmap(struct hashmap_GC *hashmap, char *name,
 void bootstrap_globals() {
   Global_Scope = create_scope(NULL, true);
   add_to_scope(Global_Scope, "global", create_dictionary(Global_Scope->scope));
+  add_to_scope(Global_Scope, "object", BASE_CLASS);
   add_to_scope(Global_Scope, "string", ARGON_STRING_TYPE);
   add_to_scope(Global_Scope, "type", ARGON_TYPE_TYPE);
   add_to_scope(Global_Scope, "boolean", ARGON_BOOL_TYPE);
@@ -1072,6 +1141,9 @@ void bootstrap_globals() {
   add_to_scope(Global_Scope, "equal", EQUAL_FUNCTION);
   add_to_scope(Global_Scope, "not_equal", NOT_EQUAL_FUNCTION);
   add_to_scope(Global_Scope, "less_than", LESS_THAN_FUNCTION);
+  add_to_scope(Global_Scope, "less_than_equal", LESS_THAN_EQUAL_FUNCTION);
+  add_to_scope(Global_Scope, "greater_than", GREATER_THAN_FUNCTION);
+  add_to_scope(Global_Scope, "greater_than_equal", GREATER_THAN_EQUAL_FUNCTION);
 
   struct hashmap_GC *argon_term = createHashmap_GC();
   add_to_hashmap(argon_term, "log",
@@ -1220,6 +1292,15 @@ void add_to_scope(Stack *stack, char *name, ArgonObject *value) {
   hashmap_insert_GC(stack->scope, hash, key, value, 0);
 }
 
+void add_source_location_to_error_if_exists(ArErr *err, RuntimeState *state) {
+  if (err->exists) {
+    err->column = state->source_location.column;
+    err->length = state->source_location.length;
+    err->line = state->source_location.line;
+    strcpy(err->path, state->path);
+  }
+}
+
 void runtime(Translated _translated, RuntimeState _state, Stack *stack,
              ArErr *err) {
   static void *const dispatch_table[] = {
@@ -1252,14 +1333,18 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       [OP_EQUAL] = &&DO_EQUAL,
       [OP_NOT_EQUAL] = &&DO_NOT_EQUAL,
       [OP_LESS_THAN] = &&DO_LESS_THAN,
+      [OP_LESS_THAN_EQUAL] = &&DO_LESS_THAN_EQUAL,
       [OP_GREATER_THAN] = &&DO_GREATER_THAN,
+      [OP_GREATER_THAN_EQUAL] = &&DO_GREATER_THAN_EQUAL,
       [OP_MODULO] = &&DO_MODULO,
       [OP_NOT] = &&DO_NOT,
       [OP_NEGATION] = &&DO_NEGATION,
       [OP_LOAD_SETATTR_METHOD] = &&DO_LOAD_SETATTR_METHOD,
       [OP_CREATE_DICTIONARY] = &&DO_CREATE_DICTIONARY,
       [OP_LOAD_SETITEM_METHOD] = &&DO_LOAD_SETITEM_METHOD,
-      [OP_LOAD_GETITEM_METHOD] = &&DO_LOAD_GETITEM_METHOD};
+      [OP_LOAD_GETITEM_METHOD] = &&DO_LOAD_GETITEM_METHOD,
+      [OP_LOAD_BASE_CLASS] = &&DO_LOAD_BASE_CLASS,
+      [OP_CREATE_CLASS] = &&DO_CREATE_CLASS};
   _state.head = 0;
 
   StackFrame *currentStackFrame = ar_alloc(sizeof(StackFrame));
@@ -1282,6 +1367,9 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       goto *dispatch_table[instruction];
     DO_LOAD_NULL:
       state->registers[pop_byte(translated, state)] = ARGON_NULL;
+      continue;
+    DO_LOAD_BASE_CLASS:
+      state->registers[0] = BASE_CLASS;
       continue;
     DO_LOAD_STRING:
       load_const(translated, state);
@@ -1472,6 +1560,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       ArgonObject *args[] = {valueA, valueB};
       state->registers[registerC] =
           argon_call(ADDITION_FUNCTION, 2, args, err, state);
+      add_source_location_to_error_if_exists(err, state);
       continue;
     }
     DO_SUBTRACTION: {
@@ -1533,6 +1622,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       ArgonObject *args[] = {valueA, valueB};
       state->registers[registerC] =
           argon_call(SUBTRACTION_FUNCTION, 2, args, err, state);
+      add_source_location_to_error_if_exists(err, state);
       continue;
     }
     DO_MULTIPLICATION: {
@@ -1594,6 +1684,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       ArgonObject *args[] = {valueA, valueB};
       state->registers[registerC] =
           argon_call(MULTIPLY_FUNCTION, 2, args, err, state);
+      add_source_location_to_error_if_exists(err, state);
       continue;
     }
     DO_EXPONENTIATION: {
@@ -1724,6 +1815,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       ArgonObject *args[] = {valueA, valueB};
       state->registers[registerC] =
           argon_call(EXPONENT_FUNCTION, 2, args, err, state);
+      add_source_location_to_error_if_exists(err, state);
       continue;
     }
 
@@ -1786,6 +1878,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       ArgonObject *args[] = {valueA, valueB};
       state->registers[registerC] =
           argon_call(DIVIDE_FUNCTION, 2, args, err, state);
+      add_source_location_to_error_if_exists(err, state);
       continue;
     }
 
@@ -1847,6 +1940,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       ArgonObject *args[] = {valueA, valueB};
       state->registers[registerC] =
           argon_call(FLOOR_DIVIDE_FUNCTION, 2, args, err, state);
+      add_source_location_to_error_if_exists(err, state);
       continue;
     }
 
@@ -1908,6 +2002,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       ArgonObject *args[] = {valueA, valueB};
       state->registers[registerC] =
           argon_call(MODULO_FUNCTION, 2, args, err, state);
+      add_source_location_to_error_if_exists(err, state);
       continue;
     }
 
@@ -1951,6 +2046,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       ArgonObject *args[] = {valueA, valueB};
       state->registers[registerC] =
           argon_call(EQUAL_FUNCTION, 2, args, err, state);
+      add_source_location_to_error_if_exists(err, state);
       continue;
     }
 
@@ -1994,6 +2090,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       ArgonObject *args[] = {valueA, valueB};
       state->registers[registerC] =
           argon_call(NOT_EQUAL_FUNCTION, 2, args, err, state);
+      add_source_location_to_error_if_exists(err, state);
       continue;
     }
 
@@ -2037,6 +2134,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       ArgonObject *args[] = {valueA, valueB};
       state->registers[registerC] =
           argon_call(LESS_THAN_FUNCTION, 2, args, err, state);
+      add_source_location_to_error_if_exists(err, state);
       continue;
     }
 
@@ -2080,6 +2178,95 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       ArgonObject *args[] = {valueA, valueB};
       state->registers[registerC] =
           argon_call(GREATER_THAN_FUNCTION, 2, args, err, state);
+      add_source_location_to_error_if_exists(err, state);
+      continue;
+    }
+
+    DO_LESS_THAN_EQUAL: {
+      uint8_t registerA = pop_byte(translated, state);
+      uint8_t registerB = pop_byte(translated, state);
+      uint8_t registerC = pop_byte(translated, state);
+
+      ArgonObject *valueA = state->registers[registerA];
+      ArgonObject *valueB = state->registers[registerB];
+
+      if (valueA->type == TYPE_NUMBER && valueB->type == TYPE_NUMBER) {
+        if (likely(valueA->value.as_number->is_int64 &&
+                   valueB->value.as_number->is_int64)) {
+          int64_t a = valueA->value.as_number->n.i64;
+          int64_t b = valueB->value.as_number->n.i64;
+          state->registers[registerC] = a <= b ? ARGON_TRUE : ARGON_FALSE;
+        } else if (!valueA->value.as_number->is_int64 &&
+                   !valueB->value.as_number->is_int64) {
+          state->registers[registerC] =
+              mpq_cmp(*valueA->value.as_number->n.mpq,
+                      *valueB->value.as_number->n.mpq) <= 0
+                  ? ARGON_TRUE
+                  : ARGON_FALSE;
+        } else if (valueA->value.as_number->is_int64) {
+          state->registers[registerC] =
+              mpq_cmp_ui(*valueB->value.as_number->n.mpq,
+                         valueA->value.as_number->n.i64, 1) >= 0
+                  ? ARGON_TRUE
+                  : ARGON_FALSE;
+        } else {
+          state->registers[registerC] =
+              mpq_cmp_ui(*valueA->value.as_number->n.mpq,
+                         valueB->value.as_number->n.i64, 1) <= 0
+                  ? ARGON_TRUE
+                  : ARGON_FALSE;
+        }
+        continue;
+      }
+
+      ArgonObject *args[] = {valueA, valueB};
+      state->registers[registerC] =
+          argon_call(LESS_THAN_EQUAL_FUNCTION, 2, args, err, state);
+      add_source_location_to_error_if_exists(err, state);
+      continue;
+    }
+
+    DO_GREATER_THAN_EQUAL: {
+      uint8_t registerA = pop_byte(translated, state);
+      uint8_t registerB = pop_byte(translated, state);
+      uint8_t registerC = pop_byte(translated, state);
+
+      ArgonObject *valueA = state->registers[registerA];
+      ArgonObject *valueB = state->registers[registerB];
+
+      if (valueA->type == TYPE_NUMBER && valueB->type == TYPE_NUMBER) {
+        if (likely(valueA->value.as_number->is_int64 &&
+                   valueB->value.as_number->is_int64)) {
+          int64_t a = valueA->value.as_number->n.i64;
+          int64_t b = valueB->value.as_number->n.i64;
+          state->registers[registerC] = a >= b ? ARGON_TRUE : ARGON_FALSE;
+        } else if (!valueA->value.as_number->is_int64 &&
+                   !valueB->value.as_number->is_int64) {
+          state->registers[registerC] =
+              mpq_cmp(*valueA->value.as_number->n.mpq,
+                      *valueB->value.as_number->n.mpq) >= 0
+                  ? ARGON_TRUE
+                  : ARGON_FALSE;
+        } else if (valueA->value.as_number->is_int64) {
+          state->registers[registerC] =
+              mpq_cmp_ui(*valueB->value.as_number->n.mpq,
+                         valueA->value.as_number->n.i64, 1) <= 0
+                  ? ARGON_TRUE
+                  : ARGON_FALSE;
+        } else {
+          state->registers[registerC] =
+              mpq_cmp_ui(*valueA->value.as_number->n.mpq,
+                         valueB->value.as_number->n.i64, 1) >= 0
+                  ? ARGON_TRUE
+                  : ARGON_FALSE;
+        }
+        continue;
+      }
+
+      ArgonObject *args[] = {valueA, valueB};
+      state->registers[registerC] =
+          argon_call(GREATER_THAN_EQUAL_FUNCTION, 2, args, err, state);
+      add_source_location_to_error_if_exists(err, state);
       continue;
     }
 
@@ -2093,6 +2280,18 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
             state->source_location.length, state->path, "Runtime Error",
             "unable to get __setattr__ from objects class");
       }
+      continue;
+    }
+    DO_CREATE_CLASS: {
+      int64_t length = pop_bytecode(translated, state);
+      int64_t offset = pop_bytecode(translated, state);
+      ArgonObject *class = new_class();
+      add_builtin_field(class, __base__, state->registers[0]);
+      add_builtin_field(
+          class, __name__,
+          new_string_object(arena_get(&translated->constants, offset), length,
+                            0, 0));
+      state->registers[0] = class;
       continue;
     }
     DO_CREATE_DICTIONARY: {

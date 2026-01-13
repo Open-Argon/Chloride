@@ -37,6 +37,7 @@ typedef enum {
   AST_STRING,
   AST_ASSIGN,
   AST_IDENTIFIER,
+  AST_CLASS,
   AST_NUMBER,
   AST_IF,
   AST_ACCESS,

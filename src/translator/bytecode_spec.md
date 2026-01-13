@@ -147,99 +147,117 @@ loads a mpq_t / int64 number into memory
 copies the value from one register to another
 
 1. the register to copy from (*)
-2. the register to write to (*)
+1. the register to write to (*)
 
 ## OP_ADDITION
 
 performs addition between register A and register B, storing the result in register C
 
 1. the register A (*)
-2. the register B (*)
-2. the register C (*)
+1. the register B (*)
+1. the register C (*)
 
 ## OP_SUBTRACTION
 
 performs subtraction between register A and register B, storing the result in register C
 
 1. the register A (*)
-2. the register B (*)
-2. the register C (*)
+1. the register B (*)
+1. the register C (*)
 
 ## OP_MULTIPLICATION
 
 performs multiplication between register A and register B, storing the result in register C
 
 1. the register A (*)
-2. the register B (*)
-2. the register C (*)
+1. the register B (*)
+1. the register C (*)
 
 ## OP_EXPONENTIATION
 
 performs exponentiation between register A and register B, storing the result in register C
 
 1. the register A (*)
-2. the register B (*)
-2. the register C (*)
+1. the register B (*)
+1. the register C (*)
 
 ## OP_DIVISION
 
 performs division between register A and register B, storing the result in register C
 
 1. the register A (*)
-2. the register B (*)
-2. the register C (*)
+1. the register B (*)
+1. the register C (*)
 
 ## OP_FLOOR_DIVISION
 
 performs floor division between register A and register B, storing the result in register C
 
 1. the register A (*)
-2. the register B (*)
-2. the register C (*)
+1. the register B (*)
+1. the register C (*)
 
 ## OP_MODULO
 
 performs modulo between register A and register B, storing the result in register C
 
 1. the register A (*)
-2. the register B (*)
-2. the register C (*)
+1. the register B (*)
+1. the register C (*)
 
 ## OP_EQUAL
 
 performs equality between register A and register B, storing the result in register C
 
 1. the register A (*)
-2. the register B (*)
-2. the register C (*)
+1. the register B (*)
+1. the register C (*)
 
 ## OP_NOT_EQUAL
 
 performs not equality between register A and register B, storing the result in register C
 
 1. the register A (*)
-2. the register B (*)
-2. the register C (*)
+1. the register B (*)
+1. the register C (*)
 
 ## OP_LESS_THAN
 
 performs a less than operation between register A and register B, storing the result in register C
 
 1. the register A (*)
-2. the register B (*)
-2. the register C (*)
+1. the register B (*)
+1. the register C (*)
 
 ## OP_GREATER_THAN
 
 performs a greater than operation between register A and register B, storing the result in register C
 
 1. the register A (*)
-2. the register B (*)
-2. the register C (*)
+1. the register B (*)
+1. the register C (*)
+
+## OP_LESS_THAN_EQUAL
+
+performs a less than or equal operation between register A and register B, storing the result in register C
+
+1. the register A (*)
+1. the register B (*)
+1. the register C (*)
 
 ## OP_NOT
 
 inverts the boolean value in register 0.
+
+## OP_LOAD_BASE_CLASS
+
+loads the base class into register 0.
+
+## OP_CREATE_CLASS
+
+creates a class object with the base being the object in register 0, and storing the result in register 0. it uses register A as the object storing the name of the class.
+
+1. the register A (*)
 
 ## OP_NEGATION
 

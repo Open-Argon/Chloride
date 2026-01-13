@@ -2,7 +2,7 @@ let raylib = load_native_code("basic_raylib_binding/raylib.so")
 
 term.log(raylib)
 
-let width = 800, height = 450
+let width = 640, height = 640
 
 let maxX = width -235, maxY = height-20
 

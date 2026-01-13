@@ -163,6 +163,7 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
       runtime(new_stackFrame.translated, new_stackFrame.state,
               new_stackFrame.stack, err);
       state->registers[0] = new_stackFrame.state.registers[0];
+      return;
     } else {
       StackFrame *currentStackFrame =
           ar_alloc(sizeof(StackFrame) +
