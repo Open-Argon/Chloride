@@ -6,7 +6,6 @@
 
 #ifndef OBJECT_H
 #define OBJECT_H
-#include "../internals/hashmap/hashmap.h"
 #include "../runtime.h"
 #include <stdbool.h>
 #include <string.h>

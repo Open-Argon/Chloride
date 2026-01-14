@@ -5,7 +5,12 @@
 let raylib = load_native_code("basic_raylib_binding/raylib.so")
 term.log(raylib)
 
-class game do
+class Based do
+  this.abs(x)=do
+    if (x<0) return -x
+    return x
+
+class Game(Based) do
   this.__init__(self, width, height, fps) = do
     self.frame = 0
     self.width = width
@@ -16,24 +21,24 @@ class game do
     if (fps) raylib.SetTargetFPS(fps)
 
   this.render(self) = do
-      term.log("frame:",self.frame)
+      # term.log("frame:",self.frame)
       let maxX = self.width -235, maxY = self.height-20
       raylib.ClearBackground(raylib.BLACK)
 
-      let x = maxX - this.abs(((self.frame * self.speedX) % (2 * maxX)) - maxX)
-      let y = maxY - this.abs(((self.frame * self.speedY) % (2 * maxY)) - maxY)
+      let x = maxX - super.abs(((self.frame * self.speedX) % (2 * maxX)) - maxX)
+      let y = maxY - super.abs(((self.frame * self.speedY) % (2 * maxY)) - maxY)
       
       raylib.DrawText("Hello world from Argon", x, y, 20, raylib.WHITE)
 
       self.frame=self.frame+1
-
-  this.abs(x)=do
-    if (x<0) return -x
-    return x
-
+  
+  this.__string__(self) = do
+    return "game instance"
 
 
-let instance = game(1000, 1000, 0)
+let instance = Game(1000, 1000, 0)
+
+instance.speedX=1
 
 while (!raylib.WindowShouldClose()) do
   raylib.BeginDrawing()

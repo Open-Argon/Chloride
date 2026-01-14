@@ -111,6 +111,6 @@ size_t translate_parsed_class(Translated *translated, ParsedClass *parsedClass,
   }
   darray_free(&return_jumps, NULL);
   translated->return_jumps = old_return_jumps;
-
+  translated->registerAssignment--;
   return first;
 }

@@ -8,7 +8,6 @@
 #define AROBJECT_H
 
 #include "dynamic_array/darray.h"
-#include "runtime/internals/dynamic_array_armem/darray_armem.h"
 #include "runtime/internals/hashmap/hashmap.h"
 #include <gmp.h>
 #include <stddef.h>
@@ -74,13 +73,17 @@ struct rational {
 };
 
 struct string {
-  char * data;
-  uint64_t length;
+  char *data;
+  size_t length;
+};
+
+struct buffer {
+  void *data;
+  size_t size;
 };
 
 struct ArgonNativeAPI {
-  void (*register_ArgonObject)(hashmap_GC *reg, char *name,
-                               ArgonObject *obj);
+  void (*register_ArgonObject)(hashmap_GC *reg, char *name, ArgonObject *obj);
   ArgonObject *(*create_argon_native_function)(char *name, native_fn);
   ArgonObject *(*throw_argon_error)(ArErr *err, const char *type,
                                     const char *fmt, ...);
@@ -91,12 +94,18 @@ struct ArgonNativeAPI {
   ArgonObject *(*i64_to_argon)(int64_t);
   ArgonObject *(*double_to_argon)(double);
   ArgonObject *(*rational_to_argon)(struct rational);
-  ArgonObject *(*string_to_argon)(struct string);
-
   int64_t (*argon_to_i64)(ArgonObject *, ArErr *);
   double (*argon_to_double)(ArgonObject *, ArErr *);
   struct rational (*argon_to_rational)(ArgonObject *, ArErr *);
+
+  // strings
+  ArgonObject *(*string_to_argon)(struct string);
   struct string (*argon_to_string)(ArgonObject *, ArErr *);
+
+  // buffers
+  ArgonObject *(*create_argon_buffer)(size_t size);
+  void (*resize_argon_buffer)(ArgonObject *obj, ArErr *err, size_t new_size);
+  struct buffer (*argon_buffer_to_buffer)(ArgonObject *obj, ArErr *err);
 
   // literals
   ArgonObject *ARGON_NULL;
@@ -113,6 +122,7 @@ typedef enum ArgonType {
   TYPE_NATIVE_FUNCTION,
   TYPE_METHOD,
   TYPE_DICTIONARY,
+  TYPE_BUFFER,
   TYPE_OBJECT,
 } ArgonType;
 
@@ -179,6 +189,7 @@ struct ArgonObject {
     struct as_number *as_number;
     struct hashmap_GC *as_hashmap;
     struct string_struct *as_str;
+    struct buffer *as_buffer;
     native_fn native_fn;
     struct argon_function_struct *argon_fn;
   } value;

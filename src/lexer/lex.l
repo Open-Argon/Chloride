@@ -64,6 +64,7 @@ int yywrap(void * unused_param) {
 "let"               { return TOKEN_LET; }
 "class"             { return TOKEN_CLASS; }
 "import"            { return TOKEN_IMPORT; }
+"expose"            { return TOKEN_EXPOSE; }
 "from"              { return TOKEN_FROM; }
 "do"                { return TOKEN_DO; }
 "true"              { return TOKEN_TRUE; }
