@@ -59,15 +59,14 @@ ArgonObject *ARGON_LOAD_NATIVE_CODE(size_t argc, ArgonObject **argv, ArErr *err,
   void *handle = dlopen(path_c, RTLD_NOW | RTLD_LOCAL);
   if (!handle) {
     const char *dlerr = dlerror();
-    *err = create_err(0, 0, 0, "", "Runtime Error",
-                      "%s",
+    *err = create_err(0, 0, 0, "", "Runtime Error", "%s",
                       dlerr ? dlerr : "unknown");
     free(path_c);
     return ARGON_NULL;
   }
 
-  void (*init)(RuntimeState *, ArgonNativeAPI *, hashmap_GC *) =
-      (void (*)(RuntimeState *, ArgonNativeAPI *, hashmap_GC *))dlsym(
+  void (*init)(RuntimeState *, ArgonNativeAPI *, ArErr *, hashmap_GC *) =
+      (void (*)(RuntimeState *, ArgonNativeAPI *, ArErr *, hashmap_GC *))dlsym(
           handle, "argon_module_init");
 
   if (!init) {
@@ -83,9 +82,12 @@ ArgonObject *ARGON_LOAD_NATIVE_CODE(size_t argc, ArgonObject **argv, ArErr *err,
 
   hashmap_GC *reg = createHashmap_GC();
 
-  init(state, api, reg);
+  init(state, api, err, reg);
 
   free(path_c);
+
+  if (err->exists)
+    return ARGON_NULL;
 
   return create_dictionary(reg);
 }

@@ -155,9 +155,8 @@ void add_field_l(ArgonObject *target, char *name, uint64_t hash, size_t length,
 
 ArgonObject *bind_object_to_function(ArgonObject *object,
                                      ArgonObject *function) {
-  ArgonObject *bound_method_wrapper = new_object();
+  ArgonObject *bound_method_wrapper = new_instance(ARGON_METHOD_TYPE);
   bound_method_wrapper->type = TYPE_METHOD;
-  add_builtin_field(bound_method_wrapper, __class__, ARGON_METHOD_TYPE);
   add_builtin_field(bound_method_wrapper, __binding__, object);
   add_builtin_field(bound_method_wrapper, __function__, function);
   ArgonObject *function_name = get_builtin_field(function, __name__);

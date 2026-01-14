@@ -78,7 +78,7 @@ ArgonObject *Argon_ClearBackground(size_t argc, ArgonObject **argv,
   if (api->fix_to_arg_size(1, argc, err)) {
     return api->ARGON_NULL;
   }
-  struct string color = api->argon_to_string(argv[0], err);
+  struct buffer color = api->argon_buffer_to_buffer(argv[0], err);
   if (api->is_error(err)) {
     return api->ARGON_NULL;
   }
@@ -112,7 +112,7 @@ ArgonObject *Argon_DrawText(size_t argc, ArgonObject **argv, ArgonError *err,
     return api->ARGON_NULL;
   }
 
-  struct string color = api->argon_to_string(argv[4], err);
+  struct buffer color = api->argon_buffer_to_buffer(argv[4], err);
   if (api->is_error(err)) {
     return api->ARGON_NULL;
   }
@@ -145,7 +145,7 @@ ArgonObject *Argon_CloseWindow(size_t argc, ArgonObject **argv, ArgonError *err,
   return api->ARGON_NULL;
 }
 
-void argon_module_init(ArgonState *vm, ArgonNativeAPI *api,
+void argon_module_init(ArgonState *vm, ArgonNativeAPI *api, ArgonError *err,
                        ArgonObjectRegister *reg) {
   NamedColor colors[] = {
       {"WHITE", WHITE},     {"BLACK", BLACK},         {"RED", RED},
@@ -158,10 +158,13 @@ void argon_module_init(ArgonState *vm, ArgonNativeAPI *api,
   int numColors = sizeof(colors) / sizeof(colors[0]);
 
   for (int i = 0; i < numColors; i++) {
-    api->register_ArgonObject(
-        reg, colors[i].name,
-        api->string_to_argon((struct string){(char *)&colors[i].color,
-                                             sizeof(colors[i].color)}));
+    ArgonObject *color_object =
+        api->create_argon_buffer(sizeof(colors[i].color));
+    struct buffer b = api->argon_buffer_to_buffer(color_object, err);
+    if (api->is_error(err))
+      return;
+    memcpy(b.data, &colors[i].color, b.size);
+    api->register_ArgonObject(reg, colors[i].name, color_object);
   }
 
   api->register_ArgonObject(

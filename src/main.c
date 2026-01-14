@@ -58,6 +58,10 @@ int main(int argc, char *argv[]) {
   init_built_in_field_hashes();
   bootstrap_types();
   bootstrap_globals();
+
+  imported_hash_table = createHashmap_GC();
+  importing_hash_table = createHashmap();
+
   if (argc <= 1)
     return shell();
   CWD = get_current_directory();

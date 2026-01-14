@@ -4,16 +4,17 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 #include "api.h"
+#include "../objects/buffer/buffer.h"
 #include "../objects/functions/functions.h"
 #include "../objects/literals/literals.h"
 #include "../objects/number/number.h"
 #include "../objects/string/string.h"
 #include "../runtime.h"
 #include <gmp.h>
+#include <inttypes.h>
 #include <math.h>
 #include <stdarg.h>
 #include <string.h>
-#include <inttypes.h>
 
 ArgonObject *throw_argon_error(ArErr *err, const char *type, const char *fmt,
                                ...) {
@@ -25,8 +26,10 @@ ArgonObject *throw_argon_error(ArErr *err, const char *type, const char *fmt,
 }
 
 bool fix_to_arg_size(size_t fix, size_t argc, ArErr *err) {
-  if (fix!=argc) {
-    throw_argon_error(err, "Runtime Error", "expects %" PRIu64" argument(s), got %" PRIu64, fix, argc);
+  if (fix != argc) {
+    throw_argon_error(err, "Runtime Error",
+                      "expects %" PRIu64 " argument(s), got %" PRIu64, fix,
+                      argc);
     return true;
   }
   return false;
@@ -97,24 +100,22 @@ double argon_to_double(ArgonObject *obj, ArErr *err) {
   return d;
 }
 
-bool is_error(ArErr*err) {
-  return err->exists;
-}
+bool is_error(ArErr *err) { return err->exists; }
 
-ArgonObject* rational_to_argon(struct rational r){
+ArgonObject *rational_to_argon(struct rational r) {
   return new_number_object_from_num_and_den(r.n, r.d);
 }
 
-ArgonObject* string_to_argon(struct string str) {
+ArgonObject *string_to_argon(struct string str) {
   return new_string_object(str.data, str.length, 0, 0);
 }
 
-struct string argon_to_string(ArgonObject*obj, ArErr * err) {
+struct string argon_to_string(ArgonObject *obj, ArErr *err) {
   if (obj->type != TYPE_STRING) {
     throw_argon_error(err, "Runtime Error", "expected string");
     return (struct string){NULL, 0};
   }
-  
+
   return (struct string){obj->value.as_str->data, obj->value.as_str->length};
 }
 
@@ -122,16 +123,20 @@ ArgonNativeAPI native_api = {
     .register_ArgonObject = add_to_hashmap,
     .create_argon_native_function = create_argon_native_function,
     .throw_argon_error = throw_argon_error,
-    .is_error=is_error,
-    .fix_to_arg_size=fix_to_arg_size,
+    .is_error = is_error,
+    .fix_to_arg_size = fix_to_arg_size,
 
     .i64_to_argon = new_number_object_from_int64,
     .double_to_argon = new_number_object_from_double,
     .rational_to_argon = rational_to_argon,
-    .string_to_argon=string_to_argon,
-
     .argon_to_i64 = argon_to_i64,
     .argon_to_double = argon_to_double,
     .argon_to_rational = argon_to_num_and_den,
-    .argon_to_string=argon_to_string,
+    
+    .string_to_argon = string_to_argon,
+    .argon_to_string = argon_to_string,
+
+    .create_argon_buffer = create_ARGON_BUFFER_object,
+    .resize_argon_buffer = resize_ARGON_BUFFER_object,
+    .argon_buffer_to_buffer = ARGON_BUFFER_to_buffer_struct,
 };

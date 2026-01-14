@@ -33,7 +33,7 @@ this operation takes 3 operands.
 
 assigns to a variable in the stack. if the variable doesnt exist on the stack, it is automatically declared on the current scope.
 
-this operation takes 3 operands.
+this operation takes 4 operands.
 
 1. the length of the variable name.
 1. the offset in the constant buffer of the variable name.

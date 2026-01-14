@@ -40,7 +40,12 @@ struct rational {
 
 struct string {
   char *data;
-  uint64_t length;
+  size_t length;
+};
+
+struct buffer {
+  void *data;
+  size_t size;
 };
 
 struct ArgonNativeAPI {
@@ -56,12 +61,18 @@ struct ArgonNativeAPI {
   ArgonObject *(*i64_to_argon)(int64_t);
   ArgonObject *(*double_to_argon)(double);
   ArgonObject *(*rational_to_argon)(struct rational);
-  ArgonObject *(*string_to_argon)(struct string);
-
   int64_t (*argon_to_i64)(ArgonObject *, ArgonError *);
   double (*argon_to_double)(ArgonObject *, ArgonError *);
   struct rational (*argon_to_rational)(ArgonObject *, ArgonError *);
+
+  // strings
+  ArgonObject *(*string_to_argon)(struct string);
   struct string (*argon_to_string)(ArgonObject *, ArgonError *);
+
+  // buffers
+  ArgonObject *(*create_argon_buffer)(size_t size);
+  void (*resize_argon_buffer)(ArgonObject *obj, ArgonError *err, size_t new_size);
+  struct buffer (*argon_buffer_to_buffer)(ArgonObject *obj, ArgonError *err);
 
   // literals
   ArgonObject *ARGON_NULL;
@@ -70,7 +81,7 @@ struct ArgonNativeAPI {
 };
 
 __attribute__((visibility("default"))) void
-argon_module_init(ArgonState *vm, ArgonNativeAPI *api,
+argon_module_init(ArgonState *vm, ArgonNativeAPI *api, ArgonError*err,
                   ArgonObjectRegister *reg);
 
 #ifdef __cplusplus

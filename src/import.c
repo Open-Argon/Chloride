@@ -442,8 +442,8 @@ const char *PRE_PATHS_TO_TEST[] = {"", "", "argon_modules", "argon_modules"};
 const char *POST_PATHS_TO_TEST[sizeof(PRE_PATHS_TO_TEST) / sizeof(char *)] = {
     "", "init.ar", "", "init.ar"};
 
-struct hashmap *importing_hash_table = NULL;
-struct hashmap_GC *imported_hash_table = NULL;
+struct hashmap *importing_hash_table;
+struct hashmap_GC *imported_hash_table;
 
 Stack *ar_import(char *current_directory, char *path_relative, ArErr *err) {
   char path[FILENAME_MAX];
@@ -463,12 +463,21 @@ Stack *ar_import(char *current_directory, char *path_relative, ArErr *err) {
                       path_relative);
     return NULL;
   }
-  if (!importing_hash_table)
-    importing_hash_table = createHashmap();
   uint64_t hash = siphash64_bytes(path, strlen(path), siphash_key);
+
+  Stack *scope = NULL;
+
+  if (hashmap_lookup(importing_hash_table, hash)) {
+    *err =
+        create_err(0, 0, 0, NULL, "Import Error", "Circular import detected: %s", path, path_relative);
+    return NULL;
+  }
+
   hashmap_insert(importing_hash_table, hash, path, (void *)true, 0);
+
   Translated translated = load_argon_file(path, err);
   if (err->exists) {
+    hashmap_insert(importing_hash_table, hash, path, (void *)NULL, 0);
     return NULL;
   }
   clock_t start = clock(), end;
@@ -476,14 +485,13 @@ Stack *ar_import(char *current_directory, char *path_relative, ArErr *err) {
   Stack *main_scope = create_scope(Global_Scope, true);
   runtime(translated, state, main_scope, err);
   if (err->exists) {
+    hashmap_insert(importing_hash_table, hash, path, (void *)NULL, 0);
     return NULL;
   }
   end = clock();
   double time_spent = (double)(end - start) / CLOCKS_PER_SEC;
   fprintf(stderr, "Execution time taken: %f seconds\n", time_spent);
-  hashmap_insert(importing_hash_table, hash, path, (void *)false, 0);
-  if (!imported_hash_table)
-    imported_hash_table = createHashmap_GC();
   hashmap_insert_GC(imported_hash_table, hash, path, main_scope, 0);
+  hashmap_insert(importing_hash_table, hash, path, (void *)NULL, 0);
   return main_scope;
 }

@@ -652,6 +652,10 @@ ArgonObject *BASE_CLASS___string__(size_t argc, ArgonObject **argv, ArErr *err,
              class_name->value.as_str->data,
              (int)object_name->value.as_str->length,
              object_name->value.as_str->data, argv[0]);
+  else if (class_name)
+    snprintf(buffer, sizeof(buffer), "<%.*s object at %p>",
+             (int)class_name->value.as_str->length,
+             class_name->value.as_str->data, argv[0]);
   else
     snprintf(buffer, sizeof(buffer), "<object at %p>", argv[0]);
   return new_string_object_null_terminated(buffer);
