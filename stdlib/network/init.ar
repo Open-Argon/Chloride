@@ -2,3 +2,6 @@
 #
 # SPDX-License-Identifier: LGPL-3.0-or-later
 
+let path 
+
+let net = load_native_code("stdlib/network/native/bin/network.so")
