@@ -40,7 +40,7 @@ pipeline {
       steps {
         script {
 
-          def tag = sh(script: "git describe --tags --exact-match", returnStdout: true).trim()
+          def tag = sh(script: "git describe --tags", returnStdout: true).trim()
           echo "Tag detected: ${tag}"
 
           if (tag.toLowerCase().contains('unsable')) {

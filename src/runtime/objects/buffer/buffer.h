@@ -10,9 +10,11 @@
 #include <stddef.h>
 #include "../object.h"
 
+extern ArgonObject *ARGON_BUFFER_TYPE;
 ArgonObject *create_ARGON_BUFFER_object(size_t size);
 void resize_ARGON_BUFFER_object(ArgonObject *obj, ArErr *err, size_t new_size);
 struct buffer ARGON_BUFFER_to_buffer_struct(ArgonObject *obj,
                                                    ArErr *err);
+void create_ARGON_BUFFER_TYPE();
 
 #endif // BUFFER_H

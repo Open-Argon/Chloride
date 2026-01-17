@@ -20,7 +20,7 @@ ArgonObject *throw_argon_error(ArErr *err, const char *type, const char *fmt,
                                ...) {
   va_list args;
   va_start(args, fmt);
-  *err = create_err(0, 0, 0, "", type, fmt, args);
+  *err = vcreate_err(0, 0, 0, "", type, fmt, args);
   va_end(args);
   return ARGON_NULL;
 }
