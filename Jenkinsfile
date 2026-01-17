@@ -130,7 +130,7 @@ stage('Archive Build Artifacts') {
     always {
         script {
             // Automatically detects full ref name
-            def tag = sh(script: "git describe --tags --exact-match", returnStdout: true).trim()
+            def tag = sh(script: "git describe --tags", returnStdout: true).trim()
             echo "Detected tag: ${tag}"
 
             if (tag.toLowerCase().contains("unstable")) {
