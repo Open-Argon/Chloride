@@ -43,8 +43,8 @@ pipeline {
           def tag = sh(script: "git describe --tags", returnStdout: true).trim()
           echo "Tag detected: ${tag}"
 
-          if (tag.toLowerCase().contains('unsable')) {
-            echo "Tag contains 'unsable' → marking build UNSTABLE"
+          if (tag.toLowerCase().contains('unstable')) {
+            echo "Tag contains 'unstable' → marking build UNSTABLE"
             currentBuild.result = 'UNSTABLE'
           }
 
