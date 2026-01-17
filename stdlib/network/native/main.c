@@ -122,16 +122,6 @@ ArgonObject *argon_net_send_string(size_t argc, ArgonObject **argv, ArgonError *
       net_send(connection_socket, data_string.data, data_string.length));
 }
 
-ArgonObject *argon_make_object(size_t argc, ArgonObject **argv, ArgonError *err,
-                               ArgonState *state, ArgonNativeAPI *api) {
-  if (api->fix_to_arg_size(1, argc, err))
-    return api->ARGON_NULL;
-  int64_t size = api->argon_to_i64(argv[0], err);
-  if (api->is_error(err))
-    return api->ARGON_NULL;
-  return api->create_argon_buffer(size);
-}
-
 ArgonObject *argon_net_recv(size_t argc, ArgonObject **argv, ArgonError *err,
                             ArgonState *state, ArgonNativeAPI *api) {
   if (api->fix_to_arg_size(2, argc, err))
@@ -219,7 +209,4 @@ void argon_module_init(ArgonState *vm, ArgonNativeAPI *api, ArgonError *err,
   api->register_ArgonObject(
       reg, "net_close",
       api->create_argon_native_function("net_close", argon_net_close));
-  api->register_ArgonObject(
-      reg, "make_object",
-      api->create_argon_native_function("make_object", argon_make_object));
 }
