@@ -135,7 +135,7 @@ stage('Archive Build Artifacts') {
 
             if (tag.toLowerCase().contains("unstable")) {
                 echo "Unstable tag detected"
-                currentBuild.result = "UNSTABLE"
+                currentBuild.result = "SUCCESS"
             } else {
                 echo "Stable tagged build"
                 currentBuild.description = "Stable"
