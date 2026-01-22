@@ -16,7 +16,7 @@ It is designed as a drop-in replacement for the older Go implementation (argon-v
 
 ## Build
 
-Currently, builds are only being made for linux x86_64 at [the projects Jenklins instance](https://jenkins.wbell.dev/job/chloride/). 
+Currently, builds are only being made for linux x86_64 at [the projects Jenkins instance](https://jenkins.wbell.dev/job/chloride/). 
 
 If this does not satify your requirements, feel free to build for your platform. the dependancies are `conan`, `flex`, `cmake` and `gcc`.
 
