@@ -7,6 +7,7 @@
 #include "return.h"
 #include "../../lexer/token.h"
 #include "../../memory.h"
+#include "../../err.h"
 #include "../literals/literals.h"
 
 ParsedValueReturn parse_return(char *file, DArray *tokens, size_t *index) {

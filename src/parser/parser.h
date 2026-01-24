@@ -8,7 +8,7 @@
 #define PARSER_H
 
 #include "../dynamic_array/darray.h"
-#include "../err.h"
+#include "../returnTypes.h"
 #include <stdbool.h>
 #include <stddef.h>
 

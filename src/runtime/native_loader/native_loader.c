@@ -42,11 +42,10 @@ ArgonObject *ARGON_LOAD_NATIVE_CODE(size_t argc, ArgonObject **argv, ArErr *err,
     return ARGON_NULL;
   }
 
-  void (*init)(RuntimeState *, ArgonNativeAPI *, hashmap_GC *) =
-      (void (*)(RuntimeState *, ArgonNativeAPI *, hashmap_GC *))GetProcAddress(
+  FARPROC proc = GetProcAddress(
           handle, "argon_module_init");
 
-  if (!init) {
+  if (!proc) {
     *err = create_err(
         0, 0, 0, "", "Runtime Error",
         "Unable to find argon_module_init in the native code at path: %s",
@@ -55,6 +54,7 @@ ArgonObject *ARGON_LOAD_NATIVE_CODE(size_t argc, ArgonObject **argv, ArErr *err,
     FreeLibrary(handle);
     return ARGON_NULL;
   }
+  argon_module_init_fn init = (argon_module_init_fn)(void *)proc;
 #else
   void *handle = dlopen(path_c, RTLD_NOW | RTLD_LOCAL);
   if (!handle) {
@@ -65,8 +65,8 @@ ArgonObject *ARGON_LOAD_NATIVE_CODE(size_t argc, ArgonObject **argv, ArErr *err,
     return ARGON_NULL;
   }
 
-  void (*init)(RuntimeState *, ArgonNativeAPI *, ArErr *, hashmap_GC *) =
-      (void (*)(RuntimeState *, ArgonNativeAPI *, ArErr *, hashmap_GC *))dlsym(
+  argon_module_init_fn init =
+      (argon_module_init_fn)dlsym(
           handle, "argon_module_init");
 
   if (!init) {

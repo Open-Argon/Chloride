@@ -11,6 +11,7 @@
 #include "../../memory.h"
 #include "../function/function.h"
 #include "../literals/literals.h"
+#include "../../err.h"
 #include "../parser.h"
 #include <stdio.h>
 #include <stdlib.h>

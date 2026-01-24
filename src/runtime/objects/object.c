@@ -8,6 +8,7 @@
 #include "../../hash_data/hash_data.h"
 #include "../../memory.h"
 #include "../call/call.h"
+#include "../../err.h"
 #include "type/type.h"
 #include <stdbool.h>
 #include <stddef.h>

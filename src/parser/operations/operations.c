@@ -6,6 +6,7 @@
 
 #include "operations.h"
 #include "../../memory.h"
+#include "../../err.h"
 #include "../parser.h"
 #include <stddef.h>
 #include <stdio.h>

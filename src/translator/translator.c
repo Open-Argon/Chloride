@@ -11,6 +11,7 @@
 #include "../parser/not/not.h"
 #include "access/access.h"
 #include "assignment/assignment.h"
+#include "../err.h"
 #include "call/call.h"
 #include "class/class.h"
 #include "declaration/declaration.h"

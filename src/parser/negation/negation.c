@@ -6,6 +6,7 @@
 #include "negation.h"
 #include "../../lexer/token.h"
 #include "../../memory.h"
+#include "../../err.h"
 #include "../parser.h"
 
 ParsedValueReturn parse_negation(char *file, DArray *tokens, size_t *index) {

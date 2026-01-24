@@ -8,6 +8,7 @@
 #include "../../../lexer/token.h"
 #include "../../../memory.h"
 #include "../../parser.h"
+#include "../../../err.h"
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>

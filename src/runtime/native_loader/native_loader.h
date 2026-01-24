@@ -8,6 +8,13 @@
 #define native_loader_H
 #include "../../arobject.h"
 
+typedef void (*argon_module_init_fn)(
+    RuntimeState *,
+    ArgonNativeAPI *,
+    ArErr *,
+    hashmap_GC *
+);
+
 ArgonObject *ARGON_LOAD_NATIVE_CODE(size_t argc, ArgonObject **argv, ArErr *err,
                                     RuntimeState *state, ArgonNativeAPI *api);
 

@@ -7,6 +7,7 @@
 #include "parentheses-and-anonymous-function.h"
 #include "../../memory.h"
 #include "../assignable/identifier/identifier.h"
+#include "../../err.h"
 #include "../function/function.h"
 #include <stddef.h>
 #include <string.h>
