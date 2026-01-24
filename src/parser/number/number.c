@@ -6,6 +6,7 @@
 
 #include "number.h"
 #include "../../memory.h"
+#include "../../err.h"
 #include <ctype.h>
 #include <gmp.h>
 #include <stdio.h>

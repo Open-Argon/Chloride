@@ -6,6 +6,7 @@
 #include "while.h"
 #include "../../lexer/token.h"
 #include "../../memory.h"
+#include "../../err.h"
 #include "../parser.h"
 #include <stddef.h>
 

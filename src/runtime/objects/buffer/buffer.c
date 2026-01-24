@@ -6,6 +6,7 @@
 #include "buffer.h"
 #include "../functions/functions.h"
 #include "../string/string.h"
+#include "../../../err.h"
 #include <inttypes.h>
 #include <stddef.h>
 #include <stdio.h>

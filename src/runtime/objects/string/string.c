@@ -9,6 +9,7 @@
 #include "../number/number.h"
 #include "../object.h"
 #include "../literals/literals.h"
+#include "../../../err.h"
 #include <inttypes.h>
 #include <ctype.h>
 #include <stdint.h>

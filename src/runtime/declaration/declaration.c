@@ -5,6 +5,7 @@
  */
 
 #include "declaration.h"
+#include "../../err.h"
 
 void runtime_declaration(Translated *translated, RuntimeState *state,
                          struct Stack *stack, ArErr *err) {

@@ -70,7 +70,7 @@ uint64_t runtime_hash(const void *data, size_t len, uint64_t prehash);
 void bootstrap_globals();
 
 static inline void *arena_get(ConstantArena *arena, size_t offset) {
-  return (char *)arena->data + offset;
+  return (uint8_t *)arena->data + offset;
 }
 
 static inline uint8_t pop_byte(Translated *translated, RuntimeState *state) {

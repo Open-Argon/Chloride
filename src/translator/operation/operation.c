@@ -8,6 +8,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
+#include "../../err.h"
 
 size_t translate_operation(Translated *translated, ParsedOperation *operation,
                            ArErr *err) {

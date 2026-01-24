@@ -8,6 +8,7 @@
 #include "../functions/functions.h"
 #include "../literals/literals.h"
 #include "../string/string.h"
+#include "../../../err.h"
 #include <inttypes.h>
 #include <stddef.h>
 #include <stdint.h>

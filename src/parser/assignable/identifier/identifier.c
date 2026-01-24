@@ -6,6 +6,7 @@
 
 #include "identifier.h"
 #include "../../../lexer/token.h"
+#include "../../../err.h"
 #include "../../parser.h"
 #include <string.h>
 #include "../../../memory.h"

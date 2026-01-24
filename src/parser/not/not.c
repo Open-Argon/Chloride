@@ -7,6 +7,7 @@
 #include "../../lexer/token.h"
 #include "../../memory.h"
 #include "../parser.h"
+#include "../../err.h"
 #include <stdio.h>
 
 ParsedValueReturn parse_not(char *file, DArray *tokens, size_t *index) {

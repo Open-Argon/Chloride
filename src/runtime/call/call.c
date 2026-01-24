@@ -8,6 +8,7 @@
 #include "../../hash_data/hash_data.h"
 #include "../api/api.h"
 #include "../objects/string/string.h"
+#include "../../err.h"
 #include <inttypes.h>
 #include <math.h>
 #include <stdbool.h>
@@ -21,8 +22,8 @@
 #ifndef _WIN32_WINNT
 #define _WIN32_WINNT 0x0602
 #endif
-#include <psapi.h>
 #include <windows.h>
+#include <psapi.h>
 
 double get_memory_usage_mb() {
   PROCESS_MEMORY_COUNTERS pmc;

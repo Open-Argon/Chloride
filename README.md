@@ -11,14 +11,23 @@ SPDX-License-Identifier: GPL-3.0-or-later
 <h1>Chloride</h1>
 </div>
 
-Chloride is the new C-based interpreter for the Argon programming language.  
-It is designed as a drop-in replacement for the older Go implementation (argon-v3), while introducing a more efficient runtime and a cleaner, more consistent object model.
+**Chloride** is a C-based interpreter for the Argon programming language. It is released as libre software - that is, software that **respects your freedom to run, study, modify, and share it**. All source code in this repository is libre, and the compiled binaries are fully freedom-respecting as well.
+
+Chloride is designed as a **drop-in replacement** for the older Go implementation (`argon-v3`), providing a **more efficient runtime** and a **cleaner, more consistent object model**.
 
 ## Build
 
-Currently, builds are only being made for linux x86_64 at [the projects Jenklins instance](https://jenkins.wbell.dev/job/chloride/). 
+Currently, offical builds are only being made for linux x86_64 at [the project's Jenkins instance](https://jenkins.wbell.dev/job/chloride/).
 
-If this does not satify your requirements, feel free to build for your platform. the dependancies are `conan`, `flex`, `cmake` and `gcc`.
+If this does not satisfy your requirements, feel free to build for your platform. 
+
+There are two ways to build Chloride. **Conan is recommended for anyone who is not developing Chloride**. Conan is a cross platform package manager and compiler tool.
+
+If you are developing Chloride, it is recommended to use **make**, as that has been set up to build for dynamic linking and has debug tools.
+
+### Conan
+
+For **conan**, the dependencies are `conan`, `flex`, `cmake` and `gcc`.
 
 install using conan.
 ```
@@ -30,16 +39,25 @@ and finally build using conan.
 conan build .
 ```
 
-the final build can be found in `build/bin`.
+The final build can be found in `build/bin`.
+
+### Make
+
+For **make**, there are more dependencies, since we are not using conan to manage them. The exact dependencies are not fixed, so you may need to read through the **Makefile** to determine which packages are required (or attempt a build to see what is missing).
+
+Development is only currently set up to be possible on posix systems. If you are on windows, it's recommended to use **WSL**.
+
+To build normally, run `make -j$(nproc)`.
+
+If you are building from posix to windows, run `make -j$(nproc) TARGET_OS=windows`.
+
+If you are wanting to debug, use `make -j$(nproc) full-debug`. Of course if you are wanting to debug for windows, add `TARGET_OS=windows`.
 
 ## Overview
 
-Chloride aims to remain as interchangeable with argon-v3 as possible.  
-Most existing Argon code should run with minimal or no changes, and backwards compatibility is an ongoing priority.  
-Where behaviour differs, the goal is for those differences to be predictable and well-defined rather than accidental quirks.
+Chloride introduces a **bytecode compiler, caching system, and virtual machine**, replacing the older AST-walking runtime of argon-v3.
 
-This interpreter replaces argon-v3's AST-walking runtime with a proper bytecode compiler, caching system, and virtual machine.  
-The result is a more consistent execution model, lower memory usage, and improved overall performance, even though speed is not the sole focus of the project.
+The result is a **more predictable execution model**, lower memory usage, and better performance, with a focus on **clarity and consistency** rather than strict backwards compatibility.
 
 ## Key Improvements Over argon-v3
 
@@ -58,25 +76,20 @@ The result is a more consistent execution model, lower memory usage, and improve
   Classes in Chloride are real objects, supporting inheritance and introspection in a clean, well-defined manner.  
   The old interpreter treated classes as a special-case construct, which restricted the language's expressiveness.
 
-- **Backwards compatibility focus**  
-  Chloride aims to match argon-v3’s behaviour closely enough that most existing Argon programs run unchanged.  
-  Compatibility fixes and behavioural parity are treated as long-term goals.
-
 ## Project Goals
 
-- Maintain high compatibility with argon-v3.  
 - Minimise memory usage and improve runtime efficiency.  
 - Provide a stable, maintainable interpreter core.  
 - Keep the implementation straightforward so that future language features can be built cleanly on top of it.  
 - Serve as the reference interpreter for Argon going forward.
 
-
 ## Project Status
 
-Chloride is still under active development.
-The object model is largely complete, but several core language features are missing or experimental. Basic control flow constructs such as for loops are not implemented yet, partly because the older syntax was confusing and may be replaced with something clearer. While backwards compatibility is a goal, perfect compatibility is unlikely, especially where new syntax or improved semantics resolve long-standing issues in argon-v3.
+Chloride is still **actively developed**. Its object model is mostly complete, but some core features are missing or experimental. Certain control flow constructs, like for loops, are not implemented yet, as the syntax is being refined for clarity.
 
-The interpreter currently contains known performance issues and occasional segmentation faults, and part of the development process is identifying and removing these. The intention is to stabilise the runtime, finalise the syntax, and avoid any further major redesigns. The hope is that Chloride becomes both the long-term Argon interpreter and the last large rewrite the language needs.
+Chloride improves on argon-v3 with **cleaner syntax and more predictable semantics**, which may require adapting older code.
 
-# Licence
+Known performance issues and occasional crashes remain, and development is focused on **stabilising the runtime, finalising the syntax, and eliminating major bugs**. The aim is for Chloride to serve as the **long-term Argon interpreter** and the **last major rewrite the language needs**.
+
+## Licence
 GNU General Public License v3.0

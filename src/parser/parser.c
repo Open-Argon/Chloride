@@ -20,6 +20,7 @@
 #include "if/if.h"
 #include "list/list.h"
 #include "literals/literals.h"
+#include "../err.h"
 #include "negation/negation.h"
 #include "not/not.h"
 #include "number/number.h"
