@@ -16,6 +16,7 @@
 #include "runtime/internals/hashmap/hashmap.h"
 #include "runtime/runtime.h"
 #include "translator/translator.h"
+#include "runtime/objects/dictionary/dictionary.h"
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
@@ -465,8 +466,6 @@ Stack *ar_import(char *current_directory, char *path_relative, ArErr *err) {
   }
   uint64_t hash = siphash64_bytes(path, strlen(path), siphash_key);
 
-  Stack *scope = NULL;
-
   if (hashmap_lookup(importing_hash_table, hash)) {
     *err =
         create_err(0, 0, 0, NULL, "Import Error", "Circular import detected: %s", path, path_relative);
@@ -482,7 +481,12 @@ Stack *ar_import(char *current_directory, char *path_relative, ArErr *err) {
   }
   clock_t start = clock(), end;
   RuntimeState state = init_runtime_state(translated, path);
-  Stack *main_scope = create_scope(Global_Scope, true);
+  Stack *program_scope = create_scope(Global_Scope, true);
+
+  hashmap_GC *program = createHashmap_GC();
+
+  add_to_scope(program_scope, "program", create_dictionary(program));
+  Stack *main_scope = create_scope(program_scope, true);
   runtime(translated, state, main_scope, err);
   if (err->exists) {
     hashmap_insert(importing_hash_table, hash, path, (void *)NULL, 0);
