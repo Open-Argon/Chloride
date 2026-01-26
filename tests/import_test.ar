@@ -1,0 +1,10 @@
+# SPDX-FileCopyrightText: 2025 William Bell
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+term.log(program, platform)
+
+class something do
+  let y = 10
+  this.f(x) = do
+    term.log(x, y=y+1)

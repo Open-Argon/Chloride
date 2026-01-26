@@ -7,12 +7,15 @@
 #include "runtime.h"
 #include "../err.h"
 #include "../hash_data/hash_data.h"
+#include "../hashmap/hashmap.h"
+#include "../memory.h"
 #include "../parser/number/number.h"
 #include "../translator/translator.h"
 #include "api/api.h"
 #include "assignment/assignment.h"
 #include "call/call.h"
 #include "declaration/declaration.h"
+#include "import/import.h"
 #include "internals/hashmap/hashmap.h"
 #include "native_loader/native_loader.h"
 #include "objects/dictionary/dictionary.h"
@@ -39,6 +42,57 @@
 #else
 extern char **environ;
 #endif
+
+#if defined(_WIN32) || defined(_WIN64)
+
+    #define PLATFORM_OS          "windows"
+    #define PLATFORM_LIB_PREFIX  ""
+    #define PLATFORM_LIB_EXT     ".dll"
+
+#elif defined(__APPLE__) && defined(__MACH__)
+
+    #define PLATFORM_OS          "darwin"
+    #define PLATFORM_LIB_PREFIX  "lib"
+    #define PLATFORM_LIB_EXT     ".dylib"
+
+#elif defined(__linux__)
+
+    #define PLATFORM_OS          "linux"
+    #define PLATFORM_LIB_PREFIX  "lib"
+    #define PLATFORM_LIB_EXT     ".so"
+
+#elif defined(__FreeBSD__)
+
+    #define PLATFORM_OS          "freebsd"
+    #define PLATFORM_LIB_PREFIX  "lib"
+    #define PLATFORM_LIB_EXT     ".so"
+
+#elif defined(__NetBSD__)
+
+    #define PLATFORM_OS          "netbsd"
+    #define PLATFORM_LIB_PREFIX  "lib"
+    #define PLATFORM_LIB_EXT     ".so"
+
+#elif defined(__OpenBSD__)
+
+    #define PLATFORM_OS          "openbsd"
+    #define PLATFORM_LIB_PREFIX  "lib"
+    #define PLATFORM_LIB_EXT     ".so"
+
+#elif defined(__unix__)
+
+    #define PLATFORM_OS          "unix"
+    #define PLATFORM_LIB_PREFIX  "lib"
+    #define PLATFORM_LIB_EXT     ".so"
+
+#else
+
+    #define PLATFORM_OS          "unknown"
+    #define PLATFORM_LIB_PREFIX  ""
+    #define PLATFORM_LIB_EXT     ""
+
+#endif
+
 
 ArgonObject *ARGON_METHOD_TYPE;
 Stack *Global_Scope = NULL;
@@ -1100,8 +1154,6 @@ void bootstrap_types() {
       create_argon_native_function("less_than", ARGON_LESS_THAN_FUNCTION);
   LESS_THAN_EQUAL_FUNCTION = create_argon_native_function(
       "less_than_equal", ARGON_LESS_THAN_EQUAL_FUNCTION);
-  GREATER_THAN_FUNCTION =
-      create_argon_native_function("greater_than", ARGON_GREATER_THAN_FUNCTION);
   GREATER_THAN_EQUAL_FUNCTION = create_argon_native_function(
       "greater_than_equal", ARGON_GREATER_THAN_EQUAL_FUNCTION);
   add_builtin_field(BASE_CLASS, __getattribute__,
@@ -1151,6 +1203,13 @@ void bootstrap_globals() {
   add_to_scope(Global_Scope, "less_than_equal", LESS_THAN_EQUAL_FUNCTION);
   add_to_scope(Global_Scope, "greater_than", GREATER_THAN_FUNCTION);
   add_to_scope(Global_Scope, "greater_than_equal", GREATER_THAN_EQUAL_FUNCTION);
+
+  // create platform
+  hashmap_GC *platform = createHashmap_GC();
+  add_to_hashmap(platform, "os", new_string_object_null_terminated(PLATFORM_OS));
+  add_to_hashmap(platform, "lib_prefix", new_string_object_null_terminated(PLATFORM_LIB_PREFIX));
+  add_to_hashmap(platform, "lib_ext", new_string_object_null_terminated(PLATFORM_LIB_EXT));
+  add_to_scope(Global_Scope, "platform", create_dictionary(platform));
 
   struct hashmap_GC *argon_term = createHashmap_GC();
   add_to_hashmap(argon_term, "log",
@@ -1351,7 +1410,8 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       [OP_LOAD_SETITEM_METHOD] = &&DO_LOAD_SETITEM_METHOD,
       [OP_LOAD_GETITEM_METHOD] = &&DO_LOAD_GETITEM_METHOD,
       [OP_LOAD_BASE_CLASS] = &&DO_LOAD_BASE_CLASS,
-      [OP_CREATE_CLASS] = &&DO_CREATE_CLASS};
+      [OP_CREATE_CLASS] = &&DO_CREATE_CLASS,
+      [OP_IMPORT] = &&DO_IMPORT};
   _state.head = 0;
 
   StackFrame *currentStackFrame = ar_alloc(sizeof(StackFrame));
@@ -1386,6 +1446,9 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       continue;
     DO_LOAD_FUNCTION:
       load_argon_function(translated, state, currentStackFrame->stack);
+      continue;
+    DO_IMPORT:
+      runtime_import(translated, state, currentStackFrame->stack, err);
       continue;
     DO_IDENTIFIER:
       load_variable(translated, state, currentStackFrame->stack, err);

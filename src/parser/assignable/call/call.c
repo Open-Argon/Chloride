@@ -99,7 +99,7 @@ void free_parse_call(void *ptr) {
   ParsedValue *parsedValue = ptr;
   ParsedCall *parsedCall = parsedValue->data;
 
-  darray_free(&parsedCall->args, free_parsed);
+  darray_free(&parsedCall->args, (void (*)(void *))free_parsed);
   free_parsed(parsedCall->to_call);
   free(parsedCall->to_call);
   free(parsedCall);

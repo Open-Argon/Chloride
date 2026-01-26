@@ -6,7 +6,6 @@
 
 #ifndef TRANSLATE_CLASS_H
 #define TRANSLATE_CLASS_H
-#include "../translator.h"
 #include "../../parser/class/class.h"
 
 

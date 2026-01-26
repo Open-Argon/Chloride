@@ -52,7 +52,7 @@ ParsedValueReturn parse_assign(char *file, DArray *tokens,
       char *param = strdup(((ParsedIdentifier *)arg->data)->name);
       darray_push(&function_args, &param);
     }
-    darray_free(&call->args, free_parsed);
+    darray_free(&call->args, (void (*)(void *))free_parsed);
     is_function = true;
     function_assign_to = call->to_call;
     switch (function_assign_to->type) {

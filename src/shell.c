@@ -13,6 +13,8 @@
 #include "import.h"
 #include "runtime/objects/literals/literals.h"
 #include "runtime/objects/string/string.h"
+#include "hashmap/hashmap.h"
+#include "memory.h"
 #include <signal.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -61,13 +63,13 @@ int execute_code(FILE *stream, char *path, Stack *scope,
   err = parser(path, &ast, &tokens, false);
   darray_free(&tokens, free_token);
   if (err.exists) {
-    darray_free(&ast, free_parsed);
+    darray_free(&ast, (void (*)(void *))free_parsed);
     output_err(err);
     return 1;
   }
   Translated __translated = init_translator(path);
   err = translate(&__translated, &ast);
-  darray_free(&ast, free_parsed);
+  darray_free(&ast, (void (*)(void *))free_parsed);
   if (err.exists) {
     darray_free(&__translated.bytecode, NULL);
     free(__translated.constants.data);

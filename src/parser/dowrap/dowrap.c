@@ -119,6 +119,6 @@ ParsedValueReturn parse_dowrap(char *file, DArray *tokens, size_t *index) {
 void free_dowrap(void *ptr) {
   ParsedValue *parsedValue = ptr;
   DArray *parsed = parsedValue->data;
-  darray_free(parsed, free_parsed);
+  darray_free(parsed, (void (*)(void *))free_parsed);
   free(parsed);
 }

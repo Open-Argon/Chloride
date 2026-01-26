@@ -23,6 +23,7 @@
 #include "number/number.h"
 #include "operation/operation.h"
 #include "return/return.h"
+#include "import/import.h"
 #include "string/string.h"
 #include "while/while.h"
 #include <stddef.h>
@@ -30,6 +31,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "../hashmap/hashmap.h"
 
 void uint64_to_bytes(uint64_t value, uint8_t bytes[8]) {
   for (int i = 0; i < 8; i++) {
@@ -192,6 +194,8 @@ size_t translate_parsed(Translated *translated, ParsedValue *parsedValue,
       push_instruction_byte(translated, OP_NOT);
     return first;
   }
+  case AST_IMPORT:
+    return translate_parsed_import(translated, (ParsedImport *)parsedValue->data, err);
   case AST_DICTIONARY: {
     DArray *dictionaryDarray = parsedValue->data;
 

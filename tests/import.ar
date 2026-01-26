@@ -1,0 +1,27 @@
+# SPDX-FileCopyrightText: 2025 William Bell
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+import "import_test.ar" as test
+term.log(program)
+let instance = test.something()
+
+instance.f()
+instance.f()
+instance.f()
+instance.f()
+instance.f()
+instance.f()
+instance.f()
+instance.f()
+instance.f()
+instance.f()
+instance.f()
+instance.f()
+instance.f()
+instance.f()
+instance.f()
+instance.f()
+instance.f()
+instance.f()
+instance.f()

@@ -14,9 +14,13 @@
 #include "lexer/lexer.h"
 #include "lexer/token.h"
 #include "runtime/internals/hashmap/hashmap.h"
-#include "runtime/runtime.h"
-#include "translator/translator.h"
 #include "runtime/objects/dictionary/dictionary.h"
+#include "runtime/objects/literals/literals.h"
+#include "runtime/objects/string/string.h"
+#include "runtime/runtime.h"
+#include "memory.h"
+#include "translator/translator.h"
+#include <limits.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
@@ -102,6 +106,9 @@ int ensure_dir_exists(const char *path) {
 }
 
 char *CWD;
+char *EXC;
+ArgonObject *CWD_ARGON;
+ArgonObject *EXC_ARGON;
 
 const char CACHE_FOLDER[] = "__arcache__";
 const char FILE_IDENTIFIER[5] = "ARBI";
@@ -283,21 +290,21 @@ Translated load_argon_file(char *path, ArErr *err) {
     return (Translated){};
   }
 
-  char basename[FILENAME_MAX];
+  char basename[PATH_MAX];
   memcpy(basename, basename_ptr, basename_length);
 
   size_t parent_directory_length;
   cwk_path_get_dirname(path, &parent_directory_length);
 
-  char parent_directory[FILENAME_MAX];
+  char parent_directory[PATH_MAX];
   memcpy(parent_directory, path, parent_directory_length);
   parent_directory[parent_directory_length] = '\0';
 
-  char cache_folder_path[FILENAME_MAX];
+  char cache_folder_path[PATH_MAX];
   cwk_path_join(parent_directory, CACHE_FOLDER, cache_folder_path,
                 sizeof(cache_folder_path));
 
-  char cache_file_path[FILENAME_MAX];
+  char cache_file_path[PATH_MAX];
   cwk_path_join(cache_folder_path, basename, cache_file_path,
                 sizeof(cache_file_path));
   cwk_path_change_extension(cache_file_path, BYTECODE_EXTENTION,
@@ -348,7 +355,7 @@ Translated load_argon_file(char *path, ArErr *err) {
     *err = parser(path, &ast, &tokens, false);
     darray_free(&tokens, free_token);
     if (err->exists) {
-      darray_free(&ast, free_parsed);
+      darray_free(&ast, (void (*)(void *))free_parsed);
       return (Translated){};
     }
     end = clock();
@@ -359,7 +366,7 @@ Translated load_argon_file(char *path, ArErr *err) {
 
     translated = init_translator(path);
     *err = translate(&translated, &ast);
-    darray_free(&ast, free_parsed);
+    darray_free(&ast, (void (*)(void *))free_parsed);
     if (err->exists) {
       darray_free(&translated.bytecode, NULL);
       free(translated.constants.data);
@@ -442,12 +449,50 @@ Translated load_argon_file(char *path, ArErr *err) {
 const char *PRE_PATHS_TO_TEST[] = {"", "", "argon_modules", "argon_modules"};
 const char *POST_PATHS_TO_TEST[sizeof(PRE_PATHS_TO_TEST) / sizeof(char *)] = {
     "", "init.ar", "", "init.ar"};
+const char *EXTENTIONS_TO_TEST[sizeof(PRE_PATHS_TO_TEST) / sizeof(char *)] = {
+    "", "init.ar", "", "init.ar"};
 
 struct hashmap *importing_hash_table;
 struct hashmap_GC *imported_hash_table;
 
-Stack *ar_import(char *current_directory, char *path_relative, ArErr *err) {
-  char path[FILENAME_MAX];
+#include <stdio.h>
+#include <stdlib.h>
+
+#if defined(_WIN32)
+#include <windows.h>
+#elif defined(__APPLE__)
+#include <limits.h>
+#include <mach-o/dyld.h>
+#else // Linux / Unix
+#include <limits.h>
+#include <unistd.h>
+#endif
+
+char *get_executable_path() {
+  static char path[PATH_MAX];
+
+#if defined(_WIN32)
+  if (GetModuleFileNameA(NULL, path, MAX_PATH) == 0) {
+    return NULL;
+  }
+#elif defined(__APPLE__)
+  uint32_t size = sizeof(path);
+  if (_NSGetExecutablePath(path, &size) != 0) {
+    return NULL; // buffer too small
+  }
+#else // Linux / Unix
+  ssize_t len = readlink("/proc/self/exe", path, sizeof(path) - 1);
+  if (len == -1)
+    return NULL;
+  path[len] = '\0';
+#endif
+
+  return path;
+}
+
+Stack *ar_import(char *current_directory, char *path_relative, ArErr *err,
+                 bool is_main) {
+  char path[PATH_MAX];
   bool found = false;
   for (size_t i = 0; i < sizeof(PRE_PATHS_TO_TEST) / sizeof(char *); i++) {
     cwk_path_get_absolute(current_directory, PRE_PATHS_TO_TEST[i], path,
@@ -467,8 +512,8 @@ Stack *ar_import(char *current_directory, char *path_relative, ArErr *err) {
   uint64_t hash = siphash64_bytes(path, strlen(path), siphash_key);
 
   if (hashmap_lookup(importing_hash_table, hash)) {
-    *err =
-        create_err(0, 0, 0, NULL, "Import Error", "Circular import detected: %s", path, path_relative);
+    *err = create_err(0, 0, 0, NULL, "Import Error",
+                      "Circular import detected: %s", path, path_relative);
     return NULL;
   }
 
@@ -482,8 +527,20 @@ Stack *ar_import(char *current_directory, char *path_relative, ArErr *err) {
   clock_t start = clock(), end;
   RuntimeState state = init_runtime_state(translated, path);
   Stack *program_scope = create_scope(Global_Scope, true);
-
   hashmap_GC *program = createHashmap_GC();
+  hashmap_GC *file = createHashmap_GC();
+  add_to_hashmap(file, "path", new_string_object_null_terminated(path));
+  const char *basename;
+  size_t basename_length;
+  cwk_path_get_basename(path, &basename, &basename_length);
+  add_to_hashmap(file, "name",
+                 new_string_object((char *)basename, basename_length, 0, 0));
+  add_to_hashmap(program, "file", create_dictionary(file));
+  add_to_hashmap(program, "main", is_main ? ARGON_TRUE : ARGON_FALSE);
+  add_to_hashmap(program, "origin",
+                 new_string_object_null_terminated(current_directory));
+  add_to_hashmap(program, "cwd", CWD_ARGON);
+  add_to_hashmap(program, "exc", EXC_ARGON);
 
   add_to_scope(program_scope, "program", create_dictionary(program));
   Stack *main_scope = create_scope(program_scope, true);

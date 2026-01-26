@@ -91,18 +91,18 @@ ParsedValueReturn parse_operations(char *file, DArray *tokens, size_t *index,
     (*index)++;
     ArErr err = error_if_finished(file, tokens, index);
     if (err.exists) {
-      darray_free(&to_operate_on, free_parsed);
+      darray_free(&to_operate_on, (void (*)(void *))free_parsed);
       darray_free(&operations, NULL);
       return (ParsedValueReturn){err, NULL};
     }
     ParsedValueReturn parsedValue =
         parse_token_full(file, tokens, index, true, false);
     if (parsedValue.err.exists) {
-      darray_free(&to_operate_on, free_parsed);
+      darray_free(&to_operate_on, (void (*)(void *))free_parsed);
       darray_free(&operations, NULL);
       return parsedValue;
     } else if (!parsedValue.value) {
-      darray_free(&to_operate_on, free_parsed);
+      darray_free(&to_operate_on, (void (*)(void *))free_parsed);
       darray_free(&operations, NULL);
       return (ParsedValueReturn){create_err(token->line, token->column,
                                             token->length, file, "Syntax Error",
@@ -123,6 +123,6 @@ ParsedValueReturn parse_operations(char *file, DArray *tokens, size_t *index,
 void free_operation(void *ptr) {
   ParsedValue *parsedValue = ptr;
   ParsedOperation *parsed_operation = parsedValue->data;
-  darray_free(&parsed_operation->to_operate_on, free_parsed);
+  darray_free(&parsed_operation->to_operate_on, (void (*)(void *))free_parsed);
   free(parsed_operation);
 }

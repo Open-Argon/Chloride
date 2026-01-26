@@ -4,10 +4,10 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 #include "class.h"
+#include "../../err.h"
 #include "../../lexer/token.h"
 #include "../../memory.h"
 #include "../parser.h"
-#include "../../err.h"
 #include <stdlib.h>
 #include <string.h>
 
@@ -19,10 +19,10 @@ ParsedValueReturn parse_class(char *file, DArray *tokens, size_t *index) {
   }
   Token *first_token = darray_get(tokens, *index);
   if (first_token->type != TOKEN_IDENTIFIER) {
-    return (ParsedValueReturn){create_err(first_token->line, first_token->column,
-                                          first_token->length, file, "Syntax Error",
-                                          "expected identifier"),
-                               NULL};
+    return (ParsedValueReturn){
+        create_err(first_token->line, first_token->column, first_token->length,
+                   file, "Syntax Error", "expected identifier"),
+        NULL};
   }
   char *name = first_token->value;
   ParsedValue *parent = NULL;
@@ -91,7 +91,10 @@ void free_class(void *ptr) {
 
   ParsedClass *class = parsedValue->data;
   free(class->name);
-  free(class->parent);
+  if (class->parent) {
+    free_parsed(class->parent);
+    free(class->parent);
+  }
   free_parsed(class->body);
   free(class->body);
   free(class);

@@ -5,6 +5,7 @@
  */
 
 #include "../../parser/if/if.h"
+#include "../../memory.h"
 #include "if.h"
 #include <stddef.h>
 #include <stdint.h>
