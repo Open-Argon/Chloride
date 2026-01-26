@@ -9,6 +9,7 @@
 #include "../api/api.h"
 #include "../objects/string/string.h"
 #include "../../err.h"
+#include "../../memory.h"
 #include <inttypes.h>
 #include <math.h>
 #include <stdbool.h>

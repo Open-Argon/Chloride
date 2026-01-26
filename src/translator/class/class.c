@@ -5,6 +5,7 @@
  */
 
 #include "class.h"
+#include "../translator.h"
 #include "../../hash_data/hash_data.h"
 #include <string.h>
 

@@ -8,7 +8,9 @@
 #include "hashmap/hashmap.h"
 #include "import.h"
 #include "memory.h"
+#include "runtime/objects/literals/literals.h"
 #include "runtime/objects/object.h"
+#include "runtime/objects/string/string.h"
 #include "runtime/runtime.h"
 #include "shell.h"
 
@@ -23,7 +25,8 @@
 #include <windows.h>
 #endif
 
-char *get_current_directory() {
+char *
+get_current_directory() {
   char *buffer = NULL;
 
 #ifdef _WIN32
@@ -65,9 +68,12 @@ int main(int argc, char *argv[]) {
   if (argc <= 1)
     return shell();
   CWD = get_current_directory();
+  EXC = get_executable_path();
+  CWD_ARGON = CWD?new_string_object_null_terminated(CWD):ARGON_NULL;
+  EXC_ARGON = EXC?new_string_object_null_terminated(EXC):ARGON_NULL;
   char *path_non_absolute = argv[1];
   ArErr err = no_err;
-  ar_import(CWD, path_non_absolute, &err);
+  ar_import(CWD, path_non_absolute, &err, true);
   if (err.exists) {
     output_err(err);
     return 1;

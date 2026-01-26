@@ -7,6 +7,7 @@
 #include "../../runtime.h"
 #include "../object.h"
 #include "../string/string.h"
+#include "../../../memory.h"
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>

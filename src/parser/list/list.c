@@ -76,6 +76,6 @@ ParsedValueReturn parse_list(char *file, DArray *tokens, size_t *index) {
 void free_parsed_list(void *ptr) {
   ParsedValue *parsedValue = ptr;
   DArray *parsed_list = parsedValue->data;
-  darray_free(parsed_list, free_parsed);
+  darray_free(parsed_list, (void (*)(void *))free_parsed);
   free(parsed_list);
 }

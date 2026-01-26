@@ -48,6 +48,9 @@ CFLAGS  = $(ARCHFLAGS) -Wall -Wextra -Wno-unused-function \
           -Iexternal/cwalk/include \
           -Iexternal/libdye/include
 
+# Strip flag (only for non-debug builds)
+STRIP_FLAG = -s
+
 # ------------------------------------------------------------
 # Default target
 # ------------------------------------------------------------
@@ -71,26 +74,33 @@ $(BUILD_DIR)/%.o: %.c
 # ------------------------------------------------------------
 $(BINARY): $(LEXER_C) $(LEXER_H) $(OBJFILES)
 	mkdir -p bin
-	$(CC) -O3 -o $(BINARY) $(OBJFILES) $(LDFLAGS) -s $(CFLAGS)
+	$(CC) -O3 -o $(BINARY) $(OBJFILES) $(LDFLAGS) $(CFLAGS) $(STRIP_FLAG)
 
 # ------------------------------------------------------------
 # Variants
 # ------------------------------------------------------------
+# Native optimizations
 native: CFLAGS += -march=native
+native: STRIP_FLAG = -s
 native: $(BINARY)
 
+# Debug (keep symbols)
 debug: CFLAGS += -g
+debug: STRIP_FLAG =
 debug: $(BINARY)
 
+# Full debug (keep symbols, enable ASan)
 full-debug: CFLAGS += -g -fsanitize=address -fno-omit-frame-pointer
+full-debug: STRIP_FLAG =
 full-debug: $(BINARY)
 
+# Optimized with profiling
 optimised:
 	$(MAKE) clean
-	$(MAKE) CFLAGS="$(CFLAGS) -O3 -fprofile-generate" $(BINARY)
+	$(MAKE) CFLAGS="$(CFLAGS) -O3 -fprofile-generate" STRIP_FLAG=-s $(BINARY)
 	$(BINARY) rand_test.ar
 	$(MAKE) clean
-	$(MAKE) CFLAGS="$(CFLAGS) -O3 -fprofile-use" $(BINARY)
+	$(MAKE) CFLAGS="$(CFLAGS) -O3 -fprofile-use" STRIP_FLAG=-s $(BINARY)
 
 # ------------------------------------------------------------
 # Cleanup

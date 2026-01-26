@@ -8,8 +8,6 @@
 #define TRANSLATOR_H
 
 #include "../dynamic_array/darray.h"
-#include "../hashmap/hashmap.h"
-#include "../memory.h"
 #include "../parser/parser.h"
 #include <stddef.h>
 #include <stdint.h>
@@ -55,7 +53,8 @@ typedef enum {
   OP_LOAD_GETITEM_METHOD,
   OP_LOAD_SETITEM_METHOD,
   OP_CREATE_CLASS,
-  OP_LOAD_BASE_CLASS
+  OP_LOAD_BASE_CLASS,
+  OP_IMPORT
 } OperationType;
 
 void arena_resize(ConstantArena *arena, size_t new_size);

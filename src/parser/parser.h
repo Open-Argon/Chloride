@@ -54,7 +54,8 @@ typedef enum {
   AST_RETURN,
   AST_WHILE,
   AST_TO_BOOL,
-  AST_NEGATION
+  AST_NEGATION,
+  AST_IMPORT
 } ValueType;
 
 extern const char *ValueTypeNames[];
@@ -77,7 +78,7 @@ ParsedValueReturn parse_token_full(char *file, DArray *tokens, size_t *index,
 ParsedValueReturn parse_token(char *file, DArray *tokens, size_t *index,
                          bool inline_flag);
 
-void free_parsed(void *ptr);
+void free_parsed(ParsedValue *ptr);
 
 __attribute__((warn_unused_result)) ArErr error_if_finished(char *file, DArray *tokens, size_t *index);
 

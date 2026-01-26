@@ -36,7 +36,7 @@ class Game(Based) do
     return "game instance"
 
 
-let instance = Game(640, 480, 180)
+let instance = Game(820, 640, 180)
 
 instance.speedX=1
 

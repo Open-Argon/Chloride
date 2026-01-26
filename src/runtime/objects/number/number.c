@@ -8,6 +8,7 @@
 #include "../functions/functions.h"
 #include "../string/string.h"
 #include "../../../err.h"
+#include "../../../memory.h"
 #include <gmp.h>
 #include <inttypes.h>
 #include <mpfr.h>

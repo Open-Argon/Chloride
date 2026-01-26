@@ -18,6 +18,7 @@
 #include "dowrap/dowrap.h"
 #include "function/function.h"
 #include "if/if.h"
+#include "import/import.h"
 #include "list/list.h"
 #include "literals/literals.h"
 #include "../err.h"
@@ -87,6 +88,8 @@ ParsedValueReturn parse_token_full(char *file, DArray *tokens, size_t *index,
       return parse_declaration(file, tokens, index);
     case TOKEN_CLASS:
       return parse_class(file, tokens, index);
+    case TOKEN_IMPORT:
+      return parse_import(file, tokens, index);
     default:
       break;
     };
@@ -222,7 +225,7 @@ ArErr parser(char *file, DArray *parsed, DArray *tokens, bool inline_flag) {
   return no_err;
 }
 
-void free_parsed(void *ptr) {
+void free_parsed(ParsedValue *ptr) {
 
   if (!ptr) {
     fprintf(stderr, "panic: freeing NULL pointer\n");
@@ -290,6 +293,9 @@ void free_parsed(void *ptr) {
     break;
   case AST_CLASS:
     free_class(parsed);
+    break;
+  case AST_IMPORT:
+    free_import(parsed);
     break;
   }
 }
