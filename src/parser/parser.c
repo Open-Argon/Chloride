@@ -212,6 +212,8 @@ ArErr parser(char *file, DArray *parsed, DArray *tokens, bool inline_flag) {
     } else if (parsed_code.value) {
       if (expecting_new_line) {
         Token *token = darray_get(tokens, old_index);
+        free_parsed(parsed_code.value);
+        free(parsed_code.value);
         return create_err(token->line, token->column, token->length, file,
                           "Syntax Error", "invalid syntax");
       }

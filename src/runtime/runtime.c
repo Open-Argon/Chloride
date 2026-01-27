@@ -18,11 +18,11 @@
 #include "import/import.h"
 #include "internals/hashmap/hashmap.h"
 #include "native_loader/native_loader.h"
+#include "objects/buffer/buffer.h"
 #include "objects/dictionary/dictionary.h"
 #include "objects/functions/functions.h"
 #include "objects/literals/literals.h"
 #include "objects/number/number.h"
-#include "objects/buffer/buffer.h"
 #include "objects/object.h"
 #include "objects/string/string.h"
 #include "objects/term/term.h"
@@ -45,54 +45,53 @@ extern char **environ;
 
 #if defined(_WIN32) || defined(_WIN64)
 
-    #define PLATFORM_OS          "windows"
-    #define PLATFORM_LIB_PREFIX  ""
-    #define PLATFORM_LIB_EXT     ".dll"
+#define PLATFORM_OS "windows"
+#define PLATFORM_LIB_PREFIX ""
+#define PLATFORM_LIB_EXT ".dll"
 
 #elif defined(__APPLE__) && defined(__MACH__)
 
-    #define PLATFORM_OS          "darwin"
-    #define PLATFORM_LIB_PREFIX  "lib"
-    #define PLATFORM_LIB_EXT     ".dylib"
+#define PLATFORM_OS "darwin"
+#define PLATFORM_LIB_PREFIX "lib"
+#define PLATFORM_LIB_EXT ".dylib"
 
 #elif defined(__linux__)
 
-    #define PLATFORM_OS          "linux"
-    #define PLATFORM_LIB_PREFIX  "lib"
-    #define PLATFORM_LIB_EXT     ".so"
+#define PLATFORM_OS "linux"
+#define PLATFORM_LIB_PREFIX "lib"
+#define PLATFORM_LIB_EXT ".so"
 
 #elif defined(__FreeBSD__)
 
-    #define PLATFORM_OS          "freebsd"
-    #define PLATFORM_LIB_PREFIX  "lib"
-    #define PLATFORM_LIB_EXT     ".so"
+#define PLATFORM_OS "freebsd"
+#define PLATFORM_LIB_PREFIX "lib"
+#define PLATFORM_LIB_EXT ".so"
 
 #elif defined(__NetBSD__)
 
-    #define PLATFORM_OS          "netbsd"
-    #define PLATFORM_LIB_PREFIX  "lib"
-    #define PLATFORM_LIB_EXT     ".so"
+#define PLATFORM_OS "netbsd"
+#define PLATFORM_LIB_PREFIX "lib"
+#define PLATFORM_LIB_EXT ".so"
 
 #elif defined(__OpenBSD__)
 
-    #define PLATFORM_OS          "openbsd"
-    #define PLATFORM_LIB_PREFIX  "lib"
-    #define PLATFORM_LIB_EXT     ".so"
+#define PLATFORM_OS "openbsd"
+#define PLATFORM_LIB_PREFIX "lib"
+#define PLATFORM_LIB_EXT ".so"
 
 #elif defined(__unix__)
 
-    #define PLATFORM_OS          "unix"
-    #define PLATFORM_LIB_PREFIX  "lib"
-    #define PLATFORM_LIB_EXT     ".so"
+#define PLATFORM_OS "unix"
+#define PLATFORM_LIB_PREFIX "lib"
+#define PLATFORM_LIB_EXT ".so"
 
 #else
 
-    #define PLATFORM_OS          "unknown"
-    #define PLATFORM_LIB_PREFIX  ""
-    #define PLATFORM_LIB_EXT     ""
+#define PLATFORM_OS "unknown"
+#define PLATFORM_LIB_PREFIX ""
+#define PLATFORM_LIB_EXT ""
 
 #endif
-
 
 ArgonObject *ARGON_METHOD_TYPE;
 Stack *Global_Scope = NULL;
@@ -1206,9 +1205,12 @@ void bootstrap_globals() {
 
   // create platform
   hashmap_GC *platform = createHashmap_GC();
-  add_to_hashmap(platform, "os", new_string_object_null_terminated(PLATFORM_OS));
-  add_to_hashmap(platform, "lib_prefix", new_string_object_null_terminated(PLATFORM_LIB_PREFIX));
-  add_to_hashmap(platform, "lib_ext", new_string_object_null_terminated(PLATFORM_LIB_EXT));
+  add_to_hashmap(platform, "os",
+                 new_string_object_null_terminated(PLATFORM_OS));
+  add_to_hashmap(platform, "lib_prefix",
+                 new_string_object_null_terminated(PLATFORM_LIB_PREFIX));
+  add_to_hashmap(platform, "lib_ext",
+                 new_string_object_null_terminated(PLATFORM_LIB_EXT));
   add_to_scope(Global_Scope, "platform", create_dictionary(platform));
 
   struct hashmap_GC *argon_term = createHashmap_GC();
@@ -1411,7 +1413,9 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       [OP_LOAD_GETITEM_METHOD] = &&DO_LOAD_GETITEM_METHOD,
       [OP_LOAD_BASE_CLASS] = &&DO_LOAD_BASE_CLASS,
       [OP_CREATE_CLASS] = &&DO_CREATE_CLASS,
-      [OP_IMPORT] = &&DO_IMPORT};
+      [OP_IMPORT] = &&DO_IMPORT,
+      [OP_EXPOSE_ALL] = &&DO_EXPOSE_ALL,
+      [OP_EXPOSE] = &&DO_EXPOSE};
   _state.head = 0;
 
   StackFrame *currentStackFrame = ar_alloc(sizeof(StackFrame));
@@ -1448,8 +1452,41 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       load_argon_function(translated, state, currentStackFrame->stack);
       continue;
     DO_IMPORT:
-      runtime_import(translated, state, currentStackFrame->stack, err);
+      runtime_import(state, err);
+      add_source_location_to_error_if_exists(err, state);
       continue;
+    DO_EXPOSE_ALL: {
+      size_t nodes_length;
+      hashmap_GC *hashmap = state->registers[0]->value.as_hashmap;
+      struct node_GC **nodes = hashmap_GC_to_array(hashmap, &nodes_length);
+      hashmap_GC *scope_hashmap = stack->scope;
+
+      for (size_t i = 0; i < nodes_length; i++) {
+        hashmap_insert_GC(scope_hashmap, nodes[i]->hash, nodes[i]->key,
+                          nodes[i]->val, 0);
+      }
+      continue;
+    }
+    DO_EXPOSE: {
+      hashmap_GC *hashmap = state->registers[0]->value.as_hashmap;
+
+      int64_t length = pop_bytecode(translated, state);
+      int64_t offset = pop_bytecode(translated, state);
+      uint64_t prehash = pop_bytecode(translated, state);
+      uint64_t hash =
+          runtime_hash(arena_get(&translated->constants, offset), length, prehash);
+
+      ArgonObject*object = hashmap_lookup_GC(hashmap, hash);
+      if (!object) {
+        *err = create_err(
+            state->source_location.line, state->source_location.column,
+            state->source_location.length, state->path, "Runtime Error",
+            "could not find '%*.s'", length, arena_get(&translated->constants, offset));
+        continue;
+      }
+      state->registers[0] = object;
+      continue;
+    }
     DO_IDENTIFIER:
       load_variable(translated, state, currentStackFrame->stack, err);
       continue;

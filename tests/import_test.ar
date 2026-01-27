@@ -5,6 +5,7 @@
 term.log(program, platform)
 
 class something do
-  let y = 10
-  this.f(x) = do
-    term.log(x, y=y+1)
+  this.__init__(self, x) = do
+    self.x = x
+  this.f(self) = do
+    term.log(self,self.x, self.x=self.x+1)
