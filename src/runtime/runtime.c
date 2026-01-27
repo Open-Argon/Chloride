@@ -1361,7 +1361,7 @@ void add_to_scope(Stack *stack, char *name, ArgonObject *value) {
 }
 
 void add_source_location_to_error_if_exists(ArErr *err, RuntimeState *state) {
-  if (err->exists) {
+  if (err->exists && !strlen(err->path)) {
     err->column = state->source_location.column;
     err->length = state->source_location.length;
     err->line = state->source_location.line;
@@ -1481,7 +1481,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
         *err = create_err(
             state->source_location.line, state->source_location.column,
             state->source_location.length, state->path, "Runtime Error",
-            "could not find '%*.s'", length, arena_get(&translated->constants, offset));
+            "could not find '%.*s'", length, arena_get(&translated->constants, offset));
         continue;
       }
       state->registers[0] = object;
