@@ -1,5 +1,40 @@
 # SPDX-FileCopyrightText: 2025 William Bell
 #
 # SPDX-License-Identifier: LGPL-3.0-or-later
+let __net__ = load_native_code("stdlib/network/native/bin/network.so")
 
-let net = load_native_code("stdlib/network/native/bin/network.so")
+class tcp_connection do
+  this.__init__(self,socket_id) = do
+    self.__socket__ = socket_id
+  
+  this.send(self,buff) = do
+    return __net__.net_send(self.__socket__, buff)
+
+  this.send_string(self,str) = do
+    return __net__.net_send_string(self.__socket__, str)
+  
+  this.recv(self,size) = do
+    return __net__.net_recv(self.__socket__, size)
+  
+  this.recv_string(self,size) = do
+    return __net__.net_recv_string(self.__socket__, size)
+  
+  this.close(self) = do
+    return __net__.net_close(self.__socket__)
+
+class tcp do
+  this.__refcount__=0
+  term.log(__net__)
+
+  this.__init__(self,port) = do
+    if (!this.__refcount__) __net__.net_init()
+    this.__refcount__=this.__refcount__+1
+    self.__socket__ = __net__.net_listen(port)
+
+  this.accept(self) = do
+    return tcp_connection(__net__.net_accept(self.__socket__))
+  
+  this.close(self) = do
+    this.__refcount__=this.__refcount__-1
+    if (!this.__refcount__) __net__.net_cleanup()
+    return __net__.net_close(self.__socket__)
