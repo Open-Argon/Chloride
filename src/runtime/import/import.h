@@ -10,7 +10,6 @@
 
 extern ArgonObject*ARGON_IMPORT_FUNCTION;
 
-void runtime_import(Translated *translated, RuntimeState *state,
-                    struct Stack *stack, ArErr *err);
+void runtime_import(RuntimeState *state, ArErr *err);
 
 #endif // IMPORT_RUNTIME_H

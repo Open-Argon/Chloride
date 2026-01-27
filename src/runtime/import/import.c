@@ -14,8 +14,7 @@
 #include <stddef.h>
 #include <string.h>
 
-void runtime_import(Translated *translated, RuntimeState *state,
-                    struct Stack *stack, ArErr *err) {
+void runtime_import(RuntimeState *state, ArErr *err) {
   struct string path = native_api.argon_to_string(state->registers[0], err);
   if (native_api.is_error(err))
     return;

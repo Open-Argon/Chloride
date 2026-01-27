@@ -16,6 +16,8 @@ typedef struct {
   uint64_t column;
 } ParsedSingleDeclaration;
 
+void free_string(void *ptr);
+
 // Function declaration for parsing an identifier
 ParsedValueReturn parse_declaration(char *file, DArray *tokens, size_t *index);
 

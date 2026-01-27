@@ -282,3 +282,15 @@ loads the \_\_setitem\_\_ method from the objects class in register 0 and put it
 ## OP_IMPORT
 
 imports the argon file from the string stored in register 0, storing the result as a dictionary object in register 0
+
+## OP_EXPOSE_ALL
+
+exposes all values in the dictionary stored in register 0 to the current scope, overwriting values already stored in the current scope (similar to OP_ASSIGN)
+
+## OP_EXPOSE
+
+exposes the value in the dictionary stored in register 0 to the current scope, and storing the result in register 0.
+
+1. the length of the variable name.
+1. the offset in the constant buffer of the variable name.
+1. the fixed hash of the variable name.
