@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include "../include/Argon.h"
+#include "Argon.h"
 #include <raylib.h>
 #include <stdlib.h>
 #include <string.h>

@@ -10,7 +10,7 @@
 #include "../objects/number/number.h"
 #include "../objects/string/string.h"
 #include "../../err.h"
-#include "../runtime.h"
+#include "../call/call.h"
 #include <gmp.h>
 #include <inttypes.h>
 #include <math.h>
@@ -126,6 +126,7 @@ ArgonNativeAPI native_api = {
     .throw_argon_error = throw_argon_error,
     .is_error = is_error,
     .fix_to_arg_size = fix_to_arg_size,
+    .call=argon_call,
 
     .i64_to_argon = new_number_object_from_int64,
     .double_to_argon = new_number_object_from_double,

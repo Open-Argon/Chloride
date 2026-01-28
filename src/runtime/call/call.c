@@ -159,9 +159,6 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
           scope,
           *state->currentStackFramePointer,
           (*state->currentStackFramePointer)->depth + 1};
-      for (size_t i = 0; i < new_stackFrame.translated.registerCount; i++) {
-        new_stackFrame.state.registers[i] = NULL;
-      }
       runtime(new_stackFrame.translated, new_stackFrame.state,
               new_stackFrame.stack, err);
       state->registers[0] = new_stackFrame.state.registers[0];

@@ -1,0 +1,11 @@
+let __rand__ = load_native_code(program.file.directory+"native/bin/random"+platform.lib_ext)
+
+class Random do
+  this.__init__(self, seed) = do
+    self.__state__ = __rand__.random_seed(seed)
+  this.random(self) = do
+    return __rand__.random_next_number(self.__state__)
+  this.range(self,start,end) = do
+    return start + self.random()*end
+
+let random = Random(__rand__.random_os_seed())

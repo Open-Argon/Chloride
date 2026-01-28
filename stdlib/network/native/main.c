@@ -12,6 +12,8 @@
 
 ArgonObject *argon_net_init(size_t argc, ArgonObject **argv, ArgonError *err,
                             ArgonState *state, ArgonNativeAPI *api) {
+  (void)argv;
+  (void)state;
   if (api->fix_to_arg_size(0, argc, err))
     return api->ARGON_NULL;
 
@@ -21,6 +23,8 @@ ArgonObject *argon_net_init(size_t argc, ArgonObject **argv, ArgonError *err,
 
 ArgonObject *argon_net_cleanup(size_t argc, ArgonObject **argv, ArgonError *err,
                                ArgonState *state, ArgonNativeAPI *api) {
+  (void)argv;
+  (void)state;
   if (api->fix_to_arg_size(0, argc, err))
     return api->ARGON_NULL;
 
@@ -30,6 +34,7 @@ ArgonObject *argon_net_cleanup(size_t argc, ArgonObject **argv, ArgonError *err,
 
 ArgonObject *argon_net_listen(size_t argc, ArgonObject **argv, ArgonError *err,
                               ArgonState *state, ArgonNativeAPI *api) {
+  (void)state;
   if (api->fix_to_arg_size(1, argc, err))
     return api->ARGON_NULL;
 
@@ -55,6 +60,7 @@ ArgonObject *argon_net_listen(size_t argc, ArgonObject **argv, ArgonError *err,
 
 ArgonObject *argon_net_accept(size_t argc, ArgonObject **argv, ArgonError *err,
                               ArgonState *state, ArgonNativeAPI *api) {
+  (void)state;
   if (api->fix_to_arg_size(1, argc, err))
     return api->ARGON_NULL;
 
@@ -84,6 +90,7 @@ ArgonObject *argon_net_accept(size_t argc, ArgonObject **argv, ArgonError *err,
 
 ArgonObject *argon_net_send(size_t argc, ArgonObject **argv, ArgonError *err,
                             ArgonState *state, ArgonNativeAPI *api) {
+  (void)state;
   if (api->fix_to_arg_size(2, argc, err))
     return api->ARGON_NULL;
 
@@ -102,8 +109,10 @@ ArgonObject *argon_net_send(size_t argc, ArgonObject **argv, ArgonError *err,
       net_send(connection_socket, data_buffer.data, data_buffer.size));
 }
 
-ArgonObject *argon_net_send_string(size_t argc, ArgonObject **argv, ArgonError *err,
-                            ArgonState *state, ArgonNativeAPI *api) {
+ArgonObject *argon_net_send_string(size_t argc, ArgonObject **argv,
+                                   ArgonError *err, ArgonState *state,
+                                   ArgonNativeAPI *api) {
+  (void)state;
   if (api->fix_to_arg_size(2, argc, err))
     return api->ARGON_NULL;
 
@@ -124,6 +133,7 @@ ArgonObject *argon_net_send_string(size_t argc, ArgonObject **argv, ArgonError *
 
 ArgonObject *argon_net_recv(size_t argc, ArgonObject **argv, ArgonError *err,
                             ArgonState *state, ArgonNativeAPI *api) {
+  (void)state;
   if (api->fix_to_arg_size(2, argc, err))
     return api->ARGON_NULL;
 
@@ -145,6 +155,8 @@ ArgonObject *argon_net_recv(size_t argc, ArgonObject **argv, ArgonError *err,
 ArgonObject *argon_net_recv_string(size_t argc, ArgonObject **argv,
                                    ArgonError *err, ArgonState *state,
                                    ArgonNativeAPI *api) {
+  (void)state;
+  (void)argv;
   if (api->fix_to_arg_size(2, argc, err))
     return api->ARGON_NULL;
 
@@ -168,6 +180,7 @@ ArgonObject *argon_net_recv_string(size_t argc, ArgonObject **argv,
 
 ArgonObject *argon_net_close(size_t argc, ArgonObject **argv, ArgonError *err,
                              ArgonState *state, ArgonNativeAPI *api) {
+  (void)state;
   if (api->fix_to_arg_size(1, argc, err))
     return api->ARGON_NULL;
 
@@ -182,6 +195,8 @@ ArgonObject *argon_net_close(size_t argc, ArgonObject **argv, ArgonError *err,
 
 void argon_module_init(ArgonState *vm, ArgonNativeAPI *api, ArgonError *err,
                        ArgonObjectRegister *reg) {
+  (void)vm;
+  (void)err;
   api->register_ArgonObject(
       reg, "net_init",
       api->create_argon_native_function("net_init", argon_net_init));
@@ -197,15 +212,15 @@ void argon_module_init(ArgonState *vm, ArgonNativeAPI *api, ArgonError *err,
   api->register_ArgonObject(
       reg, "net_send",
       api->create_argon_native_function("net_send", argon_net_send));
-  api->register_ArgonObject(
-      reg, "net_send_string",
-      api->create_argon_native_function("net_send_string", argon_net_send_string));
+  api->register_ArgonObject(reg, "net_send_string",
+                            api->create_argon_native_function(
+                                "net_send_string", argon_net_send_string));
   api->register_ArgonObject(
       reg, "net_recv",
       api->create_argon_native_function("net_recv", argon_net_recv));
-  api->register_ArgonObject(
-      reg, "net_recv_string",
-      api->create_argon_native_function("net_recv_string", argon_net_recv_string));
+  api->register_ArgonObject(reg, "net_recv_string",
+                            api->create_argon_native_function(
+                                "net_recv_string", argon_net_recv_string));
   api->register_ArgonObject(
       reg, "net_close",
       api->create_argon_native_function("net_close", argon_net_close));

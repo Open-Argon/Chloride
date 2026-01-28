@@ -1,4 +1,5 @@
 import "../stdlib/network" expose tcp
+import "../stdlib/random" expose random
 
 let server = tcp(3000)
 
@@ -9,9 +10,9 @@ while (true) do
   i=i+1
   term.log(i)
 
-  let html = "<html><body><h1>requests: "+string(i)+"</h1></body></html>"
+  let html = "<html><body><h1>requests: "+string(i)+"</h1><h2>requests: "+string(random.random())+"</h2></body></html>"
 
-  let data = "HTTP/1.1 200 OK\nContent-Type: text/html; charset=utf-8\nContent-Length: "+string(html.length)+"\nConnection: close\n\n"+html+"\n"
+  let data = "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: "+string(html.length)+"\r\nConnection: close\r\n\r\n"+html+"\r\n"
 
   connection.send_string(data)
   connection.close()
