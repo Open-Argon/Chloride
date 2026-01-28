@@ -1335,9 +1335,6 @@ RuntimeState init_runtime_state(Translated translated, char *path) {
       {0, 0, 0},
       {},
       createHashmap_GC()};
-  for (size_t i = 0; i < translated.registerCount; i++) {
-    runtime.registers[i] = NULL;
-  }
   return runtime;
 }
 

@@ -2,8 +2,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-let raylib = load_native_code("basic_raylib_binding/raylib.so")
-term.log(raylib)
+import "../stdlib/raylib" expose raylib
 
 class Based do
   this.abs(x)=do

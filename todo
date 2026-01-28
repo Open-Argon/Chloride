@@ -1,0 +1,10 @@
+1.  add lists
+2.  iterator objects
+3.  add for loops using iterator objects
+4.  add item get
+5.  add delete functionality
+6.  add is and is instance
+7.  add path stdlib
+8.  add conversion for all path types (make / and \ are the same)
+9.  add random stdlib
+10. add try catch

@@ -52,6 +52,8 @@ struct ArgonNativeAPI {
   void (*register_ArgonObject)(ArgonObjectRegister *reg, char *name,
                                ArgonObject *obj);
   ArgonObject *(*create_argon_native_function)(char *name, native_fn);
+  ArgonObject *(*call)(ArgonObject *original_object, size_t argc,
+                        ArgonObject **argv, ArgonError *err, ArgonState *state);
   ArgonObject *(*throw_argon_error)(ArgonError *err, const char *type,
                                     const char *fmt, ...);
   bool (*is_error)(ArgonError *err);
