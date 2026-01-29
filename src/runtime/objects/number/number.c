@@ -5,10 +5,10 @@
  */
 
 #include "number.h"
-#include "../functions/functions.h"
-#include "../string/string.h"
 #include "../../../err.h"
 #include "../../../memory.h"
+#include "../functions/functions.h"
+#include "../string/string.h"
 #include <gmp.h>
 #include <inttypes.h>
 #include <mpfr.h>
@@ -831,10 +831,10 @@ ArgonObject *ARGON_NUMBER_TYPE___less_than__(size_t argc, ArgonObject **argv,
   if (argv[1]->type != TYPE_NUMBER) {
     ArgonObject *type_name = get_builtin_field_for_class(
         get_builtin_field(argv[1], __class__), __name__, argv[1]);
-    *err = create_err(
-        0, 0, 0, "", "Runtime Error",
-        "cannot perform < between number and %.*s",
-        type_name->value.as_str->length, type_name->value.as_str->data);
+    *err = create_err(0, 0, 0, "", "Runtime Error",
+                      "cannot perform < between number and %.*s",
+                      type_name->value.as_str->length,
+                      type_name->value.as_str->data);
     return ARGON_NULL;
   }
   if (likely(argv[0]->value.as_number->is_int64 &&
@@ -862,23 +862,26 @@ ArgonObject *ARGON_NUMBER_TYPE___less_than__(size_t argc, ArgonObject **argv,
   }
 }
 
-ArgonObject *ARGON_NUMBER_TYPE___less_than_equal__(size_t argc, ArgonObject **argv,
-                                             ArErr *err, RuntimeState *state,
-                                             ArgonNativeAPI *api) {
+ArgonObject *ARGON_NUMBER_TYPE___less_than_equal__(size_t argc,
+                                                   ArgonObject **argv,
+                                                   ArErr *err,
+                                                   RuntimeState *state,
+                                                   ArgonNativeAPI *api) {
   (void)api;
   (void)state;
   if (argc != 2) {
     *err = create_err(0, 0, 0, "", "Runtime Error",
-                      "__less_than_equal__ expects 2 arguments, got %" PRIu64, argc);
+                      "__less_than_equal__ expects 2 arguments, got %" PRIu64,
+                      argc);
     return ARGON_NULL;
   }
   if (argv[1]->type != TYPE_NUMBER) {
     ArgonObject *type_name = get_builtin_field_for_class(
         get_builtin_field(argv[1], __class__), __name__, argv[1]);
-    *err = create_err(
-        0, 0, 0, "", "Runtime Error",
-        "cannot perform <= between number and %.*s",
-        type_name->value.as_str->length, type_name->value.as_str->data);
+    *err = create_err(0, 0, 0, "", "Runtime Error",
+                      "cannot perform <= between number and %.*s",
+                      type_name->value.as_str->length,
+                      type_name->value.as_str->data);
     return ARGON_NULL;
   }
   if (likely(argv[0]->value.as_number->is_int64 &&
@@ -907,22 +910,23 @@ ArgonObject *ARGON_NUMBER_TYPE___less_than_equal__(size_t argc, ArgonObject **ar
 }
 
 ArgonObject *ARGON_NUMBER_TYPE___greater_than__(size_t argc, ArgonObject **argv,
-                                             ArErr *err, RuntimeState *state,
-                                             ArgonNativeAPI *api) {
+                                                ArErr *err, RuntimeState *state,
+                                                ArgonNativeAPI *api) {
   (void)api;
   (void)state;
   if (argc != 2) {
-    *err = create_err(0, 0, 0, "", "Runtime Error",
-                      "__greater_than__ expects 2 arguments, got %" PRIu64, argc);
+    *err =
+        create_err(0, 0, 0, "", "Runtime Error",
+                   "__greater_than__ expects 2 arguments, got %" PRIu64, argc);
     return ARGON_NULL;
   }
   if (argv[1]->type != TYPE_NUMBER) {
     ArgonObject *type_name = get_builtin_field_for_class(
         get_builtin_field(argv[1], __class__), __name__, argv[1]);
-    *err = create_err(
-        0, 0, 0, "", "Runtime Error",
-        "cannot perform > between number and %.*s",
-        type_name->value.as_str->length, type_name->value.as_str->data);
+    *err = create_err(0, 0, 0, "", "Runtime Error",
+                      "cannot perform > between number and %.*s",
+                      type_name->value.as_str->length,
+                      type_name->value.as_str->data);
     return ARGON_NULL;
   }
   if (likely(argv[0]->value.as_number->is_int64 &&
@@ -950,23 +954,26 @@ ArgonObject *ARGON_NUMBER_TYPE___greater_than__(size_t argc, ArgonObject **argv,
   }
 }
 
-ArgonObject *ARGON_NUMBER_TYPE___greater_than_equal__(size_t argc, ArgonObject **argv,
-                                             ArErr *err, RuntimeState *state,
-                                             ArgonNativeAPI *api) {
+ArgonObject *ARGON_NUMBER_TYPE___greater_than_equal__(size_t argc,
+                                                      ArgonObject **argv,
+                                                      ArErr *err,
+                                                      RuntimeState *state,
+                                                      ArgonNativeAPI *api) {
   (void)api;
   (void)state;
   if (argc != 2) {
-    *err = create_err(0, 0, 0, "", "Runtime Error",
-                      "__greater_than_equal__ expects 2 arguments, got %" PRIu64, argc);
+    *err = create_err(
+        0, 0, 0, "", "Runtime Error",
+        "__greater_than_equal__ expects 2 arguments, got %" PRIu64, argc);
     return ARGON_NULL;
   }
   if (argv[1]->type != TYPE_NUMBER) {
     ArgonObject *type_name = get_builtin_field_for_class(
         get_builtin_field(argv[1], __class__), __name__, argv[1]);
-    *err = create_err(
-        0, 0, 0, "", "Runtime Error",
-        "cannot perform >= between number and %.*s",
-        type_name->value.as_str->length, type_name->value.as_str->data);
+    *err = create_err(0, 0, 0, "", "Runtime Error",
+                      "cannot perform >= between number and %.*s",
+                      type_name->value.as_str->length,
+                      type_name->value.as_str->data);
     return ARGON_NULL;
   }
   if (likely(argv[0]->value.as_number->is_int64 &&
@@ -1153,8 +1160,6 @@ ArgonObject *ARGON_NUMBER_TYPE___string__(size_t argc, ArgonObject **argv,
   return result;
 }
 
-#define small_ints_min -256
-#define small_ints_max 256
 ArgonObject small_ints[small_ints_max - small_ints_min + 1];
 struct as_number small_ints_as_number[small_ints_max - small_ints_min + 1];
 
@@ -1224,15 +1229,18 @@ void create_ARGON_NUMBER_TYPE() {
   add_builtin_field(ARGON_NUMBER_TYPE, __less_than__,
                     create_argon_native_function(
                         "__less_than__", ARGON_NUMBER_TYPE___less_than__));
-  add_builtin_field(ARGON_NUMBER_TYPE, __less_than_equal__,
-                    create_argon_native_function(
-                        "__less_than_equal__", ARGON_NUMBER_TYPE___less_than_equal__));
-  add_builtin_field(ARGON_NUMBER_TYPE, __greater_than__,
-                    create_argon_native_function(
-                        "__greater_than__", ARGON_NUMBER_TYPE___greater_than__));
-  add_builtin_field(ARGON_NUMBER_TYPE, __greater_than_equal__,
-                    create_argon_native_function(
-                        "__greater_than_equal__", ARGON_NUMBER_TYPE___greater_than_equal__));
+  add_builtin_field(
+      ARGON_NUMBER_TYPE, __less_than_equal__,
+      create_argon_native_function("__less_than_equal__",
+                                   ARGON_NUMBER_TYPE___less_than_equal__));
+  add_builtin_field(
+      ARGON_NUMBER_TYPE, __greater_than__,
+      create_argon_native_function("__greater_than__",
+                                   ARGON_NUMBER_TYPE___greater_than__));
+  add_builtin_field(
+      ARGON_NUMBER_TYPE, __greater_than_equal__,
+      create_argon_native_function("__greater_than_equal__",
+                                   ARGON_NUMBER_TYPE___greater_than_equal__));
   init_small_ints();
 }
 
@@ -1465,97 +1473,23 @@ ArgonObject *new_number_object_from_double(double d) {
 }
 
 static inline uint64_t hash_u64(uint64_t h, uint64_t x) {
-    x ^= x >> 33;
-    x *= 0xff51afd7ed558ccdULL;
-    x ^= x >> 33;
-    x *= 0xc4ceb9fe1a85ec53ULL;
-    x ^= x >> 33;
-    return h ^ (x + 0x9e3779b97f4a7c15ULL + (h << 6) + (h >> 2));
+  x ^= x >> 33;
+  x *= 0xff51afd7ed558ccdULL;
+  x ^= x >> 33;
+  x *= 0xc4ceb9fe1a85ec53ULL;
+  x ^= x >> 33;
+  return h ^ (x + 0x9e3779b97f4a7c15ULL + (h << 6) + (h >> 2));
 }
 
-uint64_t make_id(
-    size_t num_size,
-    size_t num_pos,
-    bool is_int,
-    size_t den_size,
-    size_t den_pos
-) {
-    uint64_t h = 0;
-    h = hash_u64(h, num_size);
-    h = hash_u64(h, num_pos);
-    h = hash_u64(h, is_int);
-    if (!is_int) {
-        h = hash_u64(h, den_size);
-        h = hash_u64(h, den_pos);
-    }
-    return h;
-}
-
-void load_number(Translated *translated, RuntimeState *state) {
-  uint8_t to_register = pop_byte(translated, state);
-  uint8_t is_int64 = pop_byte(translated, state);
-  ArgonObject *cache_number = NULL;
-  if (is_int64) {
-    int64_t num = pop_bytecode(translated, state);
-    bool small_num = num < small_ints_min || num > small_ints_max;
-    if (small_num) {
-      cache_number = hashmap_lookup_GC(state->load_number_cache, num);
-    }
-    if (cache_number) {
-      state->registers[to_register] = cache_number;
-      return;
-    }
-    state->registers[to_register] = new_number_object_from_int64(num);
-    if (small_num) {
-      hashmap_insert_GC(state->load_number_cache, num, NULL,
-                        state->registers[to_register], 0);
-    }
-    return;
-  }
-  size_t num_size = pop_bytecode(translated, state);
-  size_t num_pos = pop_bytecode(translated, state);
-  bool is_int = pop_byte(translated, state);
-  size_t den_size=0;
-  size_t den_pos=0;
+uint64_t make_id(size_t num_size, size_t num_pos, bool is_int, size_t den_size,
+                 size_t den_pos) {
+  uint64_t h = 0;
+  h = hash_u64(h, num_size);
+  h = hash_u64(h, num_pos);
+  h = hash_u64(h, is_int);
   if (!is_int) {
-    den_size=pop_bytecode(translated, state);
-    den_pos=pop_bytecode(translated, state);
+    h = hash_u64(h, den_size);
+    h = hash_u64(h, den_pos);
   }
-
-  uint64_t uuid = make_id(num_size,num_pos,is_int,den_size,den_pos);
-
-
-  cache_number = hashmap_lookup_GC(state->load_number_cache, uuid);
-  if (cache_number) {
-    state->registers[to_register] = cache_number;
-    state->head += 16;
-    if (!pop_byte(translated, state)) {
-      state->head += 16;
-    }
-    return;
-  }
-
-  mpq_t r;
-  mpq_init(r);
-  mpz_t num;
-  mpz_init(num);
-  mpz_import(num, num_size, 1, 1, 0, 0,
-             arena_get(&translated->constants, num_pos));
-  mpq_set_num(r, num);
-  mpz_clear(num);
-  if (!is_int) {
-    mpz_t den;
-    mpz_init(den);
-    mpz_import(den, den_size, 1, 1, 0, 0,
-               arena_get(&translated->constants, den_pos));
-    mpq_set_den(r, den);
-    mpz_clear(den);
-  } else {
-    mpz_set_si(mpq_denref(r), 1);
-  }
-
-  state->registers[to_register] = new_number_object(r);
-  hashmap_insert_GC(state->load_number_cache, uuid, NULL,
-                    state->registers[to_register], 0);
-  mpq_clear(r);
+  return h;
 }

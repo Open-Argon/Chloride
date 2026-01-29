@@ -73,18 +73,6 @@ static inline void *arena_get(ConstantArena *arena, size_t offset) {
   return (uint8_t *)arena->data + offset;
 }
 
-static inline uint8_t pop_byte(Translated *translated, RuntimeState *state) {
-  return *(((uint8_t *)(translated->bytecode.data)) + state->head++);
-}
-
-static inline uint64_t pop_bytecode(Translated *translated,
-                                    RuntimeState *state) {
-  uint64_t *ptr =
-      (uint64_t *)((uint8_t *)translated->bytecode.data + state->head);
-  state->head += 8;
-  return *ptr;
-}
-
 static inline void run_instruction(Translated *translated, RuntimeState *state,
                                    struct Stack **stack, ArErr *err);
 

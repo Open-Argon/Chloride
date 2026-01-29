@@ -13,8 +13,10 @@
 #include "import.h"
 #include "runtime/objects/literals/literals.h"
 #include "runtime/objects/string/string.h"
+#include "../external/cwalk/include/cwalk.h"
 #include "hashmap/hashmap.h"
 #include "memory.h"
+#include <linux/limits.h>
 #include <signal.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -158,16 +160,20 @@ char *read_all_stdin(size_t *out_len) {
 int shell() {
   Stack *main_scope = create_scope(Global_Scope, true);
 
+  char path[PATH_MAX];
+
   if (!isatty(STDIN_FILENO)) {
+    cwk_path_join(CWD,"<stdin>", path, sizeof(path));
     RuntimeState runtime_state;
     size_t len;
     char *data = read_all_stdin(&len);
     FILE *file = fmemopen(data, len, "r");
-    int resp = execute_code(file, "<stdin>", main_scope, &runtime_state);
+    int resp = execute_code(file, path, main_scope, &runtime_state);
     fclose(file);
     free(data);
     return resp;
   }
+  cwk_path_join(CWD,"<shell>", path, sizeof(path));
   add_to_scope(main_scope, "license",
                new_string_object_without_memcpy((char *)LICENSE_txt,
                                                 LICENSE_txt_len, 0, 0));
@@ -255,7 +261,7 @@ int shell() {
     totranslate[totranslatelength] = '\0';
     RuntimeState runtime_state;
     FILE *file = fmemopen((void *)totranslate, totranslatelength, "r");
-    int resp = execute_code(file, "<shell>", main_scope, &runtime_state);
+    int resp = execute_code(file, path, main_scope, &runtime_state);
     fclose(file);
     if (resp) {
       continue;

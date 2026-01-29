@@ -7,9 +7,8 @@
 #ifndef runtime_declaration_H
 #define runtime_declaration_H
 #include "../runtime.h"
-#include "../objects/string/string.h"
 
-void runtime_declaration(Translated *translated, RuntimeState *state,
+void runtime_declaration(int64_t length,int64_t offset,int64_t prehash,uint8_t from_register,Translated *translated, RuntimeState *state,
                          struct Stack *stack, ArErr *err);
 
 #endif // runtime_declaration_H

@@ -7,5 +7,6 @@ class Random do
     return __rand__.random_next_number(self.__state__)
   this.range(self,start,end) = do
     return start + self.random()*end
+  
 
 let random = Random(__rand__.random_os_seed())
