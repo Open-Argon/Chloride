@@ -69,7 +69,12 @@ int execute_code(FILE *stream, char *path, Stack *scope,
     output_err(err);
     return 1;
   }
-  Translated __translated = init_translator(path);
+
+  char path_length = strlen(path)+1;
+  char*path_alloc = ar_alloc(path_length);
+  memcpy(path_alloc, path, path_length);
+  
+  Translated __translated = init_translator(path_alloc);
   err = translate(&__translated, &ast);
   darray_free(&ast, (void (*)(void *))free_parsed);
   if (err.exists) {
@@ -99,7 +104,7 @@ int execute_code(FILE *stream, char *path, Stack *scope,
   translated.constants.capacity = __translated.constants.capacity;
   darray_free(&__translated.bytecode, NULL);
   free(__translated.constants.data);
-  *runtime_state = init_runtime_state(translated, path);
+  *runtime_state = init_runtime_state(translated, path_alloc);
   runtime(translated, *runtime_state, scope, &err);
   if (err.exists) {
     output_err(err);

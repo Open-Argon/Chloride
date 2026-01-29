@@ -7,8 +7,6 @@
 #ifndef RUNTIME_H
 #define RUNTIME_H
 #include "../returnTypes.h"
-#include "../translator/translator.h"
-#include "internals/dynamic_array_armem/darray_armem.h"
 #include "internals/hashmap/hashmap.h"
 #include <stdio.h>
 
@@ -45,12 +43,12 @@ typedef struct ErrorCatch {
 typedef struct RuntimeState {
   ArgonObject **registers;
   size_t head;
-  char *path;
   call_instance *call_instance;
   StackFrame **currentStackFramePointer;
   SourceLocation source_location;
   DArray catch_errors; // ErrorCatch[]
   hashmap_GC *load_number_cache;
+  char *path;
 } RuntimeState;
 
 typedef struct StackFrame {

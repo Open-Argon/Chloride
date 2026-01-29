@@ -31,7 +31,6 @@
 #include <gc.h>
 #include <gmp.h>
 #include <inttypes.h>
-#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -1335,12 +1334,12 @@ RuntimeState init_runtime_state(Translated translated, char *path) {
   RuntimeState runtime = {
       ar_alloc(translated.registerCount * sizeof(ArgonObject *)),
       0,
-      path,
       NULL,
       NULL,
       {0, 0, 0},
       {},
-      createHashmap_GC()};
+      createHashmap_GC(),
+      path};
   return runtime;
 }
 
@@ -1421,7 +1420,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       [OP_EXPOSE] = &&DO_EXPOSE};
   _state.head = 0;
 
-  ArErr err={.exists=false};
+  ArErr err = *err_ptr;
 
   StackFrame *currentStackFrame = ar_alloc(sizeof(StackFrame));
   *currentStackFrame = (StackFrame){_translated, _state, stack, NULL, 0};
@@ -1565,7 +1564,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       object->value.argon_fn->bytecode =
           arena_get(&translated->constants, offset);
       object->value.argon_fn->bytecode_length = length;
-      object->value.argon_fn->stack = stack;
+      object->value.argon_fn->stack = currentStackFrame->stack;
       state->registers[0] = object;
       goto END_OF_LOOP;
     }
@@ -1600,10 +1599,10 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       ArgonObject *object = hashmap_lookup_GC(hashmap, hash);
       if (!object) {
         err = create_err(state->source_location.line,
-                          state->source_location.column,
-                          state->source_location.length, state->path,
-                          "Runtime Error", "could not find '%.*s'", length,
-                          arena_get(&translated->constants, offset));
+                         state->source_location.column,
+                         state->source_location.length, state->path,
+                         "Runtime Error", "could not find '%.*s'", length,
+                         arena_get(&translated->constants, offset));
         goto END_OF_LOOP;
       }
       state->registers[0] = object;
@@ -2106,9 +2105,9 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
           int64_t b = valueB->value.as_number->n.i64;
           if (!b) {
             err = create_err(state->source_location.line,
-                              state->source_location.column,
-                              state->source_location.length, state->path,
-                              "Zero Division Error", "division by zero");
+                             state->source_location.column,
+                             state->source_location.length, state->path,
+                             "Zero Division Error", "division by zero");
             goto END_OF_LOOP;
           }
           state->registers[registerC] =
@@ -2132,9 +2131,9 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
             mpq_set(a_GMP, *valueA->value.as_number->n.mpq);
             if (!valueB->value.as_number->n.i64) {
               err = create_err(state->source_location.line,
-                                state->source_location.column,
-                                state->source_location.length, state->path,
-                                "Zero Division Error", "division by zero");
+                               state->source_location.column,
+                               state->source_location.length, state->path,
+                               "Zero Division Error", "division by zero");
               goto END_OF_LOOP;
             }
             mpq_set_si(b_GMP, valueB->value.as_number->n.i64, 1);
@@ -2169,9 +2168,9 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
           int64_t b = valueB->value.as_number->n.i64;
           if (!b) {
             err = create_err(state->source_location.line,
-                              state->source_location.column,
-                              state->source_location.length, state->path,
-                              "Zero Division Error", "floor division by zero");
+                             state->source_location.column,
+                             state->source_location.length, state->path,
+                             "Zero Division Error", "floor division by zero");
             goto END_OF_LOOP;
           }
           state->registers[registerC] = new_number_object_from_int64(a / b);
@@ -2193,10 +2192,10 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
           } else {
             mpq_set(a_GMP, *valueA->value.as_number->n.mpq);
             if (!valueB->value.as_number->n.i64) {
-              err = create_err(
-                  state->source_location.line, state->source_location.column,
-                  state->source_location.length, state->path,
-                  "Zero Division Error", "floor division by zero");
+              err = create_err(state->source_location.line,
+                               state->source_location.column,
+                               state->source_location.length, state->path,
+                               "Zero Division Error", "floor division by zero");
               goto END_OF_LOOP;
             }
             mpq_set_si(b_GMP, valueB->value.as_number->n.i64, 1);
@@ -2231,9 +2230,9 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
           int64_t b = valueB->value.as_number->n.i64;
           if (!b) {
             err = create_err(state->source_location.line,
-                              state->source_location.column,
-                              state->source_location.length, state->path,
-                              "Zero Division Error", "modulo by zero");
+                             state->source_location.column,
+                             state->source_location.length, state->path,
+                             "Zero Division Error", "modulo by zero");
             goto END_OF_LOOP;
           }
           state->registers[registerC] = new_number_object_from_int64(a % b);
@@ -2256,9 +2255,9 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
             mpq_set(a_GMP, *valueA->value.as_number->n.mpq);
             if (!valueB->value.as_number->n.i64) {
               err = create_err(state->source_location.line,
-                                state->source_location.column,
-                                state->source_location.length, state->path,
-                                "Zero Division Error", "modulo by zero");
+                               state->source_location.column,
+                               state->source_location.length, state->path,
+                               "Zero Division Error", "modulo by zero");
               goto END_OF_LOOP;
             }
             mpq_set_si(b_GMP, valueB->value.as_number->n.i64, 1);
@@ -2606,5 +2605,6 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
     if (currentStackFrame)
       currentStackFrame->state.registers[0] = result;
   }
-  if (err.exists) *err_ptr = err;
+  if (err.exists)
+    *err_ptr = err;
 }

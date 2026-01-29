@@ -10,6 +10,7 @@
 #include "dynamic_array/darray.h"
 #include "runtime/internals/hashmap/hashmap.h"
 #include <gmp.h>
+#include <linux/limits.h>
 #include <stddef.h>
 
 typedef enum {

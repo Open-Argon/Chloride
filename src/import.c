@@ -13,12 +13,12 @@
 #include "hashmap/hashmap.h"
 #include "lexer/lexer.h"
 #include "lexer/token.h"
+#include "memory.h"
 #include "runtime/internals/hashmap/hashmap.h"
 #include "runtime/objects/dictionary/dictionary.h"
 #include "runtime/objects/literals/literals.h"
 #include "runtime/objects/string/string.h"
 #include "runtime/runtime.h"
-#include "memory.h"
 #include "translator/translator.h"
 #include <limits.h>
 #include <stddef.h>
@@ -419,10 +419,16 @@ Translated load_argon_file(char *path, ArErr *err) {
 
     fclose(file);
   }
+  char path_length = strlen(translated.path)+1;
+  char*path_alloc = ar_alloc(path_length);
+  memcpy(path_alloc, translated.path, path_length);
   hashmap_free(translated.constants.hashmap, NULL);
-  Translated gc_translated = {
-      translated.registerCount, translated.registerAssignment, NULL, {}, {},
-      translated.path};
+  Translated gc_translated = {translated.registerCount,
+                              translated.registerAssignment,
+                              NULL,
+                              {},
+                              {},
+                              path_alloc};
   gc_translated.bytecode.data = ar_alloc_atomic(translated.bytecode.capacity +
                                                 translated.constants.capacity);
   memcpy(gc_translated.bytecode.data, translated.bytecode.data,
