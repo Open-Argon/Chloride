@@ -1,1 +1,1 @@
--lraylib -lm -ldl -lGL -lX11 -lpthread
+-lraylib

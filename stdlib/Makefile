@@ -6,12 +6,12 @@
 # Target OS
 # ------------------------------------------------------------
 TARGET_OS ?= posix
-
+UNAME_S := $(shell uname -s)
 ifeq ($(TARGET_OS),windows)
 	CC        = x86_64-w64-mingw32-gcc
 	LIB_EXT   = dll
 	SHARED_LDFLAGS = -shared
-else ifeq ($(TARGET_OS),macos)
+else ifeq ($(UNAME_S),Darwin)
 	CC        = gcc
 	LIB_EXT   = dylib
 	SHARED_LDFLAGS = -dynamiclib -Wl,-install_name,@rpath/$(LIB).dylib
