@@ -107,4 +107,5 @@ optimised:
 # ------------------------------------------------------------
 clean:
 	rm -rf build bin
+	find . -type d -name "__arcache__" -exec rm -rf {} +
 	rm -f $(LEXER_C) $(LEXER_H)
