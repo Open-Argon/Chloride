@@ -16,7 +16,7 @@
 #include "../external/cwalk/include/cwalk.h"
 #include "hashmap/hashmap.h"
 #include "memory.h"
-#include <linux/limits.h>
+#include <limits.h>
 #include <signal.h>
 #include <stdbool.h>
 #include <stdio.h>
