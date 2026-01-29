@@ -93,6 +93,13 @@ extern char **environ;
 
 #endif
 
+#define POP_BYTE() bc[ip++]
+#define POP_U64(dst)                                                           \
+  do {                                                                         \
+    memcpy(&(dst), bc + ip, 8);                                                \
+    ip += 8;                                                                   \
+  } while (0)
+
 ArgonObject *ARGON_METHOD_TYPE;
 Stack *Global_Scope = NULL;
 ArgonObject *ADDITION_FUNCTION;
@@ -1276,10 +1283,9 @@ int compare_by_order(const void *a, const void *b) {
   return itemA->order - itemB->order;
 }
 
-static inline void load_const(Translated *translated, RuntimeState *state) {
-  uint8_t to_register = pop_byte(translated, state);
-  size_t length = pop_bytecode(translated, state);
-  uint64_t offset = pop_bytecode(translated, state);
+static inline void load_const(uint8_t to_register, size_t length,
+                              uint64_t offset, Translated *translated,
+                              RuntimeState *state) {
   ArgonObject *object = new_string_object(
       arena_get(&translated->constants, offset), length, 0, 0);
   state->registers[to_register] = object;
@@ -1302,11 +1308,10 @@ uint64_t runtime_hash(const void *data, size_t len, uint64_t prehash) {
   return hash;
 }
 
-static inline void load_variable(Translated *translated, RuntimeState *state,
-                                 struct Stack *stack, ArErr *err) {
-  int64_t length = pop_bytecode(translated, state);
-  int64_t offset = pop_bytecode(translated, state);
-  uint64_t prehash = pop_bytecode(translated, state);
+static inline void load_variable(int64_t length, int64_t offset,
+                                 uint64_t prehash, Translated *translated,
+                                 RuntimeState *state, struct Stack *stack,
+                                 ArErr *err) {
   uint64_t hash =
       runtime_hash(arena_get(&translated->constants, offset), length, prehash);
   struct Stack *current_stack = stack;
@@ -1419,12 +1424,14 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
   *currentStackFrame = (StackFrame){_translated, _state, stack, NULL, 0};
   currentStackFrame->state.currentStackFramePointer = &currentStackFrame;
   while (currentStackFrame) {
-    while (likely(currentStackFrame->state.head <
-                      currentStackFrame->translated.bytecode.size &&
-                  !err->exists)) {
+    size_t ip = currentStackFrame->state.head;
+    DArray *bytecode = &currentStackFrame->translated.bytecode;
+    uint8_t *bc = bytecode->data;
+    while (likely(ip < bytecode->size && !err->exists)) {
       Translated *translated = &currentStackFrame->translated;
       RuntimeState *state = &currentStackFrame->state;
-      uint8_t instruction = pop_byte(translated, state);
+
+      uint8_t instruction = POP_BYTE();
       // printf("instruction: %d\n", instruction);
       // for (size_t i = 0; i < translated->bytecode.size; i++) {
       //   if (i == state->head)
@@ -1434,24 +1441,134 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       // printf("\n");
       goto *dispatch_table[instruction];
     DO_LOAD_NULL:
-      state->registers[pop_byte(translated, state)] = ARGON_NULL;
-      continue;
+      state->registers[POP_BYTE()] = ARGON_NULL;
+      goto END_OF_LOOP;
     DO_LOAD_BASE_CLASS:
       state->registers[0] = BASE_CLASS;
-      continue;
-    DO_LOAD_STRING:
-      load_const(translated, state);
-      continue;
-    DO_LOAD_NUMBER:
-      load_number(translated, state);
-      continue;
-    DO_LOAD_FUNCTION:
-      load_argon_function(translated, state, currentStackFrame->stack);
-      continue;
+      goto END_OF_LOOP;
+    DO_LOAD_STRING: {
+      uint8_t to_register = POP_BYTE();
+      size_t length;
+      POP_U64(length);
+      uint64_t offset;
+      POP_U64(offset);
+      load_const(to_register, length, offset, translated, state);
+      goto END_OF_LOOP;
+    }
+    DO_LOAD_NUMBER: {
+
+      uint8_t to_register = POP_BYTE();
+      uint8_t is_int64 = POP_BYTE();
+      ArgonObject *cache_number = NULL;
+      if (is_int64) {
+        int64_t num;
+        POP_U64(num);
+        bool small_num = num < small_ints_min || num > small_ints_max;
+        if (small_num) {
+          cache_number = hashmap_lookup_GC(state->load_number_cache, num);
+        }
+        if (cache_number) {
+          state->registers[to_register] = cache_number;
+          goto END_OF_LOOP;
+        }
+        state->registers[to_register] = new_number_object_from_int64(num);
+        if (small_num) {
+          hashmap_insert_GC(state->load_number_cache, num, NULL,
+                            state->registers[to_register], 0);
+        }
+        goto END_OF_LOOP;
+      }
+      size_t num_size;
+      POP_U64(num_size);
+      size_t num_pos;
+      POP_U64(num_pos);
+      bool is_int = POP_BYTE();
+      size_t den_size = 0;
+      size_t den_pos = 0;
+      if (!is_int) {
+        POP_U64(den_size);
+        POP_U64(den_pos);
+      }
+
+      uint64_t uuid = make_id(num_size, num_pos, is_int, den_size, den_pos);
+
+      cache_number = hashmap_lookup_GC(state->load_number_cache, uuid);
+      if (cache_number) {
+        state->registers[to_register] = cache_number;
+        state->head += 16;
+        if (!POP_BYTE()) {
+          state->head += 16;
+        }
+        goto END_OF_LOOP;
+      }
+
+      mpq_t r;
+      mpq_init(r);
+      mpz_t num;
+      mpz_init(num);
+      mpz_import(num, num_size, 1, 1, 0, 0,
+                 arena_get(&translated->constants, num_pos));
+      mpq_set_num(r, num);
+      mpz_clear(num);
+      if (!is_int) {
+        mpz_t den;
+        mpz_init(den);
+        mpz_import(den, den_size, 1, 1, 0, 0,
+                   arena_get(&translated->constants, den_pos));
+        mpq_set_den(r, den);
+        mpz_clear(den);
+      } else {
+        mpz_set_si(mpq_denref(r), 1);
+      }
+
+      state->registers[to_register] = new_number_object(r);
+      hashmap_insert_GC(state->load_number_cache, uuid, NULL,
+                        state->registers[to_register], 0);
+      mpq_clear(r);
+      goto END_OF_LOOP;
+    }
+    DO_LOAD_FUNCTION: {
+      ArgonObject *object = new_instance(ARGON_FUNCTION_TYPE);
+      object->type = TYPE_FUNCTION;
+      uint64_t offset;
+      POP_U64(offset);
+      uint64_t length;
+      POP_U64(length);
+      add_builtin_field(
+          object, __name__,
+          new_string_object(arena_get(&translated->constants, offset), length,
+                            0, 0));
+      uint64_t number_of_parameters;
+      POP_U64(number_of_parameters);
+      object->value.argon_fn =
+          ar_alloc(sizeof(struct argon_function_struct) +
+                   number_of_parameters * sizeof(struct string_struct));
+      object->value.argon_fn->parameters =
+          (struct string_struct *)((char *)object->value.argon_fn +
+                                   sizeof(struct argon_function_struct));
+      object->value.argon_fn->translated = *translated;
+      object->value.argon_fn->number_of_parameters = number_of_parameters;
+      for (size_t i = 0; i < object->value.argon_fn->number_of_parameters;
+           i++) {
+        POP_U64(offset);
+        POP_U64(length);
+        object->value.argon_fn->parameters[i].data =
+            arena_get(&translated->constants, offset);
+        object->value.argon_fn->parameters[i].length = length;
+      }
+      POP_U64(offset);
+      POP_U64(length);
+      object->value.argon_fn->bytecode =
+          arena_get(&translated->constants, offset);
+      object->value.argon_fn->bytecode_length = length;
+      object->value.argon_fn->stack = stack;
+      state->registers[0] = object;
+      goto END_OF_LOOP;
+    }
     DO_IMPORT:
       runtime_import(state, err);
       add_source_location_to_error_if_exists(err, state);
-      continue;
+      goto END_OF_LOOP;
     DO_EXPOSE_ALL: {
       size_t nodes_length;
       hashmap_GC *hashmap = state->registers[0]->value.as_hashmap;
@@ -1462,113 +1579,157 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
         hashmap_insert_GC(scope_hashmap, nodes[i]->hash, nodes[i]->key,
                           nodes[i]->val, 0);
       }
-      continue;
+      goto END_OF_LOOP;
     }
     DO_EXPOSE: {
       hashmap_GC *hashmap = state->registers[0]->value.as_hashmap;
 
-      int64_t length = pop_bytecode(translated, state);
-      int64_t offset = pop_bytecode(translated, state);
-      uint64_t prehash = pop_bytecode(translated, state);
-      uint64_t hash =
-          runtime_hash(arena_get(&translated->constants, offset), length, prehash);
+      int64_t length;
+      POP_U64(length);
+      int64_t offset;
+      POP_U64(offset);
+      uint64_t prehash;
+      POP_U64(prehash);
+      uint64_t hash = runtime_hash(arena_get(&translated->constants, offset),
+                                   length, prehash);
 
-      ArgonObject*object = hashmap_lookup_GC(hashmap, hash);
+      ArgonObject *object = hashmap_lookup_GC(hashmap, hash);
       if (!object) {
-        *err = create_err(
-            state->source_location.line, state->source_location.column,
-            state->source_location.length, state->path, "Runtime Error",
-            "could not find '%.*s'", length, arena_get(&translated->constants, offset));
-        continue;
+        *err = create_err(state->source_location.line,
+                          state->source_location.column,
+                          state->source_location.length, state->path,
+                          "Runtime Error", "could not find '%.*s'", length,
+                          arena_get(&translated->constants, offset));
+        goto END_OF_LOOP;
       }
       state->registers[0] = object;
-      continue;
+      goto END_OF_LOOP;
     }
-    DO_IDENTIFIER:
-      load_variable(translated, state, currentStackFrame->stack, err);
-      continue;
-    DO_DECLARE:
-      runtime_declaration(translated, state, currentStackFrame->stack, err);
-      continue;
-    DO_ASSIGN:
-      runtime_assignment(translated, state, currentStackFrame->stack);
-      continue;
+    DO_IDENTIFIER: {
+      int64_t length;
+      POP_U64(length);
+      int64_t offset;
+      POP_U64(offset);
+      uint64_t prehash;
+      POP_U64(prehash);
+      load_variable(length, offset, prehash, translated, state,
+                    currentStackFrame->stack, err);
+      goto END_OF_LOOP;
+    }
+    DO_DECLARE: {
+      int64_t length;
+      POP_U64(length);
+      int64_t offset;
+      POP_U64(offset);
+      uint64_t prehash;
+      POP_U64(prehash);
+      uint8_t from_register = POP_BYTE();
+      runtime_declaration(length, offset, prehash, from_register, translated,
+                          state, currentStackFrame->stack, err);
+      goto END_OF_LOOP;
+    }
+    DO_ASSIGN: {
+      int64_t length;
+      POP_U64(length);
+      int64_t offset;
+      POP_U64(offset);
+      uint64_t prehash;
+      POP_U64(prehash);
+      uint8_t from_register = POP_BYTE();
+      runtime_assignment(length, offset, prehash, from_register, translated,
+                         state, currentStackFrame->stack);
+      goto END_OF_LOOP;
+    }
     DO_BOOL: {
       if (state->registers[0] == ARGON_TRUE ||
           state->registers[0] == ARGON_FALSE)
-        continue;
+        goto END_OF_LOOP;
       if (likely(state->registers[0]->type != TYPE_OBJECT)) {
         state->registers[0] =
             state->registers[0]->as_bool ? ARGON_TRUE : ARGON_FALSE;
-        continue;
+        goto END_OF_LOOP;
       }
       ArgonObject *args[] = {ARGON_BOOL_TYPE, state->registers[0]};
       state->registers[0] = ARGON_BOOL_TYPE___new__(2, args, err, state, NULL);
-      continue;
+      goto END_OF_LOOP;
     }
     DO_JUMP_IF_FALSE: {
-      uint8_t from_register = pop_byte(translated, state);
-      uint64_t to = pop_bytecode(translated, state);
+      uint8_t from_register = POP_BYTE();
+      uint64_t to;
+      POP_U64(to);
       if (state->registers[from_register] == ARGON_FALSE) {
-        state->head = to;
+        ip=to;
       }
-      continue;
+      goto END_OF_LOOP;
     }
     DO_NOT:
       state->registers[0] =
           state->registers[0] == ARGON_FALSE ? ARGON_TRUE : ARGON_FALSE;
-      continue;
-    DO_JUMP:
-      state->head = pop_bytecode(translated, state);
-      continue;
+      goto END_OF_LOOP;
+    DO_JUMP: {
+      uint64_t to;
+      POP_U64(to);
+      ip = to;
+      goto END_OF_LOOP;
+    }
     DO_NEW_SCOPE:
       currentStackFrame->stack = create_scope(currentStackFrame->stack, false);
-      continue;
+      goto END_OF_LOOP;
     DO_EMPTY_SCOPE:
       clear_hashmap_GC(currentStackFrame->stack->scope);
-      continue;
+      goto END_OF_LOOP;
     DO_POP_SCOPE:
       if (currentStackFrame->stack->fake_new_scopes) {
         currentStackFrame->stack->fake_new_scopes--;
         goto DO_EMPTY_SCOPE;
       }
       currentStackFrame->stack = currentStackFrame->stack->prev;
-      continue;
+      goto END_OF_LOOP;
     DO_INIT_CALL: {
-      size_t length = pop_bytecode(translated, state);
+      size_t length;
+      POP_U64(length);
       call_instance call_instance = {state->call_instance, state->registers[0],
                                      ar_alloc(length * sizeof(ArgonObject *)),
                                      length};
       state->call_instance = ar_alloc(sizeof(call_instance));
       *state->call_instance = call_instance;
-      continue;
+      goto END_OF_LOOP;
     }
     DO_INSERT_ARG:;
-      size_t index = pop_bytecode(translated, state);
+      size_t index;
+      POP_U64(index);
       state->call_instance->args[index] = state->registers[0];
-      continue;
+      goto END_OF_LOOP;
     DO_CALL: {
+      state->head = ip;
       run_call(state->call_instance->to_call, state->call_instance->args_length,
                state->call_instance->args, state, false, err);
       state->call_instance = (*state->call_instance).previous;
+      ip = currentStackFrame->state.head;
+      bytecode = &currentStackFrame->translated.bytecode;
+      bc = bytecode->data;
       continue;
     }
-    DO_SOURCE_LOCATION:
-      state->source_location = (SourceLocation){
-          pop_bytecode(translated, state), pop_bytecode(translated, state),
-          pop_bytecode(translated, state)};
-      continue;
+    DO_SOURCE_LOCATION: {
+      uint64_t line;
+      POP_U64(line);
+      uint64_t column;
+      POP_U64(column);
+      uint64_t length;
+      POP_U64(length);
+      state->source_location = (SourceLocation){line, column, length};
+      goto END_OF_LOOP;
+    }
     DO_LOAD_BOOL:
-      state->registers[0] =
-          pop_byte(translated, state) ? ARGON_TRUE : ARGON_FALSE;
-      continue;
+      state->registers[0] = POP_BYTE() ? ARGON_TRUE : ARGON_FALSE;
+      goto END_OF_LOOP;
     DO_NEGATION:
       if (state->registers[0]->type == TYPE_NUMBER) {
         ArgonObject *value = state->registers[0];
         if (likely(value->value.as_number->is_int64)) {
           int64_t a = value->value.as_number->n.i64;
           state->registers[0] = new_number_object_from_int64(-a);
-          continue;
+          goto END_OF_LOOP;
         }
         mpq_t result;
         mpq_init(result);
@@ -1584,11 +1745,11 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
             state->source_location.line, state->source_location.column,
             state->source_location.length, state->path, "Runtime Error",
             "unable to get __negation__ from objects class");
-        continue;
+        goto END_OF_LOOP;
       }
       ArgonObject *args[] = {};
       argon_call(negation_function, 0, args, err, state);
-      continue;
+      goto END_OF_LOOP;
     DO_LOAD_GETATTRIBUTE_METHOD:
       state->registers[0] = get_builtin_field_for_class(
           get_builtin_field(state->registers[0], __class__), __getattribute__,
@@ -1599,17 +1760,17 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
             state->source_location.length, state->path, "Runtime Error",
             "unable to get __getattribute__ from objects class");
       }
-      continue;
+      goto END_OF_LOOP;
     DO_COPY_TO_REGISTER: {
-      uint8_t from_register = pop_byte(translated, state);
-      uint64_t to_register = pop_byte(translated, state);
+      uint8_t from_register = POP_BYTE();
+      uint64_t to_register = POP_BYTE();
       state->registers[to_register] = state->registers[from_register];
-      continue;
+      goto END_OF_LOOP;
     }
     DO_ADDITION: {
-      uint8_t registerA = pop_byte(translated, state);
-      uint8_t registerB = pop_byte(translated, state);
-      uint8_t registerC = pop_byte(translated, state);
+      uint8_t registerA = POP_BYTE();
+      uint8_t registerB = POP_BYTE();
+      uint8_t registerC = POP_BYTE();
 
       ArgonObject *valueA = state->registers[registerA];
       ArgonObject *valueB = state->registers[registerB];
@@ -1623,7 +1784,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
                                 (a < 0 && b < 0 && a < INT64_MIN - b);
           if (!gonna_overflow) {
             state->registers[registerC] = new_number_object_from_int64(a + b);
-            continue;
+            goto END_OF_LOOP;
           }
           mpq_t a_GMP, b_GMP;
           mpq_init(a_GMP);
@@ -1658,19 +1819,19 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
           mpq_clear(a_GMP);
           mpq_clear(b_GMP);
         }
-        continue;
+        goto END_OF_LOOP;
       }
 
       ArgonObject *args[] = {valueA, valueB};
       state->registers[registerC] =
           argon_call(ADDITION_FUNCTION, 2, args, err, state);
       add_source_location_to_error_if_exists(err, state);
-      continue;
+      goto END_OF_LOOP;
     }
     DO_SUBTRACTION: {
-      uint8_t registerA = pop_byte(translated, state);
-      uint8_t registerB = pop_byte(translated, state);
-      uint8_t registerC = pop_byte(translated, state);
+      uint8_t registerA = POP_BYTE();
+      uint8_t registerB = POP_BYTE();
+      uint8_t registerC = POP_BYTE();
 
       ArgonObject *valueA = state->registers[registerA];
       ArgonObject *valueB = state->registers[registerB];
@@ -1685,7 +1846,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
                                 (neg_a < 0 && b < 0 && b < INT64_MIN - neg_a);
           if (!gonna_overflow) {
             state->registers[registerC] = new_number_object_from_int64(a - b);
-            continue;
+            goto END_OF_LOOP;
           }
           mpq_t a_GMP, b_GMP;
           mpq_init(a_GMP);
@@ -1720,19 +1881,19 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
           mpq_clear(a_GMP);
           mpq_clear(b_GMP);
         }
-        continue;
+        goto END_OF_LOOP;
       }
 
       ArgonObject *args[] = {valueA, valueB};
       state->registers[registerC] =
           argon_call(SUBTRACTION_FUNCTION, 2, args, err, state);
       add_source_location_to_error_if_exists(err, state);
-      continue;
+      goto END_OF_LOOP;
     }
     DO_MULTIPLICATION: {
-      uint8_t registerA = pop_byte(translated, state);
-      uint8_t registerB = pop_byte(translated, state);
-      uint8_t registerC = pop_byte(translated, state);
+      uint8_t registerA = POP_BYTE();
+      uint8_t registerB = POP_BYTE();
+      uint8_t registerC = POP_BYTE();
 
       ArgonObject *valueA = state->registers[registerA];
       ArgonObject *valueB = state->registers[registerB];
@@ -1747,7 +1908,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
                     : (b > 0 ? a < INT64_MIN / b : a != 0 && b < INT64_MAX / a);
           if (!gonna_overflow) {
             state->registers[registerC] = new_number_object_from_int64(a * b);
-            continue;
+            goto END_OF_LOOP;
           }
           mpq_t a_GMP, b_GMP;
           mpq_init(a_GMP);
@@ -1782,19 +1943,19 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
           mpq_clear(a_GMP);
           mpq_clear(b_GMP);
         }
-        continue;
+        goto END_OF_LOOP;
       }
 
       ArgonObject *args[] = {valueA, valueB};
       state->registers[registerC] =
           argon_call(MULTIPLY_FUNCTION, 2, args, err, state);
       add_source_location_to_error_if_exists(err, state);
-      continue;
+      goto END_OF_LOOP;
     }
     DO_EXPONENTIATION: {
-      uint8_t registerA = pop_byte(translated, state);
-      uint8_t registerB = pop_byte(translated, state);
-      uint8_t registerC = pop_byte(translated, state);
+      uint8_t registerA = POP_BYTE();
+      uint8_t registerB = POP_BYTE();
+      uint8_t registerC = POP_BYTE();
 
       ArgonObject *valueA = state->registers[registerA];
       ArgonObject *valueB = state->registers[registerB];
@@ -1825,7 +1986,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
             mpq_clear(a);
             mpq_clear(b);
             mpq_clear(r);
-            continue;
+            goto END_OF_LOOP;
           }
 
           /* exp >= 0 → try int64 exponentiation */
@@ -1850,7 +2011,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
 
           if (!overflow) {
             state->registers[registerC] = new_number_object_from_int64(result);
-            continue;
+            goto END_OF_LOOP;
           }
 
           /* overflow → fall through to GMP */
@@ -1887,7 +2048,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
             mpq_clear(a_GMP);
             mpq_clear(b_GMP);
             mpq_clear(r);
-            continue;
+            goto END_OF_LOOP;
           }
 
           /* negative base with non-integer exponent → complex */
@@ -1900,7 +2061,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
             mpq_clear(a_GMP);
             mpq_clear(b_GMP);
             mpq_clear(r);
-            continue;
+            goto END_OF_LOOP;
           }
 
           /* ---------- SAFE TO COMPUTE ---------- */
@@ -1911,7 +2072,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
           mpq_clear(a_GMP);
           mpq_clear(b_GMP);
           mpq_clear(r);
-          continue;
+          goto END_OF_LOOP;
         }
       }
 
@@ -1920,13 +2081,13 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       state->registers[registerC] =
           argon_call(EXPONENT_FUNCTION, 2, args, err, state);
       add_source_location_to_error_if_exists(err, state);
-      continue;
+      goto END_OF_LOOP;
     }
 
     DO_DIVISION: {
-      uint8_t registerA = pop_byte(translated, state);
-      uint8_t registerB = pop_byte(translated, state);
-      uint8_t registerC = pop_byte(translated, state);
+      uint8_t registerA = POP_BYTE();
+      uint8_t registerB = POP_BYTE();
+      uint8_t registerC = POP_BYTE();
 
       ArgonObject *valueA = state->registers[registerA];
       ArgonObject *valueB = state->registers[registerB];
@@ -1941,7 +2102,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
                               state->source_location.column,
                               state->source_location.length, state->path,
                               "Zero Division Error", "division by zero");
-            continue;
+            goto END_OF_LOOP;
           }
           state->registers[registerC] =
               new_number_object_from_num_and_den(a, b);
@@ -1967,7 +2128,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
                                 state->source_location.column,
                                 state->source_location.length, state->path,
                                 "Zero Division Error", "division by zero");
-              continue;
+              goto END_OF_LOOP;
             }
             mpq_set_si(b_GMP, valueB->value.as_number->n.i64, 1);
           }
@@ -1976,20 +2137,20 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
           mpq_clear(a_GMP);
           mpq_clear(b_GMP);
         }
-        continue;
+        goto END_OF_LOOP;
       }
 
       ArgonObject *args[] = {valueA, valueB};
       state->registers[registerC] =
           argon_call(DIVIDE_FUNCTION, 2, args, err, state);
       add_source_location_to_error_if_exists(err, state);
-      continue;
+      goto END_OF_LOOP;
     }
 
     DO_FLOOR_DIVISION: {
-      uint8_t registerA = pop_byte(translated, state);
-      uint8_t registerB = pop_byte(translated, state);
-      uint8_t registerC = pop_byte(translated, state);
+      uint8_t registerA = POP_BYTE();
+      uint8_t registerB = POP_BYTE();
+      uint8_t registerC = POP_BYTE();
 
       ArgonObject *valueA = state->registers[registerA];
       ArgonObject *valueB = state->registers[registerB];
@@ -2004,7 +2165,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
                               state->source_location.column,
                               state->source_location.length, state->path,
                               "Zero Division Error", "floor division by zero");
-            continue;
+            goto END_OF_LOOP;
           }
           state->registers[registerC] = new_number_object_from_int64(a / b);
         } else if (!valueA->value.as_number->is_int64 &&
@@ -2029,7 +2190,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
                   state->source_location.line, state->source_location.column,
                   state->source_location.length, state->path,
                   "Zero Division Error", "floor division by zero");
-              continue;
+              goto END_OF_LOOP;
             }
             mpq_set_si(b_GMP, valueB->value.as_number->n.i64, 1);
           }
@@ -2038,20 +2199,20 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
           mpq_clear(a_GMP);
           mpq_clear(b_GMP);
         }
-        continue;
+        goto END_OF_LOOP;
       }
 
       ArgonObject *args[] = {valueA, valueB};
       state->registers[registerC] =
           argon_call(FLOOR_DIVIDE_FUNCTION, 2, args, err, state);
       add_source_location_to_error_if_exists(err, state);
-      continue;
+      goto END_OF_LOOP;
     }
 
     DO_MODULO: {
-      uint8_t registerA = pop_byte(translated, state);
-      uint8_t registerB = pop_byte(translated, state);
-      uint8_t registerC = pop_byte(translated, state);
+      uint8_t registerA = POP_BYTE();
+      uint8_t registerB = POP_BYTE();
+      uint8_t registerC = POP_BYTE();
 
       ArgonObject *valueA = state->registers[registerA];
       ArgonObject *valueB = state->registers[registerB];
@@ -2066,7 +2227,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
                               state->source_location.column,
                               state->source_location.length, state->path,
                               "Zero Division Error", "modulo by zero");
-            continue;
+            goto END_OF_LOOP;
           }
           state->registers[registerC] = new_number_object_from_int64(a % b);
         } else if (!valueA->value.as_number->is_int64 &&
@@ -2091,7 +2252,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
                                 state->source_location.column,
                                 state->source_location.length, state->path,
                                 "Zero Division Error", "modulo by zero");
-              continue;
+              goto END_OF_LOOP;
             }
             mpq_set_si(b_GMP, valueB->value.as_number->n.i64, 1);
           }
@@ -2100,20 +2261,20 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
           mpq_clear(a_GMP);
           mpq_clear(b_GMP);
         }
-        continue;
+        goto END_OF_LOOP;
       }
 
       ArgonObject *args[] = {valueA, valueB};
       state->registers[registerC] =
           argon_call(MODULO_FUNCTION, 2, args, err, state);
       add_source_location_to_error_if_exists(err, state);
-      continue;
+      goto END_OF_LOOP;
     }
 
     DO_EQUAL: {
-      uint8_t registerA = pop_byte(translated, state);
-      uint8_t registerB = pop_byte(translated, state);
-      uint8_t registerC = pop_byte(translated, state);
+      uint8_t registerA = POP_BYTE();
+      uint8_t registerB = POP_BYTE();
+      uint8_t registerC = POP_BYTE();
 
       ArgonObject *valueA = state->registers[registerA];
       ArgonObject *valueB = state->registers[registerB];
@@ -2144,20 +2305,20 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
                   ? ARGON_TRUE
                   : ARGON_FALSE;
         }
-        continue;
+        goto END_OF_LOOP;
       }
 
       ArgonObject *args[] = {valueA, valueB};
       state->registers[registerC] =
           argon_call(EQUAL_FUNCTION, 2, args, err, state);
       add_source_location_to_error_if_exists(err, state);
-      continue;
+      goto END_OF_LOOP;
     }
 
     DO_NOT_EQUAL: {
-      uint8_t registerA = pop_byte(translated, state);
-      uint8_t registerB = pop_byte(translated, state);
-      uint8_t registerC = pop_byte(translated, state);
+      uint8_t registerA = POP_BYTE();
+      uint8_t registerB = POP_BYTE();
+      uint8_t registerC = POP_BYTE();
 
       ArgonObject *valueA = state->registers[registerA];
       ArgonObject *valueB = state->registers[registerB];
@@ -2188,20 +2349,20 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
                   ? ARGON_TRUE
                   : ARGON_FALSE;
         }
-        continue;
+        goto END_OF_LOOP;
       }
 
       ArgonObject *args[] = {valueA, valueB};
       state->registers[registerC] =
           argon_call(NOT_EQUAL_FUNCTION, 2, args, err, state);
       add_source_location_to_error_if_exists(err, state);
-      continue;
+      goto END_OF_LOOP;
     }
 
     DO_LESS_THAN: {
-      uint8_t registerA = pop_byte(translated, state);
-      uint8_t registerB = pop_byte(translated, state);
-      uint8_t registerC = pop_byte(translated, state);
+      uint8_t registerA = POP_BYTE();
+      uint8_t registerB = POP_BYTE();
+      uint8_t registerC = POP_BYTE();
 
       ArgonObject *valueA = state->registers[registerA];
       ArgonObject *valueB = state->registers[registerB];
@@ -2232,20 +2393,20 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
                   ? ARGON_TRUE
                   : ARGON_FALSE;
         }
-        continue;
+        goto END_OF_LOOP;
       }
 
       ArgonObject *args[] = {valueA, valueB};
       state->registers[registerC] =
           argon_call(LESS_THAN_FUNCTION, 2, args, err, state);
       add_source_location_to_error_if_exists(err, state);
-      continue;
+      goto END_OF_LOOP;
     }
 
     DO_GREATER_THAN: {
-      uint8_t registerA = pop_byte(translated, state);
-      uint8_t registerB = pop_byte(translated, state);
-      uint8_t registerC = pop_byte(translated, state);
+      uint8_t registerA = POP_BYTE();
+      uint8_t registerB = POP_BYTE();
+      uint8_t registerC = POP_BYTE();
 
       ArgonObject *valueA = state->registers[registerA];
       ArgonObject *valueB = state->registers[registerB];
@@ -2276,20 +2437,20 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
                   ? ARGON_TRUE
                   : ARGON_FALSE;
         }
-        continue;
+        goto END_OF_LOOP;
       }
 
       ArgonObject *args[] = {valueA, valueB};
       state->registers[registerC] =
           argon_call(GREATER_THAN_FUNCTION, 2, args, err, state);
       add_source_location_to_error_if_exists(err, state);
-      continue;
+      goto END_OF_LOOP;
     }
 
     DO_LESS_THAN_EQUAL: {
-      uint8_t registerA = pop_byte(translated, state);
-      uint8_t registerB = pop_byte(translated, state);
-      uint8_t registerC = pop_byte(translated, state);
+      uint8_t registerA = POP_BYTE();
+      uint8_t registerB = POP_BYTE();
+      uint8_t registerC = POP_BYTE();
 
       ArgonObject *valueA = state->registers[registerA];
       ArgonObject *valueB = state->registers[registerB];
@@ -2320,20 +2481,20 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
                   ? ARGON_TRUE
                   : ARGON_FALSE;
         }
-        continue;
+        goto END_OF_LOOP;
       }
 
       ArgonObject *args[] = {valueA, valueB};
       state->registers[registerC] =
           argon_call(LESS_THAN_EQUAL_FUNCTION, 2, args, err, state);
       add_source_location_to_error_if_exists(err, state);
-      continue;
+      goto END_OF_LOOP;
     }
 
     DO_GREATER_THAN_EQUAL: {
-      uint8_t registerA = pop_byte(translated, state);
-      uint8_t registerB = pop_byte(translated, state);
-      uint8_t registerC = pop_byte(translated, state);
+      uint8_t registerA = POP_BYTE();
+      uint8_t registerB = POP_BYTE();
+      uint8_t registerC = POP_BYTE();
 
       ArgonObject *valueA = state->registers[registerA];
       ArgonObject *valueB = state->registers[registerB];
@@ -2364,14 +2525,14 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
                   ? ARGON_TRUE
                   : ARGON_FALSE;
         }
-        continue;
+        goto END_OF_LOOP;
       }
 
       ArgonObject *args[] = {valueA, valueB};
       state->registers[registerC] =
           argon_call(GREATER_THAN_EQUAL_FUNCTION, 2, args, err, state);
       add_source_location_to_error_if_exists(err, state);
-      continue;
+      goto END_OF_LOOP;
     }
 
     DO_LOAD_SETATTR_METHOD: {
@@ -2384,11 +2545,13 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
             state->source_location.length, state->path, "Runtime Error",
             "unable to get __setattr__ from objects class");
       }
-      continue;
+      goto END_OF_LOOP;
     }
     DO_CREATE_CLASS: {
-      int64_t length = pop_bytecode(translated, state);
-      int64_t offset = pop_bytecode(translated, state);
+      int64_t length;
+      POP_U64(length);
+      int64_t offset;
+      POP_U64(offset);
       ArgonObject *class = new_class();
       add_builtin_field(class, __base__, state->registers[0]);
       add_builtin_field(
@@ -2396,11 +2559,11 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
           new_string_object(arena_get(&translated->constants, offset), length,
                             0, 0));
       state->registers[0] = class;
-      continue;
+      goto END_OF_LOOP;
     }
     DO_CREATE_DICTIONARY: {
       state->registers[0] = create_dictionary(createHashmap_GC());
-      continue;
+      goto END_OF_LOOP;
     }
     DO_LOAD_SETITEM_METHOD: {
       state->registers[0] = get_builtin_field_for_class(
@@ -2412,7 +2575,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
             state->source_location.length, state->path, "Runtime Error",
             "unable to get __setitem__ from objects class");
       }
-      continue;
+      goto END_OF_LOOP;
     }
     DO_LOAD_GETITEM_METHOD: {
       state->registers[0] = get_builtin_field_for_class(
@@ -2424,8 +2587,11 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
             state->source_location.length, state->path, "Runtime Error",
             "unable to get __getitem__ from objects class");
       }
-      continue;
+      goto END_OF_LOOP;
     }
+
+    END_OF_LOOP:
+      state->head = ip;
     }
 
     ArgonObject *result = currentStackFrame->state.registers[0];

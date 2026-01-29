@@ -64,13 +64,12 @@ int main(int argc, char *argv[]) {
 
   imported_hash_table = createHashmap_GC();
   importing_hash_table = createHashmap();
-
-  if (argc <= 1)
-    return shell();
   CWD = get_current_directory();
   EXC = get_executable_path();
   CWD_ARGON = CWD?new_string_object_null_terminated(CWD):ARGON_NULL;
   EXC_ARGON = EXC?new_string_object_null_terminated(EXC):ARGON_NULL;
+  if (argc <= 1)
+    return shell();
   char *path_non_absolute = argv[1];
   ArErr err = no_err;
   ar_import(CWD, path_non_absolute, &err, true);

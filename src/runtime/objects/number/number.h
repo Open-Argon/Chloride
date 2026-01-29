@@ -8,6 +8,9 @@
 #define RUNTIME_NUMBER_H
 #include "../object.h"
 
+#define small_ints_min -256
+#define small_ints_max 256
+
 extern ArgonObject *ARGON_NUMBER_TYPE;
 
 void create_ARGON_NUMBER_TYPE();
@@ -15,8 +18,6 @@ void create_ARGON_NUMBER_TYPE();
 ArgonObject *new_number_object(mpq_t number);
 
 bool mpq_to_int64(mpq_t q, int64_t *out);
-
-void load_number(Translated *translated, RuntimeState *state);
 
 ArgonObject *new_number_object_from_double(double d);
 
@@ -29,5 +30,8 @@ void mpq_pow_q(mpq_t rop, const mpq_t e, const mpq_t n);
 void mpq_fdiv(mpq_t result, const mpq_t a, const mpq_t b);
 
 void mpq_fmod(mpq_t result, const mpq_t a, const mpq_t b);
+
+uint64_t make_id(size_t num_size, size_t num_pos, bool is_int, size_t den_size,
+                 size_t den_pos);
 
 #endif // RUNTIME_NUMBER_H

@@ -5,13 +5,11 @@
  */
 
 #include "assignment.h"
+#include <stdint.h>
+#include "../objects/string/string.h"
 
-void runtime_assignment(Translated *translated, RuntimeState *state,
+void runtime_assignment(int64_t length,int64_t offset,int64_t prehash,uint8_t from_register,Translated *translated, RuntimeState *state,
                          struct Stack *stack) {
-  int64_t length = pop_bytecode(translated, state);
-  int64_t offset = pop_bytecode(translated, state);
-  int64_t prehash = pop_bytecode(translated, state);
-  int64_t from_register = pop_byte(translated, state);
   void *data = arena_get(&translated->constants, offset);
   uint64_t hash = runtime_hash(data, length, prehash);
   ArgonObject *key = new_string_object(data, length, prehash, hash);
