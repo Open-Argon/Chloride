@@ -31,6 +31,7 @@
 #include <gc.h>
 #include <gmp.h>
 #include <inttypes.h>
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -1372,7 +1373,7 @@ void add_source_location_to_error_if_exists(ArErr *err, RuntimeState *state) {
 }
 
 void runtime(Translated _translated, RuntimeState _state, Stack *stack,
-             ArErr *err) {
+             ArErr *err_ptr) {
   static void *const dispatch_table[] = {
       [OP_LOAD_STRING] = &&DO_LOAD_STRING,
       [OP_DECLARE] = &&DO_DECLARE,
@@ -1420,16 +1421,19 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       [OP_EXPOSE] = &&DO_EXPOSE};
   _state.head = 0;
 
+  ArErr err={.exists=false};
+
   StackFrame *currentStackFrame = ar_alloc(sizeof(StackFrame));
   *currentStackFrame = (StackFrame){_translated, _state, stack, NULL, 0};
   currentStackFrame->state.currentStackFramePointer = &currentStackFrame;
   while (currentStackFrame) {
     size_t ip = currentStackFrame->state.head;
     DArray *bytecode = &currentStackFrame->translated.bytecode;
+    size_t bytecode_size = bytecode->size;
     uint8_t *bc = bytecode->data;
-    while (likely(ip < bytecode->size && !err->exists)) {
-      Translated *translated = &currentStackFrame->translated;
-      RuntimeState *state = &currentStackFrame->state;
+    Translated *translated = &currentStackFrame->translated;
+    RuntimeState *state = &currentStackFrame->state;
+    while (likely(ip < bytecode_size && !err.exists)) {
 
       uint8_t instruction = POP_BYTE();
       // printf("instruction: %d\n", instruction);
@@ -1566,8 +1570,8 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       goto END_OF_LOOP;
     }
     DO_IMPORT:
-      runtime_import(state, err);
-      add_source_location_to_error_if_exists(err, state);
+      runtime_import(state, &err);
+      add_source_location_to_error_if_exists(&err, state);
       goto END_OF_LOOP;
     DO_EXPOSE_ALL: {
       size_t nodes_length;
@@ -1595,7 +1599,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
 
       ArgonObject *object = hashmap_lookup_GC(hashmap, hash);
       if (!object) {
-        *err = create_err(state->source_location.line,
+        err = create_err(state->source_location.line,
                           state->source_location.column,
                           state->source_location.length, state->path,
                           "Runtime Error", "could not find '%.*s'", length,
@@ -1613,7 +1617,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       uint64_t prehash;
       POP_U64(prehash);
       load_variable(length, offset, prehash, translated, state,
-                    currentStackFrame->stack, err);
+                    currentStackFrame->stack, &err);
       goto END_OF_LOOP;
     }
     DO_DECLARE: {
@@ -1625,7 +1629,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       POP_U64(prehash);
       uint8_t from_register = POP_BYTE();
       runtime_declaration(length, offset, prehash, from_register, translated,
-                          state, currentStackFrame->stack, err);
+                          state, currentStackFrame->stack, &err);
       goto END_OF_LOOP;
     }
     DO_ASSIGN: {
@@ -1650,7 +1654,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
         goto END_OF_LOOP;
       }
       ArgonObject *args[] = {ARGON_BOOL_TYPE, state->registers[0]};
-      state->registers[0] = ARGON_BOOL_TYPE___new__(2, args, err, state, NULL);
+      state->registers[0] = ARGON_BOOL_TYPE___new__(2, args, &err, state, NULL);
       goto END_OF_LOOP;
     }
     DO_JUMP_IF_FALSE: {
@@ -1658,7 +1662,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       uint64_t to;
       POP_U64(to);
       if (state->registers[from_register] == ARGON_FALSE) {
-        ip=to;
+        ip = to;
       }
       goto END_OF_LOOP;
     }
@@ -1703,11 +1707,14 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
     DO_CALL: {
       state->head = ip;
       run_call(state->call_instance->to_call, state->call_instance->args_length,
-               state->call_instance->args, state, false, err);
+               state->call_instance->args, state, false, &err);
       state->call_instance = (*state->call_instance).previous;
       ip = currentStackFrame->state.head;
       bytecode = &currentStackFrame->translated.bytecode;
+      bytecode_size = bytecode->size;
       bc = bytecode->data;
+      translated = &currentStackFrame->translated;
+      state = &currentStackFrame->state;
       continue;
     }
     DO_SOURCE_LOCATION: {
@@ -1741,21 +1748,21 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
           get_builtin_field(state->registers[0], __class__), __negation__,
           state->registers[0]);
       if (!state->registers[0]) {
-        *err = create_err(
+        err = create_err(
             state->source_location.line, state->source_location.column,
             state->source_location.length, state->path, "Runtime Error",
             "unable to get __negation__ from objects class");
         goto END_OF_LOOP;
       }
       ArgonObject *args[] = {};
-      argon_call(negation_function, 0, args, err, state);
+      argon_call(negation_function, 0, args, &err, state);
       goto END_OF_LOOP;
     DO_LOAD_GETATTRIBUTE_METHOD:
       state->registers[0] = get_builtin_field_for_class(
           get_builtin_field(state->registers[0], __class__), __getattribute__,
           state->registers[0]);
       if (!state->registers[0]) {
-        *err = create_err(
+        err = create_err(
             state->source_location.line, state->source_location.column,
             state->source_location.length, state->path, "Runtime Error",
             "unable to get __getattribute__ from objects class");
@@ -1824,8 +1831,8 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
 
       ArgonObject *args[] = {valueA, valueB};
       state->registers[registerC] =
-          argon_call(ADDITION_FUNCTION, 2, args, err, state);
-      add_source_location_to_error_if_exists(err, state);
+          argon_call(ADDITION_FUNCTION, 2, args, &err, state);
+      add_source_location_to_error_if_exists(&err, state);
       goto END_OF_LOOP;
     }
     DO_SUBTRACTION: {
@@ -1886,8 +1893,8 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
 
       ArgonObject *args[] = {valueA, valueB};
       state->registers[registerC] =
-          argon_call(SUBTRACTION_FUNCTION, 2, args, err, state);
-      add_source_location_to_error_if_exists(err, state);
+          argon_call(SUBTRACTION_FUNCTION, 2, args, &err, state);
+      add_source_location_to_error_if_exists(&err, state);
       goto END_OF_LOOP;
     }
     DO_MULTIPLICATION: {
@@ -1948,8 +1955,8 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
 
       ArgonObject *args[] = {valueA, valueB};
       state->registers[registerC] =
-          argon_call(MULTIPLY_FUNCTION, 2, args, err, state);
-      add_source_location_to_error_if_exists(err, state);
+          argon_call(MULTIPLY_FUNCTION, 2, args, &err, state);
+      add_source_location_to_error_if_exists(&err, state);
       goto END_OF_LOOP;
     }
     DO_EXPONENTIATION: {
@@ -2040,7 +2047,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
 
           /* 0^0 or 0^negative */
           if (mpq_sgn(a_GMP) == 0 && mpq_sgn(b_GMP) <= 0) {
-            *err = create_err(
+            err = create_err(
                 state->source_location.line, state->source_location.column,
                 state->source_location.length, state->path, "Math Error",
                 "0 cannot be raised to zero or a negative power");
@@ -2053,7 +2060,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
 
           /* negative base with non-integer exponent → complex */
           if (mpq_sgn(a_GMP) < 0 && mpz_cmp_ui(mpq_denref(b_GMP), 1) != 0) {
-            *err = create_err(
+            err = create_err(
                 state->source_location.line, state->source_location.column,
                 state->source_location.length, state->path, "Math Error",
                 "Negative base with fractional exponent is not a real number");
@@ -2079,8 +2086,8 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       /* ---------- fallback to dynamic dispatch ---------- */
       ArgonObject *args[] = {valueA, valueB};
       state->registers[registerC] =
-          argon_call(EXPONENT_FUNCTION, 2, args, err, state);
-      add_source_location_to_error_if_exists(err, state);
+          argon_call(EXPONENT_FUNCTION, 2, args, &err, state);
+      add_source_location_to_error_if_exists(&err, state);
       goto END_OF_LOOP;
     }
 
@@ -2098,7 +2105,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
           int64_t a = valueA->value.as_number->n.i64;
           int64_t b = valueB->value.as_number->n.i64;
           if (!b) {
-            *err = create_err(state->source_location.line,
+            err = create_err(state->source_location.line,
                               state->source_location.column,
                               state->source_location.length, state->path,
                               "Zero Division Error", "division by zero");
@@ -2124,7 +2131,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
           } else {
             mpq_set(a_GMP, *valueA->value.as_number->n.mpq);
             if (!valueB->value.as_number->n.i64) {
-              *err = create_err(state->source_location.line,
+              err = create_err(state->source_location.line,
                                 state->source_location.column,
                                 state->source_location.length, state->path,
                                 "Zero Division Error", "division by zero");
@@ -2142,8 +2149,8 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
 
       ArgonObject *args[] = {valueA, valueB};
       state->registers[registerC] =
-          argon_call(DIVIDE_FUNCTION, 2, args, err, state);
-      add_source_location_to_error_if_exists(err, state);
+          argon_call(DIVIDE_FUNCTION, 2, args, &err, state);
+      add_source_location_to_error_if_exists(&err, state);
       goto END_OF_LOOP;
     }
 
@@ -2161,7 +2168,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
           int64_t a = valueA->value.as_number->n.i64;
           int64_t b = valueB->value.as_number->n.i64;
           if (!b) {
-            *err = create_err(state->source_location.line,
+            err = create_err(state->source_location.line,
                               state->source_location.column,
                               state->source_location.length, state->path,
                               "Zero Division Error", "floor division by zero");
@@ -2186,7 +2193,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
           } else {
             mpq_set(a_GMP, *valueA->value.as_number->n.mpq);
             if (!valueB->value.as_number->n.i64) {
-              *err = create_err(
+              err = create_err(
                   state->source_location.line, state->source_location.column,
                   state->source_location.length, state->path,
                   "Zero Division Error", "floor division by zero");
@@ -2204,8 +2211,8 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
 
       ArgonObject *args[] = {valueA, valueB};
       state->registers[registerC] =
-          argon_call(FLOOR_DIVIDE_FUNCTION, 2, args, err, state);
-      add_source_location_to_error_if_exists(err, state);
+          argon_call(FLOOR_DIVIDE_FUNCTION, 2, args, &err, state);
+      add_source_location_to_error_if_exists(&err, state);
       goto END_OF_LOOP;
     }
 
@@ -2223,7 +2230,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
           int64_t a = valueA->value.as_number->n.i64;
           int64_t b = valueB->value.as_number->n.i64;
           if (!b) {
-            *err = create_err(state->source_location.line,
+            err = create_err(state->source_location.line,
                               state->source_location.column,
                               state->source_location.length, state->path,
                               "Zero Division Error", "modulo by zero");
@@ -2248,7 +2255,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
           } else {
             mpq_set(a_GMP, *valueA->value.as_number->n.mpq);
             if (!valueB->value.as_number->n.i64) {
-              *err = create_err(state->source_location.line,
+              err = create_err(state->source_location.line,
                                 state->source_location.column,
                                 state->source_location.length, state->path,
                                 "Zero Division Error", "modulo by zero");
@@ -2266,8 +2273,8 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
 
       ArgonObject *args[] = {valueA, valueB};
       state->registers[registerC] =
-          argon_call(MODULO_FUNCTION, 2, args, err, state);
-      add_source_location_to_error_if_exists(err, state);
+          argon_call(MODULO_FUNCTION, 2, args, &err, state);
+      add_source_location_to_error_if_exists(&err, state);
       goto END_OF_LOOP;
     }
 
@@ -2310,8 +2317,8 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
 
       ArgonObject *args[] = {valueA, valueB};
       state->registers[registerC] =
-          argon_call(EQUAL_FUNCTION, 2, args, err, state);
-      add_source_location_to_error_if_exists(err, state);
+          argon_call(EQUAL_FUNCTION, 2, args, &err, state);
+      add_source_location_to_error_if_exists(&err, state);
       goto END_OF_LOOP;
     }
 
@@ -2354,8 +2361,8 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
 
       ArgonObject *args[] = {valueA, valueB};
       state->registers[registerC] =
-          argon_call(NOT_EQUAL_FUNCTION, 2, args, err, state);
-      add_source_location_to_error_if_exists(err, state);
+          argon_call(NOT_EQUAL_FUNCTION, 2, args, &err, state);
+      add_source_location_to_error_if_exists(&err, state);
       goto END_OF_LOOP;
     }
 
@@ -2398,8 +2405,8 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
 
       ArgonObject *args[] = {valueA, valueB};
       state->registers[registerC] =
-          argon_call(LESS_THAN_FUNCTION, 2, args, err, state);
-      add_source_location_to_error_if_exists(err, state);
+          argon_call(LESS_THAN_FUNCTION, 2, args, &err, state);
+      add_source_location_to_error_if_exists(&err, state);
       goto END_OF_LOOP;
     }
 
@@ -2442,8 +2449,8 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
 
       ArgonObject *args[] = {valueA, valueB};
       state->registers[registerC] =
-          argon_call(GREATER_THAN_FUNCTION, 2, args, err, state);
-      add_source_location_to_error_if_exists(err, state);
+          argon_call(GREATER_THAN_FUNCTION, 2, args, &err, state);
+      add_source_location_to_error_if_exists(&err, state);
       goto END_OF_LOOP;
     }
 
@@ -2486,8 +2493,8 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
 
       ArgonObject *args[] = {valueA, valueB};
       state->registers[registerC] =
-          argon_call(LESS_THAN_EQUAL_FUNCTION, 2, args, err, state);
-      add_source_location_to_error_if_exists(err, state);
+          argon_call(LESS_THAN_EQUAL_FUNCTION, 2, args, &err, state);
+      add_source_location_to_error_if_exists(&err, state);
       goto END_OF_LOOP;
     }
 
@@ -2530,8 +2537,8 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
 
       ArgonObject *args[] = {valueA, valueB};
       state->registers[registerC] =
-          argon_call(GREATER_THAN_EQUAL_FUNCTION, 2, args, err, state);
-      add_source_location_to_error_if_exists(err, state);
+          argon_call(GREATER_THAN_EQUAL_FUNCTION, 2, args, &err, state);
+      add_source_location_to_error_if_exists(&err, state);
       goto END_OF_LOOP;
     }
 
@@ -2540,7 +2547,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
           get_builtin_field(state->registers[0], __class__), __setattr__,
           state->registers[0]);
       if (!state->registers[0]) {
-        *err = create_err(
+        err = create_err(
             state->source_location.line, state->source_location.column,
             state->source_location.length, state->path, "Runtime Error",
             "unable to get __setattr__ from objects class");
@@ -2570,7 +2577,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
           get_builtin_field(state->registers[0], __class__), __setitem__,
           state->registers[0]);
       if (!state->registers[0]) {
-        *err = create_err(
+        err = create_err(
             state->source_location.line, state->source_location.column,
             state->source_location.length, state->path, "Runtime Error",
             "unable to get __setitem__ from objects class");
@@ -2582,7 +2589,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
           get_builtin_field(state->registers[0], __class__), __getitem__,
           state->registers[0]);
       if (!state->registers[0]) {
-        *err = create_err(
+        err = create_err(
             state->source_location.line, state->source_location.column,
             state->source_location.length, state->path, "Runtime Error",
             "unable to get __getitem__ from objects class");
@@ -2599,4 +2606,5 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
     if (currentStackFrame)
       currentStackFrame->state.registers[0] = result;
   }
+  if (err.exists) *err_ptr = err;
 }
