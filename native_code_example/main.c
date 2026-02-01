@@ -89,9 +89,8 @@ ArgonObject *yooo(size_t argc, ArgonObject **argv, ArgonError *err,
   return output;
 }
 
-void argon_module_init(ArgonState *vm, ArgonNativeAPI *api,
-                       ArgonObjectRegister *reg) {
-
+void argon_module_init(ArgonState *vm, ArgonNativeAPI *api, ArgonError*err,
+                  ArgonObjectRegister *reg) {
   api->register_ArgonObject(
       reg, "hello_world",
       api->create_argon_native_function("hello_world", hello_world));

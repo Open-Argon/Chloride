@@ -80,6 +80,14 @@ struct ArgonNativeAPI {
   ArgonObject *ARGON_NULL;
   ArgonObject *ARGON_TRUE;
   ArgonObject *ARGON_FALSE;
+
+  int (*register_thread)();
+  int (*unregister_thread)();
+
+  ArgonObject *(*create_err_object)();
+  ArgonError *(*err_object_to_err)(ArgonObject *, ArgonError *);
+  ArgonState *(*new_state)(ArgonObject**registers);
+  void (*set_err)(ArgonObject *object, ArgonError *err);
 };
 
 __attribute__((visibility("default"))) void

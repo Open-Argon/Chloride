@@ -8,6 +8,7 @@
 #include "../../hash_data/hash_data.h"
 #include "../api/api.h"
 #include "../objects/string/string.h"
+#include "../objects/literals/literals.h"
 #include "../../err.h"
 #include "../../memory.h"
 #include <inttypes.h>
@@ -138,28 +139,23 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
     }
     if (CStackFrame) {
       ArgonObject
-          *registers[MAX_REGISTERS]; // fixed on the stack for speed purposes
-      StackFrame new_stackFrame = {
-          {object->value.argon_fn->translated.registerCount,
+          **registers=ar_alloc(sizeof(ArgonObject)*object->value.argon_fn->translated.registerCount); // fixed on the stack for speed purposes
+      runtime((Translated){object->value.argon_fn->translated.registerCount,
            object->value.argon_fn->translated.registerAssignment,
            NULL,
            {object->value.argon_fn->bytecode, sizeof(uint8_t),
             object->value.argon_fn->bytecode_length,
             object->value.argon_fn->bytecode_length, false},
-           object->value.argon_fn->translated.constants, object->value.argon_fn->translated.path},
-          {registers,
+           object->value.argon_fn->translated.constants, object->value.argon_fn->translated.path}, (RuntimeState){registers,
            0,
            NULL,
-           state->currentStackFramePointer,
+           NULL,
            {},
            {},
            state->load_number_cache, object->value.argon_fn->translated.path},
-          scope,
-          *state->currentStackFramePointer,
-          (*state->currentStackFramePointer)->depth + 1};
-      runtime(new_stackFrame.translated, new_stackFrame.state,
-              new_stackFrame.stack, err);
-      state->registers[0] = new_stackFrame.state.registers[0];
+              scope, err);
+      ArgonObject * output = registers[0];
+      state->registers[0] = output;
       return;
     } else {
       StackFrame *currentStackFrame =

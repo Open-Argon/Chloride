@@ -1,0 +1,22 @@
+# SPDX-FileCopyrightText: 2025 William Bell
+#
+# SPDX-License-Identifier: LGPL-3.0-or-later
+let __threading__ = load_native_code(program.file.directory+"native/bin/threading"+platform.lib_ext)
+
+__threading__.Init()
+
+class Thread do
+  this.__init__(self, target) = do
+    self.__started__ = false
+    self.__err__ = null
+    self.__target__ = target
+    self.__thread__ = null
+  this.start(self) = do
+    if (self.__started__) return
+    self.__started__ = true
+    self.__err__ = __threading__.Err_object()
+    self.__thread__ = __threading__.Thread(self.__target__, self.__err__)
+    return self
+  this.join(self) = do
+    if (!self.__started__ || !self.__thread__) return
+    return __threading__.Join(self.__thread__, self.__err__)

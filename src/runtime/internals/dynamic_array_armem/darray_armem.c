@@ -6,7 +6,6 @@
 
 #include "darray_armem.h"
 #include "../../../memory.h"
-#include <gc.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

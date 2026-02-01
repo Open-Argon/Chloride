@@ -5,7 +5,6 @@
  */
 
 #include "memory.h"
-#include <gc.h>
 #include <pthread.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -35,6 +34,7 @@ size_t memory_allocations_size = 0;
 pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 
 void ar_memory_init() {
+  GC_allow_register_threads();
   GC_INIT();
   // memory_allocations_size = 8;
   // memory_allocations = malloc(memory_allocations_size*sizeof(struct
