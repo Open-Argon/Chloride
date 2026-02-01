@@ -1,6 +1,7 @@
 #include "thread.h"
 #include <stdlib.h>
 #include <string.h>
+#include <gc.h>
 
 
 /* =========================
