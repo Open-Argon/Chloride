@@ -14,7 +14,6 @@ struct thread_arg {
   ArgonObject *target;
   ArgonError *err;
   ArgonNativeAPI *api;
-  ArgonObject *return_value;
   mt_thread_t thread;
 };
 
@@ -26,8 +25,6 @@ void *thread_fn(void *arg) {
   ArgonObject *registers;
 
   api->call(args->target, 0, NULL, args->err, api->new_state(&registers));
-
-  args->return_value = registers;
 
   mt_thread_t thread = ((struct thread_arg *)arg)->thread;
   atomic_store(&args->thread.finished, 1);
@@ -101,7 +98,7 @@ ArgonObject *Argon_Thread_join(size_t argc, ArgonObject **argv, ArgonError *err,
   api->set_err(argv[1], err);
 
   /* Free native resources */
-  return thread->return_value;
+  return api->ARGON_NULL;
 }
 
 ArgonObject *Argon_Err_object(size_t argc, ArgonObject **argv, ArgonError *err,

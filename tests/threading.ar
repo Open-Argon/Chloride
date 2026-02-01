@@ -1,15 +1,20 @@
 import "../stdlib/threading" expose Thread
+import "../stdlib/random" expose random
 
-let d() = do
+let thread1_result, thread2_result
+
+let d(until, result) = do
   let i = 0
-  while (i<1e4) do
+  while (i<until) do
     i=i+1
-  return i
+  result(i)
 
 while (true) do
-  let thread = Thread(d).start()
-  let thread2 = Thread(d).start()
+  let thread = Thread(()=d(random.range(0,10),(result)=thread1_result=result)).start()
+  let thread2 = Thread(()=d(random.range(0,10),(result)=thread2_result=result)).start()
 
-  term.log(thread.join())
-  term.log(thread2.join())
+  thread.join()
+  term.log(thread1_result)
+  thread2.join()
+  term.log(thread2_result)
   term.log("done")
