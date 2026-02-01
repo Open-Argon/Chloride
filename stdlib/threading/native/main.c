@@ -20,6 +20,7 @@ struct thread_arg {
 ArgonNativeAPI *api;
 
 void *thread_fn(void *arg) {
+  api->register_thread();
   struct thread_arg *args = ((struct thread_arg *)arg);
 
   ArgonObject *registers;
@@ -28,6 +29,7 @@ void *thread_fn(void *arg) {
 
   mt_thread_t thread = ((struct thread_arg *)arg)->thread;
   atomic_store(&args->thread.finished, 1);
+  api->unregister_thread();
   return NULL;
 }
 
