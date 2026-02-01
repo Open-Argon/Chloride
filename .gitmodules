@@ -14,3 +14,6 @@
 [submodule "external/linenoise"]
 	path = external/linenoise
 	url = https://github.com/antirez/linenoise
+[submodule "external/bdwgc"]
+	path = external/bdwgc
+	url = https://github.com/bdwgc/bdwgc.git
