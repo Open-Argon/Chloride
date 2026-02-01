@@ -8,6 +8,7 @@
 #include "hashmap/hashmap.h"
 #include "import.h"
 #include "memory.h"
+#include "runtime/internals/hashmap/hashmap.h"
 #include "runtime/objects/literals/literals.h"
 #include "runtime/objects/object.h"
 #include "runtime/objects/string/string.h"
@@ -64,6 +65,7 @@ int main(int argc, char *argv[]) {
 
   imported_hash_table = createHashmap_GC();
   importing_hash_table = createHashmap();
+  runtime_hash_table = createHashmap_GC();
   CWD = get_current_directory();
   EXC = get_executable_path();
   CWD_ARGON = CWD?new_string_object_null_terminated(CWD):ARGON_NULL;
@@ -79,8 +81,6 @@ int main(int argc, char *argv[]) {
   }
   free(CWD);
   ar_memory_shutdown();
-  if (runtime_hash_table)
-    hashmap_free(runtime_hash_table, NULL);
   if (err.exists) {
     output_err(err);
     return 1;

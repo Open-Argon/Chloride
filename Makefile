@@ -10,11 +10,11 @@ TARGET_OS ?= posix       # default target, can be 'posix' or 'windows'
 ifeq ($(TARGET_OS),windows)
 	CC     = x86_64-w64-mingw32-gcc
 	BINARY = bin/argon.exe
-	LDFLAGS = -lgc -lgmp -lm -lmpfr -lbcrypt
+	LDFLAGS = -Lexternal/bdwgc/build -lgc -lgmp -lm -lmpfr -lbcrypt
 else
 	CC     = gcc
 	BINARY = bin/argon
-	LDFLAGS = -lgc -lgmp -lm -lmpfr
+	LDFLAGS = -Lexternal/bdwgc/build -lgc -lgmp -lm -lmpfr
 endif
 
 FLEX_TOOL  = flex
@@ -46,7 +46,8 @@ OBJFILES = $(patsubst %.c,$(BUILD_DIR)/%.o,$(CFILES)) \
 CFLAGS  = $(ARCHFLAGS) -Wall -Wextra -Wno-unused-function \
           -Werror=unused-result \
           -Iexternal/cwalk/include \
-          -Iexternal/libdye/include
+          -Iexternal/libdye/include \
+					-Iexternal/bdwgc/include
 
 # Strip flag (only for non-debug builds)
 STRIP_FLAG = -s

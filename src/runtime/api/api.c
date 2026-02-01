@@ -4,13 +4,15 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 #include "api.h"
+#include "../../err.h"
+#include "../../memory.h"
+#include "../call/call.h"
 #include "../objects/buffer/buffer.h"
 #include "../objects/functions/functions.h"
 #include "../objects/literals/literals.h"
 #include "../objects/number/number.h"
+#include "../objects/object.h"
 #include "../objects/string/string.h"
-#include "../../err.h"
-#include "../call/call.h"
 #include <gmp.h>
 #include <inttypes.h>
 #include <math.h>
@@ -120,13 +122,53 @@ struct string argon_to_string(ArgonObject *obj, ArErr *err) {
   return (struct string){obj->value.as_str->data, obj->value.as_str->length};
 }
 
+int register_thread() {
+  struct GC_stack_base sb;
+  GC_get_stack_base(&sb);
+  return GC_register_my_thread(&sb);
+}
+
+ArgonObject *create_err_object() {
+  ArgonObject *obj = new_object();
+  obj->type = TYPE_ERROR;
+  obj->value.err = ar_alloc(sizeof(ArErr));
+  *obj->value.err = no_err;
+  return obj;
+}
+
+ArErr *err_object_to_err(ArgonObject *object, ArErr *err) {
+  if (object->type != TYPE_ERROR)
+    *err = create_err(0, 0, 0, NULL, "Runtime Error", "Expected error object");
+  return object->value.err;
+}
+
+void set_err(ArgonObject *object, ArErr *err) {
+  if (object->type != TYPE_ERROR) {
+    *err = create_err(0, 0, 0, NULL, "Runtime Error", "Expected error object");
+    return;
+  }
+  *err = *object->value.err;
+  return;
+}
+
+RuntimeState *new_state(ArgonObject**registers) {
+  RuntimeState *new_state = ar_alloc(sizeof(RuntimeState));
+  new_state->source_location = (SourceLocation){0,0,0};
+  new_state->load_number_cache = createHashmap_GC();
+  new_state->head = 0;
+  new_state->path = "";
+  // Ensure proper alignment
+  new_state->registers=registers;
+  return new_state;
+}
+
 ArgonNativeAPI native_api = {
     .register_ArgonObject = add_to_hashmap,
     .create_argon_native_function = create_argon_native_function,
     .throw_argon_error = throw_argon_error,
     .is_error = is_error,
     .fix_to_arg_size = fix_to_arg_size,
-    .call=argon_call,
+    .call = argon_call,
 
     .i64_to_argon = new_number_object_from_int64,
     .double_to_argon = new_number_object_from_double,
@@ -134,11 +176,16 @@ ArgonNativeAPI native_api = {
     .argon_to_i64 = argon_to_i64,
     .argon_to_double = argon_to_double,
     .argon_to_rational = argon_to_num_and_den,
-    
+
     .string_to_argon = string_to_argon,
     .argon_to_string = argon_to_string,
 
     .create_argon_buffer = create_ARGON_BUFFER_object,
     .resize_argon_buffer = resize_ARGON_BUFFER_object,
     .argon_buffer_to_buffer = ARGON_BUFFER_to_buffer_struct,
-};
+    .register_thread = register_thread,
+    .unregister_thread = GC_unregister_my_thread,
+    .create_err_object = create_err_object,
+    .err_object_to_err = err_object_to_err,
+    .new_state = new_state,
+    .set_err = set_err};

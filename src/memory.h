@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+#define GC_THREADS
+
 #ifndef ARGON_MEMORY_H
 #define ARGON_MEMORY_H
 

@@ -7,7 +7,6 @@
 #include "runtime.h"
 #include "../err.h"
 #include "../hash_data/hash_data.h"
-#include "../hashmap/hashmap.h"
 #include "../memory.h"
 #include "../parser/number/number.h"
 #include "../translator/translator.h"
@@ -28,7 +27,6 @@
 #include "objects/term/term.h"
 #include "objects/type/type.h"
 #include <fcntl.h>
-#include <gc.h>
 #include <gmp.h>
 #include <inttypes.h>
 #include <stddef.h>
@@ -455,6 +453,7 @@ ArgonObject *ARGON_LESS_THAN_FUNCTION(size_t argc, ArgonObject **argv,
     ArgonObject *function___less_than__ =
         get_builtin_field_for_class(object_class, __less_than__, output);
     if (!function___less_than__) {
+      printf("%d\n", output->type);
       ArgonObject *cls___name__ = get_builtin_field(object_class, __name__);
       *err = create_err(0, 0, 0, "", "Runtime Error",
                         "Object of type '%.*s' is missing __less_than__ method",
@@ -1291,20 +1290,18 @@ static inline void load_const(uint8_t to_register, size_t length,
   state->registers[to_register] = object;
 }
 
-struct hashmap *runtime_hash_table = NULL;
+struct hashmap_GC *runtime_hash_table = NULL;
 
 uint64_t runtime_hash(const void *data, size_t len, uint64_t prehash) {
-  if (!runtime_hash_table) {
-    runtime_hash_table = createHashmap();
-  } else if (prehash) {
-    void *result = hashmap_lookup(runtime_hash_table, prehash);
+  if (prehash) {
+    void *result = hashmap_lookup_GC(runtime_hash_table, prehash);
     if (result) {
       return (uint64_t)result;
     }
   }
   uint64_t hash = siphash64_bytes(data, len, siphash_key);
   if (prehash)
-    hashmap_insert(runtime_hash_table, prehash, 0, (void *)hash, 0);
+    hashmap_insert_GC(runtime_hash_table, prehash, 0, (void *)hash, 0);
   return hash;
 }
 
@@ -1330,17 +1327,17 @@ static inline void load_variable(int64_t length, int64_t offset,
   return;
 }
 
-RuntimeState init_runtime_state(Translated translated, char *path) {
-  RuntimeState runtime = {
-      ar_alloc(translated.registerCount * sizeof(ArgonObject *)),
-      0,
-      NULL,
-      NULL,
-      {0, 0, 0},
-      {},
-      createHashmap_GC(),
-      path};
-  return runtime;
+void init_runtime_state(RuntimeState *runtime, Translated translated,
+                        char *path) {
+  *runtime =
+      (RuntimeState){ar_alloc(translated.registerCount * sizeof(ArgonObject *)),
+                     0,
+                     NULL,
+                     NULL,
+                     {0, 0, 0},
+                     {},
+                     createHashmap_GC(),
+                     path};
 }
 
 Stack *create_scope(Stack *prev, bool force) {
@@ -1432,7 +1429,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
     uint8_t *bc = bytecode->data;
     Translated *translated = &currentStackFrame->translated;
     RuntimeState *state = &currentStackFrame->state;
-    while (likely(ip < bytecode_size && !err.exists)) {
+    while (ip < bytecode_size && !err.exists) {
 
       uint8_t instruction = POP_BYTE();
       // printf("instruction: %d\n", instruction);
@@ -1647,7 +1644,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       if (state->registers[0] == ARGON_TRUE ||
           state->registers[0] == ARGON_FALSE)
         continue;
-      if (likely(state->registers[0]->type != TYPE_OBJECT)) {
+      if ((state->registers[0]->type != TYPE_OBJECT)) {
         state->registers[0] =
             state->registers[0]->as_bool ? ARGON_TRUE : ARGON_FALSE;
         continue;
@@ -1732,7 +1729,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
     DO_NEGATION:
       if (state->registers[0]->type == TYPE_NUMBER) {
         ArgonObject *value = state->registers[0];
-        if (likely(value->value.as_number->is_int64)) {
+        if ((value->value.as_number->is_int64)) {
           int64_t a = value->value.as_number->n.i64;
           state->registers[0] = new_number_object_from_int64(-a);
           continue;
@@ -1782,8 +1779,8 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       ArgonObject *valueB = state->registers[registerB];
 
       if (valueA->type == TYPE_NUMBER && valueB->type == TYPE_NUMBER) {
-        if (likely(valueA->value.as_number->is_int64 &&
-                   valueB->value.as_number->is_int64)) {
+        if ((valueA->value.as_number->is_int64 &&
+             valueB->value.as_number->is_int64)) {
           int64_t a = valueA->value.as_number->n.i64;
           int64_t b = valueB->value.as_number->n.i64;
           bool gonna_overflow = (a > 0 && b > 0 && a > INT64_MAX - b) ||
@@ -1843,8 +1840,8 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       ArgonObject *valueB = state->registers[registerB];
 
       if (valueA->type == TYPE_NUMBER && valueB->type == TYPE_NUMBER) {
-        if (likely(valueA->value.as_number->is_int64 &&
-                   valueB->value.as_number->is_int64)) {
+        if ((valueA->value.as_number->is_int64 &&
+             valueB->value.as_number->is_int64)) {
           int64_t a = valueA->value.as_number->n.i64;
           int64_t b = valueB->value.as_number->n.i64;
           int64_t neg_a = -a;
@@ -1905,8 +1902,8 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       ArgonObject *valueB = state->registers[registerB];
 
       if (valueA->type == TYPE_NUMBER && valueB->type == TYPE_NUMBER) {
-        if (likely(valueA->value.as_number->is_int64 &&
-                   valueB->value.as_number->is_int64)) {
+        if ((valueA->value.as_number->is_int64 &&
+             valueB->value.as_number->is_int64)) {
           int64_t a = valueA->value.as_number->n.i64;
           int64_t b = valueB->value.as_number->n.i64;
           bool gonna_overflow =
@@ -1969,8 +1966,8 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       if (valueA->type == TYPE_NUMBER && valueB->type == TYPE_NUMBER) {
 
         /* ---------- fast int64 ^ int64 path ---------- */
-        if (likely(valueA->value.as_number->is_int64 &&
-                   valueB->value.as_number->is_int64)) {
+        if ((valueA->value.as_number->is_int64 &&
+             valueB->value.as_number->is_int64)) {
 
           int64_t base = valueA->value.as_number->n.i64;
           int64_t exp = valueB->value.as_number->n.i64;
@@ -2099,8 +2096,8 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       ArgonObject *valueB = state->registers[registerB];
 
       if (valueA->type == TYPE_NUMBER && valueB->type == TYPE_NUMBER) {
-        if (likely(valueA->value.as_number->is_int64 &&
-                   valueB->value.as_number->is_int64)) {
+        if ((valueA->value.as_number->is_int64 &&
+             valueB->value.as_number->is_int64)) {
           int64_t a = valueA->value.as_number->n.i64;
           int64_t b = valueB->value.as_number->n.i64;
           if (!b) {
@@ -2162,8 +2159,8 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       ArgonObject *valueB = state->registers[registerB];
 
       if (valueA->type == TYPE_NUMBER && valueB->type == TYPE_NUMBER) {
-        if (likely(valueA->value.as_number->is_int64 &&
-                   valueB->value.as_number->is_int64)) {
+        if ((valueA->value.as_number->is_int64 &&
+             valueB->value.as_number->is_int64)) {
           int64_t a = valueA->value.as_number->n.i64;
           int64_t b = valueB->value.as_number->n.i64;
           if (!b) {
@@ -2224,8 +2221,8 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       ArgonObject *valueB = state->registers[registerB];
 
       if (valueA->type == TYPE_NUMBER && valueB->type == TYPE_NUMBER) {
-        if (likely(valueA->value.as_number->is_int64 &&
-                   valueB->value.as_number->is_int64)) {
+        if ((valueA->value.as_number->is_int64 &&
+             valueB->value.as_number->is_int64)) {
           int64_t a = valueA->value.as_number->n.i64;
           int64_t b = valueB->value.as_number->n.i64;
           if (!b) {
@@ -2286,8 +2283,8 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       ArgonObject *valueB = state->registers[registerB];
 
       if (valueA->type == TYPE_NUMBER && valueB->type == TYPE_NUMBER) {
-        if (likely(valueA->value.as_number->is_int64 &&
-                   valueB->value.as_number->is_int64)) {
+        if ((valueA->value.as_number->is_int64 &&
+             valueB->value.as_number->is_int64)) {
           int64_t a = valueA->value.as_number->n.i64;
           int64_t b = valueB->value.as_number->n.i64;
           state->registers[registerC] = a == b ? ARGON_TRUE : ARGON_FALSE;
@@ -2330,8 +2327,8 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       ArgonObject *valueB = state->registers[registerB];
 
       if (valueA->type == TYPE_NUMBER && valueB->type == TYPE_NUMBER) {
-        if (likely(valueA->value.as_number->is_int64 &&
-                   valueB->value.as_number->is_int64)) {
+        if ((valueA->value.as_number->is_int64 &&
+             valueB->value.as_number->is_int64)) {
           int64_t a = valueA->value.as_number->n.i64;
           int64_t b = valueB->value.as_number->n.i64;
           state->registers[registerC] = a != b ? ARGON_TRUE : ARGON_FALSE;
@@ -2374,8 +2371,8 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       ArgonObject *valueB = state->registers[registerB];
 
       if (valueA->type == TYPE_NUMBER && valueB->type == TYPE_NUMBER) {
-        if (likely(valueA->value.as_number->is_int64 &&
-                   valueB->value.as_number->is_int64)) {
+        if ((valueA->value.as_number->is_int64 &&
+             valueB->value.as_number->is_int64)) {
           int64_t a = valueA->value.as_number->n.i64;
           int64_t b = valueB->value.as_number->n.i64;
           state->registers[registerC] = a < b ? ARGON_TRUE : ARGON_FALSE;
@@ -2418,8 +2415,8 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       ArgonObject *valueB = state->registers[registerB];
 
       if (valueA->type == TYPE_NUMBER && valueB->type == TYPE_NUMBER) {
-        if (likely(valueA->value.as_number->is_int64 &&
-                   valueB->value.as_number->is_int64)) {
+        if ((valueA->value.as_number->is_int64 &&
+             valueB->value.as_number->is_int64)) {
           int64_t a = valueA->value.as_number->n.i64;
           int64_t b = valueB->value.as_number->n.i64;
           state->registers[registerC] = a > b ? ARGON_TRUE : ARGON_FALSE;
@@ -2462,8 +2459,8 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       ArgonObject *valueB = state->registers[registerB];
 
       if (valueA->type == TYPE_NUMBER && valueB->type == TYPE_NUMBER) {
-        if (likely(valueA->value.as_number->is_int64 &&
-                   valueB->value.as_number->is_int64)) {
+        if ((valueA->value.as_number->is_int64 &&
+             valueB->value.as_number->is_int64)) {
           int64_t a = valueA->value.as_number->n.i64;
           int64_t b = valueB->value.as_number->n.i64;
           state->registers[registerC] = a <= b ? ARGON_TRUE : ARGON_FALSE;
@@ -2506,8 +2503,8 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       ArgonObject *valueB = state->registers[registerB];
 
       if (valueA->type == TYPE_NUMBER && valueB->type == TYPE_NUMBER) {
-        if (likely(valueA->value.as_number->is_int64 &&
-                   valueB->value.as_number->is_int64)) {
+        if ((valueA->value.as_number->is_int64 &&
+             valueB->value.as_number->is_int64)) {
           int64_t a = valueA->value.as_number->n.i64;
           int64_t b = valueB->value.as_number->n.i64;
           state->registers[registerC] = a >= b ? ARGON_TRUE : ARGON_FALSE;

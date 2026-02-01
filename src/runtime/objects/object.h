@@ -48,4 +48,6 @@ ArgonObject *get_builtin_field(ArgonObject *target, built_in_fields field);
 
 ArgonObject *get_builtin_field_with_recursion_support(ArgonObject *target, built_in_fields field, bool recursive, bool disable_method_wrapper);
 
+ArgonObject *new_object();
+
 #endif // OBJECT_H

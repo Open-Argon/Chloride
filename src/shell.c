@@ -3,6 +3,7 @@
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
+#include "../external/cwalk/include/cwalk.h"
 #include "./lexer/lexer.h"
 #include "./runtime/call/call.h"
 #include "./runtime/objects/functions/functions.h"
@@ -10,12 +11,11 @@
 #include "./runtime/runtime.h"
 #include "./translator/translator.h"
 #include "LICENSE.h"
+#include "hashmap/hashmap.h"
 #include "import.h"
+#include "memory.h"
 #include "runtime/objects/literals/literals.h"
 #include "runtime/objects/string/string.h"
-#include "../external/cwalk/include/cwalk.h"
-#include "hashmap/hashmap.h"
-#include "memory.h"
 #include <limits.h>
 #include <signal.h>
 #include <stdbool.h>
@@ -70,10 +70,10 @@ int execute_code(FILE *stream, char *path, Stack *scope,
     return 1;
   }
 
-  char path_length = strlen(path)+1;
-  char*path_alloc = ar_alloc(path_length);
+  char path_length = strlen(path) + 1;
+  char *path_alloc = ar_alloc(path_length);
   memcpy(path_alloc, path, path_length);
-  
+
   Translated __translated = init_translator(path_alloc);
   err = translate(&__translated, &ast);
   darray_free(&ast, (void (*)(void *))free_parsed);
@@ -104,7 +104,7 @@ int execute_code(FILE *stream, char *path, Stack *scope,
   translated.constants.capacity = __translated.constants.capacity;
   darray_free(&__translated.bytecode, NULL);
   free(__translated.constants.data);
-  *runtime_state = init_runtime_state(translated, path_alloc);
+  init_runtime_state(runtime_state, translated, path_alloc);
   runtime(translated, *runtime_state, scope, &err);
   if (err.exists) {
     output_err(err);
@@ -168,7 +168,7 @@ int shell() {
   char path[PATH_MAX];
 
   if (!isatty(STDIN_FILENO)) {
-    cwk_path_join(CWD,"<stdin>", path, sizeof(path));
+    cwk_path_join(CWD, "<stdin>", path, sizeof(path));
     RuntimeState runtime_state;
     size_t len;
     char *data = read_all_stdin(&len);
@@ -178,7 +178,7 @@ int shell() {
     free(data);
     return resp;
   }
-  cwk_path_join(CWD,"<shell>", path, sizeof(path));
+  cwk_path_join(CWD, "<shell>", path, sizeof(path));
   add_to_scope(main_scope, "license",
                new_string_object_without_memcpy((char *)LICENSE_txt,
                                                 LICENSE_txt_len, 0, 0));
@@ -186,9 +186,13 @@ int shell() {
   signal(SIGINT, handle_sigint);
 
   printf("Chloride %s Copyright (C) 2026 William Bell\n"
-"This program comes with ABSOLUTELY NO WARRANTY; for details type \"license\".\n"
-"This is libre (freedom-respecting) software released under the GNU GPL Version 3 or later,\n"
-"and you are welcome to redistribute it under certain conditions; type \"license\" for details.\n\n", version_string);
+         "This program comes with ABSOLUTELY NO WARRANTY; for details type "
+         "\"license\".\n"
+         "This is libre (freedom-respecting) software released under the GNU "
+         "GPL Version 3 or later,\n"
+         "and you are welcome to redistribute it under certain conditions; "
+         "type \"license\" for details.\n\n",
+         version_string);
 
   ArgonObject *output_object = create_argon_native_function("log", term_log);
   char *totranslate = NULL;

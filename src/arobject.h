@@ -90,7 +90,7 @@ struct ArgonNativeAPI {
   void (*register_ArgonObject)(hashmap_GC *reg, char *name, ArgonObject *obj);
   ArgonObject *(*create_argon_native_function)(char *name, native_fn);
   ArgonObject *(*call)(ArgonObject *original_object, size_t argc,
-                        ArgonObject **argv, ArErr *err, RuntimeState *state);
+                       ArgonObject **argv, ArErr *err, RuntimeState *state);
   ArgonObject *(*throw_argon_error)(ArErr *err, const char *type,
                                     const char *fmt, ...);
   bool (*is_error)(ArErr *err);
@@ -117,6 +117,14 @@ struct ArgonNativeAPI {
   ArgonObject *ARGON_NULL;
   ArgonObject *ARGON_TRUE;
   ArgonObject *ARGON_FALSE;
+
+  int (*register_thread)();
+  int (*unregister_thread)();
+
+  ArgonObject *(*create_err_object)();
+  ArErr *(*err_object_to_err)(ArgonObject *, ArErr *);
+  RuntimeState *(*new_state)(ArgonObject**registers);
+  void (*set_err)(ArgonObject *object, ArErr *err);
 };
 
 typedef enum ArgonType {
@@ -129,6 +137,7 @@ typedef enum ArgonType {
   TYPE_METHOD,
   TYPE_DICTIONARY,
   TYPE_BUFFER,
+  TYPE_ERROR,
   TYPE_OBJECT,
 } ArgonType;
 
@@ -192,6 +201,7 @@ struct ArgonObject {
   size_t built_in_slot_length;
   struct built_in_slot built_in_slot[BUILT_IN_ARRAY_COUNT];
   union {
+    ArErr *err;
     struct as_number *as_number;
     struct hashmap_GC *as_hashmap;
     struct string_struct *as_str;

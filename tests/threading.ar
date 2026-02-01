@@ -1,0 +1,15 @@
+import "../stdlib/threading" expose Thread
+
+let d() = do
+  let i = 0
+  while (i<1e4) do
+    i=i+1
+  return i
+
+while (true) do
+  let thread = Thread(d).start()
+  let thread2 = Thread(d).start()
+
+  term.log(thread.join())
+  term.log(thread2.join())
+  term.log("done")

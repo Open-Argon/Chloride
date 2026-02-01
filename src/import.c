@@ -419,8 +419,8 @@ Translated load_argon_file(char *path, ArErr *err) {
 
     fclose(file);
   }
-  char path_length = strlen(translated.path)+1;
-  char*path_alloc = ar_alloc(path_length);
+  char path_length = strlen(translated.path) + 1;
+  char *path_alloc = ar_alloc(path_length);
   memcpy(path_alloc, translated.path, path_length);
   hashmap_free(translated.constants.hashmap, NULL);
   Translated gc_translated = {translated.registerCount,
@@ -531,7 +531,8 @@ Stack *ar_import(char *current_directory, char *path_relative, ArErr *err,
     return NULL;
   }
   clock_t start = clock(), end;
-  RuntimeState state = init_runtime_state(translated, path);
+  RuntimeState state;
+  init_runtime_state(&state, translated, path);
   Stack *program_scope = create_scope(Global_Scope, true);
   hashmap_GC *program = createHashmap_GC();
   hashmap_GC *file = createHashmap_GC();

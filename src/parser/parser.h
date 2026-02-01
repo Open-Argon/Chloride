@@ -11,6 +11,7 @@
 #include "../returnTypes.h"
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdlib.h>
 
 #define SWITCH_OPERATIONS                                                      \
   case TOKEN_AND:                                                              \

@@ -61,7 +61,7 @@ typedef struct StackFrame {
 
 void bootstrap_types();
 
-extern struct hashmap *runtime_hash_table;
+extern struct hashmap_GC *runtime_hash_table;
 
 uint64_t runtime_hash(const void *data, size_t len, uint64_t prehash);
 
@@ -74,7 +74,7 @@ static inline void *arena_get(ConstantArena *arena, size_t offset) {
 static inline void run_instruction(Translated *translated, RuntimeState *state,
                                    struct Stack **stack, ArErr *err);
 
-RuntimeState init_runtime_state(Translated translated, char *path);
+void init_runtime_state(RuntimeState *runtime,Translated translated, char *path);
 
 Stack *create_scope(Stack *prev, bool force);
 
