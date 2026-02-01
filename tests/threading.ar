@@ -10,11 +10,11 @@ let d(until, result) = do
   result(i)
 
 while (true) do
-  let thread = Thread(()=d(random.range(0,10),(result)=thread1_result=result)).start()
-  let thread2 = Thread(()=d(random.range(0,10),(result)=thread2_result=result)).start()
+  let thread = Thread(()=d(random.range(0,1000000),(result)=thread1_result=result)).start()
+  let thread2 = Thread(()=d(random.range(0,1000000),(result)=thread2_result=result)).start()
 
-  thread.join()
+  term.log(thread.join())
   term.log(thread1_result)
-  thread2.join()
+  term.log(thread2.join())
   term.log(thread2_result)
   term.log("done")
