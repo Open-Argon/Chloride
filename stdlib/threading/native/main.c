@@ -20,23 +20,24 @@ struct thread_arg {
 ArgonNativeAPI *api;
 
 void *thread_fn(void *arg) {
-  api->register_thread();
-  struct thread_arg *args = ((struct thread_arg *)arg);
-
+  struct thread_arg args = *((struct thread_arg *)arg);
   ArgonObject *registers;
 
-  api->call(args->target, 0, NULL, args->err, api->new_state(&registers));
+  ArgonState *state = api->new_state(&registers);
 
-  mt_thread_t thread = ((struct thread_arg *)arg)->thread;
-  atomic_store(&args->thread.finished, 1);
-  api->unregister_thread();
+  api->call(args.target, 0, NULL, args.err, state);
+
+  atomic_store(&args.thread.finished, 1);
   return NULL;
 }
 
 ArgonObject *Argon_Init(size_t argc, ArgonObject **argv, ArgonError *err,
                         ArgonState *state, ArgonNativeAPI *api_passed) {
+  if (api_passed->fix_to_arg_size(0, argc, err)) {
+    return api_passed->ARGON_NULL;
+  }
   api = api_passed;
-  return api->ARGON_NULL;
+  return api_passed->ARGON_NULL;
 }
 
 ArgonObject *Argon_Thread(size_t argc, ArgonObject **argv, ArgonError *err,

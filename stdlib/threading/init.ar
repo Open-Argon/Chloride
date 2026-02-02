@@ -3,7 +3,6 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 let __threading__ = load_native_code(program.file.directory+"native/bin/threading"+platform.lib_ext)
 
-__threading__.Init()
 
 class Thread do
   this.__init__(self, target) = do
@@ -11,12 +10,19 @@ class Thread do
     self.__err__ = null
     self.__target__ = target
     self.__thread__ = null
+    self.__retval__ = null
+  this.__thread_run__(self) = do
+    self.__retval__ = self.__target__()
   this.start(self) = do
     if (self.__started__) return
     self.__started__ = true
     self.__err__ = __threading__.Err_object()
-    self.__thread__ = __threading__.Thread(self.__target__, self.__err__)
+    self.__thread__ = __threading__.Thread(self.__thread_run__, self.__err__)
     return self
   this.join(self) = do
     if (!self.__started__ || !self.__thread__) return
-    return __threading__.Join(self.__thread__, self.__err__)
+    __threading__.Join(self.__thread__, self.__err__)
+    return self.__retval__
+  
+
+__threading__.Init()

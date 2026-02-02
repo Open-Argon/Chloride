@@ -1,8 +1,11 @@
 #ifndef MINI_THREAD_H
 #define MINI_THREAD_H
 
+#define GC_THREADS
+
 #include <stdatomic.h>
 #include <stddef.h>
+#include <gc/gc.h>
 
 #ifdef _WIN32
   #include <windows.h>

@@ -1,4 +1,5 @@
 #include "thread.h"
+#include <pthread.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -31,7 +32,7 @@ int mt_thread_start(mt_thread_t *t, mt_thread_fn fn, void *arg) {
     if (!t->handle)
         return -1;
 #else
-    if (pthread_create(&t->thread, NULL, fn, arg) != 0)
+    if (GC_pthread_create(&t->thread, NULL, fn, arg) != 0)
         return -1;
 #endif
 

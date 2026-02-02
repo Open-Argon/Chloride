@@ -1,20 +1,32 @@
 import "../stdlib/threading" expose Thread
 import "../stdlib/random" expose random
 
-let thread1_result, thread2_result
-
-let d(until, result) = do
+let d(until) = do
   let i = 0
   while (i<until) do
     i=i+1
-  result(i)
+  return i
 
 while (true) do
-  let thread = Thread(()=d(random.range(0,1000000),(result)=thread1_result=result)).start()
-  let thread2 = Thread(()=d(random.range(0,1000000),(result)=thread2_result=result)).start()
+  let thread = Thread(()=d(random.range(0,10000000))).start()
+  let thread2 = Thread(()=d(random.range(0,10000000))).start()
+  let thread3 = Thread(()=d(random.range(0,10000000))).start()
+  let thread4 = Thread(()=d(random.range(0,10000000))).start()
+  let thread5 = Thread(()=d(random.range(0,10000000))).start()
+  let thread6 = Thread(()=d(random.range(0,10000000))).start()
+  let thread7 = Thread(()=d(random.range(0,10000000))).start()
+  let thread8 = Thread(()=d(random.range(0,10000000))).start()
+  let thread9 = Thread(()=d(random.range(0,10000000))).start()
+  let thread10 = Thread(()=d(random.range(0,10000000))).start()
 
   term.log(thread.join())
-  term.log(thread1_result)
   term.log(thread2.join())
-  term.log(thread2_result)
+  term.log(thread3.join())
+  term.log(thread4.join())
+  term.log(thread5.join())
+  term.log(thread6.join())
+  term.log(thread7.join())
+  term.log(thread8.join())
+  term.log(thread9.join())
+  term.log(thread10.join())
   term.log("done")
