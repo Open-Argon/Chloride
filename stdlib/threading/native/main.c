@@ -58,12 +58,14 @@ void *thread_fn(void *arg) {
   int status = atomic_load(&args->status);
   atomic_store(&args->finished, 1);
 
+  args->api->unregister_thread();
+
   int expected = 0;
   if (status == DETACHED &&
       atomic_compare_exchange_strong(&args->freed, &expected, 1)) {
     args->api->free(arg);
   }
-  args->api->unregister_thread();
+  
   return NULL;
 }
 
