@@ -13,7 +13,7 @@
 #include <stdint.h>
 
 typedef enum {
-  OP_LOAD_STRING,
+  OP_LOAD_STRING=1,
   OP_DECLARE,
   OP_LOAD_NULL,
   OP_LOAD_FUNCTION,

@@ -1,29 +1,31 @@
 import "../stdlib/threading" expose Thread
 import "../stdlib/random" expose random
 
-let d(until) = do
+let d() = do
   let i = 0
-  while (i<until) do
+  while (random.random()>0.0001) do
     i=i+1
   return i
 
-while (true) do
-  let thread1 = Thread(()=d(random.range(0,100000))).start()
-  let thread2 = Thread(()=d(random.range(0,100000))).start()
-  let thread3 = Thread(()=d(random.range(0,100000))).start()
-  let thread4 = Thread(()=d(random.range(0,100000))).start()
-  let thread5 = Thread(()=d(random.range(0,100000))).start()
-  let thread6 = Thread(()=d(random.range(0,100000))).start()
-  let thread7 = Thread(()=d(random.range(0,100000))).start()
-  let thread8 = Thread(()=d(random.range(0,100000))).start()
-  let thread9 = Thread(()=d(random.range(0,100000))).start()
-  let thread10 = Thread(()=d(random.range(0,100000))).start()
-  let thread11 = Thread(()=d(random.range(0,100000))).start()
-  let thread12 = Thread(()=d(random.range(0,100000))).start()
-  let thread13 = Thread(()=d(random.range(0,100000))).start()
-  let thread14 = Thread(()=d(random.range(0,100000))).start()
-  let thread15 = Thread(()=d(random.range(0,100000))).start()
-  let thread16 = Thread(()=d(random.range(0,100000))).start()
+let x = 0
+
+while (x<10) do
+  let thread1 = Thread(()=d()).start()
+  let thread2 = Thread(()=d()).start()
+  let thread3 = Thread(()=d()).start()
+  let thread4 = Thread(()=d()).start()
+  let thread5 = Thread(()=d()).start()
+  let thread6 = Thread(()=d()).start()
+  let thread7 = Thread(()=d()).start()
+  let thread8 = Thread(()=d()).start()
+  let thread9 = Thread(()=d()).start()
+  let thread10 = Thread(()=d()).start()
+  let thread11 = Thread(()=d()).start()
+  let thread12 = Thread(()=d()).start()
+  let thread13 = Thread(()=d()).start()
+  let thread14 = Thread(()=d()).start()
+  let thread15 = Thread(()=d()).start()
+  let thread16 = Thread(()=d()).start()
 
   term.log(thread1.join())
   term.log(thread2.join())
@@ -42,3 +44,4 @@ while (true) do
   term.log(thread15.join())
   term.log(thread16.join())
   term.log("done")
+  x=x+1

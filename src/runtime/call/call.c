@@ -8,7 +8,6 @@
 #include "../../hash_data/hash_data.h"
 #include "../api/api.h"
 #include "../objects/string/string.h"
-#include "../objects/literals/literals.h"
 #include "../../err.h"
 #include "../../memory.h"
 #include <inttypes.h>
