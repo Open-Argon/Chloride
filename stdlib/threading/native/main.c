@@ -4,6 +4,31 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+// NOTE: This threading library interacts directly with the Boehm GC and the
+// Argon runtime, which requires some intentional deviations from normal rules:
+//
+// 1. Thread arguments are allocated using GC_MALLOC_UNCOLLECTABLE to prevent
+//    the GC from freeing them while a thread is still running. This is
+//    necessary because the thread may hold pointers to Argon objects outside
+//    the interpreter.
+//
+// 2. Detached threads are responsible for freeing their own thread argument
+// memory
+//    once they have finished execution. This is safe because:
+//
+//       - Only threads marked as DETACHED will free their memory.
+//       - The status field is atomic, preventing races and double-free.
+//       - Joinable threads are never freed by the thread itself; the joiner
+//       frees them.
+//
+// 3. This design intentionally breaks the usual Argon C API rule against
+// storing
+//    Argon object pointers outside the interpreter, but it is safe here because
+//    the memory is uncollectable and thread access is carefully synchronized.
+//
+// ⚠️ Future maintainers: Do not modify this memory or state handling unless you
+// fully understand the interaction between threads, atomic state, and the GC.
+
 #include "Argon.h"
 #include "thread.h"
 #include <gc/gc.h>
@@ -11,7 +36,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-typedef enum thread_state { UNCHANGED, JOINED, DETACHED } allocation_status;
+typedef enum thread_state {
+  UNCHANGED,
+  JOINED,
+  DETACHED,
+  FREED
+} allocation_status;
 
 struct thread_arg {
   ArgonObject *target;
@@ -32,8 +62,8 @@ void *thread_fn(void *arg) {
   int status = atomic_load(&args->status);
   atomic_store(&args->finished, 1);
   if (status == DETACHED) {
-    printf("free?\n");
-    GC_free(arg);
+    atomic_store(&args->status, FREED);
+    GC_FREE(arg);
   }
   return NULL;
 }
@@ -100,6 +130,7 @@ ArgonObject *Argon_Thread_join(size_t argc, ArgonObject **argv, ArgonError *err,
     mt_thread_join(&thread->thread);
     /* Block until thread exits */
     api->set_err(argv[1], err);
+    atomic_store(&thread->status, FREED);
     GC_FREE(thread);
     return api->ARGON_NULL;
   }
@@ -132,6 +163,7 @@ ArgonObject *Argon_Thread_detach(size_t argc, ArgonObject **argv,
   struct thread_arg *thread = *thread_ptr;
 
   if (atomic_load(&thread->finished)) {
+    atomic_store(&thread->status, FREED);
     GC_FREE(thread);
     return api->ARGON_NULL;
   }
