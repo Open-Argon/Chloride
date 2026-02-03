@@ -1,5 +1,4 @@
 #include "thread.h"
-#include <gc/gc_pthread_redirects.h>
 #include <pthread.h>
 #include <stdlib.h>
 #include <string.h>

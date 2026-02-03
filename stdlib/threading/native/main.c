@@ -31,7 +31,6 @@
 
 #include "Argon.h"
 #include "thread.h"
-#include <gc/gc.h>
 #include <stdatomic.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -62,7 +61,7 @@ void *thread_fn(void *arg) {
   int expected = 0;
   if (status == DETACHED &&
       atomic_compare_exchange_strong(&args->freed, &expected, 1)) {
-    GC_FREE(arg);
+    args->api->free(arg);
   }
   args->api->unregister_thread();
   return NULL;
@@ -81,8 +80,7 @@ ArgonObject *Argon_Thread(size_t argc, ArgonObject **argv, ArgonError *err,
 
   struct thread_arg **gc_args_ptr = GC_managed_args_buffer.data;
 
-  struct thread_arg *gc_args =
-      GC_MALLOC_UNCOLLECTABLE(sizeof(struct thread_arg));
+  struct thread_arg *gc_args = api->malloc(sizeof(struct thread_arg));
 
   *gc_args_ptr = gc_args;
 
@@ -133,7 +131,7 @@ ArgonObject *Argon_Thread_join(size_t argc, ArgonObject **argv, ArgonError *err,
     api->set_err(argv[1], err);
     int expected = 0;
     if (atomic_compare_exchange_strong(&thread->freed, &expected, 1)) {
-      GC_FREE(thread);
+      api->free(thread);
     }
     return api->ARGON_NULL;
   }
@@ -168,7 +166,7 @@ ArgonObject *Argon_Thread_detach(size_t argc, ArgonObject **argv,
   if (atomic_load(&thread->finished)) {
     int expected = 0;
     if (atomic_compare_exchange_strong(&thread->freed, &expected, 1)) {
-      GC_FREE(thread);
+      api->free(thread);
     }
     return api->ARGON_NULL;
   }

@@ -3,7 +3,6 @@
 
 #include <stdatomic.h>
 #include <stddef.h>
-#include <gc/gc.h>
 
 #ifdef _WIN32
   #include <windows.h>

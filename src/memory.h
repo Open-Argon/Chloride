@@ -11,7 +11,7 @@
 
 #include <stddef.h> // for size_t
 #include <stdbool.h>
-#include <gc.h>
+#include <gc/gc.h>
 
 void ar_finalizer(void *obj, GC_finalization_proc fn, void *client_data,
                   GC_finalization_proc *old_fn, void **old_client_data);

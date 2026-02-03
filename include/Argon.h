@@ -88,6 +88,9 @@ struct ArgonNativeAPI {
   ArgonError *(*err_object_to_err)(ArgonObject *, ArgonError *);
   ArgonState *(*new_state)(ArgonObject**registers);
   void (*set_err)(ArgonObject *object, ArgonError *err);
+
+  void* (*malloc)(size_t);
+  void (*free)(void*);
 };
 
 __attribute__((visibility("default"))) void

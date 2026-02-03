@@ -188,4 +188,7 @@ ArgonNativeAPI native_api = {
     .create_err_object = create_err_object,
     .err_object_to_err = err_object_to_err,
     .new_state = new_state,
-    .set_err = set_err};
+    .set_err = set_err,
+    .malloc=GC_malloc_uncollectable,
+    .free=GC_free
+  };
