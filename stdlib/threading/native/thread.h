@@ -2,6 +2,7 @@
 #define MINI_THREAD_H
 
 #define GC_THREADS
+#define GC_NO_THREAD_REDIRECTS
 
 #include <stdatomic.h>
 #include <stddef.h>
@@ -28,7 +29,6 @@ struct mt_thread {
 #else
     pthread_t thread;
 #endif
-    atomic_int finished;
 };
 
 struct mt_mutex {
@@ -67,11 +67,9 @@ typedef void *(*mt_thread_fn)(void *arg);
    Thread API
    ========================= */
 
-int mt_thread_init(mt_thread_t *t);
 int mt_thread_start(mt_thread_t *t, mt_thread_fn fn, void *arg);
-int  mt_thread_join(mt_thread_t *thread, void **retval);
-int mt_thread_is_finished(mt_thread_t *t);
-void mt_thread_destroy(mt_thread_t *thread);
+int mt_thread_join(mt_thread_t *t);
+int mt_thread_detach(mt_thread_t *t);
 
 mt_thread_id_t mt_thread_current_id(void);
 

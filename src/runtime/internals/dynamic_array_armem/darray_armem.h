@@ -10,14 +10,13 @@
 #include <stdbool.h>
 #include <stddef.h> // for size_t
 
-#define CHUNK_SIZE 4096
+#define CHUNK_SIZE 16
 
 typedef struct {
   void *data;
   size_t element_size;
   size_t size;
   size_t capacity;
-  bool resizable;
 } darray_armem;
 
 // Initializes the dynamic_array
@@ -31,9 +30,6 @@ void darray_armem_pop(darray_armem *arr, void (*free_data)(void *));
 
 // Gets a pointer to an element at index
 void *darray_armem_get(darray_armem *arr, size_t index);
-
-// Frees the entire array and optionally each element
-void darray_armem_free(darray_armem *arr, void (*free_data)(void *));
 
 // Resizes the array to a new size (internal use, but exposed)
 void darray_armem_resize(darray_armem *arr, size_t new_size);

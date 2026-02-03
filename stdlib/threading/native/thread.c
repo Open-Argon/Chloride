@@ -1,4 +1,5 @@
 #include "thread.h"
+#include <gc/gc_pthread_redirects.h>
 #include <pthread.h>
 #include <stdlib.h>
 #include <string.h>
@@ -7,14 +8,6 @@
 /* =========================
    Thread implementation
    ========================= */
-
-int mt_thread_init(mt_thread_t *t) {
-
-
-    atomic_init(&t->finished, 0);
-
-    return 0;
-}
 
 int mt_thread_start(mt_thread_t *t, mt_thread_fn fn, void *arg) {
     if (!t || !fn)
@@ -39,25 +32,40 @@ int mt_thread_start(mt_thread_t *t, mt_thread_fn fn, void *arg) {
     return 0;
 }
 
-int mt_thread_join(mt_thread_t *t, void **retval) {
+int mt_thread_join(mt_thread_t *t) {
 #ifdef _WIN32
     WaitForSingleObject(t->handle, INFINITE);
     if (retval) *retval = NULL;
 #else
-    pthread_join(t->thread, retval);
+    GC_pthread_join(t->thread, NULL);
 #endif
     return 0;
 }
 
-int mt_thread_is_finished(mt_thread_t *t) {
-    return atomic_load(&t->finished);
+int mt_thread_detach(mt_thread_t *t) {
+#ifdef _WIN32
+    /* 
+     * Windows threads are detached by closing the handle.
+     * The thread keeps running; the OS cleans up on exit.
+     */
+    if (t->handle) {
+        CloseHandle(t->handle);
+        t->handle = NULL;
+    }
+#else
+    /*
+     * POSIX: mark the thread as detached.
+     * After this, pthread_join MUST NOT be called.
+     */
+    GC_pthread_detach(t->thread);
+#endif
+    return 0;
 }
 
 void mt_thread_destroy(mt_thread_t *t) {
 #ifdef _WIN32
     CloseHandle(t->handle);
 #endif
-    free(t);
 }
 
 /* =========================
