@@ -1496,7 +1496,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       if (cache_number) {
         state->registers[to_register] = cache_number;
         state->head += 16;
-        if (!POP_BYTE()) {
+        if (!is_int) {
           state->head += 16;
         }
         continue;

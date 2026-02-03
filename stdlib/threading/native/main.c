@@ -36,12 +36,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-typedef enum thread_state {
-  UNCHANGED,
-  JOINED,
-  DETACHED,
-  FREED
-} allocation_status;
+typedef enum thread_state { UNCHANGED, JOINED, DETACHED } allocation_status;
 
 struct thread_arg {
   ArgonObject *target;
@@ -50,10 +45,12 @@ struct thread_arg {
   mt_thread_t thread;
   atomic_int status;
   atomic_int finished;
+  atomic_int freed;
 };
 
 void *thread_fn(void *arg) {
   struct thread_arg *args = (struct thread_arg *)arg;
+  args->api->register_thread();
   ArgonObject *registers;
 
   ArgonState *state = args->api->new_state(&registers);
@@ -61,10 +58,13 @@ void *thread_fn(void *arg) {
   args->api->call(args->target, 0, NULL, args->err, state);
   int status = atomic_load(&args->status);
   atomic_store(&args->finished, 1);
-  if (status == DETACHED) {
-    atomic_store(&args->status, FREED);
+
+  int expected = 0;
+  if (status == DETACHED &&
+      atomic_compare_exchange_strong(&args->freed, &expected, 1)) {
     GC_FREE(arg);
   }
+  args->api->unregister_thread();
   return NULL;
 }
 
@@ -96,6 +96,7 @@ ArgonObject *Argon_Thread(size_t argc, ArgonObject **argv, ArgonError *err,
   gc_args->err = err_obj;
   atomic_init(&gc_args->status, UNCHANGED);
   atomic_init(&gc_args->finished, 0);
+  atomic_init(&gc_args->freed, 0);
   if (mt_thread_start(&gc_args->thread, thread_fn, gc_args) != 0) {
     return api->throw_argon_error(err, "Runtime Error",
                                   "Failed to create thread");
@@ -130,8 +131,10 @@ ArgonObject *Argon_Thread_join(size_t argc, ArgonObject **argv, ArgonError *err,
     mt_thread_join(&thread->thread);
     /* Block until thread exits */
     api->set_err(argv[1], err);
-    atomic_store(&thread->status, FREED);
-    GC_FREE(thread);
+    int expected = 0;
+    if (atomic_compare_exchange_strong(&thread->freed, &expected, 1)) {
+      GC_FREE(thread);
+    }
     return api->ARGON_NULL;
   }
 
@@ -163,8 +166,10 @@ ArgonObject *Argon_Thread_detach(size_t argc, ArgonObject **argv,
   struct thread_arg *thread = *thread_ptr;
 
   if (atomic_load(&thread->finished)) {
-    atomic_store(&thread->status, FREED);
-    GC_FREE(thread);
+    int expected = 0;
+    if (atomic_compare_exchange_strong(&thread->freed, &expected, 1)) {
+      GC_FREE(thread);
+    }
     return api->ARGON_NULL;
   }
   int expected = UNCHANGED;

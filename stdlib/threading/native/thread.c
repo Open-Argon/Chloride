@@ -25,7 +25,7 @@ int mt_thread_start(mt_thread_t *t, mt_thread_fn fn, void *arg) {
     if (!t->handle)
         return -1;
 #else
-    if (GC_pthread_create(&t->thread, NULL, fn, arg) != 0)
+    if (pthread_create(&t->thread, NULL, fn, arg) != 0)
         return -1;
 #endif
 
@@ -37,7 +37,7 @@ int mt_thread_join(mt_thread_t *t) {
     WaitForSingleObject(t->handle, INFINITE);
     if (retval) *retval = NULL;
 #else
-    GC_pthread_join(t->thread, NULL);
+    pthread_join(t->thread, NULL);
 #endif
     return 0;
 }
@@ -57,7 +57,7 @@ int mt_thread_detach(mt_thread_t *t) {
      * POSIX: mark the thread as detached.
      * After this, pthread_join MUST NOT be called.
      */
-    GC_pthread_detach(t->thread);
+    pthread_detach(t->thread);
 #endif
     return 0;
 }

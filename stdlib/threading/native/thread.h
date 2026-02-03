@@ -1,9 +1,6 @@
 #ifndef MINI_THREAD_H
 #define MINI_THREAD_H
 
-#define GC_THREADS
-#define GC_NO_THREAD_REDIRECTS
-
 #include <stdatomic.h>
 #include <stddef.h>
 #include <gc/gc.h>
