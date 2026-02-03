@@ -125,6 +125,8 @@ struct ArgonNativeAPI {
   ArErr *(*err_object_to_err)(ArgonObject *, ArErr *);
   RuntimeState *(*new_state)(ArgonObject**registers);
   void (*set_err)(ArgonObject *object, ArErr *err);
+  void* (*malloc)(size_t);
+  void (*free)(void*);
 };
 
 typedef enum ArgonType {

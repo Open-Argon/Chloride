@@ -6,7 +6,7 @@ let d() = do
 
 let x = 0
 
-while (x<10) do
+while (x<2) do
   let thread1 = thread(()=d())
   thread1.start()
   let thread2 = thread(()=d())

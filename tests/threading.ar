@@ -9,7 +9,7 @@ let d() = do
 
 let x = 0
 
-while (x<10) do
+while (x<2) do
   let thread1 = Thread(()=d()).start()
   let thread2 = Thread(()=d()).start()
   let thread3 = Thread(()=d()).start()
