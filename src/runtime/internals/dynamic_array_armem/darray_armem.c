@@ -20,7 +20,6 @@ void darray_armem_init(darray_armem *arr, size_t element_size) {
   arr->size = 0;
   arr->capacity = CHUNK_SIZE / element_size;
   arr->data = ar_alloc(CHUNK_SIZE); // fixed-size byte allocation
-  arr->resizable = true;
 
   if (!arr->data) {
     fprintf(stderr, "darray_armem_init: allocation failed\n");
@@ -29,13 +28,8 @@ void darray_armem_init(darray_armem *arr, size_t element_size) {
 }
 
 void darray_armem_resize(darray_armem *arr, size_t new_size) {
-  if (!arr->resizable) {
-    fprintf(stderr, "darray_armem_resize: unresizable darray_armem\n");
-    exit(EXIT_FAILURE);
-  }
-
   size_t required_bytes = new_size * arr->element_size;
-  size_t new_capacity_bytes =required_bytes*2;
+  size_t new_capacity_bytes = required_bytes * 2;
   size_t new_capacity = new_capacity_bytes / arr->element_size;
 
   if (!new_capacity) {
@@ -55,10 +49,6 @@ void darray_armem_resize(darray_armem *arr, size_t new_size) {
 }
 
 void darray_armem_push(darray_armem *arr, void *element) {
-  if (!arr->resizable) {
-    fprintf(stderr, "darray_armem_resize: unresizable darray_armem\n");
-    exit(EXIT_FAILURE);
-  }
   if (arr->size >= arr->capacity) {
     darray_armem_resize(arr, arr->size + 1);
   } else {
@@ -70,10 +60,6 @@ void darray_armem_push(darray_armem *arr, void *element) {
 }
 
 void darray_armem_pop(darray_armem *arr, void (*free_data)(void *)) {
-  if (!arr->resizable) {
-    fprintf(stderr, "darray_armem_resize: unresizable darray_armem\n");
-    exit(EXIT_FAILURE);
-  }
   if (arr->size == 0)
     return;
 
@@ -101,29 +87,12 @@ darray_armem darray_armem_slice(darray_armem *arr, size_t start, size_t end) {
 
   darray_armem slice;
 
-  slice.data = (char *)arr->data + start * arr->element_size;
   slice.size = (end - start);
   slice.element_size = arr->element_size;
   slice.capacity = ((slice.size + CHUNK_SIZE) / CHUNK_SIZE) * CHUNK_SIZE;
-  slice.resizable = false;
+  slice.data = ar_alloc(slice.capacity);
+  memcpy(slice.data, (char *)arr->data + start * arr->element_size,
+         slice.capacity*slice.element_size);
 
   return slice;
-}
-
-void darray_armem_free(darray_armem *arr, void (*free_data)(void *)) {
-  if (!arr->resizable) {
-    // It's a view/slice — don't free
-    return;
-  }
-  if (free_data) {
-    for (size_t i = 0; i < arr->size; ++i) {
-      void *element = (char *)arr->data + i * arr->element_size;
-      free_data(element);
-    }
-  }
-  arr->data = NULL;
-  arr->size = 0;
-  arr->capacity = 0;
-  arr->element_size = 0;
-  arr->resizable = false;
 }

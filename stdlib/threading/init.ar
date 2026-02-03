@@ -20,9 +20,11 @@ class Thread do
     self.__thread__ = __threading__.Thread(self.__thread_run__, self.__err__)
     return self
   this.join(self) = do
-    if (!self.__started__ || !self.__thread__) return
+    if (!self.__started__ || !self.__thread__) return self.__retval__
     __threading__.Join(self.__thread__, self.__err__)
+    self.__thread__ = null
     return self.__retval__
-  
-
-__threading__.Init()
+  this.detach(self) = do
+    if (!self.__started__ || !self.__thread__) return
+    __threading__.Detach(self.__thread__)
+    return
