@@ -1,43 +1,43 @@
 let d() = do
   let i = 0
-  while (random()>0.0001) do
+  while (random()>0.00001) do
     i=i+1
   return i
 
 let x = 0
 
-while (x<2) do
-  let thread1 = thread(()=d())
+while (x<10) do
+  let thread1 = thread(d)
   thread1.start()
-  let thread2 = thread(()=d())
+  let thread2 = thread(d)
   thread2.start()
-  let thread3 = thread(()=d())
+  let thread3 = thread(d)
   thread3.start()
-  let thread4 = thread(()=d())
+  let thread4 = thread(d)
   thread4.start()
-  let thread5 = thread(()=d())
+  let thread5 = thread(d)
   thread5.start()
-  let thread6 = thread(()=d())
+  let thread6 = thread(d)
   thread6.start()
-  let thread7 = thread(()=d())
+  let thread7 = thread(d)
   thread7.start()
-  let thread8 = thread(()=d())
+  let thread8 = thread(d)
   thread8.start()
-  let thread9 = thread(()=d())
+  let thread9 = thread(d)
   thread9.start()
-  let thread10 = thread(()=d())
+  let thread10 = thread(d)
   thread10.start()
-  let thread11 = thread(()=d())
+  let thread11 = thread(d)
   thread11.start()
-  let thread12 = thread(()=d())
+  let thread12 = thread(d)
   thread12.start()
-  let thread13 = thread(()=d())
+  let thread13 = thread(d)
   thread13.start()
-  let thread14 = thread(()=d())
+  let thread14 = thread(d)
   thread14.start()
-  let thread15 = thread(()=d())
+  let thread15 = thread(d)
   thread15.start()
-  let thread16 = thread(()=d())
+  let thread16 = thread(d)
   thread16.start()
 
 
