@@ -6,6 +6,7 @@
 
 #include "darray_armem.h"
 #include "../../../memory.h"
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -18,25 +19,26 @@ void darray_armem_init(darray_armem *arr, size_t element_size) {
 
   arr->element_size = element_size;
   arr->size = 0;
+  arr->offset = 0;
   arr->capacity = CHUNK_SIZE / element_size;
-  arr->data = ar_alloc(CHUNK_SIZE); // fixed-size byte allocation
+  arr->data = ar_alloc(CHUNK_SIZE);
 
   if (!arr->data) {
     fprintf(stderr, "darray_armem_init: allocation failed\n");
     exit(EXIT_FAILURE);
   }
+
+  pthread_rwlock_init(&arr->lock, NULL);
 }
 
 void darray_armem_resize(darray_armem *arr, size_t new_size) {
-  size_t required_bytes = new_size * arr->element_size;
+  pthread_rwlock_wrlock(&arr->lock);
+
+  size_t required_bytes = (arr->offset + new_size) * arr->element_size;
   size_t new_capacity_bytes = required_bytes * 2;
   size_t new_capacity = new_capacity_bytes / arr->element_size;
 
-  if (!new_capacity) {
-    return;
-  }
-
-  if (new_capacity != arr->capacity) {
+  if (new_capacity && new_capacity != arr->capacity) {
     arr->data = ar_realloc(arr->data, new_capacity_bytes);
     if (!arr->data) {
       fprintf(stderr, "darray_armem_resize: reallocation failed\n");
@@ -46,53 +48,109 @@ void darray_armem_resize(darray_armem *arr, size_t new_size) {
   }
 
   arr->size = new_size;
+
+  pthread_rwlock_unlock(&arr->lock);
 }
 
-void darray_armem_push(darray_armem *arr, void *element) {
+void darray_armem_insert(darray_armem *arr, size_t pos, void *element) {
+  pthread_rwlock_wrlock(&arr->lock);
+
   if (arr->size >= arr->capacity) {
     darray_armem_resize(arr, arr->size + 1);
   } else {
     arr->size++;
   }
 
-  void *target = (char *)arr->data + (arr->size - 1) * arr->element_size;
-  memcpy(target, element, arr->element_size);
-}
+  if (pos > arr->size - 1) pos = arr->size - 1;
 
-void darray_armem_pop(darray_armem *arr, void (*free_data)(void *)) {
-  if (arr->size == 0)
-    return;
+  void *target = (char *)arr->data + (arr->offset + pos) * arr->element_size;
 
-  if (free_data) {
-    void *target = (char *)arr->data + (arr->size - 1) * arr->element_size;
-    free_data(target);
+  if (pos < arr->size - 1) {
+    // shift elements to make space
+    memmove(
+      (char *)target + arr->element_size,
+      target,
+      (arr->size - arr->offset - pos - 1) * arr->element_size
+    );
   }
 
-  darray_armem_resize(arr, arr->size - 1);
+  memcpy(target, element, arr->element_size);
+
+  pthread_rwlock_unlock(&arr->lock);
+}
+
+void *darray_armem_pop(darray_armem *arr, size_t pos) {
+  pthread_rwlock_wrlock(&arr->lock);
+
+  if (arr->size == 0) {
+    pthread_rwlock_unlock(&arr->lock);
+    return NULL;
+  }
+
+  if (pos >= arr->size) pos = arr->size - 1;
+
+  void *target = (char *)arr->data + (arr->offset + pos) * arr->element_size;
+
+  if (pos == 0) {
+    // use offset trick to avoid memmove
+    arr->offset++;
+    arr->size--;
+  } else if (pos < arr->size - 1) {
+    // shift elements down
+    memmove(
+      target,
+      (char *)target + arr->element_size,
+      (arr->size - arr->offset - pos - 1) * arr->element_size
+    );
+    arr->size--;
+  } else {
+    // last element
+    arr->size--;
+  }
+
+  pthread_rwlock_unlock(&arr->lock);
+  return target;
 }
 
 void *darray_armem_get(darray_armem *arr, size_t index) {
+  pthread_rwlock_rdlock(&arr->lock);
+
   if (index >= arr->size) {
+    pthread_rwlock_unlock(&arr->lock);
     fprintf(stderr, "darray_armem_get: index out of bounds\n");
     exit(EXIT_FAILURE);
   }
-  return (char *)arr->data + index * arr->element_size;
+
+  void *ptr = (char *)arr->data + (arr->offset + index) * arr->element_size;
+
+  pthread_rwlock_unlock(&arr->lock);
+  return ptr;
 }
 
 darray_armem darray_armem_slice(darray_armem *arr, size_t start, size_t end) {
+  pthread_rwlock_rdlock(&arr->lock);
+
   if (start > end || end > arr->size) {
+    pthread_rwlock_unlock(&arr->lock);
     fprintf(stderr, "darray_armem_slice: invalid slice range\n");
     exit(EXIT_FAILURE);
   }
 
   darray_armem slice;
 
-  slice.size = (end - start);
+  slice.size = end - start;
   slice.element_size = arr->element_size;
   slice.capacity = ((slice.size + CHUNK_SIZE) / CHUNK_SIZE) * CHUNK_SIZE;
-  slice.data = ar_alloc(slice.capacity);
-  memcpy(slice.data, (char *)arr->data + start * arr->element_size,
-         slice.capacity*slice.element_size);
+  slice.data = ar_alloc(slice.capacity * slice.element_size);
+  memcpy(
+    slice.data,
+    (char *)arr->data + (arr->offset + start) * arr->element_size,
+    slice.size * arr->element_size
+  );
 
+  slice.offset = 0;
+  pthread_rwlock_init(&slice.lock, NULL);
+
+  pthread_rwlock_unlock(&arr->lock);
   return slice;
 }

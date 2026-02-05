@@ -31,7 +31,7 @@ struct hashmap_GC {
   size_t inline_count;
   struct node_GC inline_values[INLINE_HASHMAP_ARRAY_SIZE];
 
-  pthread_mutex_t lock;
+  pthread_rwlock_t lock; // switched to read-write lock
 };
 
 /* Public API (thread-safe) */

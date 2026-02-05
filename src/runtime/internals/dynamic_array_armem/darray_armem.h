@@ -8,7 +8,8 @@
 #define darray_armem_H
 
 #include <stdbool.h>
-#include <stddef.h> // for size_t
+#include <stddef.h>
+#include <pthread.h>
 
 #define CHUNK_SIZE 16
 
@@ -17,23 +18,26 @@ typedef struct {
   size_t element_size;
   size_t size;
   size_t capacity;
+  size_t offset;          // space at the start for efficient pops
+  pthread_rwlock_t lock;
 } darray_armem;
 
-// Initializes the dynamic_array
+// Initialize the dynamic array
 void darray_armem_init(darray_armem *arr, size_t element_size);
 
-// Pushes an element onto the array
-void darray_armem_push(darray_armem *arr, void *element);
+// Insert element at position (size = append)
+void darray_armem_insert(darray_armem *arr, size_t pos, void *element);
 
-// Pops the last element, calling `free_data` if provided
-void darray_armem_pop(darray_armem *arr, void (*free_data)(void *));
+// Pop element at position (size-1 = default pop)
+void *darray_armem_pop(darray_armem *arr, size_t pos);
 
-// Gets a pointer to an element at index
+// Get element at index (read-only)
 void *darray_armem_get(darray_armem *arr, size_t index);
 
-// Resizes the array to a new size (internal use, but exposed)
+// Resize array to new size (internal)
 void darray_armem_resize(darray_armem *arr, size_t new_size);
 
+// Return a slice of the array
 darray_armem darray_armem_slice(darray_armem *arr, size_t start, size_t end);
 
 #endif // darray_armem_H
