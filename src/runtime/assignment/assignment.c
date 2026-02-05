@@ -12,16 +12,16 @@ void runtime_assignment(int64_t length,int64_t offset,int64_t prehash,uint8_t fr
                          struct Stack *stack) {
   void *data = arena_get(&translated->constants, offset);
   uint64_t hash = runtime_hash(data, length, prehash);
-  ArgonObject *key = new_string_object(data, length, prehash, hash);
   for (Stack *current_stack = stack; current_stack;
        current_stack = current_stack->prev) {
     ArgonObject *exists = hashmap_lookup_GC(current_stack->scope, hash);
     if (exists) {
-      hashmap_insert_GC(current_stack->scope, hash, key,
+      hashmap_insert_GC(current_stack->scope, hash, NULL,
                         state->registers[from_register], 0);
       return;
     }
   }
+  ArgonObject *key = new_string_object(data, length, prehash, hash);
   hashmap_insert_GC(stack->scope, hash, key, state->registers[from_register],
                     0);
 }

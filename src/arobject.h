@@ -9,6 +9,7 @@
 
 #include "dynamic_array/darray.h"
 #include "runtime/internals/hashmap/hashmap.h"
+#include <bits/pthreadtypes.h>
 #include <gmp.h>
 #include <limits.h>
 #include <stddef.h>
@@ -213,6 +214,7 @@ struct ArgonObject {
   } value;
   ArgonType type;
   bool as_bool;
+  pthread_rwlock_t lock;
 };
 
 #endif // AROBJECT_H

@@ -75,13 +75,13 @@ $(BUILD_DIR)/%.o: %.c
 # ------------------------------------------------------------
 $(BINARY): $(LEXER_C) $(LEXER_H) $(OBJFILES)
 	mkdir -p bin
-	$(CC) -O3 -o $(BINARY) $(OBJFILES) $(LDFLAGS) $(CFLAGS) $(STRIP_FLAG)
+	$(CC) -o $(BINARY) $(OBJFILES) $(LDFLAGS) $(CFLAGS) $(STRIP_FLAG)
 
 # ------------------------------------------------------------
 # Variants
 # ------------------------------------------------------------
 # Native optimizations
-native: CFLAGS += -march=native
+native: CFLAGS += -march=native -O3
 native: STRIP_FLAG = -s
 native: $(BINARY)
 
