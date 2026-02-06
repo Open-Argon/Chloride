@@ -15,7 +15,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-ArgonObject *ARGON_DICTIONARY_TYPE = NULL;
+ArgonObject *ARGON_DICTIONARY_TYPE;
 
 ArgonObject *create_ARGON_DICTIONARY_TYPE___init__(size_t argc,
                                                    ArgonObject **argv,
@@ -44,7 +44,7 @@ ArgonObject *create_ARGON_DICTIONARY_TYPE___string__(size_t argc,
   (void)state;
   if (argc != 1) {
     *err = create_err(0, 0, 0, "", "Runtime Error",
-                      "__init__ expects 1 argument, got %" PRIu64, argc);
+                      "__string__ expects 1 argument, got %" PRIu64, argc);
     return ARGON_NULL;
   }
   ArgonObject *object = argv[0];

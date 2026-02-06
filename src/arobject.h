@@ -8,6 +8,7 @@
 #define AROBJECT_H
 
 #include "dynamic_array/darray.h"
+#include "runtime/internals/dynamic_array_armem/darray_armem.h"
 #include "runtime/internals/hashmap/hashmap.h"
 #include <bits/pthreadtypes.h>
 #include <gmp.h>
@@ -56,6 +57,9 @@ typedef enum {
   __setitem__,
   __hash__,
   __repr__,
+  append,
+  insert,
+  pop,
 
   BUILT_IN_FIELDS_COUNT,
 } built_in_fields;
@@ -139,6 +143,7 @@ typedef enum ArgonType {
   TYPE_NATIVE_FUNCTION,
   TYPE_METHOD,
   TYPE_DICTIONARY,
+  TYPE_ARRAY,
   TYPE_BUFFER,
   TYPE_ERROR,
   TYPE_OBJECT,
@@ -209,6 +214,7 @@ struct ArgonObject {
     struct hashmap_GC *as_hashmap;
     struct string_struct *as_str;
     struct buffer *as_buffer;
+    darray_armem *as_array;
     native_fn native_fn;
     struct argon_function_struct *argon_fn;
   } value;

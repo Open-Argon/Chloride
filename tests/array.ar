@@ -1,0 +1,9 @@
+let x = []
+
+let i = 0
+while (i<1e5) do
+  x.append(i)
+  i=i+1
+
+term.log("done")
+term.log(x)

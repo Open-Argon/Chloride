@@ -1,0 +1,17 @@
+import "../stdlib/random" expose random
+
+let x = []
+let i = 0
+
+while (i<1e2) do
+  x.append(i)
+  i=i+1
+
+i = 0
+while (i<1e2) do
+  let result = x.pop(random.int(0,x.length-1))
+  x.append(result)
+  # term.log(result)
+  i=i+1
+
+term.log(x)

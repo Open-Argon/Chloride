@@ -72,7 +72,10 @@ const char *built_in_field_names[BUILT_IN_FIELDS_COUNT] = {
     "__getitem__",
     "__setitem__",
     "__hash__",
-    "__repr__"};
+    "__repr__",
+    "append",
+    "insert",
+    "pop"};
 
 uint64_t built_in_field_hashes[BUILT_IN_FIELDS_COUNT];
 

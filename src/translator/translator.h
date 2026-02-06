@@ -56,7 +56,8 @@ typedef enum {
   OP_LOAD_BASE_CLASS,
   OP_IMPORT,
   OP_EXPOSE_ALL,
-  OP_EXPOSE
+  OP_EXPOSE,
+  OP_LOAD_CREATE_ARRAY
 } OperationType;
 
 void arena_resize(ConstantArena *arena, size_t new_size);

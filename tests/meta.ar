@@ -1,0 +1,12 @@
+let x = {}
+x.y=10
+let get_attr = x.__class__.__getattribute__
+let term_log = term.log
+x.__class__.__getattribute__(obj, attr) = do
+  term_log(obj,attr)
+  return get_attr(obj, attr)
+
+term.log(x.y)
+
+x = [10, "hello"]
+term.log(x)

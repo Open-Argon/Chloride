@@ -23,7 +23,7 @@ typedef struct {
 } darray_armem;
 
 // Initialize the dynamic array
-void darray_armem_init(darray_armem *arr, size_t element_size);
+void darray_armem_init(darray_armem *arr, size_t element_size, size_t initial_size);
 
 // Insert element at position (size = append)
 void darray_armem_insert(darray_armem *arr, size_t pos, void *element);

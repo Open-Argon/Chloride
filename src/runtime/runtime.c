@@ -17,6 +17,7 @@
 #include "import/import.h"
 #include "internals/hashmap/hashmap.h"
 #include "native_loader/native_loader.h"
+#include "objects/array/array.h"
 #include "objects/buffer/buffer.h"
 #include "objects/dictionary/dictionary.h"
 #include "objects/functions/functions.h"
@@ -1171,6 +1172,8 @@ void bootstrap_types() {
   create_ARGON_NUMBER_TYPE();
   create_ARGON_BUFFER_TYPE();
 
+  init_array_type();
+
   native_api.ARGON_NULL = ARGON_NULL;
   native_api.ARGON_TRUE = ARGON_TRUE;
   native_api.ARGON_FALSE = ARGON_FALSE;
@@ -1414,7 +1417,8 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       [OP_CREATE_CLASS] = &&DO_CREATE_CLASS,
       [OP_IMPORT] = &&DO_IMPORT,
       [OP_EXPOSE_ALL] = &&DO_EXPOSE_ALL,
-      [OP_EXPOSE] = &&DO_EXPOSE};
+      [OP_EXPOSE] = &&DO_EXPOSE,
+      [OP_LOAD_CREATE_ARRAY] = &&DO_LOAD_CREATE_ARRAY};
   _state.head = 0;
 
   ArErr err = *err_ptr;
@@ -2590,6 +2594,10 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
             state->source_location.length, state->path, "Runtime Error",
             "unable to get __getitem__ from objects class");
       }
+      continue;
+    }
+    DO_LOAD_CREATE_ARRAY: {
+      state->registers[0] = ARGON_ARRAY_CREATE;
       continue;
     }
     }
