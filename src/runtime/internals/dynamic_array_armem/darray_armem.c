@@ -11,17 +11,26 @@
 #include <stdlib.h>
 #include <string.h>
 
-void darray_armem_init(darray_armem *arr, size_t element_size) {
+void darray_armem_init(darray_armem *arr, size_t element_size, size_t initial_size) {
   if (element_size > CHUNK_SIZE) {
     fprintf(stderr, "darray_armem_init: element size larger than chunk size\n");
     exit(EXIT_FAILURE);
   }
 
   arr->element_size = element_size;
-  arr->size = 0;
+  arr->size = initial_size;
   arr->offset = 0;
-  arr->capacity = CHUNK_SIZE / element_size;
-  arr->data = ar_alloc(CHUNK_SIZE);
+
+  size_t bytes_needed = initial_size * element_size;
+
+  // round up to chunk size
+  size_t chunks =
+      (bytes_needed + CHUNK_SIZE - 1) / CHUNK_SIZE;
+
+  size_t alloc_size = chunks * CHUNK_SIZE;
+
+  arr->capacity = alloc_size / element_size;
+  arr->data = ar_alloc(alloc_size);
 
   if (!arr->data) {
     fprintf(stderr, "darray_armem_init: allocation failed\n");
@@ -31,9 +40,7 @@ void darray_armem_init(darray_armem *arr, size_t element_size) {
   pthread_rwlock_init(&arr->lock, NULL);
 }
 
-void darray_armem_resize(darray_armem *arr, size_t new_size) {
-  pthread_rwlock_wrlock(&arr->lock);
-
+static void darray_armem_resize_nolock(darray_armem *arr, size_t new_size) {
   size_t required_bytes = (arr->offset + new_size) * arr->element_size;
   size_t new_capacity_bytes = required_bytes * 2;
   size_t new_capacity = new_capacity_bytes / arr->element_size;
@@ -48,29 +55,34 @@ void darray_armem_resize(darray_armem *arr, size_t new_size) {
   }
 
   arr->size = new_size;
+}
 
+void darray_armem_resize(darray_armem *arr, size_t new_size) {
+  pthread_rwlock_wrlock(&arr->lock);
+  darray_armem_resize_nolock(arr, new_size);
   pthread_rwlock_unlock(&arr->lock);
 }
 
 void darray_armem_insert(darray_armem *arr, size_t pos, void *element) {
   pthread_rwlock_wrlock(&arr->lock);
 
+  if (pos > arr->size)
+    pos = arr->size;
+
   if (arr->size >= arr->capacity) {
-    darray_armem_resize(arr, arr->size + 1);
+    darray_armem_resize_nolock(arr, arr->size + 1);
   } else {
     arr->size++;
   }
 
-  if (pos > arr->size - 1) pos = arr->size - 1;
-
-  void *target = (char *)arr->data + (arr->offset + pos) * arr->element_size;
+  void *base = (char *)arr->data + arr->offset * arr->element_size;
+  void *target = (char *)base + pos * arr->element_size;
 
   if (pos < arr->size - 1) {
-    // shift elements to make space
     memmove(
       (char *)target + arr->element_size,
       target,
-      (arr->size - arr->offset - pos - 1) * arr->element_size
+      (arr->size - pos - 1) * arr->element_size
     );
   }
 
@@ -87,24 +99,20 @@ void *darray_armem_pop(darray_armem *arr, size_t pos) {
     return NULL;
   }
 
-  if (pos >= arr->size) pos = arr->size - 1;
+  if (pos >= arr->size)
+    pos = arr->size - 1;
 
-  void *target = (char *)arr->data + (arr->offset + pos) * arr->element_size;
+  void *base = (char *)arr->data + arr->offset * arr->element_size;
+  void *target = (char *)base + pos * arr->element_size;
 
-  if (pos == 0) {
-    // use offset trick to avoid memmove
-    arr->offset++;
-    arr->size--;
-  } else if (pos < arr->size - 1) {
-    // shift elements down
+  if (pos < arr->size - 1) {
     memmove(
       target,
       (char *)target + arr->element_size,
-      (arr->size - arr->offset - pos - 1) * arr->element_size
+      (arr->size - pos - 1) * arr->element_size
     );
     arr->size--;
   } else {
-    // last element
     arr->size--;
   }
 

@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include "list.h"
+#include "array.h"
 #include "../../lexer/token.h"
 #include "../../memory.h"
 #include "../parser.h"
@@ -13,9 +13,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-ParsedValueReturn parse_list(char *file, DArray *tokens, size_t *index) {
+ParsedValueReturn parse_array(char *file, DArray *tokens, size_t *index) {
   ParsedValue *parsedValue = checked_malloc(sizeof(ParsedValue));
-  parsedValue->type = AST_LIST;
+  parsedValue->type = AST_ARRAY;
   DArray *list = checked_malloc(sizeof(DArray));
   parsedValue->data = list;
   darray_init(list, sizeof(ParsedValue));
@@ -73,7 +73,7 @@ ParsedValueReturn parse_list(char *file, DArray *tokens, size_t *index) {
   return (ParsedValueReturn){no_err, parsedValue};
 }
 
-void free_parsed_list(void *ptr) {
+void free_parsed_array(void *ptr) {
   ParsedValue *parsedValue = ptr;
   DArray *parsed_list = parsedValue->data;
   darray_free(parsed_list, (void (*)(void *))free_parsed);

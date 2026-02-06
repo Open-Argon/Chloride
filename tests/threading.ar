@@ -3,7 +3,7 @@ import "../stdlib/random" expose random
 
 let d() = do
   let i = 0
-  while (random.random()>0.00001) do
+  while (random.random()>0.0001) do
     i=i+1
   return i
 

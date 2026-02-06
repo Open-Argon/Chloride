@@ -5,13 +5,14 @@
  */
 
 #include "translator.h"
+#include "../err.h"
 #include "../hash_data/hash_data.h"
+#include "../hashmap/hashmap.h"
 #include "../parser/assignable/item/item.h"
 #include "../parser/dictionary/dictionary.h"
 #include "../parser/not/not.h"
 #include "access/access.h"
 #include "assignment/assignment.h"
-#include "../err.h"
 #include "call/call.h"
 #include "class/class.h"
 #include "declaration/declaration.h"
@@ -19,11 +20,11 @@
 #include "function/function.h"
 #include "identifier/identifier.h"
 #include "if/if.h"
+#include "import/import.h"
 #include "item_access/item_access.h"
 #include "number/number.h"
 #include "operation/operation.h"
 #include "return/return.h"
-#include "import/import.h"
 #include "string/string.h"
 #include "while/while.h"
 #include <stddef.h>
@@ -31,7 +32,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "../hashmap/hashmap.h"
 
 void uint64_to_bytes(uint64_t value, uint8_t bytes[8]) {
   for (int i = 0; i < 8; i++) {
@@ -195,7 +195,24 @@ size_t translate_parsed(Translated *translated, ParsedValue *parsedValue,
     return first;
   }
   case AST_IMPORT:
-    return translate_parsed_import(translated, (ParsedImport *)parsedValue->data, err);
+    return translate_parsed_import(translated,
+                                   (ParsedImport *)parsedValue->data, err);
+  case AST_ARRAY: {
+    DArray *arrayDarray = parsedValue->data;
+    size_t first = push_instruction_byte(translated, OP_LOAD_CREATE_ARRAY);
+    push_instruction_byte(translated, OP_INIT_CALL);
+    push_instruction_code(translated, arrayDarray->size);
+    for (size_t i = 0; i < arrayDarray->size; i++) {
+      translate_parsed(translated, darray_get(arrayDarray, i), err);
+      if (err->exists)
+        return first;
+
+      push_instruction_byte(translated, OP_INSERT_ARG);
+      push_instruction_code(translated, i);
+    }
+    push_instruction_byte(translated, OP_CALL);
+    return first;
+  }
   case AST_DICTIONARY: {
     DArray *dictionaryDarray = parsedValue->data;
 

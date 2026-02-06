@@ -138,7 +138,7 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
     }
     if (CStackFrame) {
       ArgonObject
-          **registers=ar_alloc(sizeof(ArgonObject)*object->value.argon_fn->translated.registerCount); // fixed on the stack for speed purposes
+          **registers=ar_alloc(sizeof(ArgonObject)*object->value.argon_fn->translated.registerCount);
       runtime((Translated){object->value.argon_fn->translated.registerCount,
            object->value.argon_fn->translated.registerAssignment,
            NULL,

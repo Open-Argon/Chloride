@@ -1,7 +1,0 @@
-# SPDX-FileCopyrightText: 2025 William Bell
-#
-# SPDX-License-Identifier: GPL-3.0-or-later
-
-let i = 1e7
-while (i) do
-  i=i-1
