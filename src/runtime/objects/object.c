@@ -10,7 +10,6 @@
 #include "../../memory.h"
 #include "../call/call.h"
 #include "type/type.h"
-#include <bits/pthreadtypes.h>
 #include <pthread.h>
 #include <stdbool.h>
 #include <stddef.h>

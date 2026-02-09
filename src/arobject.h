@@ -10,7 +10,6 @@
 #include "dynamic_array/darray.h"
 #include "runtime/internals/dynamic_array_armem/darray_armem.h"
 #include "runtime/internals/hashmap/hashmap.h"
-#include <bits/pthreadtypes.h>
 #include <gmp.h>
 #include <limits.h>
 #include <stddef.h>
