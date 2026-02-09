@@ -8,10 +8,14 @@
 #define ITEM_ACCESS_H
 #include "../../parser.h"
 #include "../../../lexer/token.h"  // for Token
+
+typedef struct {
+  DArray items;
+} ParsedSubscript;
+
 typedef struct {
   ParsedValue *to_access;
-  ParsedValue **items;
-  size_t itemc;
+  DArray subscripts;
   size_t line;
   size_t column;
   size_t length;

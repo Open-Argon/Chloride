@@ -17,6 +17,7 @@
 #include <inttypes.h>
 #include <math.h>
 #include <stdarg.h>
+#include <stdio.h>
 #include <string.h>
 
 ArgonObject *throw_argon_error(ArErr *err, const char *type, const char *fmt,

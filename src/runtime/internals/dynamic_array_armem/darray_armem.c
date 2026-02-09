@@ -6,6 +6,7 @@
 
 #include "darray_armem.h"
 #include "../../../memory.h"
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -91,12 +92,12 @@ void darray_armem_insert(darray_armem *arr, size_t pos, void *element) {
   pthread_rwlock_unlock(&arr->lock);
 }
 
-void *darray_armem_pop(darray_armem *arr, size_t pos) {
+bool darray_armem_pop(darray_armem *arr, size_t pos, void*out) {
   pthread_rwlock_wrlock(&arr->lock);
 
   if (arr->size == 0) {
     pthread_rwlock_unlock(&arr->lock);
-    return NULL;
+    return false;
   }
 
   if (pos >= arr->size)
@@ -104,6 +105,8 @@ void *darray_armem_pop(darray_armem *arr, size_t pos) {
 
   void *base = (char *)arr->data + arr->offset * arr->element_size;
   void *target = (char *)base + pos * arr->element_size;
+
+  memcpy(out, target, arr->element_size);
 
   if (pos < arr->size - 1) {
     memmove(
@@ -117,7 +120,7 @@ void *darray_armem_pop(darray_armem *arr, size_t pos) {
   }
 
   pthread_rwlock_unlock(&arr->lock);
-  return target;
+  return true;
 }
 
 void *darray_armem_get(darray_armem *arr, size_t index) {

@@ -29,7 +29,7 @@ void darray_armem_init(darray_armem *arr, size_t element_size, size_t initial_si
 void darray_armem_insert(darray_armem *arr, size_t pos, void *element);
 
 // Pop element at position (size-1 = default pop)
-void *darray_armem_pop(darray_armem *arr, size_t pos);
+bool darray_armem_pop(darray_armem *arr, size_t pos, void*out);
 
 // Get element at index (read-only)
 void *darray_armem_get(darray_armem *arr, size_t index);

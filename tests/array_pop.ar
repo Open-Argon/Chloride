@@ -3,15 +3,16 @@ import "../stdlib/random" expose random
 let x = []
 let i = 0
 
-while (i<1e2) do
+while (i<1e6) do
   x.append(i)
   i=i+1
 
+let y = []
 i = 0
-while (i<1e2) do
+while (x.length) do
   let result = x.pop(random.int(0,x.length-1))
-  x.append(result)
+  y.append(result)
   # term.log(result)
   i=i+1
 
-term.log(x)
+# term.log(y)
