@@ -30,6 +30,7 @@ ParsedValueReturn parse_assign(char *file, DArray *tokens,
   switch (assign_to->type) {
   case AST_IDENTIFIER:
   case AST_ACCESS:
+  case AST_ITEM_ACCESS:
     break;
   case AST_CALL:;
     ParsedCall *call = assign_to->data;

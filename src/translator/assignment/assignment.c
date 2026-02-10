@@ -8,6 +8,7 @@
 #include "../../hash_data/hash_data.h"
 #include "../../parser/assignable/access/access.h"
 #include "../../parser/assignable/identifier/identifier.h"
+#include "../../parser/assignable/item/item.h"
 #include "../translator.h"
 #include <stddef.h>
 #include <stdio.h>
@@ -42,10 +43,10 @@ size_t translate_parsed_assignment(Translated *translated,
                                           siphash_key_fixed_for_translator));
     push_instruction_byte(translated, 0);
     break;
-  case AST_ACCESS:;
+  case AST_ACCESS: {
     ParsedAccess *access = assignment->to->data;
     uint8_t registerA = translated->registerAssignment++;
-    set_registers(translated, registerA);
+    set_registers(translated, translated->registerAssignment);
     push_instruction_byte(translated, OP_COPY_TO_REGISTER);
     push_instruction_byte(translated, 0);
     push_instruction_byte(translated, registerA);
@@ -70,7 +71,46 @@ size_t translate_parsed_assignment(Translated *translated,
     push_instruction_byte(translated, OP_CALL);
     translated->registerAssignment--;
     break;
-  
+  }
+  case AST_ITEM_ACCESS: {
+    ParsedItemAccess *access = assignment->to->data;
+    uint8_t registerA = translated->registerAssignment++;
+    set_registers(translated, translated->registerAssignment);
+    push_instruction_byte(translated, OP_COPY_TO_REGISTER);
+    push_instruction_byte(translated, 0);
+    push_instruction_byte(translated, registerA);
+    translate_parsed(translated, access->to_access, err);
+    if (err->exists)
+      return 0;
+    push_instruction_byte(translated, OP_LOAD_SETITEM_METHOD);
+    push_instruction_byte(translated, OP_INIT_CALL);
+    push_instruction_code(translated, 2);
+    if (access->subscripts.size == 1) {
+      DArray *subscript = darray_get(&access->subscripts, 0);
+      if (subscript->size == 1) {
+        ParsedValue *item = *(ParsedValue **)darray_get(subscript, 0);
+        translate_parsed(translated, item, err);
+        if (err->exists)
+          return 0;
+      } else {
+        // TODO: add subscript
+      }
+    } else {
+      // TODO: add tuple
+    }
+    push_instruction_byte(translated, OP_INSERT_ARG);
+    push_instruction_code(translated, 0);
+
+    push_instruction_byte(translated, OP_COPY_TO_REGISTER);
+    push_instruction_byte(translated, registerA);
+    push_instruction_byte(translated, 0);
+    push_instruction_byte(translated, OP_INSERT_ARG);
+    push_instruction_code(translated, 1);
+
+    push_instruction_byte(translated, OP_CALL);
+    translated->registerAssignment--;
+    break;
+  }
   default:
     fprintf(stderr, "panic: unsupported assignment\n");
     exit(EXIT_FAILURE);

@@ -1,0 +1,21 @@
+import "../stdlib/random" expose random
+
+let x = []
+let i = 0
+
+while (i<1e5) do
+  x.append(i)
+  i=i+1
+
+i = 0
+let len = x.length
+while (i<len) do
+  let random_index = random.int(0,len-1)
+  let temp = x[len-1]
+  x[len-1] = x[random_index]
+  x[random_index] = temp
+
+  # term.log(result)
+  i=i+1
+
+term.log(x)
