@@ -1,47 +1,26 @@
 import "../stdlib/threading" expose Thread
-import "../stdlib/random" expose random
 
 let d() = do
   let i = 0
-  while (random.random()>0.0001) do
+  while (i<1e6) do
     i=i+1
   return i
 
 let x = 0
 
-while (x<10) do
-  let thread1 = Thread(d).start()
-  let thread2 = Thread(d).start()
-  let thread3 = Thread(d).start()
-  let thread4 = Thread(d).start()
-  let thread5 = Thread(d).start()
-  let thread6 = Thread(d).start()
-  let thread7 = Thread(d).start()
-  let thread8 = Thread(d).start()
-  let thread9 = Thread(d).start()
-  let thread10 = Thread(d).start()
-  let thread11 = Thread(d).start()
-  let thread12 = Thread(d).start()
-  let thread13 = Thread(d).start()
-  let thread14 = Thread(d).start()
-  let thread15 = Thread(d).start()
-  let thread16 = Thread(d).start()
+let n = 16
 
-  term.log(thread1.join())
-  term.log(thread2.join())
-  term.log(thread3.join())
-  term.log(thread4.join())
-  term.log(thread5.join())
-  term.log(thread6.join())
-  term.log(thread7.join())
-  term.log(thread8.join())
-  term.log(thread9.join())
-  term.log(thread10.join())
-  term.log(thread11.join())
-  term.log(thread12.join())
-  term.log(thread13.join())
-  term.log(thread14.join())
-  term.log(thread15.join())
-  term.log(thread16.join())
-  term.log("done")
+while (x<10) do
+  let threads = []
+  let i = 0
+  while (i<n) do
+    threads.append(Thread(d).start())
+    i=i+1
+
+  i = 0
+  while (i<threads.length) do
+    term.log(threads[i].join())
+    i=i+1
+
+  term.log("done", x)
   x=x+1

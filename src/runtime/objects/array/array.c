@@ -200,7 +200,7 @@ ArgonObject *ARGON_ARRAY___getitem__(size_t argc, ArgonObject **argv,
     return ARGON_NULL;
   darray_armem *arr = argv[0]->value.as_array;
   if (index<0) index+=arr->size;
-  if (index>=arr->size || index<=0) {
+  if (index>=(int64_t)arr->size || index<0) {
     return api->throw_argon_error(err, "Index Error", "index out of range");
   }
   return *(ArgonObject **)darray_armem_get(arr, index);
