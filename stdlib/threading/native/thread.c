@@ -34,7 +34,6 @@ int mt_thread_start(mt_thread_t *t, mt_thread_fn fn, void *arg) {
 int mt_thread_join(mt_thread_t *t) {
 #ifdef _WIN32
     WaitForSingleObject(t->handle, INFINITE);
-    if (retval) *retval = NULL;
 #else
     pthread_join(t->thread, NULL);
 #endif
