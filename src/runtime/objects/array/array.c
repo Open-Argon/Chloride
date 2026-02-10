@@ -206,6 +206,29 @@ ArgonObject *ARGON_ARRAY___getitem__(size_t argc, ArgonObject **argv,
   return *(ArgonObject **)darray_armem_get(arr, index);
 }
 
+ArgonObject *ARGON_ARRAY___setitem__(size_t argc, ArgonObject **argv,
+                                     ArErr *err, RuntimeState *state,
+                                     ArgonNativeAPI *api) {
+  (void)state;
+  if (argc != 3) {
+    *err =
+        create_err(0, 0, 0, "", "Runtime Error",
+                   "__setitem__ expects 3 arguments, got %" PRIu64, argc);
+    return ARGON_NULL;
+  }
+  int64_t index = api->argon_to_i64(argv[1], err);
+  if (api->is_error(err))
+    return ARGON_NULL;
+  darray_armem *arr = argv[0]->value.as_array;
+  if (index<0) index+=arr->size;
+  if (index>=(int64_t)arr->size || index<0) {
+    return api->throw_argon_error(err, "Index Error", "index out of range");
+  }
+  ArgonObject** ptr = darray_armem_get(arr, index);
+  *ptr = argv[2];
+  return *ptr;
+}
+
 void init_array_type() {
   ARRAY_TYPE = new_class();
   add_builtin_field(ARRAY_TYPE, __name__,
@@ -228,6 +251,9 @@ void init_array_type() {
   add_builtin_field(
       ARRAY_TYPE, __getitem__,
       create_argon_native_function("__getitem__", ARGON_ARRAY___getitem__));
+  add_builtin_field(
+      ARRAY_TYPE, __setitem__,
+      create_argon_native_function("__setitem__", ARGON_ARRAY___setitem__));
 
   ARGON_ARRAY_CREATE =
       create_argon_native_function("ARRAY_CREATE", ARRAY_CREATE);
