@@ -15,10 +15,10 @@
 ArgonObject *ARGON_BUFFER_TYPE = NULL;
 
 ArgonObject *create_ARGON_BUFFER_object(size_t size) {
-  ArgonObject *object = new_instance(ARGON_BUFFER_TYPE);
+  ArgonObject *object = new_instance(ARGON_BUFFER_TYPE,sizeof(struct buffer)+size);
   object->type = TYPE_BUFFER;
-  object->value.as_buffer = ar_alloc(sizeof(struct buffer));
-  object->value.as_buffer->data = ar_alloc_atomic(size);
+  object->value.as_buffer = (struct buffer*)((char*)object+sizeof(ArgonObject));
+  object->value.as_buffer->data = (char*)object+sizeof(ArgonObject)+sizeof(struct buffer);
   object->value.as_buffer->size = size;
   return object;
 }

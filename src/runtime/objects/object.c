@@ -78,8 +78,8 @@ const char *built_in_field_names[BUILT_IN_FIELDS_COUNT] = {
 
 uint64_t built_in_field_hashes[BUILT_IN_FIELDS_COUNT];
 
-ArgonObject *new_object() {
-  ArgonObject *object = ar_alloc(sizeof(ArgonObject));
+ArgonObject *new_object(size_t endSize) {
+  ArgonObject *object = ar_alloc(sizeof(ArgonObject)+endSize);
   object->built_in_slot_length = 0;
   object->type = TYPE_OBJECT;
   object->dict = NULL;
@@ -87,21 +87,22 @@ ArgonObject *new_object() {
   return object;
 }
 
-#define SMALL_OBJECT_ASSIGNMENT_AMOUNT 1024
-ArgonObject *small_objects;
-size_t small_objects_pos = SMALL_OBJECT_ASSIGNMENT_AMOUNT;
+#define SMALL_OBJECT_ASSIGNMENT_AMOUNT 512
+void *small_objects;
+size_t small_objects_pos = SMALL_OBJECT_ASSIGNMENT_AMOUNT*sizeof(ArgonObject);
 pthread_mutex_t objects_mutex;
 
-ArgonObject *new_small_object() {
+ArgonObject *new_small_object(size_t endSize) {
   ArgonObject *object;
   pthread_mutex_lock(&objects_mutex);
-  if (small_objects_pos < SMALL_OBJECT_ASSIGNMENT_AMOUNT) {
-    object = small_objects + small_objects_pos++;
+  if (small_objects_pos+sizeof(ArgonObject)+endSize < SMALL_OBJECT_ASSIGNMENT_AMOUNT*sizeof(ArgonObject)) {
+    object = small_objects + small_objects_pos;
+    small_objects_pos+=sizeof(ArgonObject)+endSize;
   } else {
     small_objects =
         ar_alloc(sizeof(ArgonObject) * SMALL_OBJECT_ASSIGNMENT_AMOUNT);
     object = small_objects;
-    small_objects_pos = 0;
+    small_objects_pos = sizeof(ArgonObject)+endSize;
   }
   pthread_mutex_unlock(&objects_mutex);
   object->built_in_slot_length = 0;
@@ -136,20 +137,20 @@ int64_t hash_object(ArgonObject *object, ArErr *err, RuntimeState *state) {
 }
 
 ArgonObject *new_class() {
-  ArgonObject *object = new_object();
+  ArgonObject *object = new_object(0);
   add_builtin_field(object, __class__, ARGON_TYPE_TYPE);
   add_builtin_field(object, __base__, BASE_CLASS);
   return object;
 }
 
-ArgonObject *new_small_instance(ArgonObject *of) {
-  ArgonObject *object = new_object();
+ArgonObject *new_small_instance(ArgonObject *of, size_t endSize) {
+  ArgonObject *object = new_small_object(endSize);
   add_builtin_field(object, __class__, of);
   return object;
 }
 
-ArgonObject *new_instance(ArgonObject *of) {
-  ArgonObject *object = new_object();
+ArgonObject *new_instance(ArgonObject *of, size_t endSize) {
+  ArgonObject *object = new_object(endSize);
   add_builtin_field(object, __class__, of);
   return object;
 }
@@ -208,7 +209,7 @@ void add_field_l(ArgonObject *target, char *name, uint64_t hash, size_t length,
 
 ArgonObject *bind_object_to_function(ArgonObject *object,
                                      ArgonObject *function) {
-  ArgonObject *bound_method_wrapper = new_instance(ARGON_METHOD_TYPE);
+  ArgonObject *bound_method_wrapper = new_instance(ARGON_METHOD_TYPE, 0);
   bound_method_wrapper->type = TYPE_METHOD;
   add_builtin_field(bound_method_wrapper, __binding__, object);
   add_builtin_field(bound_method_wrapper, __function__, function);

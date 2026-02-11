@@ -17,8 +17,8 @@ extern const char *built_in_field_names[BUILT_IN_FIELDS_COUNT];
 typedef struct ArgonObject ArgonObject;
 
 ArgonObject *new_class();
-ArgonObject *new_small_instance(ArgonObject *of);
-ArgonObject *new_instance(ArgonObject * of);
+ArgonObject *new_small_instance(ArgonObject *of, size_t endSize);
+ArgonObject *new_instance(ArgonObject *of, size_t endSize);
 
 void init_built_in_field_hashes();
 
@@ -49,6 +49,6 @@ ArgonObject *get_builtin_field(ArgonObject *target, built_in_fields field);
 
 ArgonObject *get_builtin_field_with_recursion_support(ArgonObject *target, built_in_fields field, bool recursive, bool disable_method_wrapper);
 
-ArgonObject *new_object();
+ArgonObject *new_object(size_t endSize);
 
 #endif // OBJECT_H

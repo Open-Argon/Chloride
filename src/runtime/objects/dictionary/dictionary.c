@@ -266,7 +266,7 @@ void create_ARGON_DICTIONARY_TYPE() {
 }
 
 ArgonObject *create_dictionary(struct hashmap_GC *hashmap) {
-  ArgonObject *object = new_instance(ARGON_DICTIONARY_TYPE);
+  ArgonObject *object = new_instance(ARGON_DICTIONARY_TYPE,0);
   object->type = TYPE_DICTIONARY;
   object->value.as_hashmap = hashmap;
   return object;
