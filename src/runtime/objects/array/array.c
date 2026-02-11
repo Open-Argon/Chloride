@@ -27,10 +27,11 @@ ArgonObject *ARRAY_CREATE(size_t argc, ArgonObject **argv, ArErr *err,
   (void)err;
   (void)state;
   (void)api;
-  ArgonObject *object = new_instance(ARRAY_TYPE,sizeof(darray_armem));
+  ArgonObject *object = new_instance(ARRAY_TYPE, sizeof(darray_armem));
   object->type = TYPE_ARRAY;
 
-  object->value.as_array = (darray_armem*)((char*)object+sizeof(ArgonObject));
+  object->value.as_array =
+      (darray_armem *)((char *)object + sizeof(ArgonObject));
 
   darray_armem_init(object->value.as_array, sizeof(ArgonObject *), argc);
 
@@ -38,8 +39,6 @@ ArgonObject *ARRAY_CREATE(size_t argc, ArgonObject **argv, ArErr *err,
 
   return object;
 }
-
-#define ARRAY_STRING_CHUNK_SIZE 1024
 
 ArgonObject *ARGON_ARRAY___string__(size_t argc, ArgonObject **argv, ArErr *err,
                                     RuntimeState *state, ArgonNativeAPI *api) {
@@ -53,8 +52,8 @@ ArgonObject *ARGON_ARRAY___string__(size_t argc, ArgonObject **argv, ArErr *err,
 
   darray_armem *array = argv[0]->value.as_array;
 
-  char *string = checked_malloc(ARRAY_STRING_CHUNK_SIZE);
-  size_t capacity = ARRAY_STRING_CHUNK_SIZE;
+  size_t capacity = 32;
+  char *string = checked_malloc(capacity);
   size_t string_length = 1;
   string[0] = '[';
 
@@ -66,10 +65,13 @@ ArgonObject *ARGON_ARRAY___string__(size_t argc, ArgonObject **argv, ArErr *err,
     if (i) {
       char *string_obj = ", ";
       size_t length = strlen(string_obj);
-      if (capacity < string_length + length) {
+      bool resized = false;
+      while (capacity < string_length + length) {
         capacity *= 2;
-        string = realloc(string, capacity);
+        resized = true;
       }
+      if (resized)
+        string = realloc(string, capacity);
       memcpy(string + string_length, string_obj, length);
       string_length += length;
     }
@@ -77,20 +79,26 @@ ArgonObject *ARGON_ARRAY___string__(size_t argc, ArgonObject **argv, ArErr *err,
     if (string_convert_method) {
       ArgonObject *string_object =
           argon_call(string_convert_method, 0, NULL, err, state);
-      if (capacity < string_length + string_object->value.as_str->length) {
+      bool resized = false;
+      while (capacity < string_length + string_object->value.as_str->length) {
         capacity *= 2;
-        string = realloc(string, capacity);
+        resized = true;
       }
+      if (resized)
+        string = realloc(string, capacity);
       memcpy(string + string_length, string_object->value.as_str->data,
              string_object->value.as_str->length);
       string_length += string_object->value.as_str->length;
     } else {
       char *string_obj = "<object>";
       size_t length = strlen(string_obj);
-      if (capacity < string_length + length) {
+      bool resized = false;
+      while (capacity < string_length + length) {
         capacity *= 2;
-        string = realloc(string, capacity);
+        resized = true;
       }
+      if (resized)
+        string = realloc(string, capacity);
       memcpy(string + string_length, string_obj, length);
       string_length += length;
     }
@@ -190,17 +198,17 @@ ArgonObject *ARGON_ARRAY___getitem__(size_t argc, ArgonObject **argv,
                                      ArgonNativeAPI *api) {
   (void)state;
   if (argc != 2) {
-    *err =
-        create_err(0, 0, 0, "", "Runtime Error",
-                   "__getitem__ expects 2 arguments, got %" PRIu64, argc);
+    *err = create_err(0, 0, 0, "", "Runtime Error",
+                      "__getitem__ expects 2 arguments, got %" PRIu64, argc);
     return ARGON_NULL;
   }
   int64_t index = api->argon_to_i64(argv[1], err);
   if (api->is_error(err))
     return ARGON_NULL;
   darray_armem *arr = argv[0]->value.as_array;
-  if (index<0) index+=arr->size;
-  if (index>=(int64_t)arr->size || index<0) {
+  if (index < 0)
+    index += arr->size;
+  if (index >= (int64_t)arr->size || index < 0) {
     return api->throw_argon_error(err, "Index Error", "index out of range");
   }
   return *(ArgonObject **)darray_armem_get(arr, index);
@@ -211,20 +219,20 @@ ArgonObject *ARGON_ARRAY___setitem__(size_t argc, ArgonObject **argv,
                                      ArgonNativeAPI *api) {
   (void)state;
   if (argc != 3) {
-    *err =
-        create_err(0, 0, 0, "", "Runtime Error",
-                   "__setitem__ expects 3 arguments, got %" PRIu64, argc);
+    *err = create_err(0, 0, 0, "", "Runtime Error",
+                      "__setitem__ expects 3 arguments, got %" PRIu64, argc);
     return ARGON_NULL;
   }
   int64_t index = api->argon_to_i64(argv[1], err);
   if (api->is_error(err))
     return ARGON_NULL;
   darray_armem *arr = argv[0]->value.as_array;
-  if (index<0) index+=arr->size;
-  if (index>=(int64_t)arr->size || index<0) {
+  if (index < 0)
+    index += arr->size;
+  if (index >= (int64_t)arr->size || index < 0) {
     return api->throw_argon_error(err, "Index Error", "index out of range");
   }
-  ArgonObject** ptr = darray_armem_get(arr, index);
+  ArgonObject **ptr = darray_armem_get(arr, index);
   *ptr = argv[2];
   return *ptr;
 }
