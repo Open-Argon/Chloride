@@ -143,6 +143,7 @@ typedef enum ArgonType {
   TYPE_METHOD,
   TYPE_DICTIONARY,
   TYPE_ARRAY,
+  TYPE_TUPLE,
   TYPE_BUFFER,
   TYPE_ERROR,
   TYPE_OBJECT,
@@ -202,24 +203,30 @@ struct as_number {
   bool is_int64;
 };
 
+struct tuple_struct {
+  size_t size;
+  ArgonObject* data[];
+};
+
 // full definition of ArgonObject (no typedef again!)
 struct ArgonObject {
   struct hashmap_GC *dict;
   size_t built_in_slot_length;
   struct built_in_slot built_in_slot[BUILT_IN_ARRAY_COUNT];
+  ArgonType type;
+  bool as_bool;
+  pthread_rwlock_t lock;
   union {
     ArErr *err;
     struct as_number *as_number;
     struct hashmap_GC *as_hashmap;
     struct string_struct *as_str;
+    struct tuple_struct as_tuple;
     struct buffer *as_buffer;
     darray_armem *as_array;
     native_fn native_fn;
     struct argon_function_struct *argon_fn;
   } value;
-  ArgonType type;
-  bool as_bool;
-  pthread_rwlock_t lock;
 };
 
 #endif // AROBJECT_H

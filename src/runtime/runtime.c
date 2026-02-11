@@ -26,6 +26,7 @@
 #include "objects/object.h"
 #include "objects/string/string.h"
 #include "objects/term/term.h"
+#include "objects/tuple/tuple.h"
 #include "objects/type/type.h"
 #include <fcntl.h>
 #include <gmp.h>
@@ -639,7 +640,7 @@ ArgonObject *BASE_CLASS___new__(size_t argc, ArgonObject **argv, ArErr *err,
                    "__new__ expects at least 1 argument, got %" PRIu64, argc);
     return ARGON_NULL;
   }
-  ArgonObject *new_obj = new_instance(argv[0]);
+  ArgonObject *new_obj = new_instance(argv[0], 0);
   return new_obj;
 }
 
@@ -769,6 +770,20 @@ ArgonObject *BASE_CLASS___not_equal__(size_t argc, ArgonObject **argv,
                       "__boolean__ expects 2 arguments, got %" PRIu64, argc);
   }
   return argv[0] != argv[1] ? ARGON_TRUE : ARGON_FALSE;
+}
+
+ArgonObject *ARGON_STRING_TYPE___new__(size_t argc, ArgonObject **argv, ArErr *err,
+                                RuntimeState *state, ArgonNativeAPI *api) {
+  (void)api;
+  (void)state;
+  if (argc < 1) {
+    *err =
+        create_err(0, 0, 0, "", "Runtime Error",
+                   "__new__ expects at least 1 argument, got %" PRIu64, argc);
+    return ARGON_NULL;
+  }
+  ArgonObject *new_obj = new_instance(argv[0], sizeof(struct string_struct));
+  return new_obj;
 }
 
 ArgonObject *ARGON_STRING_TYPE___init__(size_t argc, ArgonObject **argv,
@@ -1028,7 +1043,7 @@ void bootstrap_types() {
 
   ARGON_NULL_TYPE = new_class();
   add_builtin_field(ARGON_NULL_TYPE, __base__, BASE_CLASS);
-  ARGON_NULL = new_instance(ARGON_NULL_TYPE);
+  ARGON_NULL = new_instance(ARGON_NULL_TYPE,0);
   ARGON_NULL->type = TYPE_NULL;
   ARGON_NULL->as_bool = false;
 
@@ -1037,9 +1052,9 @@ void bootstrap_types() {
 
   ARGON_BOOL_TYPE = new_class();
   add_builtin_field(ARGON_BOOL_TYPE, __base__, BASE_CLASS);
-  ARGON_TRUE = new_instance(ARGON_BOOL_TYPE);
+  ARGON_TRUE = new_instance(ARGON_BOOL_TYPE,0);
   ARGON_TRUE->type = TYPE_BOOL;
-  ARGON_FALSE = new_instance(ARGON_BOOL_TYPE);
+  ARGON_FALSE = new_instance(ARGON_BOOL_TYPE,0);
   ARGON_FALSE->type = TYPE_BOOL;
   ARGON_NULL->as_bool = false;
 
@@ -1085,6 +1100,9 @@ void bootstrap_types() {
   add_builtin_field(
       ARGON_TYPE_TYPE, __call__,
       create_argon_native_function("__call__", ARGON_TYPE_TYPE___call__));
+  add_builtin_field(
+      ARGON_STRING_TYPE, __new__,
+      create_argon_native_function("__new__", ARGON_STRING_TYPE___new__));
   add_builtin_field(
       ARGON_STRING_TYPE, __init__,
       create_argon_native_function("__init__", ARGON_STRING_TYPE___init__));
@@ -1173,6 +1191,7 @@ void bootstrap_types() {
   create_ARGON_BUFFER_TYPE();
 
   init_array_type();
+  init_tuple_type();
 
   native_api.ARGON_NULL = ARGON_NULL;
   native_api.ARGON_TRUE = ARGON_TRUE;
@@ -1197,6 +1216,7 @@ void bootstrap_globals() {
   add_to_scope(Global_Scope, "number", ARGON_NUMBER_TYPE);
   add_to_scope(Global_Scope, "dictionary", ARGON_DICTIONARY_TYPE);
   add_to_scope(Global_Scope, "buffer", ARGON_BUFFER_TYPE);
+  add_to_scope(Global_Scope, "tuple", ARGON_TUPLE_TYPE);
 
   add_to_scope(Global_Scope, "add", ADDITION_FUNCTION);
   add_to_scope(Global_Scope, "subtract", SUBTRACTION_FUNCTION);
@@ -1532,21 +1552,20 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       continue;
     }
     DO_LOAD_FUNCTION: {
-      ArgonObject *object = new_instance(ARGON_FUNCTION_TYPE);
-      object->type = TYPE_FUNCTION;
       uint64_t offset;
       POP_U64(offset);
       uint64_t length;
       POP_U64(length);
+      uint64_t number_of_parameters;
+      POP_U64(number_of_parameters);
+      ArgonObject *object = new_instance(ARGON_FUNCTION_TYPE,sizeof(struct argon_function_struct) +
+                   number_of_parameters * sizeof(struct string_struct));
+      object->type = TYPE_FUNCTION;
       add_builtin_field(
           object, __name__,
           new_string_object(arena_get(&translated->constants, offset), length,
                             0, 0));
-      uint64_t number_of_parameters;
-      POP_U64(number_of_parameters);
-      object->value.argon_fn =
-          ar_alloc(sizeof(struct argon_function_struct) +
-                   number_of_parameters * sizeof(struct string_struct));
+      object->value.argon_fn =(struct argon_function_struct *)((char*)object+sizeof(ArgonObject));
       object->value.argon_fn->parameters =
           (struct string_struct *)((char *)object->value.argon_fn +
                                    sizeof(struct argon_function_struct));

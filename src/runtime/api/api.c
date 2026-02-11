@@ -130,7 +130,7 @@ int register_thread() {
 }
 
 ArgonObject *create_err_object() {
-  ArgonObject *obj = new_object();
+  ArgonObject *obj = new_object(0);
   obj->type = TYPE_ERROR;
   obj->value.err = ar_alloc(sizeof(ArErr));
   *obj->value.err = no_err;
