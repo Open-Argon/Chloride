@@ -35,10 +35,8 @@ ArgonObject *TUPLE_CREATE(size_t argc, ArgonObject **argv, ArErr *err,
   return object;
 }
 
-#define TUPLE_STRING_CHUNK_SIZE 1024
-
 ArgonObject *ARGON_TUPLE___new__(size_t argc, ArgonObject **argv, ArErr *err,
-                                RuntimeState *state, ArgonNativeAPI *api) {
+                                 RuntimeState *state, ArgonNativeAPI *api) {
   (void)api;
   (void)state;
   if (argc < 1) {
@@ -47,7 +45,8 @@ ArgonObject *ARGON_TUPLE___new__(size_t argc, ArgonObject **argv, ArErr *err,
                    "__new__ expects at least 1 argument, got %" PRIu64, argc);
     return ARGON_NULL;
   }
-  ArgonObject *new_obj = new_instance(argv[0], (argc - 1) * sizeof(ArgonObject *));
+  ArgonObject *new_obj =
+      new_instance(argv[0], (argc - 1) * sizeof(ArgonObject *));
   new_obj->type = TYPE_TUPLE;
   new_obj->value.as_tuple.size = (argc - 1);
   return new_obj;
@@ -56,11 +55,12 @@ ArgonObject *ARGON_TUPLE___new__(size_t argc, ArgonObject **argv, ArErr *err,
 ArgonObject *ARGON_TUPLE___init__(size_t argc, ArgonObject **argv, ArErr *err,
                                   RuntimeState *state, ArgonNativeAPI *api) {
   (void)api;
+  (void)state;
 
   if (argc < 1) {
-    *err = create_err(0, 0, 0, "", "Runtime Error",
-                      "__init__ expects at least 1 argument, got %" PRIu64,
-                      argc);
+    *err =
+        create_err(0, 0, 0, "", "Runtime Error",
+                   "__init__ expects at least 1 argument, got %" PRIu64, argc);
     return ARGON_NULL;
   }
   memcpy(argv[0]->value.as_tuple.data, argv + 1,
@@ -80,8 +80,8 @@ ArgonObject *ARGON_TUPLE___string__(size_t argc, ArgonObject **argv, ArErr *err,
 
   struct tuple_struct *tuple = &argv[0]->value.as_tuple;
 
-  char *string = checked_malloc(TUPLE_STRING_CHUNK_SIZE);
-  size_t capacity = TUPLE_STRING_CHUNK_SIZE;
+  size_t capacity = 32;
+  char *string = checked_malloc(capacity);
   char beginning[] = "tuple(";
   size_t string_length = sizeof(beginning) - 1;
   memcpy(string, beginning, string_length);
@@ -94,10 +94,13 @@ ArgonObject *ARGON_TUPLE___string__(size_t argc, ArgonObject **argv, ArErr *err,
     if (i) {
       char *string_obj = ", ";
       size_t length = strlen(string_obj);
-      if (capacity < string_length + length) {
+      bool resized = false;
+      while (capacity < string_length + length) {
         capacity *= 2;
-        string = realloc(string, capacity);
+        resized = true;
       }
+      if (resized)
+        string = realloc(string, capacity);
       memcpy(string + string_length, string_obj, length);
       string_length += length;
     }
@@ -105,20 +108,26 @@ ArgonObject *ARGON_TUPLE___string__(size_t argc, ArgonObject **argv, ArErr *err,
     if (string_convert_method) {
       ArgonObject *string_object =
           argon_call(string_convert_method, 0, NULL, err, state);
-      if (capacity < string_length + string_object->value.as_str->length) {
+      bool resized = false;
+      while (capacity < string_length + string_object->value.as_str->length) {
         capacity *= 2;
-        string = realloc(string, capacity);
+        resized = true;
       }
+      if (resized)
+        string = realloc(string, capacity);
       memcpy(string + string_length, string_object->value.as_str->data,
              string_object->value.as_str->length);
       string_length += string_object->value.as_str->length;
     } else {
       char *string_obj = "<object>";
       size_t length = strlen(string_obj);
-      if (capacity < string_length + length) {
+      bool resized = false;
+      while (capacity < string_length + length) {
         capacity *= 2;
-        string = realloc(string, capacity);
+        resized = true;
       }
+      if (resized)
+        string = realloc(string, capacity);
       memcpy(string + string_length, string_obj, length);
       string_length += length;
     }
