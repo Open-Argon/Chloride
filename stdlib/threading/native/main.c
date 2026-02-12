@@ -188,8 +188,18 @@ ArgonObject *Argon_Err_object(size_t argc, ArgonObject **argv, ArgonError *err,
     return api->ARGON_NULL;
   }
 
-  /* Free native resources */
   return api->create_err_object();
+}
+
+ArgonObject *Argon_Get_thread_id(size_t argc, ArgonObject **argv, ArgonError *err,
+                              ArgonState *state, ArgonNativeAPI *api) {
+  if (api->fix_to_arg_size(0, argc, err)) {
+    return api->ARGON_NULL;
+  }
+
+  mt_thread_id_t tid = mt_thread_current_id();
+
+  return api->string_to_argon((struct string){(char*)tid.bytes, tid.size});
 }
 
 void argon_module_init(ArgonState *vm, ArgonNativeAPI *api, ArgonError *err,
@@ -205,4 +215,7 @@ void argon_module_init(ArgonState *vm, ArgonNativeAPI *api, ArgonError *err,
   api->register_ArgonObject(
       reg, "Err_object",
       api->create_argon_native_function("Err_object", Argon_Err_object));
+  api->register_ArgonObject(
+      reg, "Get_thread_id",
+      api->create_argon_native_function("Get_thread_id", Argon_Get_thread_id));
 }

@@ -772,8 +772,9 @@ ArgonObject *BASE_CLASS___not_equal__(size_t argc, ArgonObject **argv,
   return argv[0] != argv[1] ? ARGON_TRUE : ARGON_FALSE;
 }
 
-ArgonObject *ARGON_STRING_TYPE___new__(size_t argc, ArgonObject **argv, ArErr *err,
-                                RuntimeState *state, ArgonNativeAPI *api) {
+ArgonObject *ARGON_STRING_TYPE___new__(size_t argc, ArgonObject **argv,
+                                       ArErr *err, RuntimeState *state,
+                                       ArgonNativeAPI *api) {
   (void)api;
   (void)state;
   if (argc < 1) {
@@ -1043,7 +1044,7 @@ void bootstrap_types() {
 
   ARGON_NULL_TYPE = new_class();
   add_builtin_field(ARGON_NULL_TYPE, __base__, BASE_CLASS);
-  ARGON_NULL = new_instance(ARGON_NULL_TYPE,0);
+  ARGON_NULL = new_instance(ARGON_NULL_TYPE, 0);
   ARGON_NULL->type = TYPE_NULL;
   ARGON_NULL->as_bool = false;
 
@@ -1052,9 +1053,9 @@ void bootstrap_types() {
 
   ARGON_BOOL_TYPE = new_class();
   add_builtin_field(ARGON_BOOL_TYPE, __base__, BASE_CLASS);
-  ARGON_TRUE = new_instance(ARGON_BOOL_TYPE,0);
+  ARGON_TRUE = new_instance(ARGON_BOOL_TYPE, 0);
   ARGON_TRUE->type = TYPE_BOOL;
-  ARGON_FALSE = new_instance(ARGON_BOOL_TYPE,0);
+  ARGON_FALSE = new_instance(ARGON_BOOL_TYPE, 0);
   ARGON_FALSE->type = TYPE_BOOL;
   ARGON_NULL->as_bool = false;
 
@@ -1382,7 +1383,8 @@ void add_to_scope(Stack *stack, char *name, ArgonObject *value) {
   hashmap_insert_GC(stack->scope, hash, key, value, 0);
 }
 
-void add_source_location_to_error_if_exists(ArErr *err, RuntimeState *state) {
+void add_source_location_to_error_if_not_exists(ArErr *err,
+                                                RuntimeState *state) {
   if (err->exists && !strlen(err->path)) {
     err->column = state->source_location.column;
     err->length = state->source_location.length;
@@ -1438,7 +1440,9 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       [OP_IMPORT] = &&DO_IMPORT,
       [OP_EXPOSE_ALL] = &&DO_EXPOSE_ALL,
       [OP_EXPOSE] = &&DO_EXPOSE,
-      [OP_LOAD_CREATE_ARRAY] = &&DO_LOAD_CREATE_ARRAY};
+      [OP_LOAD_CREATE_ARRAY] = &&DO_LOAD_CREATE_ARRAY,
+      [OP_NOT_IN] = &&DO_NOT_IN,
+      [OP_IN] = &&DO_IN};
   _state.head = 0;
 
   ArErr err = *err_ptr;
@@ -1558,14 +1562,18 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       POP_U64(length);
       uint64_t number_of_parameters;
       POP_U64(number_of_parameters);
-      ArgonObject *object = new_instance(ARGON_FUNCTION_TYPE,sizeof(struct argon_function_struct) +
-                   number_of_parameters * sizeof(struct string_struct));
+      ArgonObject *object =
+          new_instance(ARGON_FUNCTION_TYPE,
+                       sizeof(struct argon_function_struct) +
+                           number_of_parameters * sizeof(struct string_struct));
       object->type = TYPE_FUNCTION;
       add_builtin_field(
           object, __name__,
           new_string_object(arena_get(&translated->constants, offset), length,
                             0, 0));
-      object->value.argon_fn =(struct argon_function_struct *)((char*)object+sizeof(ArgonObject));
+      object->value.argon_fn =
+          (struct argon_function_struct *)((char *)object +
+                                           sizeof(ArgonObject));
       object->value.argon_fn->parameters =
           (struct string_struct *)((char *)object->value.argon_fn +
                                    sizeof(struct argon_function_struct));
@@ -1590,7 +1598,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
     }
     DO_IMPORT:
       runtime_import(state, &err);
-      add_source_location_to_error_if_exists(&err, state);
+      add_source_location_to_error_if_not_exists(&err, state);
       continue;
     DO_EXPOSE_ALL: {
       size_t nodes_length;
@@ -1851,7 +1859,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       ArgonObject *args[] = {valueA, valueB};
       state->registers[registerC] =
           argon_call(ADDITION_FUNCTION, 2, args, &err, state);
-      add_source_location_to_error_if_exists(&err, state);
+      add_source_location_to_error_if_not_exists(&err, state);
       continue;
     }
     DO_SUBTRACTION: {
@@ -1913,7 +1921,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       ArgonObject *args[] = {valueA, valueB};
       state->registers[registerC] =
           argon_call(SUBTRACTION_FUNCTION, 2, args, &err, state);
-      add_source_location_to_error_if_exists(&err, state);
+      add_source_location_to_error_if_not_exists(&err, state);
       continue;
     }
     DO_MULTIPLICATION: {
@@ -1975,7 +1983,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       ArgonObject *args[] = {valueA, valueB};
       state->registers[registerC] =
           argon_call(MULTIPLY_FUNCTION, 2, args, &err, state);
-      add_source_location_to_error_if_exists(&err, state);
+      add_source_location_to_error_if_not_exists(&err, state);
       continue;
     }
     DO_EXPONENTIATION: {
@@ -2106,7 +2114,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       ArgonObject *args[] = {valueA, valueB};
       state->registers[registerC] =
           argon_call(EXPONENT_FUNCTION, 2, args, &err, state);
-      add_source_location_to_error_if_exists(&err, state);
+      add_source_location_to_error_if_not_exists(&err, state);
       continue;
     }
 
@@ -2169,7 +2177,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       ArgonObject *args[] = {valueA, valueB};
       state->registers[registerC] =
           argon_call(DIVIDE_FUNCTION, 2, args, &err, state);
-      add_source_location_to_error_if_exists(&err, state);
+      add_source_location_to_error_if_not_exists(&err, state);
       continue;
     }
 
@@ -2231,7 +2239,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       ArgonObject *args[] = {valueA, valueB};
       state->registers[registerC] =
           argon_call(FLOOR_DIVIDE_FUNCTION, 2, args, &err, state);
-      add_source_location_to_error_if_exists(&err, state);
+      add_source_location_to_error_if_not_exists(&err, state);
       continue;
     }
 
@@ -2293,7 +2301,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       ArgonObject *args[] = {valueA, valueB};
       state->registers[registerC] =
           argon_call(MODULO_FUNCTION, 2, args, &err, state);
-      add_source_location_to_error_if_exists(&err, state);
+      add_source_location_to_error_if_not_exists(&err, state);
       continue;
     }
 
@@ -2337,7 +2345,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       ArgonObject *args[] = {valueA, valueB};
       state->registers[registerC] =
           argon_call(EQUAL_FUNCTION, 2, args, &err, state);
-      add_source_location_to_error_if_exists(&err, state);
+      add_source_location_to_error_if_not_exists(&err, state);
       continue;
     }
 
@@ -2381,7 +2389,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       ArgonObject *args[] = {valueA, valueB};
       state->registers[registerC] =
           argon_call(NOT_EQUAL_FUNCTION, 2, args, &err, state);
-      add_source_location_to_error_if_exists(&err, state);
+      add_source_location_to_error_if_not_exists(&err, state);
       continue;
     }
 
@@ -2425,7 +2433,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       ArgonObject *args[] = {valueA, valueB};
       state->registers[registerC] =
           argon_call(LESS_THAN_FUNCTION, 2, args, &err, state);
-      add_source_location_to_error_if_exists(&err, state);
+      add_source_location_to_error_if_not_exists(&err, state);
       continue;
     }
 
@@ -2469,7 +2477,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       ArgonObject *args[] = {valueA, valueB};
       state->registers[registerC] =
           argon_call(GREATER_THAN_FUNCTION, 2, args, &err, state);
-      add_source_location_to_error_if_exists(&err, state);
+      add_source_location_to_error_if_not_exists(&err, state);
       continue;
     }
 
@@ -2513,7 +2521,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       ArgonObject *args[] = {valueA, valueB};
       state->registers[registerC] =
           argon_call(LESS_THAN_EQUAL_FUNCTION, 2, args, &err, state);
-      add_source_location_to_error_if_exists(&err, state);
+      add_source_location_to_error_if_not_exists(&err, state);
       continue;
     }
 
@@ -2557,7 +2565,39 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       ArgonObject *args[] = {valueA, valueB};
       state->registers[registerC] =
           argon_call(GREATER_THAN_EQUAL_FUNCTION, 2, args, &err, state);
-      add_source_location_to_error_if_exists(&err, state);
+      add_source_location_to_error_if_not_exists(&err, state);
+      continue;
+    }
+
+    DO_NOT_IN:
+    DO_IN: {
+      uint8_t registerA = POP_BYTE();
+      uint8_t registerB = POP_BYTE();
+      uint8_t registerC = POP_BYTE();
+
+      ArgonObject *valueA = state->registers[registerA];
+      ArgonObject *valueB = state->registers[registerB];
+
+      ArgonObject *object_class = get_builtin_field(valueB, __class__);
+      ArgonObject *object__contains__ =
+          get_builtin_field_for_class(object_class, __contains__, valueB);
+      if (!object__contains__) {
+        ArgonObject *cls___name__ = get_builtin_field(object_class, __name__);
+        err = create_err(0, 0, 0, "", "Runtime Error",
+                         "Object of type '%.*s' is missing __contains__ method",
+                         (int)cls___name__->value.as_str->length,
+                         cls___name__->value.as_str->data);
+        continue;
+      }
+
+      ArgonObject *args[] = {valueA};
+      state->registers[registerC] =
+          argon_call(object__contains__, 1, args, &err, state);
+      add_source_location_to_error_if_not_exists(&err, state);
+      if (instruction == OP_IN)
+        continue;
+      state->registers[registerC] =
+          state->registers[registerC] == ARGON_FALSE ? ARGON_TRUE : ARGON_FALSE;
       continue;
     }
 

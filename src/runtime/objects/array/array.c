@@ -130,6 +130,37 @@ ArgonObject *ARGON_ARRAY_append(size_t argc, ArgonObject **argv, ArErr *err,
   return ARGON_NULL;
 }
 
+ArgonObject *ARGON_ARRAY___contains__(size_t argc, ArgonObject **argv,
+                                     ArErr *err, RuntimeState *state,
+                                     ArgonNativeAPI *api) {
+  (void)state;
+  (void)api;
+  if (argc != 2) {
+    *err = create_err(0, 0, 0, "", "Runtime Error",
+                      "__contains__ expects 2 arguments, got %" PRIu64, argc);
+    return ARGON_NULL;
+  }
+  ArgonObject *object_class = get_builtin_field(argv[1], __class__);
+  ArgonObject *object__equal__ =
+      get_builtin_field_for_class(object_class, __equal__, argv[1]);
+  if (!object__equal__) {
+    ArgonObject *cls___name__ = get_builtin_field(object_class, __name__);
+    *err = create_err(0, 0, 0, "", "Runtime Error",
+                     "Object of type '%.*s' is missing __equal__ method",
+                     (int)cls___name__->value.as_str->length,
+                     cls___name__->value.as_str->data);
+    return ARGON_NULL;
+  }
+  darray_armem* arr = argv[0]->value.as_array;
+  for (size_t i = 0;i<arr->size;i++) {
+    ArgonObject*result = argon_call(object__equal__, 1, (ArgonObject*[]){darray_armem_get(arr, i)}, err, state);
+    if (api->is_error(err)) return ARGON_NULL;
+    printf("%d\n", result==ARGON_FALSE);
+    if (result == ARGON_TRUE) return result;
+  }
+  return ARGON_FALSE;
+}
+
 ArgonObject *ARGON_ARRAY_get_length(size_t argc, ArgonObject **argv, ArErr *err,
                                     RuntimeState *state, ArgonNativeAPI *api) {
   (void)api;
@@ -262,6 +293,9 @@ void init_array_type() {
   add_builtin_field(
       ARRAY_TYPE, __setitem__,
       create_argon_native_function("__setitem__", ARGON_ARRAY___setitem__));
+  add_builtin_field(
+      ARRAY_TYPE, __contains__,
+      create_argon_native_function("__contains__", ARGON_ARRAY___contains__));
 
   ARGON_ARRAY_CREATE =
       create_argon_native_function("ARRAY_CREATE", ARRAY_CREATE);

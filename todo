@@ -1,10 +1,13 @@
-1.  add lists
+1.  add lists (done)
 2.  iterator objects
 3.  add for loops using iterator objects
-4.  add item get
+4.  add item get (done)
 5.  add delete functionality
 6.  add is and is instance
 7.  add path stdlib
-8.  add conversion for all path types (make / and \ are the same)
-9.  add random stdlib
+8.  add conversion for all path types (make / change to \ on windows)
+9.  add random stdlib (basically done, just need helper functions now e.g. random.choice)
 10. add try catch
+11. add the break and continue keywords
+12. add json stdlib
+13. add file stdlib
