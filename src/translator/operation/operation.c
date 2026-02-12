@@ -109,6 +109,12 @@ size_t translate_operation(Translated *translated, ParsedOperation *operation,
     case TOKEN_GE:;
       push_instruction_byte(translated, OP_GREATER_THAN_EQUAL);
       break;
+    case TOKEN_NOT_IN:;
+      push_instruction_byte(translated, OP_NOT_IN);
+      break;
+    case TOKEN_IN:;
+      push_instruction_byte(translated, OP_IN);
+      break;
     default:
       *err = create_err(operation->line, operation->column, operation->length,
                         translated->path, "Syntax Error", "unknown operation");

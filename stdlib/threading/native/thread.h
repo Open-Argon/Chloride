@@ -5,15 +5,14 @@
 #include <stddef.h>
 
 #ifdef _WIN32
-  #include <windows.h>
+#include <windows.h>
 #else
-  #include <pthread.h>
+#include <pthread.h>
 #endif
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
 
 /* =========================
    Internal structs
@@ -21,25 +20,25 @@ extern "C" {
 
 struct mt_thread {
 #ifdef _WIN32
-    HANDLE handle;
+  HANDLE handle;
 #else
-    pthread_t thread;
+  pthread_t thread;
 #endif
 };
 
 struct mt_mutex {
 #ifdef _WIN32
-    CRITICAL_SECTION cs;
+  CRITICAL_SECTION cs;
 #else
-    pthread_mutex_t mutex;
+  pthread_mutex_t mutex;
 #endif
 };
 
 struct mt_tls {
 #ifdef _WIN32
-    DWORD key;
+  DWORD key;
 #else
-    pthread_key_t key;
+  pthread_key_t key;
 #endif
 };
 
@@ -48,12 +47,12 @@ struct mt_tls {
    ========================= */
 
 typedef struct mt_thread mt_thread_t;
-typedef struct mt_mutex  mt_mutex_t;
+typedef struct mt_mutex mt_mutex_t;
 
 /* Opaque thread ID */
 typedef struct {
-    unsigned char bytes[32];
-    size_t size;
+  unsigned char bytes[32];
+  size_t size;
 } mt_thread_id_t;
 
 /* Thread entry function */
@@ -67,7 +66,7 @@ int mt_thread_start(mt_thread_t *t, mt_thread_fn fn, void *arg);
 int mt_thread_join(mt_thread_t *t);
 int mt_thread_detach(mt_thread_t *t);
 
-mt_thread_id_t mt_thread_current_id(void);
+mt_thread_id_t mt_thread_current_id();
 
 /* =========================
    Mutex API
@@ -85,9 +84,9 @@ void mt_mutex_destroy(mt_mutex_t *m);
 typedef struct mt_tls mt_tls_t;
 
 mt_tls_t *mt_tls_create(void);
-void      mt_tls_set(mt_tls_t *tls, void *value);
-void     *mt_tls_get(mt_tls_t *tls);
-void      mt_tls_destroy(mt_tls_t *tls);
+void mt_tls_set(mt_tls_t *tls, void *value);
+void *mt_tls_get(mt_tls_t *tls);
+void mt_tls_destroy(mt_tls_t *tls);
 
 #ifdef __cplusplus
 }

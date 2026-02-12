@@ -1,68 +1,60 @@
 #include "thread.h"
-#include <pthread.h>
 #include <stdlib.h>
 #include <string.h>
-
+#include <stdint.h>
 
 /* =========================
    Thread implementation
    ========================= */
 
 int mt_thread_start(mt_thread_t *t, mt_thread_fn fn, void *arg) {
-    if (!t || !fn)
-        return -1;
+  if (!t || !fn)
+    return -1;
 
 #ifdef _WIN32
-    t->handle = CreateThread(
-        NULL,
-        0,
-        (LPTHREAD_START_ROUTINE)fn,
-        arg,
-        0,
-        NULL
-    );
-    if (!t->handle)
-        return -1;
+  t->handle = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)fn, arg, 0, NULL);
+  if (!t->handle)
+    return -1;
 #else
-    if (pthread_create(&t->thread, NULL, fn, arg) != 0)
-        return -1;
+  if (pthread_create(&t->thread, NULL, fn, arg) != 0)
+    return -1;
 #endif
 
-    return 0;
+  return 0;
 }
 
 int mt_thread_join(mt_thread_t *t) {
 #ifdef _WIN32
-    WaitForSingleObject(t->handle, INFINITE);
+  WaitForSingleObject(t->handle, INFINITE);
 #else
-    pthread_join(t->thread, NULL);
+  pthread_join(t->thread, NULL);
 #endif
-    return 0;
+  return 0;
 }
 
 int mt_thread_detach(mt_thread_t *t) {
 #ifdef _WIN32
-    /* 
-     * Windows threads are detached by closing the handle.
-     * The thread keeps running; the OS cleans up on exit.
-     */
-    if (t->handle) {
-        CloseHandle(t->handle);
-        t->handle = NULL;
-    }
+  /*
+   * Windows threads are detached by closing the handle.
+   * The thread keeps running; the OS cleans up on exit.
+   */
+  if (t->handle) {
+    CloseHandle(t->handle);
+    t->handle = NULL;
+  }
 #else
-    /*
-     * POSIX: mark the thread as detached.
-     * After this, pthread_join MUST NOT be called.
-     */
-    pthread_detach(t->thread);
+  /*
+   * POSIX: mark the thread as detached.
+   * After this, pthread_join MUST NOT be called.
+   */
+  pthread_detach(t->thread);
 #endif
-    return 0;
+  return 0;
 }
 
 void mt_thread_destroy(mt_thread_t *t) {
 #ifdef _WIN32
-    CloseHandle(t->handle);
+  CloseHandle(t->handle);
 #endif
 }
 
@@ -71,20 +63,20 @@ void mt_thread_destroy(mt_thread_t *t) {
    ========================= */
 
 mt_thread_id_t mt_thread_current_id(void) {
-    mt_thread_id_t id;
-    memset(&id, 0, sizeof(id));
+  mt_thread_id_t id;
+  memset(&id, 0, sizeof(id));
 
 #ifdef _WIN32
-    DWORD tid = GetCurrentThreadId();
-    memcpy(id.bytes, &tid, sizeof(tid));
-    id.size = sizeof(tid);
+  DWORD tid = GetCurrentThreadId();
+  memcpy(id.bytes, &tid, sizeof(tid));
+  id.size = sizeof(tid);
 #else
-    pthread_t tid = pthread_self();
-    memcpy(id.bytes, &tid, sizeof(tid));
-    id.size = sizeof(tid);
+  pthread_t tid = pthread_self();
+  memcpy(id.bytes, &tid, sizeof(tid));
+  id.size = sizeof(tid);
 #endif
 
-    return id;
+  return id;
 }
 
 /* =========================
@@ -92,40 +84,41 @@ mt_thread_id_t mt_thread_current_id(void) {
    ========================= */
 
 mt_mutex_t *mt_mutex_create(void) {
-    mt_mutex_t *m = calloc(1, sizeof(*m));
-    if (!m) return NULL;
+  mt_mutex_t *m = calloc(1, sizeof(*m));
+  if (!m)
+    return NULL;
 
 #ifdef _WIN32
-    InitializeCriticalSection(&m->cs);
+  InitializeCriticalSection(&m->cs);
 #else
-    pthread_mutex_init(&m->mutex, NULL);
+  pthread_mutex_init(&m->mutex, NULL);
 #endif
-    return m;
+  return m;
 }
 
 void mt_mutex_lock(mt_mutex_t *m) {
 #ifdef _WIN32
-    EnterCriticalSection(&m->cs);
+  EnterCriticalSection(&m->cs);
 #else
-    pthread_mutex_lock(&m->mutex);
+  pthread_mutex_lock(&m->mutex);
 #endif
 }
 
 void mt_mutex_unlock(mt_mutex_t *m) {
 #ifdef _WIN32
-    LeaveCriticalSection(&m->cs);
+  LeaveCriticalSection(&m->cs);
 #else
-    pthread_mutex_unlock(&m->mutex);
+  pthread_mutex_unlock(&m->mutex);
 #endif
 }
 
 void mt_mutex_destroy(mt_mutex_t *m) {
 #ifdef _WIN32
-    DeleteCriticalSection(&m->cs);
+  DeleteCriticalSection(&m->cs);
 #else
-    pthread_mutex_destroy(&m->mutex);
+  pthread_mutex_destroy(&m->mutex);
 #endif
-    free(m);
+  free(m);
 }
 
 /* =========================
@@ -133,45 +126,46 @@ void mt_mutex_destroy(mt_mutex_t *m) {
    ========================= */
 
 mt_tls_t *mt_tls_create(void) {
-    mt_tls_t *t = calloc(1, sizeof(*t));
-    if (!t) return NULL;
+  mt_tls_t *t = calloc(1, sizeof(*t));
+  if (!t)
+    return NULL;
 
 #ifdef _WIN32
-    t->key = TlsAlloc();
-    if (t->key == TLS_OUT_OF_INDEXES) {
-        free(t);
-        return NULL;
-    }
+  t->key = TlsAlloc();
+  if (t->key == TLS_OUT_OF_INDEXES) {
+    free(t);
+    return NULL;
+  }
 #else
-    if (pthread_key_create(&t->key, NULL) != 0) {
-        free(t);
-        return NULL;
-    }
+  if (pthread_key_create(&t->key, NULL) != 0) {
+    free(t);
+    return NULL;
+  }
 #endif
-    return t;
+  return t;
 }
 
 void mt_tls_set(mt_tls_t *t, void *value) {
 #ifdef _WIN32
-    TlsSetValue(t->key, value);
+  TlsSetValue(t->key, value);
 #else
-    pthread_setspecific(t->key, value);
+  pthread_setspecific(t->key, value);
 #endif
 }
 
 void *mt_tls_get(mt_tls_t *t) {
 #ifdef _WIN32
-    return TlsGetValue(t->key);
+  return TlsGetValue(t->key);
 #else
-    return pthread_getspecific(t->key);
+  return pthread_getspecific(t->key);
 #endif
 }
 
 void mt_tls_destroy(mt_tls_t *t) {
 #ifdef _WIN32
-    TlsFree(t->key);
+  TlsFree(t->key);
 #else
-    pthread_key_delete(t->key);
+  pthread_key_delete(t->key);
 #endif
-    free(t);
+  free(t);
 }

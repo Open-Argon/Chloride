@@ -26,6 +26,20 @@ static void hashmap_insert_GC_nolock(
     size_t order
 );
 
+
+static int compare_node_asc(const void *a, const void *b) {
+  const struct node_GC *na = *(const struct node_GC **)a;
+  const struct node_GC *nb = *(const struct node_GC **)b;
+
+  // Ascending order (smallest order first)
+  if (na->order < nb->order)
+    return -1;
+  if (na->order > nb->order)
+    return 1;
+  return 0;
+}
+
+
 static void resize_hashmap_GC_nolock(struct hashmap_GC *t) {
   int old_size = t->size;
   int new_size = old_size ? old_size * 2 : 8;
@@ -169,6 +183,8 @@ struct node_GC **hashmap_GC_to_array(
       n = n->next;
     }
   }
+
+  qsort(arr, *array_length, sizeof(struct node_GC*), compare_node_asc);
 
   pthread_rwlock_unlock(&t->lock);
   return arr;

@@ -74,12 +74,13 @@ const char *built_in_field_names[BUILT_IN_FIELDS_COUNT] = {
     "__repr__",
     "append",
     "insert",
-    "pop"};
+    "pop",
+    "__contains__"};
 
 uint64_t built_in_field_hashes[BUILT_IN_FIELDS_COUNT];
 
 ArgonObject *new_object(size_t endSize) {
-  ArgonObject *object = ar_alloc(sizeof(ArgonObject)+endSize);
+  ArgonObject *object = ar_alloc(sizeof(ArgonObject) + endSize);
   object->built_in_slot_length = 0;
   object->type = TYPE_OBJECT;
   object->dict = NULL;
@@ -89,20 +90,21 @@ ArgonObject *new_object(size_t endSize) {
 
 #define SMALL_OBJECT_ASSIGNMENT_AMOUNT 512
 void *small_objects;
-size_t small_objects_pos = SMALL_OBJECT_ASSIGNMENT_AMOUNT*sizeof(ArgonObject);
+size_t small_objects_pos = SMALL_OBJECT_ASSIGNMENT_AMOUNT * sizeof(ArgonObject);
 pthread_mutex_t objects_mutex;
 
 ArgonObject *new_small_object(size_t endSize) {
   ArgonObject *object;
   pthread_mutex_lock(&objects_mutex);
-  if (small_objects_pos+sizeof(ArgonObject)+endSize < SMALL_OBJECT_ASSIGNMENT_AMOUNT*sizeof(ArgonObject)) {
+  if (small_objects_pos + sizeof(ArgonObject) + endSize <
+      SMALL_OBJECT_ASSIGNMENT_AMOUNT * sizeof(ArgonObject)) {
     object = small_objects + small_objects_pos;
-    small_objects_pos+=sizeof(ArgonObject)+endSize;
+    small_objects_pos += sizeof(ArgonObject) + endSize;
   } else {
     small_objects =
         ar_alloc(sizeof(ArgonObject) * SMALL_OBJECT_ASSIGNMENT_AMOUNT);
     object = small_objects;
-    small_objects_pos = sizeof(ArgonObject)+endSize;
+    small_objects_pos = sizeof(ArgonObject) + endSize;
   }
   pthread_mutex_unlock(&objects_mutex);
   object->built_in_slot_length = 0;

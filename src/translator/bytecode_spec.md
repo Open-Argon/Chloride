@@ -245,6 +245,22 @@ performs a less than or equal operation between register A and register B, stori
 1. the register B (*)
 1. the register C (*)
 
+## OP_IN
+
+calls \_\_contains\_\_ of the value in register B between register A and register B, storing the result in register C
+
+1. the register A (*)
+1. the register B (*)
+1. the register C (*)
+
+## OP_NOT_IN
+
+calls \_\_contains\_\_ of the value in register B between register A and register B, inverting and storing the result in register C
+
+1. the register A (*)
+1. the register B (*)
+1. the register C (*)
+
 ## OP_NOT
 
 inverts the boolean value in register 0.

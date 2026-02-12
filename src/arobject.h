@@ -59,6 +59,7 @@ typedef enum {
   append,
   insert,
   pop,
+  __contains__,
 
   BUILT_IN_FIELDS_COUNT,
 } built_in_fields;
@@ -127,10 +128,10 @@ struct ArgonNativeAPI {
 
   ArgonObject *(*create_err_object)();
   ArErr *(*err_object_to_err)(ArgonObject *, ArErr *);
-  RuntimeState *(*new_state)(ArgonObject**registers);
+  RuntimeState *(*new_state)(ArgonObject **registers);
   void (*set_err)(ArgonObject *object, ArErr *err);
-  void* (*malloc)(size_t);
-  void (*free)(void*);
+  void *(*malloc)(size_t);
+  void (*free)(void *);
 };
 
 typedef enum ArgonType {
@@ -205,7 +206,7 @@ struct as_number {
 
 struct tuple_struct {
   size_t size;
-  ArgonObject* data[];
+  ArgonObject *data[];
 };
 
 // full definition of ArgonObject (no typedef again!)

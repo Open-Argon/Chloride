@@ -4,11 +4,11 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 #include "dictionary.h"
+#include "../../../err.h"
 #include "../../call/call.h"
 #include "../functions/functions.h"
 #include "../literals/literals.h"
 #include "../string/string.h"
-#include "../../../err.h"
 #include <inttypes.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -134,57 +134,6 @@ ArgonObject *create_ARGON_DICTIONARY_TYPE___string__(size_t argc,
   return result;
 }
 
-ArgonObject *create_ARGON_DICTIONARY_TYPE___getattr__(size_t argc,
-                                                      ArgonObject **argv,
-                                                      ArErr *err,
-                                                      RuntimeState *state,
-                                                      ArgonNativeAPI *api) {
-  (void)api;
-  (void)state;
-  if (argc != 2) {
-    *err = create_err(0, 0, 0, "", "Runtime Error",
-                      "__getattr__ expects 2 argument, got %" PRIu64, argc);
-    return ARGON_NULL;
-  }
-  ArgonObject *object = argv[0];
-  ArgonObject *key = argv[1];
-  int64_t hash = hash_object(key, err, state);
-  if (err->exists) {
-    return ARGON_NULL;
-  }
-  ArgonObject *result = hashmap_lookup_GC(object->value.as_hashmap, hash);
-  if (!result) {
-    *err = create_err(0, 0, 0, NULL, "Attribute Error",
-                      "Dictionary has no attribute '%.*s'",
-                      key->value.as_str->length, key->value.as_str->data);
-    return ARGON_NULL;
-  }
-  return result;
-}
-
-ArgonObject *create_ARGON_DICTIONARY_TYPE___setattr__(size_t argc,
-                                                      ArgonObject **argv,
-                                                      ArErr *err,
-                                                      RuntimeState *state,
-                                                      ArgonNativeAPI *api) {
-  (void)api;
-  (void)state;
-  if (argc != 3) {
-    *err = create_err(0, 0, 0, "", "Runtime Error",
-                      "__setattr__ expects 2 argument, got %" PRIu64, argc);
-    return ARGON_NULL;
-  }
-  ArgonObject *object = argv[0];
-  ArgonObject *key = argv[1];
-  ArgonObject *value = argv[2];
-  int64_t hash = hash_object(key, err, state);
-  if (err->exists) {
-    return ARGON_NULL;
-  }
-  hashmap_insert_GC(object->value.as_hashmap, hash, key, value, 0);
-  return value;
-}
-
 ArgonObject *create_ARGON_DICTIONARY_TYPE___getitem__(size_t argc,
                                                       ArgonObject **argv,
                                                       ArErr *err,
@@ -208,7 +157,7 @@ ArgonObject *create_ARGON_DICTIONARY_TYPE___getitem__(size_t argc,
     char *object_str = argon_object_to_null_terminated_string(key, err, state);
 
     *err = create_err(0, 0, 0, NULL, "Attribute Error",
-                      "Dictionary has no item '%s'", object_str);
+                      "Dictionary has no item %s", object_str);
     return ARGON_NULL;
   }
   return result;
@@ -244,29 +193,25 @@ void create_ARGON_DICTIONARY_TYPE() {
   add_builtin_field(ARGON_DICTIONARY_TYPE, __init__,
                     create_argon_native_function(
                         "__init__", create_ARGON_DICTIONARY_TYPE___init__));
+
+  ArgonObject *setter = create_argon_native_function(
+      "__setitem__", create_ARGON_DICTIONARY_TYPE___setitem__);
+  ArgonObject *getter = create_argon_native_function(
+      "__getitem__", create_ARGON_DICTIONARY_TYPE___getitem__);
+
+  add_builtin_field(ARGON_DICTIONARY_TYPE, __setitem__, setter);
+  add_builtin_field(ARGON_DICTIONARY_TYPE, __getitem__, getter);
   add_builtin_field(
-      ARGON_DICTIONARY_TYPE, __getattr__,
-      create_argon_native_function("__getattr__",
-                                   create_ARGON_DICTIONARY_TYPE___getattr__));
+      ARGON_DICTIONARY_TYPE, __setattr__,setter);
   add_builtin_field(
-      ARGON_DICTIONARY_TYPE, __setattr__,
-      create_argon_native_function("__setattr__",
-                                   create_ARGON_DICTIONARY_TYPE___setattr__));
-  add_builtin_field(
-      ARGON_DICTIONARY_TYPE, __setitem__,
-      create_argon_native_function("__setitem__",
-                                   create_ARGON_DICTIONARY_TYPE___setitem__));
-  add_builtin_field(
-      ARGON_DICTIONARY_TYPE, __getitem__,
-      create_argon_native_function("__getitem__",
-                                   create_ARGON_DICTIONARY_TYPE___getitem__));
+      ARGON_DICTIONARY_TYPE, __getattr__,getter);
   add_builtin_field(ARGON_DICTIONARY_TYPE, __string__,
                     create_argon_native_function(
                         "__string__", create_ARGON_DICTIONARY_TYPE___string__));
 }
 
 ArgonObject *create_dictionary(struct hashmap_GC *hashmap) {
-  ArgonObject *object = new_instance(ARGON_DICTIONARY_TYPE,0);
+  ArgonObject *object = new_instance(ARGON_DICTIONARY_TYPE, 0);
   object->type = TYPE_DICTIONARY;
   object->value.as_hashmap = hashmap;
   return object;
