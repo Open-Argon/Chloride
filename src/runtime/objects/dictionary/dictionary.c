@@ -134,6 +134,26 @@ ArgonObject *create_ARGON_DICTIONARY_TYPE___string__(size_t argc,
   return result;
 }
 
+ArgonObject *create_ARGON_DICTIONARY_TYPE___contains__(size_t argc,
+                                                      ArgonObject **argv,
+                                                      ArErr *err,
+                                                      RuntimeState *state,
+                                                      ArgonNativeAPI *api) {
+  (void)api;
+  (void)state;
+  if (argc != 2) {
+    *err = create_err(0, 0, 0, "", "Runtime Error",
+                      "__contains__ expects 2 argument, got %" PRIu64, argc);
+    return ARGON_NULL;
+  }
+  int64_t hash = hash_object(argv[1], err, state);
+  if (err->exists) {
+    return ARGON_NULL;
+  }
+  ArgonObject *result = hashmap_lookup_GC(argv[0]->value.as_hashmap, hash);
+  return result==NULL?ARGON_FALSE:ARGON_TRUE;
+}
+
 ArgonObject *create_ARGON_DICTIONARY_TYPE___getitem__(size_t argc,
                                                       ArgonObject **argv,
                                                       ArErr *err,
@@ -208,6 +228,9 @@ void create_ARGON_DICTIONARY_TYPE() {
   add_builtin_field(ARGON_DICTIONARY_TYPE, __string__,
                     create_argon_native_function(
                         "__string__", create_ARGON_DICTIONARY_TYPE___string__));
+  add_builtin_field(ARGON_DICTIONARY_TYPE, __contains__, 
+                    create_argon_native_function(
+                        "__contains__", create_ARGON_DICTIONARY_TYPE___contains__));
 }
 
 ArgonObject *create_dictionary(struct hashmap_GC *hashmap) {
