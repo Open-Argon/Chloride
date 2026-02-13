@@ -11,34 +11,45 @@ class Thread do
     self.__target__ = target
     self.__thread__ = null
     self.__retval__ = null
+
   this.__thread_run__(self) = do
     self.__retval__ = self.__target__()
+
   this.start(self) = do
     if (self.__started__) return
     self.__started__ = true
     self.__err__ = __threading__.Err_object()
     self.__thread__ = __threading__.Thread(self.__thread_run__, self.__err__)
     return self
+
   this.join(self) = do
     if (!self.__started__ || !self.__thread__) return self.__retval__
     __threading__.Join(self.__thread__, self.__err__)
     self.__thread__ = null
     return self.__retval__
+
   this.detach(self) = do
     if (!self.__started__ || !self.__thread__) return
     __threading__.Detach(self.__thread__)
     return
 
+let get_id = __threading__.Get_thread_id
+
 class Local do
   this.__init__(self) = do
-    self.__maps__ = {}
+    object.__setattr__(self,"__maps__", {})
+
   this.__getitem__(self, key) = do
     let thread_id = __threading__.Get_thread_id()
     if (thread_id not in self.__maps__) do
       self.__maps__[thread_id] = {}
     return self.__maps__[thread_id][key]
+
   this.__setitem__(self,key, value) = do
     let thread_id = __threading__.Get_thread_id()
     if (thread_id not in self.__maps__) do
       self.__maps__[thread_id] = {}
     return self.__maps__[thread_id][key]=value
+
+  this.__setattr__ = this.__setitem__
+  this.__getattr__ = this.__getitem__

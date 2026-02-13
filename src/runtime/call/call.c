@@ -19,6 +19,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define MAX_C_STACK_LIMIT 100
+
 #if defined(_WIN32)
 #ifndef _WIN32_WINNT
 #define _WIN32_WINNT 0x0602
@@ -137,6 +139,13 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
                         0);
     }
     if (CStackFrame) {
+      if (state->c_depth >= MAX_C_STACK_LIMIT) {
+        *err = create_err(
+          state->source_location.line, state->source_location.column,
+          state->source_location.length, state->path, "Internal Error",
+          "C stack limit exceeded (this usually indicates a builtin calling itself indirectly)", argc);
+        return;
+      }
       ArgonObject
           **registers=ar_alloc(sizeof(ArgonObject)*object->value.argon_fn->translated.registerCount);
       runtime((Translated){object->value.argon_fn->translated.registerCount,
@@ -151,7 +160,7 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
            NULL,
            {},
            {},
-           state->load_number_cache, object->value.argon_fn->translated.path},
+           state->load_number_cache, object->value.argon_fn->translated.path, state->c_depth+1},
               scope, err);
       ArgonObject * output = registers[0];
       state->registers[0] = output;
@@ -175,10 +184,10 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
            state->currentStackFramePointer,
            {},
            {},
-           state->load_number_cache,object->value.argon_fn->translated.path},
+           state->load_number_cache,object->value.argon_fn->translated.path, state->c_depth},
           scope,
           *state->currentStackFramePointer,
-          (*state->currentStackFramePointer)->depth + 1};
+          (*state->currentStackFramePointer)->depth + 1, {}};
       for (size_t i = 0; i < (*currentStackFrame).translated.registerCount;
            i++) {
         (*currentStackFrame).state.registers[i] = NULL;

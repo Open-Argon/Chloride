@@ -13,7 +13,7 @@
 #include <string.h>
 
 void darray_armem_init(darray_armem *arr, size_t element_size, size_t initial_size) {
-  if (element_size > CHUNK_SIZE) {
+  if (element_size > DARRAY_ARMEM_CHUNK_SIZE) {
     fprintf(stderr, "darray_armem_init: element size larger than chunk size\n");
     exit(EXIT_FAILURE);
   }
@@ -26,9 +26,9 @@ void darray_armem_init(darray_armem *arr, size_t element_size, size_t initial_si
 
   // round up to chunk size
   size_t chunks =
-      (bytes_needed + CHUNK_SIZE - 1) / CHUNK_SIZE;
+      (bytes_needed + DARRAY_ARMEM_CHUNK_SIZE - 1) / DARRAY_ARMEM_CHUNK_SIZE;
 
-  size_t alloc_size = chunks * CHUNK_SIZE;
+  size_t alloc_size = chunks * DARRAY_ARMEM_CHUNK_SIZE;
 
   arr->capacity = alloc_size / element_size;
   arr->data = ar_alloc(alloc_size);
@@ -151,7 +151,7 @@ darray_armem darray_armem_slice(darray_armem *arr, size_t start, size_t end) {
 
   slice.size = end - start;
   slice.element_size = arr->element_size;
-  slice.capacity = ((slice.size + CHUNK_SIZE) / CHUNK_SIZE) * CHUNK_SIZE;
+  slice.capacity = ((slice.size + DARRAY_ARMEM_CHUNK_SIZE) / DARRAY_ARMEM_CHUNK_SIZE) * DARRAY_ARMEM_CHUNK_SIZE;
   slice.data = ar_alloc(slice.capacity * slice.element_size);
   memcpy(
     slice.data,

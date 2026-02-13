@@ -15,6 +15,7 @@
 #include "call/call.h"
 #include "declaration/declaration.h"
 #include "import/import.h"
+#include "internals/dynamic_array_armem/darray_armem.h"
 #include "internals/hashmap/hashmap.h"
 #include "native_loader/native_loader.h"
 #include "objects/array/array.h"
@@ -1361,7 +1362,8 @@ void init_runtime_state(RuntimeState *runtime, Translated translated,
                      {0, 0, 0},
                      {},
                      createHashmap_GC(),
-                     path};
+                     path,
+                     0};
 }
 
 Stack *create_scope(Stack *prev, bool force) {
@@ -1448,7 +1450,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
   ArErr err = *err_ptr;
 
   StackFrame *currentStackFrame = ar_alloc(sizeof(StackFrame));
-  *currentStackFrame = (StackFrame){_translated, _state, stack, NULL, 0};
+  *currentStackFrame = (StackFrame){_translated, _state, stack, NULL, 0, {}};
   currentStackFrame->state.currentStackFramePointer = &currentStackFrame;
   while (currentStackFrame) {
     size_t ip = currentStackFrame->state.head;
@@ -1752,6 +1754,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       uint64_t length;
       POP_U64(length);
       state->source_location = (SourceLocation){line, column, length};
+      currentStackFrame->source_location = state->source_location;
       continue;
     }
     DO_LOAD_BOOL:
@@ -2659,6 +2662,11 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       state->registers[0] = ARGON_ARRAY_CREATE;
       continue;
     }
+    }
+
+    if (err.exists && currentStackFrame->source_location.length) {
+      struct StackTraceFrame frame = {currentStackFrame->source_location.line, currentStackFrame->source_location.column, currentStackFrame->translated.path};
+      darray_armem_insert(&err.stack_trace, err.stack_trace.size, &frame);
     }
 
     ArgonObject *result = currentStackFrame->state.registers[0];

@@ -1,7 +1,7 @@
 #include "thread.h"
+#include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdint.h>
 
 /* =========================
    Thread implementation
@@ -52,31 +52,16 @@ int mt_thread_detach(mt_thread_t *t) {
   return 0;
 }
 
-void mt_thread_destroy(mt_thread_t *t) {
-#ifdef _WIN32
-  CloseHandle(t->handle);
-#endif
-}
-
 /* =========================
    Thread ID
    ========================= */
 
-mt_thread_id_t mt_thread_current_id(void) {
-  mt_thread_id_t id;
-  memset(&id, 0, sizeof(id));
-
+int64_t mt_thread_current_id(void) {
 #ifdef _WIN32
-  DWORD tid = GetCurrentThreadId();
-  memcpy(id.bytes, &tid, sizeof(tid));
-  id.size = sizeof(tid);
+    return (int64_t)GetCurrentThreadId();
 #else
-  pthread_t tid = pthread_self();
-  memcpy(id.bytes, &tid, sizeof(tid));
-  id.size = sizeof(tid);
+    return (int64_t)(uintptr_t)pthread_self();
 #endif
-
-  return id;
 }
 
 /* =========================

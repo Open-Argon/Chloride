@@ -3,6 +3,7 @@
 
 #include <stdatomic.h>
 #include <stddef.h>
+#include <stdint.h>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -66,7 +67,7 @@ int mt_thread_start(mt_thread_t *t, mt_thread_fn fn, void *arg);
 int mt_thread_join(mt_thread_t *t);
 int mt_thread_detach(mt_thread_t *t);
 
-mt_thread_id_t mt_thread_current_id();
+int64_t mt_thread_current_id(void);
 
 /* =========================
    Mutex API
