@@ -11,7 +11,7 @@
 #include <stddef.h>
 #include <pthread.h>
 
-#define CHUNK_SIZE 16
+#define DARRAY_ARMEM_CHUNK_SIZE 128
 
 typedef struct {
   void *data;

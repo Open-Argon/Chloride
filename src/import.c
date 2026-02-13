@@ -150,7 +150,9 @@ int load_cache(Translated *translated_dest, char *joined_paths, uint64_t hash,
                char *source_path) {
   FILE *bytecode_file = fopen(joined_paths, "rb");
   if (!bytecode_file) {
+#ifdef ARGON_DEBUG
     fprintf(stderr, "cache doesnt exist... compiling from source.\n");
+#endif
     return 1;
   }
 
@@ -186,7 +188,9 @@ int load_cache(Translated *translated_dest, char *joined_paths, uint64_t hash,
   XXH64_freeState(state);
 
   if (calc_hash != stored_hash) {
+#ifdef ARGON_DEBUG
     fprintf(stderr, "cache hash mismatch (corrupted?)\n");
+#endif
     goto FAILED;
   }
 
@@ -266,19 +270,25 @@ int load_cache(Translated *translated_dest, char *joined_paths, uint64_t hash,
 
   translated_dest->bytecode.size = bytecodeSize;
 
+#ifdef ARGON_DEBUG
   fprintf(stderr, "cache exists and is valid, so will be used.\n");
+#endif
   fclose(bytecode_file);
   return 0;
 FAILED:
+#ifdef ARGON_DEBUG
   fprintf(stderr, "cache is invalid... compiling from source.\n");
+#endif
   fclose(bytecode_file);
   return 1;
 }
 
 Translated load_argon_file(char *path, ArErr *err) {
+#ifdef ARGON_DEBUG
   clock_t start, end;
   clock_t beginning = clock();
   double time_spent, total_time_spent = 0;
+#endif
 
   const char *basename_ptr;
   size_t basename_length;
@@ -336,33 +346,41 @@ Translated load_argon_file(char *path, ArErr *err) {
     darray_init(&tokens, sizeof(Token));
 
     LexerState state = {path, file, 0, 0, &tokens};
+#ifdef ARGON_DEBUG
     start = clock();
+#endif
     *err = lexer(state);
     if (err->exists) {
       darray_free(&tokens, free_token);
       return (Translated){};
     }
+#ifdef ARGON_DEBUG
     end = clock();
     time_spent = (double)(end - start) / CLOCKS_PER_SEC;
     fprintf(stderr, "Lexer time taken: %f seconds\n", time_spent);
+#endif
     fclose(state.file);
 
     DArray ast;
 
     darray_init(&ast, sizeof(ParsedValue));
 
+#ifdef ARGON_DEBUG
     start = clock();
+#endif
     *err = parser(path, &ast, &tokens, false);
     darray_free(&tokens, free_token);
     if (err->exists) {
       darray_free(&ast, (void (*)(void *))free_parsed);
       return (Translated){};
     }
+#ifdef ARGON_DEBUG
     end = clock();
     time_spent = (double)(end - start) / CLOCKS_PER_SEC;
     fprintf(stderr, "Parser time taken: %f seconds\n", time_spent);
 
     start = clock();
+#endif
 
     translated = init_translator(path);
     *err = translate(&translated, &ast);
@@ -373,9 +391,11 @@ Translated load_argon_file(char *path, ArErr *err) {
       hashmap_free(translated.constants.hashmap, NULL);
       return (Translated){};
     }
+#ifdef ARGON_DEBUG
     end = clock();
     time_spent = (double)(end - start) / CLOCKS_PER_SEC;
     fprintf(stderr, "Translation time taken: %f seconds\n", time_spent);
+#endif
 #if defined(__linux__)
     malloc_trim(0);
 #endif
@@ -446,9 +466,11 @@ Translated load_argon_file(char *path, ArErr *err) {
   gc_translated.constants.capacity = translated.constants.capacity;
   free(translated.bytecode.data);
   free(translated.constants.data);
+#ifdef ARGON_DEBUG
   total_time_spent = (double)(clock() - beginning) / CLOCKS_PER_SEC;
   fprintf(stderr, "total time taken loading file (%s): %f seconds\n", path,
           total_time_spent);
+#endif
   return gc_translated;
 }
 
@@ -530,7 +552,9 @@ Stack *ar_import(char *current_directory, char *path_relative, ArErr *err,
     hashmap_insert(importing_hash_table, hash, path, (void *)NULL, 0);
     return NULL;
   }
+#ifdef ARGON_DEBUG
   clock_t start = clock(), end;
+#endif
   RuntimeState state;
   init_runtime_state(&state, translated, path);
   Stack *program_scope = create_scope(Global_Scope, true);
@@ -560,9 +584,13 @@ Stack *ar_import(char *current_directory, char *path_relative, ArErr *err,
     hashmap_insert(importing_hash_table, hash, path, (void *)NULL, 0);
     return NULL;
   }
+
+#ifdef ARGON_DEBUG
   end = clock();
+
   double time_spent = (double)(end - start) / CLOCKS_PER_SEC;
   fprintf(stderr, "Execution time taken: %f seconds\n", time_spent);
+#endif
   hashmap_insert_GC(imported_hash_table, hash, path, main_scope, 0);
   hashmap_insert(importing_hash_table, hash, path, (void *)NULL, 0);
   return main_scope;

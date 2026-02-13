@@ -69,6 +69,10 @@ size_t translate_operation(Translated *translated, ParsedOperation *operation,
     push_instruction_byte(translated, OP_COPY_TO_REGISTER);
     push_instruction_byte(translated, 0);
     push_instruction_byte(translated, registerB);
+    push_instruction_byte(translated, OP_SOURCE_LOCATION);
+    push_instruction_code(translated, operation->line);
+    push_instruction_code(translated, operation->column);
+    push_instruction_code(translated, operation->length);
     switch (operation->operation) {
     case TOKEN_PLUS:;
       push_instruction_byte(translated, OP_ADDITION);

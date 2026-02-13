@@ -8,6 +8,7 @@
 #define RUNTIME_H
 #include "../returnTypes.h"
 #include "internals/hashmap/hashmap.h"
+#include <stdint.h>
 #include <stdio.h>
 
 #define likely(x) __builtin_expect(!!(x), 1)
@@ -49,6 +50,7 @@ typedef struct RuntimeState {
   DArray catch_errors; // ErrorCatch[]
   hashmap_GC *load_number_cache;
   char *path;
+  uint16_t c_depth;
 } RuntimeState;
 
 typedef struct StackFrame {
@@ -57,6 +59,7 @@ typedef struct StackFrame {
   Stack *stack;
   StackFrame *previousStackFrame;
   uint64_t depth;
+  SourceLocation source_location;
 } StackFrame;
 
 void bootstrap_types();

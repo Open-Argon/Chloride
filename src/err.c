@@ -6,6 +6,7 @@
 
 #include "err.h"
 #include "../external/libdye/include/dye.h"
+#include "runtime/internals/dynamic_array_armem/darray_armem.h"
 #include <ctype.h>
 #include <inttypes.h>
 #include <stdarg.h>
@@ -19,7 +20,7 @@
 #include "getline.h"
 #endif
 
-const ArErr no_err = (ArErr){"", "", "", 0, 0, 0, false};
+const ArErr no_err = (ArErr){"", "", "", 0, 0, 0, false, {}};
 
 ArErr create_err(int64_t line, int64_t column, int length, char *path,
                  const char *type, const char *fmt, ...) {
@@ -33,6 +34,8 @@ ArErr create_err(int64_t line, int64_t column, int length, char *path,
   err.line = line;
   err.column = column;
   err.length = length;
+
+  darray_armem_init(&err.stack_trace, sizeof(struct StackTraceFrame), 0);
 
   snprintf(err.type, sizeof(err.type), "%s", (char *)type);
 
@@ -58,6 +61,8 @@ ArErr vcreate_err(int64_t line, int64_t column, int length, char *path,
   err.column = column;
   err.length = length;
 
+  darray_armem_init(&err.stack_trace, sizeof(struct StackTraceFrame), 0);
+
   snprintf(err.type, sizeof(err.type), "%s", type);
   vsnprintf(err.message, sizeof(err.message), fmt, args);
 
@@ -67,6 +72,32 @@ ArErr vcreate_err(int64_t line, int64_t column, int length, char *path,
 void output_err(ArErr err) {
   if (!err.exists)
     return;
+  if (err.stack_trace.size > 1) {
+  dyefg(stderr, DYE_RED);
+  dye_style(stderr, DYE_STYLE_BOLD);
+    fprintf(stderr, "Stack trace (oldest frame first):");
+  dye_style(stderr, DYE_STYLE_RESET);
+  dyefg(stderr, DYE_RESET);
+    fprintf(stderr, "\n");
+    for (int64_t i = err.stack_trace.size - 1; i >= 0; i--) {
+      struct StackTraceFrame *frame = darray_armem_get(&err.stack_trace, i);
+      fprintf(stderr, " at ");
+      dyefg(stderr, DYE_CYAN);
+      fprintf(stderr, "%s", frame->path);
+      dyefg(stderr, DYE_GRAY);
+      fprintf(stderr, ":");
+      dyefg(stderr, DYE_YELLOW);
+      fprintf(stderr, "%" PRIu64, frame->line);
+      dyefg(stderr, DYE_GRAY);
+      fprintf(stderr, ":");
+      dyefg(stderr, DYE_YELLOW);
+      fprintf(stderr, "%" PRIu64, frame->column);
+      dye_style(stderr, DYE_STYLE_RESET);
+      dyefg(stderr, DYE_RESET);
+      fprintf(stderr, "\n");
+    }
+    fprintf(stderr, "\n");
+  }
   dye(stderr, DYE_WHITE, DYE_RED);
   fprintf(stderr, "ERROR!");
   dye(stderr, DYE_RESET, DYE_RESET);

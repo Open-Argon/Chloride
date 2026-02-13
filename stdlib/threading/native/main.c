@@ -197,9 +197,7 @@ ArgonObject *Argon_Get_thread_id(size_t argc, ArgonObject **argv, ArgonError *er
     return api->ARGON_NULL;
   }
 
-  mt_thread_id_t tid = mt_thread_current_id();
-
-  return api->string_to_argon((struct string){(char*)tid.bytes, tid.size});
+  return api->i64_to_argon(mt_thread_current_id());
 }
 
 void argon_module_init(ArgonState *vm, ArgonNativeAPI *api, ArgonError *err,
