@@ -34,13 +34,11 @@ class Local do
     self.__maps__ = {}
   this.__getitem__(self, key) = do
     let thread_id = __threading__.Get_thread_id()
-    if (thread_id not in self.__map__) do
-      self.__map__[thread_id] = {}
-    return self.__map__[thread_id][key]
+    if (thread_id not in self.__maps__) do
+      self.__maps__[thread_id] = {}
+    return self.__maps__[thread_id][key]
   this.__setitem__(self,key, value) = do
     let thread_id = __threading__.Get_thread_id()
-    if (thread_id not in self.__map__) do
-      self.__map__[thread_id] = {}
-    return self.__map__[thread_id][key]=value
-  this.__getattr__ = this.__getitem__
-  this.__setattr__ = this.__setitem__
+    if (thread_id not in self.__maps__) do
+      self.__maps__[thread_id] = {}
+    return self.__maps__[thread_id][key]=value

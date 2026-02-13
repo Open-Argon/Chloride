@@ -153,9 +153,8 @@ ArgonObject *ARGON_ARRAY___contains__(size_t argc, ArgonObject **argv,
   }
   darray_armem* arr = argv[0]->value.as_array;
   for (size_t i = 0;i<arr->size;i++) {
-    ArgonObject*result = argon_call(object__equal__, 1, (ArgonObject*[]){darray_armem_get(arr, i)}, err, state);
+    ArgonObject*result = argon_call(object__equal__, 1, (ArgonObject*[]){*(ArgonObject**)darray_armem_get(arr, i)}, err, state);
     if (api->is_error(err)) return ARGON_NULL;
-    printf("%d\n", result==ARGON_FALSE);
     if (result == ARGON_TRUE) return result;
   }
   return ARGON_FALSE;

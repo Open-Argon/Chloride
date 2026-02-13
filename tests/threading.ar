@@ -1,4 +1,6 @@
-import "../stdlib/threading" expose Thread
+import "../stdlib/threading" expose Thread, Local
+
+let l = Local()
 
 let d() = do
   let i = 0
