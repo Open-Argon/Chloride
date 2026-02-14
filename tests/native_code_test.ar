@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-let code = load_native_code("native_code_example/test.so")
+let code = load_native_code("native_code_example/target/release/libargon_native_example.so")
 
 term.log(code)
 
