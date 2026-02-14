@@ -33,12 +33,12 @@ pub unsafe extern "C" fn int_add(
 
     let a = ((*api).argon_to_i64.unwrap())(*argv.add(0), err);
     if ((*api).is_error.unwrap())(err) {
-        return (*api).ARGON_NULL;
+        return (*api).argon_null;
     }
 
     let b = ((*api).argon_to_i64.unwrap())(*argv.add(1), err);
     if ((*api).is_error.unwrap())(err) {
-        return (*api).ARGON_NULL;
+        return (*api).argon_null;
     }
 
     ((*api).i64_to_argon.unwrap())(a + b)
@@ -63,12 +63,12 @@ pub unsafe extern "C" fn double_add(
 
     let a = ((*api).argon_to_double.unwrap())(*argv.add(0), err);
     if ((*api).is_error.unwrap())(err) {
-        return (*api).ARGON_NULL;
+        return (*api).argon_null;
     }
 
     let b = ((*api).argon_to_double.unwrap())(*argv.add(1), err);
     if ((*api).is_error.unwrap())(err) {
-        return (*api).ARGON_NULL;
+        return (*api).argon_null;
     }
 
     ((*api).double_to_argon.unwrap())(a + b)
@@ -93,12 +93,12 @@ pub unsafe extern "C" fn rational_add(
 
     let a = ((*api).argon_to_rational.unwrap())(*argv.add(0), err);
     if ((*api).is_error.unwrap())(err) {
-        return (*api).ARGON_NULL;
+        return (*api).argon_null;
     }
 
     let b = ((*api).argon_to_rational.unwrap())(*argv.add(1), err);
     if ((*api).is_error.unwrap())(err) {
-        return (*api).ARGON_NULL;
+        return (*api).argon_null;
     }
 
     let result = rational {
@@ -130,12 +130,12 @@ pub unsafe extern "C" fn yooo(
     api: *mut ArgonNativeAPI,
 ) -> *mut ArgonObject { unsafe {
     if ((*api).fix_to_arg_size.unwrap())(1, argc, err) {
-        return (*api).ARGON_NULL;
+        return (*api).argon_null;
     }
 
     let name = ((*api).argon_to_string.unwrap())(*argv.add(0), err);
     if ((*api).is_error.unwrap())(err) {
-        return (*api).ARGON_NULL;
+        return (*api).argon_null;
     }
 
     let prefix = b"Yooo ";
@@ -168,31 +168,31 @@ pub unsafe extern "C" fn argon_module_init(
     // Helper alias in scope
     let c_str = |s: &str| CString::new(s).unwrap().into_raw();
 
-    ((*api).register_ArgonObject.unwrap())(
+    ((*api).register_argon_object.unwrap())(
         reg,
         c_str("hello_world"),
         ((*api).create_argon_native_function.unwrap())(c_str("hello_world"), Some(hello_world)),
     );
 
-    ((*api).register_ArgonObject.unwrap())(
+    ((*api).register_argon_object.unwrap())(
         reg,
         c_str("int_add"),
         ((*api).create_argon_native_function.unwrap())(c_str("int_add"), Some(int_add)),
     );
 
-    ((*api).register_ArgonObject.unwrap())(
+    ((*api).register_argon_object.unwrap())(
         reg,
         c_str("double_add"),
         ((*api).create_argon_native_function.unwrap())(c_str("double_add"), Some(double_add)),
     );
 
-    ((*api).register_ArgonObject.unwrap())(
+    ((*api).register_argon_object.unwrap())(
         reg,
         c_str("rational_add"),
         ((*api).create_argon_native_function.unwrap())(c_str("rational_add"), Some(rational_add)),
     );
 
-    ((*api).register_ArgonObject.unwrap())(
+    ((*api).register_argon_object.unwrap())(
         reg,
         c_str("yooo"),
         ((*api).create_argon_native_function.unwrap())(c_str("yooo"), Some(yooo)),
@@ -203,7 +203,7 @@ pub unsafe extern "C" fn argon_module_init(
         length: 11,
     };
 
-    ((*api).register_ArgonObject.unwrap())(
+    ((*api).register_argon_object.unwrap())(
         reg,
         c_str("nice"),
         ((*api).string_to_argon.unwrap())(hello_str),
