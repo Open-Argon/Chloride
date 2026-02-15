@@ -159,50 +159,50 @@ ArgonObject *new_instance(ArgonObject *of, size_t endSize) {
 
 inline void add_builtin_field(ArgonObject *target, built_in_fields field,
                               ArgonObject *object) {
-  pthread_rwlock_rdlock(&target->lock);
+  // pthread_rwlock_rdlock(&target->lock);
   for (size_t i = 0; i < target->built_in_slot_length; i++) {
     if (target->built_in_slot[i].field == field) {
       target->built_in_slot[i].value = object;
-      pthread_rwlock_unlock(&target->lock);
+      // pthread_rwlock_unlock(&target->lock);
       return;
     }
   }
   if (field > BUILT_IN_ARRAY_COUNT) {
     if (!target->dict) {
-      pthread_rwlock_unlock(&target->lock);
-      pthread_rwlock_wrlock(&target->lock);
+      // pthread_rwlock_unlock(&target->lock);
+      // pthread_rwlock_wrlock(&target->lock);
       target->dict = createHashmap_GC();
     }
-    pthread_rwlock_unlock(&target->lock);
+    // pthread_rwlock_unlock(&target->lock);
     hashmap_insert_GC(target->dict, built_in_field_hashes[field],
                       (char *)built_in_field_names[field], object, 0);
     return;
   }
-  pthread_rwlock_unlock(&target->lock);
-  pthread_rwlock_wrlock(&target->lock);
+  // pthread_rwlock_unlock(&target->lock);
+  // pthread_rwlock_wrlock(&target->lock);
   target->built_in_slot[target->built_in_slot_length++] =
       (struct built_in_slot){field, object};
-  pthread_rwlock_unlock(&target->lock);
+  // pthread_rwlock_unlock(&target->lock);
   // hashmap_insert_GC(target->dict, built_in_field_hashes[field],
   //                   (char *)built_in_field_names[field], object, 0);
 }
 
 void add_field_l(ArgonObject *target, char *name, uint64_t hash, size_t length,
                  ArgonObject *object) {
-  pthread_rwlock_rdlock(&target->lock);
+  // pthread_rwlock_rdlock(&target->lock);
   for (size_t i = 0; i < BUILT_IN_ARRAY_COUNT; i++) {
     if (strcmp_len(name, length, built_in_field_names[i]) == 0) {
-      pthread_rwlock_unlock(&target->lock);
+      // pthread_rwlock_unlock(&target->lock);
       add_builtin_field(target, i, object);
       return;
     }
   }
   if (!target->dict) {
-    pthread_rwlock_unlock(&target->lock);
-    pthread_rwlock_wrlock(&target->lock);
+    // pthread_rwlock_unlock(&target->lock);
+    // pthread_rwlock_wrlock(&target->lock);
     target->dict = createHashmap_GC();
   }
-  pthread_rwlock_unlock(&target->lock);
+  // pthread_rwlock_unlock(&target->lock);
   char *name_copy = ar_alloc_atomic(length);
   memcpy(name_copy, name, length);
   name_copy[length] = '\0';
@@ -242,15 +242,15 @@ ArgonObject *get_field_for_class_l(ArgonObject *target, char *name,
 ArgonObject *get_field_l(ArgonObject *target, char *name, uint64_t hash,
                          size_t length, bool recursive,
                          bool disable_method_wrapper) {
-  pthread_rwlock_wrlock(&target->lock);
+  // pthread_rwlock_wrlock(&target->lock);
   for (size_t i = 0; i < target->built_in_slot_length; i++) {
     if (strcmp_len(name, length, built_in_field_names[i]) == 0) {
       ArgonObject *result = target->built_in_slot[i].value;
-      pthread_rwlock_unlock(&target->lock);
+      // pthread_rwlock_unlock(&target->lock);
       return result;
     }
   }
-  pthread_rwlock_unlock(&target->lock);
+  // pthread_rwlock_unlock(&target->lock);
   if (target->dict) {
     ArgonObject *object = hashmap_lookup_GC(target->dict, hash);
     if (!recursive || object)
@@ -294,15 +294,15 @@ get_builtin_field_with_recursion_support(ArgonObject *target,
                                          bool disable_method_wrapper) {
   if (!target)
     return NULL;
-  pthread_rwlock_wrlock(&target->lock);
+  // pthread_rwlock_wrlock(&target->lock);
   for (size_t i = 0; i < target->built_in_slot_length; i++) {
     if (target->built_in_slot[i].field == field) {
       ArgonObject *result = target->built_in_slot[i].value;
-      pthread_rwlock_unlock(&target->lock);
+      // pthread_rwlock_unlock(&target->lock);
       return result;
     }
   }
-  pthread_rwlock_unlock(&target->lock);
+  // pthread_rwlock_unlock(&target->lock);
   if (!target->dict)
     return NULL;
   ArgonObject *object =

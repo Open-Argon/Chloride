@@ -216,7 +216,7 @@ struct ArgonObject {
   struct built_in_slot built_in_slot[BUILT_IN_ARRAY_COUNT];
   ArgonType type;
   bool as_bool;
-  pthread_rwlock_t lock;
+  // pthread_rwlock_t lock;
   union {
     ArErr *err;
     struct as_number *as_number;

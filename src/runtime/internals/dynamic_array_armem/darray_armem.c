@@ -12,6 +12,12 @@
 #include <stdlib.h>
 #include <string.h>
 
+void darray_armem_finalizer(void *obj, void *client_data) {
+  (void)client_data;
+  darray_armem *hashmap = obj;
+  pthread_rwlock_destroy(&hashmap->lock);
+}
+
 void darray_armem_init(darray_armem *arr, size_t element_size, size_t initial_size) {
   if (element_size > DARRAY_ARMEM_CHUNK_SIZE) {
     fprintf(stderr, "darray_armem_init: element size larger than chunk size\n");
@@ -39,6 +45,8 @@ void darray_armem_init(darray_armem *arr, size_t element_size, size_t initial_si
   }
 
   pthread_rwlock_init(&arr->lock, NULL);
+
+  GC_register_finalizer(arr, darray_armem_finalizer, NULL, NULL, NULL);
 }
 
 static void darray_armem_resize_nolock(darray_armem *arr, size_t new_size) {

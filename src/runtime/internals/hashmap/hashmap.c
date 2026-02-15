@@ -7,8 +7,9 @@
 #include "hashmap.h"
 #include "../../../memory.h"
 
-#include <string.h>
 #include <stdlib.h>
+#include <string.h>
+#include <time.h>
 
 /* ===========================
    Internal helpers (NO LOCKS)
@@ -18,14 +19,14 @@ static inline int hashCode_GC_nolock(struct hashmap_GC *t, uint64_t hash) {
   return t->size ? (hash & (t->size - 1)) : 0;
 }
 
-static void hashmap_insert_GC_nolock(
-    struct hashmap_GC *t,
-    uint64_t hash,
-    void *key,
-    void *val,
-    size_t order
-);
+static void hashmap_insert_GC_nolock(struct hashmap_GC *t, uint64_t hash,
+                                     void *key, void *val, size_t order);
 
+void hashmap_finalizer(void *obj, void *client_data) {
+  (void)client_data;
+  struct hashmap_GC *hashmap = obj;
+  pthread_rwlock_destroy(&hashmap->lock);
+}
 
 static int compare_node_asc(const void *a, const void *b) {
   const struct node_GC *na = *(const struct node_GC **)a;
@@ -38,7 +39,6 @@ static int compare_node_asc(const void *a, const void *b) {
     return 1;
   return 0;
 }
-
 
 static void resize_hashmap_GC_nolock(struct hashmap_GC *t) {
   int old_size = t->size;
@@ -57,25 +57,15 @@ static void resize_hashmap_GC_nolock(struct hashmap_GC *t) {
   for (int i = 0; i < old_size; i++) {
     struct node_GC *temp = old_list[i];
     while (temp) {
-      hashmap_insert_GC_nolock(
-        t,
-        temp->hash,
-        temp->key,
-        temp->val,
-        temp->order
-      );
+      hashmap_insert_GC_nolock(t, temp->hash, temp->key, temp->val,
+                               temp->order);
       temp = temp->next;
     }
   }
 }
 
-static void hashmap_insert_GC_nolock(
-    struct hashmap_GC *t,
-    uint64_t hash,
-    void *key,
-    void *val,
-    size_t order
-) {
+static void hashmap_insert_GC_nolock(struct hashmap_GC *t, uint64_t hash,
+                                     void *key, void *val, size_t order) {
   if (!order)
     order = t->order++;
 
@@ -89,12 +79,7 @@ static void hashmap_insert_GC_nolock(
 
   if (!t->list && t->inline_count < INLINE_HASHMAP_ARRAY_SIZE) {
     t->inline_values[t->inline_count++] = (struct node_GC){
-      .hash = hash,
-      .key = key,
-      .val = val,
-      .order = order,
-      .next = NULL
-    };
+        .hash = hash, .key = key, .val = val, .order = order, .next = NULL};
     t->count++;
     return;
   }
@@ -115,13 +100,11 @@ static void hashmap_insert_GC_nolock(
   }
 
   struct node_GC *n = ar_alloc(sizeof(struct node_GC));
-  *n = (struct node_GC){
-    .hash = hash,
-    .key = key,
-    .val = val,
-    .order = order,
-    .next = t->list[pos]
-  };
+  *n = (struct node_GC){.hash = hash,
+                        .key = key,
+                        .val = val,
+                        .order = order,
+                        .next = t->list[pos]};
 
   t->list[pos] = n;
   t->hashmap_count++;
@@ -137,6 +120,8 @@ struct hashmap_GC *createHashmap_GC(void) {
   memset(t, 0, sizeof(*t));
   t->order = 1;
   pthread_rwlock_init(&t->lock, NULL);
+
+  GC_register_finalizer(t, hashmap_finalizer, NULL, NULL, NULL);
   return t;
 }
 
@@ -154,10 +139,8 @@ void clear_hashmap_GC(struct hashmap_GC *t) {
   pthread_rwlock_unlock(&t->lock);
 }
 
-struct node_GC **hashmap_GC_to_array(
-    struct hashmap_GC *t,
-    size_t *array_length
-) {
+struct node_GC **hashmap_GC_to_array(struct hashmap_GC *t,
+                                     size_t *array_length) {
   pthread_rwlock_rdlock(&t->lock);
 
   size_t cap = 8;
@@ -184,7 +167,7 @@ struct node_GC **hashmap_GC_to_array(
     }
   }
 
-  qsort(arr, *array_length, sizeof(struct node_GC*), compare_node_asc);
+  qsort(arr, *array_length, sizeof(struct node_GC *), compare_node_asc);
 
   pthread_rwlock_unlock(&t->lock);
   return arr;
@@ -195,11 +178,8 @@ int hashmap_remove_GC(struct hashmap_GC *t, uint64_t hash) {
 
   for (size_t i = 0; i < t->inline_count; i++) {
     if (t->inline_values[i].hash == hash) {
-      memmove(
-        &t->inline_values[i],
-        &t->inline_values[i + 1],
-        (t->inline_count - i - 1) * sizeof(struct node_GC)
-      );
+      memmove(&t->inline_values[i], &t->inline_values[i + 1],
+              (t->inline_count - i - 1) * sizeof(struct node_GC));
       t->inline_count--;
       pthread_rwlock_unlock(&t->lock);
       return 1;
@@ -233,13 +213,8 @@ int hashmap_remove_GC(struct hashmap_GC *t, uint64_t hash) {
   return 0;
 }
 
-void hashmap_insert_GC(
-    struct hashmap_GC *t,
-    uint64_t hash,
-    void *key,
-    void *val,
-    size_t order
-) {
+void hashmap_insert_GC(struct hashmap_GC *t, uint64_t hash, void *key,
+                       void *val, size_t order) {
   pthread_rwlock_wrlock(&t->lock);
   hashmap_insert_GC_nolock(t, hash, key, val, order);
   pthread_rwlock_unlock(&t->lock);
