@@ -1293,7 +1293,7 @@ bool mpq_to_int64(mpq_t q, int64_t *out) {
   mpz_set(num, mpq_numref(q));
 
   // Check bounds
-  if (mpz_cmp_si(num, INT64_MIN) < 0 || mpz_cmp_si(num, INT64_MAX) > 0) {
+  if (!mpz_fits_sint_p(num)) {
     mpz_clear(num);
     return false;
   }

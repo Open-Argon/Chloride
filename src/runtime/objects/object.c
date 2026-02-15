@@ -146,7 +146,7 @@ ArgonObject *new_class() {
 }
 
 ArgonObject *new_small_instance(ArgonObject *of, size_t endSize) {
-  ArgonObject *object = new_small_object(endSize);
+  ArgonObject *object = new_object(endSize);
   add_builtin_field(object, __class__, of);
   return object;
 }

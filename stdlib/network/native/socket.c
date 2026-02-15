@@ -23,11 +23,13 @@ void net_cleanup(void) {
 
 socket_t net_listen(int port) {
     socket_t s = socket(AF_INET, SOCK_STREAM, 0);
-    if (s < 0) return -1;
 
 #ifndef _WIN32
+    if (s < 0) return -1;
     int opt = 1;
     setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+#else
+    if (s == INVALID_SOCKET) return -1;
 #endif
 
     struct sockaddr_in addr;
