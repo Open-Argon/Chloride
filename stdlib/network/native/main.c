@@ -43,7 +43,11 @@ ArgonObject *argon_net_listen(size_t argc, ArgonObject **argv, ArgonError *err,
     return api->ARGON_NULL;
 
   socket_t server_socket = net_listen(port);
+#ifdef _WIN32
+  if (server_socket == INVALID_SOCKET)
+#else
   if (server_socket < 0)
+#endif
     return api->throw_argon_error(
         err, "Socket Error", "failed to open a tcp socket on port %" PRIu64,
         port);
@@ -72,7 +76,11 @@ ArgonObject *argon_net_accept(size_t argc, ArgonObject **argv, ArgonError *err,
   socket_t server_socket = *(socket_t *)server_socket_buffer.data;
 
   socket_t connection_socket = net_accept(server_socket);
+#ifdef _WIN32
+  if (connection_socket == INVALID_SOCKET)
+#else
   if (connection_socket < 0)
+#endif
     return api->throw_argon_error(err, "Socket Error",
                                   "failed to accept a socket connection");
 

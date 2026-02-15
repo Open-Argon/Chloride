@@ -30,6 +30,7 @@
 #include "objects/tuple/tuple.h"
 #include "objects/type/type.h"
 #include <fcntl.h>
+#include <gc/gc.h>
 #include <gmp.h>
 #include <inttypes.h>
 #include <stddef.h>
@@ -1449,7 +1450,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
 
   ArErr err = *err_ptr;
 
-  StackFrame *currentStackFrame = ar_alloc(sizeof(StackFrame));
+  StackFrame *currentStackFrame = GC_MALLOC_UNCOLLECTABLE(sizeof(StackFrame));
   *currentStackFrame = (StackFrame){_translated, _state, stack, NULL, 0, {}};
   currentStackFrame->state.currentStackFramePointer = &currentStackFrame;
   while (currentStackFrame) {

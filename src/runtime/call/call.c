@@ -5,11 +5,11 @@
  */
 
 #include "call.h"
+#include "../../err.h"
 #include "../../hash_data/hash_data.h"
+#include "../../memory.h"
 #include "../api/api.h"
 #include "../objects/string/string.h"
-#include "../../err.h"
-#include "../../memory.h"
 #include <inttypes.h>
 #include <math.h>
 #include <stdbool.h>
@@ -25,8 +25,8 @@
 #ifndef _WIN32_WINNT
 #define _WIN32_WINNT 0x0602
 #endif
-#include <windows.h>
 #include <psapi.h>
+#include <windows.h>
 
 double get_memory_usage_mb() {
   PROCESS_MEMORY_COUNTERS pmc;
@@ -96,19 +96,12 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
       object = call_method;
     }
   }
-  ArgonObject*binding_object = NULL;
+  ArgonObject *binding_object = NULL;
+  int binding_object_exists = 0;
   if (object->type == TYPE_METHOD) {
-    ArgonObject *binding_object = get_builtin_field(object, __binding__);
-    if (binding_object) {
-      ArgonObject **new_call_args =
-          ar_alloc(sizeof(ArgonObject *) * (argc + 1));
-      new_call_args[0] = binding_object;
-      if (argc > 0) {
-        memcpy(new_call_args + 1, argv, argc * sizeof(ArgonObject *));
-      }
-      argv = new_call_args;
-      argc++;
-    }
+    binding_object = get_builtin_field(object, __binding__);
+    if (binding_object)
+      binding_object_exists = 1;
     ArgonObject *function_object = get_builtin_field(object, __function__);
     if (function_object)
       object = function_object;
@@ -131,8 +124,17 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
       return;
     }
     Stack *scope = create_scope(object->value.argon_fn->stack, true);
+    if (binding_object) {
+      struct string_struct key = object->value.argon_fn->parameters[0];
+      ArgonObject *value = argv[0];
+      uint64_t hash = siphash64_bytes(key.data, key.length, siphash_key);
+      hashmap_insert_GC(scope->scope, hash,
+                        new_string_object(key.data, key.length, 0, hash), value,
+                        0);
+    }
     for (size_t i = 0; i < argc; i++) {
-      struct string_struct key = object->value.argon_fn->parameters[i];
+      struct string_struct key =
+          object->value.argon_fn->parameters[i + binding_object_exists];
       ArgonObject *value = argv[i];
       uint64_t hash = siphash64_bytes(key.data, key.length, siphash_key);
       hashmap_insert_GC(scope->scope, hash,
@@ -142,29 +144,37 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
     if (CStackFrame) {
       if (state->c_depth >= MAX_C_STACK_LIMIT) {
         *err = create_err(
-          state->source_location.line, state->source_location.column,
-          state->source_location.length, state->path, "Internal Error",
-          "C stack limit exceeded (this usually indicates a builtin calling itself indirectly)", argc);
+            state->source_location.line, state->source_location.column,
+            state->source_location.length, state->path, "Internal Error",
+            "C stack limit exceeded (this usually indicates a builtin calling "
+            "itself indirectly)",
+            argc);
         return;
       }
-      ArgonObject
-          **registers=ar_alloc(sizeof(ArgonObject)*object->value.argon_fn->translated.registerCount);
-      runtime((Translated){object->value.argon_fn->translated.registerCount,
-           object->value.argon_fn->translated.registerAssignment,
-           NULL,
-           {object->value.argon_fn->bytecode, sizeof(uint8_t),
-            object->value.argon_fn->bytecode_length,
-            object->value.argon_fn->bytecode_length, false},
-           object->value.argon_fn->translated.constants, object->value.argon_fn->translated.path}, (RuntimeState){registers,
-           0,
-           NULL,
-           NULL,
-           {},
-           {},
-           state->load_number_cache, object->value.argon_fn->translated.path, state->c_depth+1},
-              scope, err);
-      ArgonObject * output = registers[0];
-      state->registers[0] = output;
+      ArgonObject **registers =
+          ar_alloc(sizeof(ArgonObject *) *
+                   object->value.argon_fn->translated.registerCount);
+      runtime(
+          (Translated){object->value.argon_fn->translated.registerCount,
+                       object->value.argon_fn->translated.registerAssignment,
+                       NULL,
+                       {object->value.argon_fn->bytecode, sizeof(uint8_t),
+                        object->value.argon_fn->bytecode_length,
+                        object->value.argon_fn->bytecode_length, false},
+                       object->value.argon_fn->translated.constants,
+                       object->value.argon_fn->translated.path},
+          (RuntimeState){registers,
+                         0,
+                         NULL,
+                         NULL,
+                         {},
+                         {},
+                         state->load_number_cache,
+                         object->value.argon_fn->translated.path,
+                         state->c_depth + 1},
+          scope, err);
+      state->registers[0] = registers[0];
+      GC_FREE(registers);
       return;
     } else {
       StackFrame *currentStackFrame =
@@ -178,21 +188,21 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
            {object->value.argon_fn->bytecode, sizeof(uint8_t),
             object->value.argon_fn->bytecode_length,
             object->value.argon_fn->bytecode_length, false},
-           object->value.argon_fn->translated.constants, object->value.argon_fn->translated.path},
+           object->value.argon_fn->translated.constants,
+           object->value.argon_fn->translated.path},
           {(ArgonObject **)((char *)currentStackFrame + sizeof(StackFrame)),
            0,
            NULL,
            state->currentStackFramePointer,
            {},
            {},
-           state->load_number_cache,object->value.argon_fn->translated.path, state->c_depth},
+           state->load_number_cache,
+           object->value.argon_fn->translated.path,
+           state->c_depth},
           scope,
           *state->currentStackFramePointer,
-          (*state->currentStackFramePointer)->depth + 1, {}};
-      for (size_t i = 0; i < (*currentStackFrame).translated.registerCount;
-           i++) {
-        (*currentStackFrame).state.registers[i] = NULL;
-      }
+          (*state->currentStackFramePointer)->depth + 1,
+          {}};
       *state->currentStackFramePointer = currentStackFrame;
       if ((*state->currentStackFramePointer)->depth >= 10000) {
         double logval =
@@ -215,6 +225,16 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
       return;
     }
   } else if (object->type == TYPE_NATIVE_FUNCTION) {
+    if (binding_object) {
+      ArgonObject **new_call_args =
+          ar_alloc(sizeof(ArgonObject *) * (argc + 1));
+      new_call_args[0] = binding_object;
+      if (argc > 0) {
+        memcpy(new_call_args + 1, argv, argc * sizeof(ArgonObject *));
+      }
+      argv = new_call_args;
+      argc++;
+    }
     state->registers[0] =
         object->value.native_fn(argc, argv, err, state, &native_api);
     if (err->exists && strlen(err->path) == 0) {

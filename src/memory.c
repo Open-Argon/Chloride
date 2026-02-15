@@ -34,8 +34,8 @@ size_t memory_allocations_size = 0;
 pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 
 void ar_memory_init() {
-  GC_allow_register_threads();
   GC_INIT();
+  GC_allow_register_threads();
   // memory_allocations_size = 8;
   // memory_allocations = malloc(memory_allocations_size*sizeof(struct
   // allocation));

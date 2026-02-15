@@ -3,95 +3,117 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 # ------------------------------------------------------------
+# Stdlib metadata
+# ------------------------------------------------------------
+LIB        := network
+SRC_DIR    := native
+BIN_DIR    := native/bin
+
+# ------------------------------------------------------------
 # Target OS
+#   posix   = Linux / FreeBSD / macOS
+#   windows = Windows (via MinGW-w64)
 # ------------------------------------------------------------
 TARGET_OS ?= posix
-UNAME_S := $(shell uname -s)
+UNAME_S   := $(shell uname -s)
+
+# ------------------------------------------------------------
+# Toolchain & platform specifics
+# ------------------------------------------------------------
 ifeq ($(TARGET_OS),windows)
-	CC        = x86_64-w64-mingw32-gcc
-	LIB_EXT   = dll
-	SHARED_LDFLAGS = -shared
+
+	CC      := x86_64-w64-mingw32-gcc
+	LIB_EXT := dll
+
+	SHARED_LDFLAGS := -shared
+	PLATFORM_LDFLAGS := \
+		-lws2_32
+
+	PLATFORM_CFLAGS := \
+		-DWIN32 \
+		-D_WIN32_WINNT=0x0601
+
 else ifeq ($(UNAME_S),Darwin)
-	CC        = gcc
-	LIB_EXT   = dylib
-	SHARED_LDFLAGS = -dynamiclib -Wl,-install_name,@rpath/$(LIB).dylib
+
+	CC      := gcc
+	LIB_EXT := dylib
+
+	SHARED_LDFLAGS := \
+		-dynamiclib \
+		-Wl,-install_name,@rpath/$(LIB).dylib
+
+	PLATFORM_LDFLAGS :=
+	PLATFORM_CFLAGS :=
+
 else
-	CC        = gcc
-	LIB_EXT   = so
-	SHARED_LDFLAGS = -shared
+
+	# Linux / FreeBSD
+	CC      := gcc
+	LIB_EXT := so
+
+	SHARED_LDFLAGS := -shared
+	PLATFORM_LDFLAGS :=
+	PLATFORM_CFLAGS :=
+
 endif
 
 # ------------------------------------------------------------
 # Common flags
 # ------------------------------------------------------------
-COMMON_CFLAGS = \
+COMMON_CFLAGS := \
 	-fPIC \
 	-fvisibility=hidden \
 	-Wall -Wextra \
 	-Werror=unused-result
 
-ARGON_INCLUDE ?= ../include
+ARGON_INCLUDE ?= ../../include
 
 # ------------------------------------------------------------
-# Stdlib discovery (BULLETPROOF)
-# Finds: network/native → network
+# Sources
 # ------------------------------------------------------------
-STDLIBS := $(shell find . -maxdepth 2 -type d -name native | sed 's|^\./||; s|/native$$||')
+SRC := $(wildcard $(SRC_DIR)/*.c)
+OUT := $(BIN_DIR)/$(LIB).$(LIB_EXT)
 
 # ------------------------------------------------------------
 # Phony targets
 # ------------------------------------------------------------
-.PHONY: all clean build-lib \
-        build-debug build-full-debug build-native \
-        $(STDLIBS)
+.PHONY: all debug full-debug native clean
 
 # ------------------------------------------------------------
 # Default target
 # ------------------------------------------------------------
-all: $(STDLIBS)
+all: $(OUT)
 
 # ------------------------------------------------------------
-# Per-stdlib entry points
+# Build rule
 # ------------------------------------------------------------
-$(STDLIBS):
-	$(MAKE) build-lib LIB=$@
-
-# ------------------------------------------------------------
-# Build logic (runtime expansion)
-# ------------------------------------------------------------
-build-lib:
-	@echo "==> Building stdlib: $(LIB)"
-	@mkdir -p $(LIB)/native/bin
-
-	SRC="$(shell ls $(LIB)/native/*.c 2>/dev/null)"; \
-	if [ -z "$$SRC" ]; then \
-		echo "error: no C sources found for stdlib '$(LIB)'"; \
-		exit 1; \
-	fi; \
-	EXTRA_CFLAGS="$$(test -f $(LIB)/native/compiler_flags.txt && cat $(LIB)/native/compiler_flags.txt)"; \
+$(OUT): $(SRC)
+	@echo "==> Building stdlib: $(LIB) ($(TARGET_OS))"
+	@mkdir -p $(BIN_DIR)
 	$(CC) \
 		$(COMMON_CFLAGS) \
+		$(PLATFORM_CFLAGS) \
 		$(CFLAGS) \
-		$$EXTRA_CFLAGS \
 		-I$(ARGON_INCLUDE) \
 		$(SHARED_LDFLAGS) \
-		-o $(LIB)/native/bin/$(LIB).$(LIB_EXT) \
-		$$SRC
+		-o $@ \
+		$^ \
+		$(PLATFORM_LDFLAGS)
 
 # ------------------------------------------------------------
 # Build variants
 # ------------------------------------------------------------
-build-debug:
+debug:
 	$(MAKE) CFLAGS="-g" all
 
-build-full-debug:
+full-debug:
 	$(MAKE) CFLAGS="-g -fsanitize=address -fno-omit-frame-pointer" all
 
-build-native:
+native:
 	$(MAKE) CFLAGS="-march=native" all
 
 # ------------------------------------------------------------
 # Cleanup
 # ------------------------------------------------------------
 clean:
-	rm -rf */native/bin
+	rm -rf $(BIN_DIR)
