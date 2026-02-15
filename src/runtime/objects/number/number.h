@@ -13,6 +13,8 @@
 
 extern ArgonObject *ARGON_NUMBER_TYPE;
 
+void mpq_set_si64(mpq_t q, int64_t n, int64_t d);
+
 void create_ARGON_NUMBER_TYPE();
 
 ArgonObject *new_number_object(mpq_t number);

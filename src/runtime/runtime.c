@@ -457,7 +457,6 @@ ArgonObject *ARGON_LESS_THAN_FUNCTION(size_t argc, ArgonObject **argv,
     ArgonObject *function___less_than__ =
         get_builtin_field_for_class(object_class, __less_than__, output);
     if (!function___less_than__) {
-      printf("%d\n", output->type);
       ArgonObject *cls___name__ = get_builtin_field(object_class, __name__);
       *err = create_err(0, 0, 0, "", "Runtime Error",
                         "Object of type '%.*s' is missing __less_than__ method",
@@ -1827,8 +1826,8 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
           mpq_t a_GMP, b_GMP;
           mpq_init(a_GMP);
           mpq_init(b_GMP);
-          mpq_set_si(a_GMP, a, 1);
-          mpq_set_si(b_GMP, b, 1);
+          mpq_set_si64(a_GMP, a, 1);
+          mpq_set_si64(b_GMP, b, 1);
           mpq_add(a_GMP, a_GMP, b_GMP);
           state->registers[registerC] = new_number_object(a_GMP);
           mpq_clear(a_GMP);
@@ -1846,11 +1845,11 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
           mpq_init(a_GMP);
           mpq_init(b_GMP);
           if (valueA->value.as_number->is_int64) {
-            mpq_set_si(a_GMP, valueA->value.as_number->n.i64, 1);
+            mpq_set_si64(a_GMP, valueA->value.as_number->n.i64, 1);
             mpq_set(b_GMP, *valueB->value.as_number->n.mpq);
           } else {
             mpq_set(a_GMP, *valueA->value.as_number->n.mpq);
-            mpq_set_si(b_GMP, valueB->value.as_number->n.i64, 1);
+            mpq_set_si64(b_GMP, valueB->value.as_number->n.i64, 1);
           }
           mpq_add(a_GMP, a_GMP, b_GMP);
           state->registers[registerC] = new_number_object(a_GMP);
@@ -1889,8 +1888,8 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
           mpq_t a_GMP, b_GMP;
           mpq_init(a_GMP);
           mpq_init(b_GMP);
-          mpq_set_si(a_GMP, a, 1);
-          mpq_set_si(b_GMP, b, 1);
+          mpq_set_si64(a_GMP, a, 1);
+          mpq_set_si64(b_GMP, b, 1);
           mpq_sub(a_GMP, a_GMP, b_GMP);
           state->registers[registerC] = new_number_object(a_GMP);
           mpq_clear(a_GMP);
@@ -1908,11 +1907,11 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
           mpq_init(a_GMP);
           mpq_init(b_GMP);
           if (valueA->value.as_number->is_int64) {
-            mpq_set_si(a_GMP, valueA->value.as_number->n.i64, 1);
+            mpq_set_si64(a_GMP, valueA->value.as_number->n.i64, 1);
             mpq_set(b_GMP, *valueB->value.as_number->n.mpq);
           } else {
             mpq_set(a_GMP, *valueA->value.as_number->n.mpq);
-            mpq_set_si(b_GMP, valueB->value.as_number->n.i64, 1);
+            mpq_set_si64(b_GMP, valueB->value.as_number->n.i64, 1);
           }
           mpq_sub(a_GMP, a_GMP, b_GMP);
           state->registers[registerC] = new_number_object(a_GMP);
@@ -1951,8 +1950,8 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
           mpq_t a_GMP, b_GMP;
           mpq_init(a_GMP);
           mpq_init(b_GMP);
-          mpq_set_si(a_GMP, a, 1);
-          mpq_set_si(b_GMP, b, 1);
+          mpq_set_si64(a_GMP, a, 1);
+          mpq_set_si64(b_GMP, b, 1);
           mpq_mul(a_GMP, a_GMP, b_GMP);
           state->registers[registerC] = new_number_object(a_GMP);
           mpq_clear(a_GMP);
@@ -1970,11 +1969,11 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
           mpq_init(a_GMP);
           mpq_init(b_GMP);
           if (valueA->value.as_number->is_int64) {
-            mpq_set_si(a_GMP, valueA->value.as_number->n.i64, 1);
+            mpq_set_si64(a_GMP, valueA->value.as_number->n.i64, 1);
             mpq_set(b_GMP, *valueB->value.as_number->n.mpq);
           } else {
             mpq_set(a_GMP, *valueA->value.as_number->n.mpq);
-            mpq_set_si(b_GMP, valueB->value.as_number->n.i64, 1);
+            mpq_set_si64(b_GMP, valueB->value.as_number->n.i64, 1);
           }
           mpq_mul(a_GMP, a_GMP, b_GMP);
           state->registers[registerC] = new_number_object(a_GMP);
@@ -2014,8 +2013,8 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
             mpq_init(b);
             mpq_init(r);
 
-            mpq_set_si(a, base, 1);
-            mpq_set_si(b, exp, 1);
+            mpq_set_si64(a, base, 1);
+            mpq_set_si64(b, exp, 1);
 
             mpq_pow_q(r, a, b);
 
@@ -2064,13 +2063,13 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
 
           /* load base */
           if (valueA->value.as_number->is_int64)
-            mpq_set_si(a_GMP, valueA->value.as_number->n.i64, 1);
+            mpq_set_si64(a_GMP, valueA->value.as_number->n.i64, 1);
           else
             mpq_set(a_GMP, *valueA->value.as_number->n.mpq);
 
           /* load exponent */
           if (valueB->value.as_number->is_int64)
-            mpq_set_si(b_GMP, valueB->value.as_number->n.i64, 1);
+            mpq_set_si64(b_GMP, valueB->value.as_number->n.i64, 1);
           else
             mpq_set(b_GMP, *valueB->value.as_number->n.mpq);
 
@@ -2142,6 +2141,10 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
                              "Zero Division Error", "division by zero");
             continue;
           }
+          if (b < 0) {
+            a = -a;
+            b = -b;
+          }
           state->registers[registerC] =
               new_number_object_from_num_and_den(a, b);
         } else if (!valueA->value.as_number->is_int64 &&
@@ -2157,7 +2160,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
           mpq_init(a_GMP);
           mpq_init(b_GMP);
           if (valueA->value.as_number->is_int64) {
-            mpq_set_si(a_GMP, valueA->value.as_number->n.i64, 1);
+            mpq_set_si64(a_GMP, valueA->value.as_number->n.i64, 1);
             mpq_set(b_GMP, *valueB->value.as_number->n.mpq);
           } else {
             mpq_set(a_GMP, *valueA->value.as_number->n.mpq);
@@ -2168,7 +2171,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
                                "Zero Division Error", "division by zero");
               continue;
             }
-            mpq_set_si(b_GMP, valueB->value.as_number->n.i64, 1);
+            mpq_set_si64(b_GMP, valueB->value.as_number->n.i64, 1);
           }
           mpq_div(a_GMP, a_GMP, b_GMP);
           state->registers[registerC] = new_number_object(a_GMP);
@@ -2219,7 +2222,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
           mpq_init(a_GMP);
           mpq_init(b_GMP);
           if (valueA->value.as_number->is_int64) {
-            mpq_set_si(a_GMP, valueA->value.as_number->n.i64, 1);
+            mpq_set_si64(a_GMP, valueA->value.as_number->n.i64, 1);
             mpq_set(b_GMP, *valueB->value.as_number->n.mpq);
           } else {
             mpq_set(a_GMP, *valueA->value.as_number->n.mpq);
@@ -2230,7 +2233,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
                                "Zero Division Error", "floor division by zero");
               continue;
             }
-            mpq_set_si(b_GMP, valueB->value.as_number->n.i64, 1);
+            mpq_set_si64(b_GMP, valueB->value.as_number->n.i64, 1);
           }
           mpq_fdiv(a_GMP, a_GMP, b_GMP);
           state->registers[registerC] = new_number_object(a_GMP);
@@ -2281,7 +2284,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
           mpq_init(a_GMP);
           mpq_init(b_GMP);
           if (valueA->value.as_number->is_int64) {
-            mpq_set_si(a_GMP, valueA->value.as_number->n.i64, 1);
+            mpq_set_si64(a_GMP, valueA->value.as_number->n.i64, 1);
             mpq_set(b_GMP, *valueB->value.as_number->n.mpq);
           } else {
             mpq_set(a_GMP, *valueA->value.as_number->n.mpq);
@@ -2292,7 +2295,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
                                "Zero Division Error", "modulo by zero");
               continue;
             }
-            mpq_set_si(b_GMP, valueB->value.as_number->n.i64, 1);
+            mpq_set_si64(b_GMP, valueB->value.as_number->n.i64, 1);
           }
           mpq_fmod(a_GMP, a_GMP, b_GMP);
           state->registers[registerC] = new_number_object(a_GMP);
@@ -2666,7 +2669,9 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
     }
 
     if (err.exists && currentStackFrame->source_location.length) {
-      struct StackTraceFrame frame = {currentStackFrame->source_location.line, currentStackFrame->source_location.column, currentStackFrame->translated.path};
+      struct StackTraceFrame frame = {currentStackFrame->source_location.line,
+                                      currentStackFrame->source_location.column,
+                                      currentStackFrame->translated.path};
       darray_armem_insert(&err.stack_trace, err.stack_trace.size, &frame);
     }
 
