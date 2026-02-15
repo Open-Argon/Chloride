@@ -1,6 +1,10 @@
-let random() = null
+r = 0
+let random() = do
+ r=r+1
+ return r
 
-let i=0
+let x=0,i=0
 while (i<1e6) do
-  random()
+  x=x+random()
   i=i+1
+  if (i%1e4 == 0) term.log(i,x/i)
