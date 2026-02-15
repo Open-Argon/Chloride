@@ -1285,27 +1285,67 @@ mpq_t *mpq_new_gc_from(const mpq_t src) {
   return dest;
 }
 
+#if defined(_WIN32) && defined(__MINGW32__)
+
 bool mpq_to_int64(mpq_t q, int64_t *out) {
-  // Check denominator == 1
-  if (mpz_cmp_ui(mpq_denref(q), 1) != 0) {
-    return false;
-  }
+    // Ensure denominator == 1
+    if (mpz_cmp_ui(mpq_denref(q), 1) != 0) {
+        return false;
+    }
 
-  // Get numerator
-  mpz_t num;
-  mpz_init(num);
-  mpz_set(num, mpq_numref(q));
+    mpz_t num, min, max;
+    mpz_init(num);
+    mpz_set(num, mpq_numref(q));
 
-  // Check bounds
-  if (!mpz_fits_slong_p(num)) {
+    // Initialize bounds as mpz_t to avoid 32-bit long overflow
+    mpz_init_set_str(min, "-9223372036854775808", 10); // INT64_MIN
+    mpz_init_set_str(max,  "9223372036854775807", 10); // INT64_MAX
+
+    // Check if numerator is in int64_t range
+    if (mpz_cmp(num, min) < 0 || mpz_cmp(num, max) > 0) {
+        mpz_clear(num);
+        mpz_clear(min);
+        mpz_clear(max);
+        return false;
+    }
+
+    // Export numerator to 64-bit integer safely
+    int64_t val = 0;
+    size_t count;
+    mpz_export(&val, &count, 1, sizeof(uint64_t), 0, 0, num);
+    if (mpz_sgn(num) < 0) val = -val;
+    *out = val;
+
     mpz_clear(num);
-    return false;
-  }
-
-  *out = mpz_get_si(num); // safe because we checked range
-  mpz_clear(num);
-  return true;
+    mpz_clear(min);
+    mpz_clear(max);
+    return true;
 }
+
+#else
+
+// Linux / other platforms: use original implementation
+bool mpq_to_int64(mpq_t q, int64_t *out) {
+    if (mpz_cmp_ui(mpq_denref(q), 1) != 0) {
+        return false;
+    }
+
+    mpz_t num;
+    mpz_init(num);
+    mpz_set(num, mpq_numref(q));
+
+    if (!mpz_fits_slong_p(num)) {
+        mpz_clear(num);
+        return false;
+    }
+
+    *out = mpz_get_si(num);
+    mpz_clear(num);
+    return true;
+}
+
+#endif
+
 
 bool double_to_int64(double x, int64_t *out) {
   if (x < (double)INT64_MIN || x > (double)INT64_MAX) {
