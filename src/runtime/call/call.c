@@ -107,7 +107,7 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
       object = function_object;
   }
   if (object->type == TYPE_FUNCTION) {
-    if (argc != object->value.argon_fn->number_of_parameters) {
+    if (argc+binding_object_exists != object->value.argon_fn->number_of_parameters) {
       ArgonObject *type_object_name = get_builtin_field_for_class(
           get_builtin_field(object, __class__), __name__, original_object);
       ArgonObject *object_name =
@@ -126,7 +126,7 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
     Stack *scope = create_scope(object->value.argon_fn->stack, true);
     if (binding_object) {
       struct string_struct key = object->value.argon_fn->parameters[0];
-      ArgonObject *value = argv[0];
+      ArgonObject *value = binding_object;
       uint64_t hash = siphash64_bytes(key.data, key.length, siphash_key);
       hashmap_insert_GC(scope->scope, hash,
                         new_string_object(key.data, key.length, 0, hash), value,
