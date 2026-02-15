@@ -151,9 +151,7 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
             argc);
         return;
       }
-      ArgonObject **registers =
-          ar_alloc(sizeof(ArgonObject *) *
-                   object->value.argon_fn->translated.registerCount);
+      ArgonObject *registers[UINT8_MAX+1];
       runtime(
           (Translated){object->value.argon_fn->translated.registerCount,
                        object->value.argon_fn->translated.registerAssignment,
@@ -174,7 +172,6 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
                          state->c_depth + 1},
           scope, err);
       state->registers[0] = registers[0];
-      GC_FREE(registers);
       return;
     } else {
       StackFrame *currentStackFrame =
