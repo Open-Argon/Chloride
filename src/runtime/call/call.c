@@ -96,6 +96,7 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
       object = call_method;
     }
   }
+  ArgonObject*binding_object = NULL;
   if (object->type == TYPE_METHOD) {
     ArgonObject *binding_object = get_builtin_field(object, __binding__);
     if (binding_object) {
