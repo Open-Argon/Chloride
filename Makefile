@@ -10,11 +10,11 @@ TARGET_OS ?= posix       # default target, can be 'posix' or 'windows'
 ifeq ($(TARGET_OS),windows)
 	CC     = x86_64-w64-mingw32-gcc
 	BINARY = bin/argon.exe
-	LDFLAGS = -Lexternal/bdwgc/build -lgc -lgmp -lm -lmpfr -lbcrypt
+	LDFLAGS = -lgc -lgmp -lm -lmpfr -lbcrypt
 else
 	CC     = gcc
 	BINARY = bin/argon
-	LDFLAGS = -Lexternal/bdwgc/build -lgc -lgmp -lm -lmpfr
+	LDFLAGS = -lgc -lgmp -lm -lmpfr
 endif
 
 FLEX_TOOL  = flex
