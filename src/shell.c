@@ -9,6 +9,8 @@
 #include "./runtime/objects/functions/functions.h"
 #include "./runtime/objects/term/term.h"
 #include "./runtime/runtime.h"
+#include "err.h"
+#include "./lexer/token.h"
 #include "./translator/translator.h"
 #include "LICENSE.h"
 #include "hashmap/hashmap.h"
@@ -39,18 +41,14 @@ void handle_sigint(int sig) {
   exit(0);
 }
 
-int execute_code(FILE *stream, char *path, Stack *scope,
+int execute_code(char *context, char *path, Stack *scope,
                  RuntimeState *runtime_state) {
-  if (!stream) {
-    perror("fmemopen");
-    return 1;
-  }
 
   ArErr err = no_err;
 
   DArray tokens;
   darray_init(&tokens, sizeof(Token));
-  LexerState state = {path, stream, 0, 0, &tokens};
+  LexerState state = {path, context, 0, 0, &tokens};
   err = lexer(state);
   if (err.exists) {
     darray_free(&tokens, free_token);
@@ -172,10 +170,12 @@ int shell() {
     RuntimeState runtime_state;
     size_t len;
     char *data = read_all_stdin(&len);
-    FILE *file = fmemopen(data, len, "r");
-    int resp = execute_code(file, path, main_scope, &runtime_state);
-    fclose(file);
+    char*context = malloc(len+1);
+    memcpy(context, data, len);
     free(data);
+    context[len] = '\0';
+    int resp = execute_code(context, path, main_scope, &runtime_state);
+    free(context);
     return resp;
   }
   cwk_path_join(CWD, "<shell>", path, sizeof(path));
@@ -269,9 +269,7 @@ int shell() {
     totranslate = realloc(totranslate, totranslatelength + 1);
     totranslate[totranslatelength] = '\0';
     RuntimeState runtime_state;
-    FILE *file = fmemopen((void *)totranslate, totranslatelength, "r");
-    int resp = execute_code(file, path, main_scope, &runtime_state);
-    fclose(file);
+    int resp = execute_code(totranslate, path, main_scope, &runtime_state);
     if (resp) {
       continue;
     }
