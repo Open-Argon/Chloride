@@ -16,6 +16,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#if defined(_WIN32) || defined(_WIN64)
+#include "getline.h"
+#endif
 
 const ArErr no_err = (ArErr){"", "", "", 0, 0, 0, false, {}};
 
