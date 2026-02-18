@@ -104,6 +104,7 @@ pipeline {
                 sh '''
                   . /tmp/venv/bin/activate
                   make clean
+                  rm -rf CMakeCache.txt
                   conan install . --profile:host=mingw-x86_64.txt --build=missing
                   conan build . --profile:host=mingw-x86_64.txt
                 '''
