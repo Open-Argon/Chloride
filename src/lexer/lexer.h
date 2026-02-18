@@ -8,13 +8,12 @@
 #define LEXER_H
 
 #include "../dynamic_array/darray.h"
-#include "token.h"
 #include <stdio.h>
-#include "../err.h"
+#include "../arobject.h"
 
 typedef struct {
   char *path;
-  FILE *file;
+  char *content;
   size_t current_line;
   size_t current_column;
   DArray *tokens;

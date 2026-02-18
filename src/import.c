@@ -345,7 +345,44 @@ Translated load_argon_file(char *path, ArErr *err) {
     DArray tokens;
     darray_init(&tokens, sizeof(Token));
 
-    LexerState state = {path, file, 0, 0, &tokens};
+    // Seek to end to get file size
+    if (fseek(file, 0, SEEK_END) != 0) {
+      *err = create_err(0, 0, 0, NULL, "File Error",
+                        "Unable determine the files size: fseek", path);
+      fclose(file);
+      return (Translated){};
+    }
+
+    long size = ftell(file);
+    if (size < 0) {
+      *err = create_err(0, 0, 0, NULL, "File Error",
+                        "Unable determine the files size: ftell", path);
+      fclose(file);
+      return (Translated){};
+    }
+    rewind(file); // go back to the beginning
+                  // Allocate buffer (+1 for NUL terminator)
+    char *buffer = malloc(size + 1);
+    if (!buffer) {
+      *err = create_err(0, 0, 0, NULL, "File Error",
+                        "Unable determine the files content: malloc", path);
+      fclose(file);
+      return (Translated){};
+    }
+
+    // Read the file
+    size_t read = fread(buffer, 1, size, file);
+    if (read != (size_t)size) {
+      *err = create_err(0, 0, 0, NULL, "File Error",
+                        "Unable determine the files content: fread", path);
+      free(buffer);
+      fclose(file);
+      return (Translated){};
+    }
+    buffer[size] = '\0'; // NUL terminate
+    fclose(file);
+
+    LexerState state = {path, buffer, 0, 0, &tokens};
 #ifdef ARGON_DEBUG
     start = clock();
 #endif
@@ -359,7 +396,7 @@ Translated load_argon_file(char *path, ArErr *err) {
     time_spent = (double)(end - start) / CLOCKS_PER_SEC;
     fprintf(stderr, "Lexer time taken: %f seconds\n", time_spent);
 #endif
-    fclose(state.file);
+    free(buffer);
 
     DArray ast;
 
