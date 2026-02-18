@@ -28,9 +28,7 @@
 #if defined(__linux__)
 #include <malloc.h>
 #endif
-#if defined(_WIN32) || defined(_WIN64)
-#include "getline.h"
-#else
+#ifndef _WIN32
 #include "../external/linenoise/linenoise.h"
 #endif
 
