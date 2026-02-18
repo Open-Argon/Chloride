@@ -5,7 +5,7 @@
 # ------------------------------------------------------------
 # Stdlib metadata
 # ------------------------------------------------------------
-LIB        := raylib-ar
+LIB        := raylib
 SRC_DIR    := native
 BIN_DIR    := native/bin
 
@@ -25,9 +25,13 @@ ifeq ($(TARGET_OS),windows)
 	CC      := x86_64-w64-mingw32-gcc
 	LIB_EXT := dll
 
-	SHARED_LDFLAGS := -shared -I../../external/raylib-5.5_win64_mingw-w64/include
-	PLATFORM_LDFLAGS := ../../external/raylib-5.5_win64_mingw-w64/lib/libraylibdll.a\
-		-lws2_32
+	SHARED_LDFLAGS := -shared -Iraylib-5.5_win64_mingw-w64/include
+	PLATFORM_LDFLAGS := raylib-5.5_win64_mingw-w64/lib/libraylib.a\
+		-lws2_32\
+		-lopengl32\
+		-lgdi32\
+		-lwinmm\
+		-luser32
 
 	PLATFORM_CFLAGS := \
 		-DWIN32 \
