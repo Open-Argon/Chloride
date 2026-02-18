@@ -8,140 +8,139 @@ pipeline {
         GITEA_URL = 'https://git.wbell.dev'
         GITEA_REPO = 'Open-Argon/Chloride'
     }
+
     stages {
         stage('Checkout') {
-          steps {
-          script {
-            // Detect if this is a tag build via Jenkins-supplied vars
-            if (env.GIT_TAG) {
-              echo "Checking out tag: ${env.GIT_TAG}"
-              checkout([
-                $class: 'GitSCM',
-                branches: [[name: "refs/tags/${env.GIT_TAG}"]],
-                userRemoteConfigs: [[url: scm.userRemoteConfigs[0].url]],
-                doGenerateSubmoduleConfigurations: false,
-                extensions: [
-                  [$class: 'SubmoduleUpdate', recursiveSubmodules: true]
-                ]
-              ])
-            } else {
-              echo "Checking out normal branch"
-              checkout scm
+            steps {
+                script {
+                    if (env.GIT_TAG) {
+                        echo "Checking out tag: ${env.GIT_TAG}"
+                        checkout([
+                            $class: 'GitSCM',
+                            branches: [[name: "refs/tags/${env.GIT_TAG}"]],
+                            userRemoteConfigs: [[url: scm.userRemoteConfigs[0].url]],
+                            doGenerateSubmoduleConfigurations: false,
+                            extensions: [
+                                [$class: 'SubmoduleUpdate', recursiveSubmodules: true]
+                            ]
+                        ])
+                    } else {
+                        echo "Checking out normal branch"
+                        checkout scm
+                    }
+
+                    sh 'git submodule update --init --recursive'
+                }
             }
-
-            // update submodules
-            sh 'git submodule update --init --recursive'
-          }
         }
-      }
-
 
         stage('Detect Tag') {
-      steps {
-        script {
+            steps {
+                script {
+                    def tag = sh(script: "git describe --tags", returnStdout: true).trim()
+                    echo "Tag detected: ${tag}"
 
-          def tag = sh(script: "git describe --tags", returnStdout: true).trim()
-          echo "Tag detected: ${tag}"
+                    if (tag.toLowerCase().contains('unstable')) {
+                        echo "Tag contains 'unstable' → marking build UNSTABLE"
+                        currentBuild.result = 'UNSTABLE'
+                    }
 
-          if (tag.toLowerCase().contains('unstable')) {
-            echo "Tag contains 'unstable' → marking build UNSTABLE"
-            currentBuild.result = 'UNSTABLE'
-          }
-
-          // Expose for other stages
-          currentBuild.displayName = "#${env.BUILD_NUMBER} ${tag}"
-          env.TAG_NAME = tag
-        }
-      }
+                    currentBuild.displayName = "#${env.BUILD_NUMBER} ${tag}"
+                    env.TAG_NAME = tag
+                }
+            }
         }
 
         stage('Setup Conan') {
-      steps {
-        sh '''
-                            apt update
-                            apt install -y cmake flex python3 python3-pip python3-venv
-                            python3 -m venv /tmp/venv
-                            . /tmp/venv/bin/activate
-                            pip install --upgrade pip
-                            pip install conan
-                        '''
-      }
+            steps {
+                sh '''
+                    apt update
+                    apt install -y cmake flex python3 python3-pip python3-venv make gcc-mingw-w64 mingw-w64 
+                    python3 -m venv /tmp/venv
+                    . /tmp/venv/bin/activate
+                    pip install --upgrade pip
+                    pip install conan
+                '''
+            }
         }
 
         stage('Setup Conan Profile') {
-      steps {
-        sh '''
-                            . /tmp/venv/bin/activate
-                            rm -rf ~/.conan2
-                            conan profile detect
-                        '''
-      }
+            steps {
+                sh '''
+                    . /tmp/venv/bin/activate
+                    rm -rf ~/.conan2
+                    conan profile detect
+                '''
+            }
         }
-
-        stage('Install Dependencies') {
-      steps {
-        sh '''
-                            . /tmp/venv/bin/activate
-                            conan install . --build=missing
-                        '''
-      }
-        }
-
-        stage('Build Project') {
-      steps {
-        sh '''
-                            . /tmp/venv/bin/activate
-                            conan build .
-                        '''
-      }
+        stage('Linux Build') {
+            steps {
+                sh '''
+                    . /tmp/venv/bin/activate
+                    conan install . --build=missing
+                    conan build .
+                '''
+            }
         }
 
 
-stage('Archive Build Artifacts') {
-      steps {
-          script {
-              // Determine platform
-              def os = sh(returnStdout: true, script: 'uname -s').trim().toLowerCase()
-              def arch = sh(returnStdout: true, script: 'uname -m').trim().toLowerCase()
+        stage('Archive Linux') {
+            steps {
+                script {
+                    def version = env.TAG_NAME ?: "dev"
+                    env.OUTPUT_FILE = "chloride-${version}-linux-x86_64.tar.gz"
+                    echo "Packaging Linux as: ${env.OUTPUT_FILE}"
+                }
+                sh '''
+                    cp LICENSE.txt build/bin/
+                    tar -czf "$OUTPUT_FILE" -C build/bin .
+                '''
+                archiveArtifacts artifacts: "${env.OUTPUT_FILE}", allowEmptyArchive: false
+            }
+        }
 
-              // Determine version (tag or "dev")
-              def version = env.TAG_NAME ?: "dev"
-
-              // Construct file name
-              env.OUTPUT_FILE = "chloride-${version}-${os}-${arch}.tar.gz"
-
-              echo "Packaging as: ${env.OUTPUT_FILE}"
-          }
-
-          sh '''
-              # Ensure LICENSE.txt is in the output directory
-              cp LICENSE.txt build/bin/
-
-              # Create tarball with auto-generated name
-              tar -czf "$OUTPUT_FILE" -C build/bin .
-          '''
-
-          archiveArtifacts artifacts: "${env.OUTPUT_FILE}", allowEmptyArchive: false
-      }
-    }
-  }
-  
-  post {
-    always {
-        script {
-            // Automatically detects full ref name
-            def tag = sh(script: "git describe --tags", returnStdout: true).trim()
-            echo "Detected tag: ${tag}"
-
-            if (tag.toLowerCase().contains("unstable")) {
-                echo "Unstable tag detected"
-                currentBuild.result = "SUCCESS"
-            } else {
-                echo "Stable tagged build"
-                currentBuild.description = "Stable"
-                currentBuild.result = "SUCCESS"
+        stage('Windows Build') {
+            steps {
+                sh '''
+                  . /tmp/venv/bin/activate
+                  make clean
+                  conan install . --profile:host=mingw-x86_64.txt --build=missing
+                  conan build . --profile:host=mingw-x86_64.txt
+                '''
+            }
+        }
+        stage('Archive Windows') {
+            steps {
+                script {
+                    def version = env.TAG_NAME ?: "dev"
+                    env.OUTPUT_FILE = "chloride-${version}-windows-x86_64.zip"
+                    echo "Packaging Windows as: ${env.OUTPUT_FILE}"
+                }
+                sh '''
+                    cp LICENSE.txt build/bin/
+                    # Adjust packaging format if needed
+                    zip -r "$OUTPUT_FILE" build/bin/*
+                '''
+                archiveArtifacts artifacts: "${env.OUTPUT_FILE}", allowEmptyArchive: false
             }
         }
     }
-  }
+
+    post {
+        always {
+            script {
+                def tag = sh(script: "git describe --tags", returnStdout: true).trim()
+                echo "Detected tag: ${tag}"
+
+                if (tag.toLowerCase().contains("unstable")) {
+                    echo "Unstable tag detected"
+                    currentBuild.result = "SUCCESS"
+                } else {
+                    echo "Stable tagged build"
+                    currentBuild.description = "Stable"
+                    currentBuild.result = "SUCCESS"
+                }
+            }
+        }
+    }
 }

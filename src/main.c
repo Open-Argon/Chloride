@@ -5,7 +5,6 @@
  */
 
 #include "err.h"
-#include "hashmap/hashmap.h"
 #include "import.h"
 #include "memory.h"
 #include "runtime/internals/hashmap/hashmap.h"
@@ -64,7 +63,7 @@ int main(int argc, char *argv[]) {
   bootstrap_globals();
 
   imported_hash_table = createHashmap_GC();
-  importing_hash_table = createHashmap();
+  importing_hash_table = createHashmap_GC();
   runtime_hash_table = createHashmap_GC();
   CWD = get_current_directory();
   EXC = get_executable_path();

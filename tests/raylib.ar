@@ -37,9 +37,7 @@ class Game(Based) do
     return "game instance"
 
 
-let instance = Game(820, 640, 180)
-
-instance.speedX=1
+let instance = Game(820, 640, 60)
 
 while (!raylib.WindowShouldClose()) do
   raylib.BeginDrawing()
