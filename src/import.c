@@ -480,7 +480,7 @@ const char *POST_PATHS_TO_TEST[sizeof(PRE_PATHS_TO_TEST) / sizeof(char *)] = {
 const char *EXTENTIONS_TO_TEST[sizeof(PRE_PATHS_TO_TEST) / sizeof(char *)] = {
     "", "init.ar", "", "init.ar"};
 
-struct hashmap *importing_hash_table;
+struct hashmap_GC *importing_hash_table;
 struct hashmap_GC *imported_hash_table;
 
 #include <stdio.h>
@@ -539,17 +539,17 @@ Stack *ar_import(char *current_directory, char *path_relative, ArErr *err,
   }
   uint64_t hash = siphash64_bytes(path, strlen(path), siphash_key);
 
-  if (hashmap_lookup(importing_hash_table, hash)) {
+  if (hashmap_lookup_GC(importing_hash_table, hash)) {
     *err = create_err(0, 0, 0, NULL, "Import Error",
                       "Circular import detected: %s", path, path_relative);
     return NULL;
   }
 
-  hashmap_insert(importing_hash_table, hash, path, (void *)true, 0);
+  hashmap_insert_GC(importing_hash_table, hash, path, (void *)true, 0);
 
   Translated translated = load_argon_file(path, err);
   if (err->exists) {
-    hashmap_insert(importing_hash_table, hash, path, (void *)NULL, 0);
+    hashmap_insert_GC(importing_hash_table, hash, path, (void *)NULL, 0);
     return NULL;
   }
 #ifdef ARGON_DEBUG
@@ -581,7 +581,7 @@ Stack *ar_import(char *current_directory, char *path_relative, ArErr *err,
   Stack *main_scope = create_scope(program_scope, true);
   runtime(translated, state, main_scope, err);
   if (err->exists) {
-    hashmap_insert(importing_hash_table, hash, path, (void *)NULL, 0);
+    hashmap_insert_GC(importing_hash_table, hash, path, (void *)NULL, 0);
     return NULL;
   }
 
@@ -592,6 +592,6 @@ Stack *ar_import(char *current_directory, char *path_relative, ArErr *err,
   fprintf(stderr, "Execution time taken: %f seconds\n", time_spent);
 #endif
   hashmap_insert_GC(imported_hash_table, hash, path, main_scope, 0);
-  hashmap_insert(importing_hash_table, hash, path, (void *)NULL, 0);
+  hashmap_insert_GC(importing_hash_table, hash, path, (void *)NULL, 0);
   return main_scope;
 }

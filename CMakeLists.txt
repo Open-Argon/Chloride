@@ -43,6 +43,15 @@ endif()
 
 # Step 3: Add executable
 add_executable(argon  ${SOURCES})
+
+if (MINGW)
+    target_link_options(argon PRIVATE
+        -static
+        -static-libgcc
+        -static-libstdc++
+    )
+endif()
+
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
 target_include_directories(argon PRIVATE ${CMAKE_SOURCE_DIR}/external/cwalk/include)
 target_include_directories(argon PRIVATE ${CMAKE_SOURCE_DIR}/external/libdye/include)
@@ -55,10 +64,14 @@ set_target_properties(argon PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/build/bin
 )
 
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+set(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
+
 # Step 6: Conan libraries
 find_package(BDWgc REQUIRED)
 find_package(gmp REQUIRED)
 find_package(mpfr REQUIRED)
+find_package(Threads REQUIRED)
 
 target_compile_options(argon PRIVATE -O3 -Wall -Wextra -Wno-unused-function -s)
 
@@ -66,6 +79,7 @@ target_link_libraries(argon PRIVATE
     BDWgc::BDWgc
     gmp::gmp
     mpfr::mpfr
+    Threads::Threads
     m
     $<$<PLATFORM_ID:Windows>:bcrypt>
 )
