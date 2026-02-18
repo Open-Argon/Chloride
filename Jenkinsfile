@@ -103,7 +103,7 @@ pipeline {
             steps {
                 sh '''
                   . /tmp/venv/bin/activate
-                  rm -rf build CMakeCache.txt CMakeFiles
+                  rm -rf ~/.conan2 build CMakeCache.txt CMakeFiles
                   conan install . --profile:host=mingw-x86_64.txt --build=missing
                   conan build . --profile:host=mingw-x86_64.txt
                 '''
