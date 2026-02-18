@@ -7,24 +7,6 @@
 #if defined(_WIN32) || defined(_WIN64)
 #include <stdio.h>
 #include <windows.h>
-FILE *fmemopen(void *buf, size_t size, const char *mode) {
-  if (strchr(mode, 'r') == NULL) {
-    return NULL;
-  }
-
-  FILE *tmp = tmpfile();
-  if (!tmp)
-    return NULL;
-
-  if (fwrite(buf, 1, size, tmp) != size) {
-    fclose(tmp);
-    return NULL;
-  }
-
-  rewind(tmp);
-
-  return tmp;
-}
 
 // Only define ssize_t if it doesn't already exist
 #ifndef _SSIZE_T_DEFINED
