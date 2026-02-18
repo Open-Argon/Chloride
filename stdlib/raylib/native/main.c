@@ -147,14 +147,19 @@ ArgonObject *Argon_CloseWindow(size_t argc, ArgonObject **argv, ArgonError *err,
 
 void argon_module_init(ArgonState *vm, ArgonNativeAPI *api, ArgonError *err,
                        ArgonObjectRegister *reg) {
-  NamedColor colors[] = {
-      {"WHITE", WHITE},     {"BLACK", BLACK},         {"RED", RED},
-      {"GREEN", GREEN},     {"BLUE", BLUE},           {"YELLOW", YELLOW},
-      {"ORANGE", ORANGE},   {"PINK", PINK},           {"PURPLE", PURPLE},
-      {"BEIGE", BEIGE},     {"BROWN", BROWN},         {"MAROON", MAROON},
-      {"GRAY", GRAY},       {"LIGHTGRAY", LIGHTGRAY}, {"DARKGRAY", DARKGRAY},
-      {"SKYBLUE", SKYBLUE}, {"VIOLET", VIOLET},       {"GOLD", GOLD},
-      {"LIME", LIME}};
+  NamedColor colors[] = {{"LIGHTGRAY", LIGHTGRAY}, {"GRAY", GRAY},
+                         {"DARKGRAY", DARKGRAY},   {"YELLOW", YELLOW},
+                         {"GOLD", GOLD},           {"ORANGE", ORANGE},
+                         {"PINK", PINK},           {"RED", RED},
+                         {"MAROON", MAROON},       {"GREEN", GREEN},
+                         {"LIME", LIME},           {"DARKGREEN", DARKGREEN},
+                         {"SKYBLUE", SKYBLUE},     {"BLUE", BLUE},
+                         {"DARKBLUE", DARKBLUE},   {"PURPLE", PURPLE},
+                         {"VIOLET", VIOLET},       {"DARKPURPLE", DARKPURPLE},
+                         {"BEIGE", BEIGE},         {"BROWN", BROWN},
+                         {"DARKBROWN", DARKBROWN}, {"WHITE", WHITE},
+                         {"BLACK", BLACK},         {"BLANK", BLANK},
+                         {"MAGENTA", MAGENTA},     {"RAYWHITE", RAYWHITE}};
   int numColors = sizeof(colors) / sizeof(colors[0]);
 
   for (int i = 0; i < numColors; i++) {

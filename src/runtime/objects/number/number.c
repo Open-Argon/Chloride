@@ -69,6 +69,74 @@ void mpq_fmod(mpq_t result, const mpq_t a, const mpq_t b) {
   mpq_clear(tmp);
 }
 
+// Round to nearest multiple of precision
+void mpq_round_prec(mpq_t result, const mpq_t n, const mpq_t precision) {
+    mpq_t div;
+    mpq_init(div);
+
+    // div = n / precision
+    mpq_div(div, n, precision);
+
+    // Get numerator and denominator of div
+    mpz_t q, r;
+    mpz_init(q);
+    mpz_init(r);
+    mpz_tdiv_qr(q, r, mpq_numref(div), mpq_denref(div)); // q = floor(div), r = remainder
+
+    // Decide if we round up
+    if (mpz_cmpabs_ui(r, mpz_get_ui(mpq_denref(div)))/2 >= 0) {
+        mpz_add_ui(q, q, 1); // round up if remainder >= 0.5
+    }
+
+    // result = q * precision
+    mpq_set_z(result, q);
+    mpq_mul(result, result, precision);
+
+    mpq_clear(div);
+    mpz_clear(q);
+    mpz_clear(r);
+}
+
+// Floor to nearest multiple of precision
+void mpq_floor_prec(mpq_t result, const mpq_t n, const mpq_t precision) {
+    mpq_t div;
+    mpq_init(div);
+
+    mpq_div(div, n, precision);
+    mpz_t q;
+    mpz_init(q);
+
+    // q = floor(n / precision)
+    mpz_fdiv_q(q, mpq_numref(div), mpq_denref(div));
+
+    mpq_set_z(result, q);
+    mpq_mul(result, result, precision);
+
+    mpq_clear(div);
+    mpz_clear(q);
+}
+
+// Ceil to nearest multiple of precision
+void mpq_ceil_prec(mpq_t result, const mpq_t n, const mpq_t precision) {
+    mpq_t div;
+    mpq_init(div);
+
+    mpq_div(div, n, precision);
+    mpz_t q;
+    mpz_init(q);
+
+    // q = ceil(n / precision)
+    mpz_cdiv_q(q, mpq_numref(div), mpq_denref(div));
+
+    mpq_set_z(result, q);
+    mpq_mul(result, result, precision);
+
+    mpq_clear(div);
+    mpz_clear(q);
+}
+
+
+
 ArgonObject *ARGON_NUMBER_TYPE___new__(size_t argc, ArgonObject **argv,
                                        ArErr *err, RuntimeState *state,
                                        ArgonNativeAPI *api) {
@@ -106,7 +174,7 @@ ArgonObject *ARGON_NUMBER_TYPE___number__(size_t argc, ArgonObject **argv,
   (void)state;
   if (argc != 1) {
     *err = create_err(0, 0, 0, "", "Runtime Error",
-                      "__number__ expects 1 arguments, got %" PRIu64, argc);
+                      "__number__ expects 1 argument, got %" PRIu64, argc);
     return ARGON_NULL;
   }
   return argv[0];
@@ -119,11 +187,31 @@ ArgonObject *ARGON_NUMBER_TYPE___boolean__(size_t argc, ArgonObject **argv,
   (void)state;
   if (argc != 1) {
     *err = create_err(0, 0, 0, "", "Runtime Error",
-                      "__boolean__ expects 1 arguments, got %" PRIu64, argc);
+                      "__boolean__ expects 1 argument, got %" PRIu64, argc);
     return ARGON_NULL;
   }
   return argv[0]->as_bool ? ARGON_TRUE : ARGON_FALSE;
 }
+
+// TODO: add rounding
+// ArgonObject *ARGON_NUMBER_TYPE___round__(size_t argc, ArgonObject **argv,
+//                                            ArErr *err, RuntimeState *state,
+//                                            ArgonNativeAPI *api) {
+//   (void)api;
+//   (void)state;
+//   if (argc != 2) {
+//     *err = create_err(0, 0, 0, "", "Runtime Error",
+//                       "__round__ expects 2 argument, got %" PRIu64, argc);
+//     return ARGON_NULL;
+//   }
+
+//   mpq_t result;
+//   mpq_init(result);
+
+//   mpq_round_prec(result, *argv[0]->value.as_number->n.mpq, *argv[1]->value.as_number->n.mpq);
+  
+//   return new_number_object(result);
+// }
 
 ArgonObject *ARGON_NUMBER_TYPE___negation__(size_t argc, ArgonObject **argv,
                                             ArErr *err, RuntimeState *state,
@@ -132,7 +220,7 @@ ArgonObject *ARGON_NUMBER_TYPE___negation__(size_t argc, ArgonObject **argv,
   (void)state;
   if (argc != 1) {
     *err = create_err(0, 0, 0, "", "Runtime Error",
-                      "__negation__ expects 1 arguments, got %" PRIu64, argc);
+                      "__negation__ expects 1 argument, got %" PRIu64, argc);
     return ARGON_NULL;
   }
   if (argv[0]->value.as_number->is_int64) {
@@ -529,7 +617,7 @@ ArgonObject *ARGON_NUMBER_TYPE___hash__(size_t argc, ArgonObject **argv,
   (void)state;
   if (argc != 1) {
     *err = create_err(0, 0, 0, "", "Runtime Error",
-                      "__hash__ expects 1 arguments, got %" PRIu64, argc);
+                      "__hash__ expects 1 argument, got %" PRIu64, argc);
   }
   uint64_t hash;
   if (argv[0]->value.as_number->is_int64) {
@@ -1012,7 +1100,7 @@ ArgonObject *ARGON_NUMBER_TYPE___string__(size_t argc, ArgonObject **argv,
   (void)state;
   if (argc != 1) {
     *err = create_err(0, 0, 0, "", "Runtime Error",
-                      "__string__ expects 1 arguments, got %" PRIu64, argc);
+                      "__string__ expects 1 argument, got %" PRIu64, argc);
     return NULL;
   }
 
@@ -1199,6 +1287,9 @@ void create_ARGON_NUMBER_TYPE() {
   add_builtin_field(ARGON_NUMBER_TYPE, __boolean__,
                     create_argon_native_function(
                         "__boolean__", ARGON_NUMBER_TYPE___boolean__));
+  // add_builtin_field(ARGON_NUMBER_TYPE, __round__,
+  //                   create_argon_native_function(
+  //                       "__round__", ARGON_NUMBER_TYPE___round__));
   add_builtin_field(ARGON_NUMBER_TYPE, __negation__,
                     create_argon_native_function(
                         "__negation__", ARGON_NUMBER_TYPE___negation__));

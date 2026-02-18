@@ -75,7 +75,8 @@ const char *built_in_field_names[BUILT_IN_FIELDS_COUNT] = {
     "append",
     "insert",
     "pop",
-    "__contains__"};
+    "__contains__",
+    "__round__"};
 
 uint64_t built_in_field_hashes[BUILT_IN_FIELDS_COUNT];
 

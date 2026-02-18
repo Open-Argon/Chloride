@@ -9,25 +9,27 @@ class Based do
     if (x<0) return -x
     return x
 
+term.log(raylib)
+
 class Game(Based) do
   this.__init__(self, width, height, fps) = do
     self.frame = 0
     self.width = width
     self.height = height
     self.speedX = 1
-    self.speedY = self.speedX
+    self.speedY = 1
     raylib.InitWindow(self.width, self.height, "Hello Raylib")
     if (fps) raylib.SetTargetFPS(fps)
 
   this.render(self) = do
       # term.log("frame:",self.frame)
       let maxX = self.width -235, maxY = self.height-20
-      raylib.ClearBackground(raylib.BLACK)
+      raylib.ClearBackground(raylib.BLUE)
 
       let x = maxX - super.abs(((self.frame * self.speedX) % (2 * maxX)) - maxX)
       let y = maxY - super.abs(((self.frame * self.speedY) % (2 * maxY)) - maxY)
       
-      raylib.DrawText("Hello world from Argon", x, y, 20, raylib.WHITE)
+      raylib.DrawText("Hello world from Argon", x//1, y//1, 20, raylib.ORANGE)
 
       self.frame=self.frame+1
   

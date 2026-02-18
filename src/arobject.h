@@ -60,6 +60,7 @@ typedef enum {
   insert,
   pop,
   __contains__,
+  __round__,
 
   BUILT_IN_FIELDS_COUNT,
 } built_in_fields;

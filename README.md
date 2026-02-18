@@ -1,7 +1,7 @@
 <!--
 SPDX-FileCopyrightText: 2025 William Bell
 
-SPDX-License-Identifier: GPL-3.0-or-later
+SPDX-License-Identifier: GFDL-1.3-or-later
 -->
 
 <div align="center">

@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2025 William Bell
+
+SPDX-License-Identifier: GFDL-1.3-or-later
+-->
+
 1.  add lists (done)
 2.  iterator objects
 3.  add for loops using iterator objects
