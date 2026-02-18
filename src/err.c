@@ -26,9 +26,10 @@ ArErr create_err(int64_t line, int64_t column, int length, char *path,
                  const char *type, const char *fmt, ...) {
   ArErr err;
   err.exists = true;
-  if (path)
-    strcpy(err.path, path);
-  else {
+  if (path) {
+    memcpy(err.path, path, sizeof(err.path));
+    err.path[sizeof(err.path) - 1] = '\0';
+  } else {
     err.path[0] = '\0';
   }
   err.line = line;
@@ -52,9 +53,10 @@ ArErr vcreate_err(int64_t line, int64_t column, int length, char *path,
   ArErr err;
   err.exists = true;
 
-  if (path)
-    strcpy(err.path, path);
-  else
+  if (path) {
+    memcpy(err.path, path, sizeof(err.path));
+    err.path[sizeof(err.path) - 1] = '\0';
+  } else
     err.path[0] = '\0';
 
   err.line = line;
@@ -73,11 +75,11 @@ void output_err(ArErr err) {
   if (!err.exists)
     return;
   if (err.stack_trace.size > 1) {
-  dyefg(stderr, DYE_RED);
-  dye_style(stderr, DYE_STYLE_BOLD);
+    dyefg(stderr, DYE_RED);
+    dye_style(stderr, DYE_STYLE_BOLD);
     fprintf(stderr, "Stack trace (oldest frame first):");
-  dye_style(stderr, DYE_STYLE_RESET);
-  dyefg(stderr, DYE_RESET);
+    dye_style(stderr, DYE_STYLE_RESET);
+    dyefg(stderr, DYE_RESET);
     fprintf(stderr, "\n");
     for (int64_t i = err.stack_trace.size - 1; i >= 0; i--) {
       struct StackTraceFrame *frame = darray_armem_get(&err.stack_trace, i);
