@@ -104,14 +104,12 @@ pipeline {
             steps {
                 sh '''
                   . /tmp/venv/bin/activate
-                  rm -rf build_mingw CMakeCache.txt CMakeFiles
+                  rm -rf build CMakeCache.txt CMakeFiles
                   conan install . \
                       --profile:host=mingw-x86_64.txt \
-                      --build=missing \
-                      --install-folder build_mingw
+                      --build=missing
                   conan build . \
-                      --profile:host=mingw-x86_64.txt \
-                      --build-folder build_mingw
+                      --profile:host=mingw-x86_64.txt
 
                 '''
             }
@@ -124,9 +122,9 @@ pipeline {
                     echo "Packaging Windows as: ${env.OUTPUT_FILE}"
                 }
                 sh '''
-                    cp LICENSE.txt build_mingw/bin/
+                    cp LICENSE.txt build/bin/
                     # Adjust packaging format if needed
-                    zip -r "$OUTPUT_FILE" build_mingw/bin/*
+                    zip -r "$OUTPUT_FILE" build/bin/*
                 '''
                 archiveArtifacts artifacts: "${env.OUTPUT_FILE}", allowEmptyArchive: false
             }
