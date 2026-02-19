@@ -14,7 +14,8 @@ ifeq ($(TARGET_OS),windows)
 else
 	CC     = gcc
 	BINARY = bin/argon
-	LDFLAGS = -lgc -lgmp -lm -lmpfr
+	LDFLAGS = $(shell pkg-config --libs gmp mpfr bdw-gc) -lm
+	CFLAGS  += $(shell pkg-config --cflags gmp mpfr bdw-gc)
 endif
 
 FLEX_TOOL  = flex
@@ -47,7 +48,8 @@ CFLAGS  = $(ARCHFLAGS) -Wall -Wextra -Wno-unused-function \
           -Werror=unused-result \
           -Iexternal/cwalk/include \
           -Iexternal/libdye/include \
-					-Iexternal/bdwgc/include
+          -Iexternal/bdwgc/include \
+          -I/opt/homebrew/include
 
 # Strip flag (only for non-debug builds)
 STRIP_FLAG = -s
