@@ -36,9 +36,8 @@
 
 // Ctrl+C handler
 void handle_sigint(int sig) {
-  (void)sig;
   printf("\nBye :)\n");
-  exit(0);
+  exit(sig);
 }
 
 int execute_code(char *context, char *path, Stack *scope,
