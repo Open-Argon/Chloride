@@ -88,4 +88,4 @@ target_include_directories(argon PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src/lexer
 )
 
-add_custom_command(TARGET argon POST_BUILD COMMAND ${CMAKE_STRIP} $<TARGET_FILE:argon>)
+add_custom_command(TARGET argon POST_BUILD COMMAND $<TARGET_FILE:argon>)
