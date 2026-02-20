@@ -24,42 +24,38 @@ static inline void RWLOCK_DESTROY(RWLock* lock) {
 #define RWLOCK_WRLOCK(l) AcquireSRWLockExclusive(&(l))
 #define RWLOCK_UNLOCK_RD(l) ReleaseSRWLockShared(&(l))
 #define RWLOCK_UNLOCK_WR(l) ReleaseSRWLockExclusive(&(l))
+// #elif defined(__APPLE__)
+// #include <dispatch/dispatch.h>
 
-#elif defined(__APPLE__)
-#include <dispatch/dispatch.h>
+// typedef struct {
+//     dispatch_queue_t queue;
+// } RWLock;
 
-typedef struct {
-    dispatch_queue_t queue;
-} RWLock;
+// static inline void RWLOCK_CREATE(RWLock* lock) {
+//     lock->queue = dispatch_queue_create("rwlock.queue", DISPATCH_QUEUE_CONCURRENT);
+//     if(!lock->queue) abort(); // fail fast if allocation fails
+// }
 
-static inline void RWLOCK_CREATE(RWLock* lock) {
-    lock->queue = dispatch_queue_create("rwlock.queue", DISPATCH_QUEUE_CONCURRENT);
-    if(!lock->queue) abort(); // fail fast if allocation fails
-}
+// // On macOS, destroying queues while threads may still use them is unsafe
+// static inline void RWLOCK_DESTROY(RWLock* lock) {
+//     (void)lock; // no-op
+// }
 
-// On macOS, destroying queues while threads may still use them is unsafe
-static inline void RWLOCK_DESTROY(RWLock* lock) {
-    (void)lock; // no-op
-}
+// #define RWLOCK_RDLOCK(l) dispatch_sync((l).queue, ^{})
+// #define RWLOCK_WRLOCK(l) dispatch_barrier_sync((l).queue, ^{})
+// #define RWLOCK_UNLOCK_RD(l) ((void)0)
+// #define RWLOCK_UNLOCK_WR(l) ((void)0)
 
-#define RWLOCK_RDLOCK(l) dispatch_sync((l).queue, ^{})
-#define RWLOCK_WRLOCK(l) dispatch_barrier_sync((l).queue, ^{})
-#define RWLOCK_UNLOCK_RD(l) ((void)0)
-#define RWLOCK_UNLOCK_WR(l) ((void)0)
-
-#elif defined(__linux__) || defined(__FreeBSD__)
+#else
 #include <pthread.h>
 #include <stdlib.h>
 
 typedef pthread_rwlock_t RWLock;
-
-// Static initializer
 #define RWLOCK_INIT PTHREAD_RWLOCK_INITIALIZER
 
-// Dynamic create/destroy
 static inline void RWLOCK_CREATE(RWLock* lock) {
     if(pthread_rwlock_init(lock, NULL) != 0) {
-        abort(); // fail fast if init fails
+        abort(); 
     }
 }
 
@@ -67,12 +63,8 @@ static inline void RWLOCK_DESTROY(RWLock* lock) {
     pthread_rwlock_destroy(lock);
 }
 
-// Lock/unlock macros
 #define RWLOCK_RDLOCK(l) pthread_rwlock_rdlock(&(l))
 #define RWLOCK_WRLOCK(l) pthread_rwlock_wrlock(&(l))
 #define RWLOCK_UNLOCK_RD(l) pthread_rwlock_unlock(&(l))
 #define RWLOCK_UNLOCK_WR(l) pthread_rwlock_unlock(&(l))
-
-#else
-#error "Unsupported platform for RWLock"
 #endif
