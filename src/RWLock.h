@@ -32,20 +32,16 @@ typedef struct {
     dispatch_queue_t queue;
 } RWLock;
 
-// Dynamic creation only (static initializer discouraged)
 static inline void RWLOCK_CREATE(RWLock* lock) {
     lock->queue = dispatch_queue_create("rwlock.queue", DISPATCH_QUEUE_CONCURRENT);
-    if(!lock->queue) {
-        abort(); // fail fast on allocation failure
-    }
+    if(!lock->queue) abort(); // fail fast if allocation fails
 }
 
-// Destroy: optional, no need to release under modern macOS
+// On macOS, destroying queues while threads may still use them is unsafe
 static inline void RWLOCK_DESTROY(RWLock* lock) {
-    lock->queue = NULL;
+    (void)lock; // no-op
 }
 
-// Lock/unlock
 #define RWLOCK_RDLOCK(l) dispatch_sync((l).queue, ^{})
 #define RWLOCK_WRLOCK(l) dispatch_barrier_sync((l).queue, ^{})
 #define RWLOCK_UNLOCK_RD(l) ((void)0)
