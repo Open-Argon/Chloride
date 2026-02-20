@@ -1,4 +1,3 @@
-// rwlock.h
 #pragma once
 
 #ifdef _WIN32
@@ -7,44 +6,52 @@
 
 typedef SRWLOCK RWLock;
 
-// Static initializer still works
 #define RWLOCK_INIT SRWLOCK_INIT
 
-// Dynamic creation / destruction
 static inline void RWLOCK_CREATE(RWLock* lock) {
     InitializeSRWLock(lock);
 }
 
 static inline void RWLOCK_DESTROY(RWLock* lock) {
-    (void)lock; // no-op
+    (void)lock;
 }
 
-// Lock/unlock macros
-#define RWLOCK_RDLOCK(l) AcquireSRWLockShared(&(l))
-#define RWLOCK_WRLOCK(l) AcquireSRWLockExclusive(&(l))
-#define RWLOCK_UNLOCK_RD(l) ReleaseSRWLockShared(&(l))
-#define RWLOCK_UNLOCK_WR(l) ReleaseSRWLockExclusive(&(l))
-// #elif defined(__APPLE__)
-// #include <dispatch/dispatch.h>
+// Execute a block while holding a read lock
+#define RWLOCK_RDLOCK(l, block)          \
+    do {                                 \
+        AcquireSRWLockShared(&(l));      \
+        block;                            \
+        ReleaseSRWLockShared(&(l));      \
+    } while(0)
 
-// typedef struct {
-//     dispatch_queue_t queue;
-// } RWLock;
+#define RWLOCK_WRLOCK(l, block)          \
+    do {                                 \
+        AcquireSRWLockExclusive(&(l));   \
+        block;                            \
+        ReleaseSRWLockExclusive(&(l));   \
+    } while(0)
 
-// static inline void RWLOCK_CREATE(RWLock* lock) {
-//     lock->queue = dispatch_queue_create("rwlock.queue", DISPATCH_QUEUE_CONCURRENT);
-//     if(!lock->queue) abort(); // fail fast if allocation fails
-// }
+#elif defined(__APPLE__)
+#include <dispatch/dispatch.h>
 
-// // On macOS, destroying queues while threads may still use them is unsafe
-// static inline void RWLOCK_DESTROY(RWLock* lock) {
-//     (void)lock; // no-op
-// }
+typedef struct {
+    dispatch_queue_t queue;
+} RWLock;
 
-// #define RWLOCK_RDLOCK(l) dispatch_sync((l).queue, ^{})
-// #define RWLOCK_WRLOCK(l) dispatch_barrier_sync((l).queue, ^{})
-// #define RWLOCK_UNLOCK_RD(l) ((void)0)
-// #define RWLOCK_UNLOCK_WR(l) ((void)0)
+static inline void RWLOCK_CREATE(RWLock* lock) {
+    lock->queue = dispatch_queue_create("rwlock.queue", DISPATCH_QUEUE_CONCURRENT);
+    if(!lock->queue) abort();
+}
+
+static inline void RWLOCK_DESTROY(RWLock* lock) {
+    (void)lock; // safe no-op
+}
+
+// Execute a block inside a read lock (dispatch_sync allows parallel readers)
+#define RWLOCK_RDLOCK(l, block) dispatch_sync((l).queue, ^{ block; })
+
+// Execute a block inside a write lock (barrier ensures exclusivity)
+#define RWLOCK_WRLOCK(l, block) dispatch_barrier_sync((l).queue, ^{ block; })
 
 #else
 #include <pthread.h>
@@ -54,17 +61,26 @@ typedef pthread_rwlock_t RWLock;
 #define RWLOCK_INIT PTHREAD_RWLOCK_INITIALIZER
 
 static inline void RWLOCK_CREATE(RWLock* lock) {
-    if(pthread_rwlock_init(lock, NULL) != 0) {
-        abort(); 
-    }
+    if(pthread_rwlock_init(lock, NULL) != 0) abort();
 }
 
 static inline void RWLOCK_DESTROY(RWLock* lock) {
     pthread_rwlock_destroy(lock);
 }
 
-#define RWLOCK_RDLOCK(l) pthread_rwlock_rdlock(&(l))
-#define RWLOCK_WRLOCK(l) pthread_rwlock_wrlock(&(l))
-#define RWLOCK_UNLOCK_RD(l) pthread_rwlock_unlock(&(l))
-#define RWLOCK_UNLOCK_WR(l) pthread_rwlock_unlock(&(l))
+// Wrap block inside pthread rwlock
+#define RWLOCK_RDLOCK(l, block)          \
+    do {                                 \
+        pthread_rwlock_rdlock(&(l));     \
+        block;                            \
+        pthread_rwlock_unlock(&(l));     \
+    } while(0)
+
+#define RWLOCK_WRLOCK(l, block)          \
+    do {                                 \
+        pthread_rwlock_wrlock(&(l));     \
+        block;                            \
+        pthread_rwlock_unlock(&(l));     \
+    } while(0)
+
 #endif

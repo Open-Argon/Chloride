@@ -126,128 +126,120 @@ struct hashmap_GC *createHashmap_GC(void) {
 }
 
 void clear_hashmap_GC(struct hashmap_GC *t) {
-  RWLOCK_WRLOCK(t->lock);
+  RWLOCK_WRLOCK(t->lock, {
+    t->order = 1;
+    t->count = 0;
+    t->inline_count = 0;
+    t->hashmap_count = 0;
 
-  t->order = 1;
-  t->count = 0;
-  t->inline_count = 0;
-  t->hashmap_count = 0;
-
-  if (t->list)
-    memset(t->list, 0, sizeof(struct node_GC *) * t->size);
-
-  RWLOCK_UNLOCK_WR(t->lock);
+    if (t->list)
+      memset(t->list, 0, sizeof(struct node_GC *) * t->size);
+  });
 }
 
 struct node_GC **hashmap_GC_to_array(struct hashmap_GC *t,
                                      size_t *array_length) {
-  RWLOCK_RDLOCK(t->lock);
-
   size_t cap = 8;
   *array_length = 0;
   struct node_GC **arr = ar_alloc(cap * sizeof(*arr));
 
-  for (size_t i = 0; i < t->inline_count; i++) {
-    if (*array_length == cap) {
-      cap *= 2;
-      arr = ar_realloc(arr, cap * sizeof(*arr));
-    }
-    arr[(*array_length)++] = &t->inline_values[i];
-  }
-
-  for (size_t i = 0; i < t->size; i++) {
-    struct node_GC *n = t->list[i];
-    while (n) {
+  RWLOCK_RDLOCK(t->lock, {
+    // Inline values
+    for (size_t i = 0; i < t->inline_count; i++) {
       if (*array_length == cap) {
         cap *= 2;
         arr = ar_realloc(arr, cap * sizeof(*arr));
       }
-      arr[(*array_length)++] = n;
-      n = n->next;
+      arr[(*array_length)++] = &t->inline_values[i];
     }
-  }
+
+    // Hash list
+    for (size_t i = 0; i < t->size; i++) {
+      struct node_GC *n = t->list[i];
+      while (n) {
+        if (*array_length == cap) {
+          cap *= 2;
+          arr = ar_realloc(arr, cap * sizeof(*arr));
+        }
+        arr[(*array_length)++] = n;
+        n = n->next;
+      }
+    }
+  });
 
   qsort(arr, *array_length, sizeof(struct node_GC *), compare_node_asc);
 
-  RWLOCK_UNLOCK_RD(t->lock);
   return arr;
 }
 
 int hashmap_remove_GC(struct hashmap_GC *t, uint64_t hash) {
-  RWLOCK_WRLOCK(t->lock);
+  int result = 0;
 
-  for (size_t i = 0; i < t->inline_count; i++) {
-    if (t->inline_values[i].hash == hash) {
-      memmove(&t->inline_values[i], &t->inline_values[i + 1],
-              (t->inline_count - i - 1) * sizeof(struct node_GC));
-      t->inline_count--;
-      RWLOCK_UNLOCK_WR(t->lock);
-      return 1;
+  RWLOCK_WRLOCK(t->lock, {
+    // Inline values
+    for (size_t i = 0; i < t->inline_count; i++) {
+      if (t->inline_values[i].hash == hash) {
+        memmove(&t->inline_values[i], &t->inline_values[i + 1],
+                (t->inline_count - i - 1) * sizeof(struct node_GC));
+        t->inline_count--;
+        result = 1;
+        break;
+      }
     }
-  }
 
-  if (!t->list) {
-    RWLOCK_UNLOCK_WR(t->lock);
-    return 0;
-  }
+    if (result == 0 && t->list) {
+      int pos = hashCode_GC_nolock(t, hash);
+      struct node_GC *prev = NULL;
+      struct node_GC *cur = t->list[pos];
 
-  int pos = hashCode_GC_nolock(t, hash);
-  struct node_GC *prev = NULL;
-  struct node_GC *cur = t->list[pos];
-
-  while (cur) {
-    if (cur->hash == hash) {
-      if (prev)
-        prev->next = cur->next;
-      else
-        t->list[pos] = cur->next;
-
-      RWLOCK_UNLOCK_WR(t->lock);
-      return 1;
+      while (cur) {
+        if (cur->hash == hash) {
+          if (prev)
+            prev->next = cur->next;
+          else
+            t->list[pos] = cur->next;
+          result = 1;
+          break;
+        }
+        prev = cur;
+        cur = cur->next;
+      }
     }
-    prev = cur;
-    cur = cur->next;
-  }
+  });
 
-  RWLOCK_UNLOCK_WR(t->lock);
-  return 0;
+  return result;
 }
 
 void hashmap_insert_GC(struct hashmap_GC *t, uint64_t hash, void *key,
                        void *val, size_t order) {
-  RWLOCK_WRLOCK(t->lock);
-  hashmap_insert_GC_nolock(t, hash, key, val, order);
-  RWLOCK_UNLOCK_WR(t->lock);
+  RWLOCK_WRLOCK(t->lock,
+                { hashmap_insert_GC_nolock(t, hash, key, val, order); });
 }
 
 void *hashmap_lookup_GC(struct hashmap_GC *t, uint64_t hash) {
-  RWLOCK_RDLOCK(t->lock);
+  void *result = NULL;
 
-  for (size_t i = 0; i < t->inline_count; i++) {
-    if (t->inline_values[i].hash == hash) {
-      void *v = t->inline_values[i].val;
-      RWLOCK_UNLOCK_RD(t->lock);
-      return v;
+  RWLOCK_RDLOCK(t->lock, {
+    for (size_t i = 0; i < t->inline_count; i++) {
+      if (t->inline_values[i].hash == hash) {
+        result = t->inline_values[i].val;
+        break;
+      }
     }
-  }
 
-  if (!t->list) {
-    RWLOCK_UNLOCK_RD(t->lock);
-    return NULL;
-  }
+    if (!result && t->list) {
+      int pos = hashCode_GC_nolock(t, hash);
+      struct node_GC *n = t->list[pos];
 
-  int pos = hashCode_GC_nolock(t, hash);
-  struct node_GC *n = t->list[pos];
-
-  while (n) {
-    if (n->hash == hash) {
-      void *v = n->val;
-      RWLOCK_UNLOCK_RD(t->lock);
-      return v;
+      while (n) {
+        if (n->hash == hash) {
+          result = n->val;
+          break;
+        }
+        n = n->next;
+      }
     }
-    n = n->next;
-  }
+  });
 
-  RWLOCK_UNLOCK_RD(t->lock);
-  return NULL;
+  return result;
 }
