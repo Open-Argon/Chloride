@@ -27,31 +27,28 @@ static inline void RWLOCK_DESTROY(RWLock* lock) {
 
 #elif defined(__APPLE__)
 #include <dispatch/dispatch.h>
-#include <stdbool.h>
 
 typedef struct {
     dispatch_queue_t queue;
 } RWLock;
 
-// Static initializer
-#define RWLOCK_INIT (RWLock){ .queue = NULL }
-
-// Dynamic create/destroy
+// Dynamic creation only (static initializer discouraged)
 static inline void RWLOCK_CREATE(RWLock* lock) {
     lock->queue = dispatch_queue_create("rwlock.queue", DISPATCH_QUEUE_CONCURRENT);
-}
-
-static inline void RWLOCK_DESTROY(RWLock* lock) {
-    if(lock->queue) {
-        dispatch_release(lock->queue);
-        lock->queue = NULL;
+    if(!lock->queue) {
+        abort(); // fail fast on allocation failure
     }
 }
 
-// Lock/unlock macros
+// Destroy: optional, no need to release under modern macOS
+static inline void RWLOCK_DESTROY(RWLock* lock) {
+    lock->queue = NULL;
+}
+
+// Lock/unlock
 #define RWLOCK_RDLOCK(l) dispatch_sync((l).queue, ^{})
 #define RWLOCK_WRLOCK(l) dispatch_barrier_sync((l).queue, ^{})
-#define RWLOCK_UNLOCK_RD(l) ((void)0) // no-op, GCD executes the block
+#define RWLOCK_UNLOCK_RD(l) ((void)0)
 #define RWLOCK_UNLOCK_WR(l) ((void)0)
 
 #elif defined(__linux__) || defined(__FreeBSD__)
