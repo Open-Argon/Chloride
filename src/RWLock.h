@@ -31,6 +31,8 @@ static inline void RWLOCK_DESTROY(RWLock* lock) {
         ReleaseSRWLockExclusive(&(l));   \
     } while(0)
 
+#define RWBLOCK
+
 #elif defined(__APPLE__)
 #include <dispatch/dispatch.h>
 
@@ -52,6 +54,8 @@ static inline void RWLOCK_DESTROY(RWLock* lock) {
 
 // Execute a block inside a write lock (barrier ensures exclusivity)
 #define RWLOCK_WRLOCK(l, block) dispatch_barrier_sync((l).queue, ^{ block; })
+
+#define RWBLOCK __block
 
 #else
 #include <pthread.h>
@@ -82,5 +86,7 @@ static inline void RWLOCK_DESTROY(RWLock* lock) {
         block;                            \
         pthread_rwlock_unlock(&(l));     \
     } while(0)
+
+#define RWBLOCK
 
 #endif
