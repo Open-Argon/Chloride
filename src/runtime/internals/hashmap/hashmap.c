@@ -139,9 +139,9 @@ void clear_hashmap_GC(struct hashmap_GC *t) {
 
 struct node_GC **hashmap_GC_to_array(struct hashmap_GC *t,
                                      size_t *array_length) {
-  size_t cap = 8;
+  RWBLOCK size_t cap = 8;
   *array_length = 0;
-  struct node_GC **arr = ar_alloc(cap * sizeof(*arr));
+  RWBLOCK struct node_GC **arr = ar_alloc(cap * sizeof(*arr));
 
   RWLOCK_RDLOCK(t->lock, {
     // Inline values
@@ -173,7 +173,7 @@ struct node_GC **hashmap_GC_to_array(struct hashmap_GC *t,
 }
 
 int hashmap_remove_GC(struct hashmap_GC *t, uint64_t hash) {
-  int result = 0;
+  RWBLOCK int result = 0;
 
   RWLOCK_WRLOCK(t->lock, {
     // Inline values
@@ -217,7 +217,7 @@ void hashmap_insert_GC(struct hashmap_GC *t, uint64_t hash, void *key,
 }
 
 void *hashmap_lookup_GC(struct hashmap_GC *t, uint64_t hash) {
-  void *result = NULL;
+  RWBLOCK void *result = NULL;
 
   RWLOCK_RDLOCK(t->lock, {
     for (size_t i = 0; i < t->inline_count; i++) {
