@@ -17,7 +17,7 @@ extern const char *built_in_field_names[BUILT_IN_FIELDS_COUNT];
 typedef struct ArgonObject ArgonObject;
 
 ArgonObject *new_class();
-ArgonObject *new_small_instance(ArgonObject *of, size_t endSize);
+// ArgonObject *new_small_instance(ArgonObject *of, size_t endSize);
 ArgonObject *new_instance(ArgonObject *of, size_t endSize);
 
 void init_built_in_field_hashes();

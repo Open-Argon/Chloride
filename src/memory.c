@@ -5,7 +5,6 @@
  */
 
 #include "memory.h"
-#include <pthread.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h> // for malloc/free (temp arena fallback)
@@ -28,10 +27,6 @@ void *checked_realloc(void *ptr, size_t size) {
   }
   return new_ptr;
 }
-
-struct allocation *memory_allocations = NULL;
-size_t memory_allocations_size = 0;
-pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 
 void ar_memory_init() {
   GC_INIT();

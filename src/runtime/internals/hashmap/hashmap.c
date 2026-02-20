@@ -25,7 +25,7 @@ static void hashmap_insert_GC_nolock(struct hashmap_GC *t, uint64_t hash,
 void hashmap_finalizer(void *obj, void *client_data) {
   (void)client_data;
   struct hashmap_GC *hashmap = obj;
-  pthread_rwlock_destroy(&hashmap->lock);
+  RWLOCK_DESTROY(&hashmap->lock);
 }
 
 static int compare_node_asc(const void *a, const void *b) {
@@ -119,14 +119,14 @@ struct hashmap_GC *createHashmap_GC(void) {
   struct hashmap_GC *t = ar_alloc(sizeof(struct hashmap_GC));
   memset(t, 0, sizeof(*t));
   t->order = 1;
-  pthread_rwlock_init(&t->lock, NULL);
+  RWLOCK_CREATE(&t->lock);
 
   GC_register_finalizer(t, hashmap_finalizer, NULL, NULL, NULL);
   return t;
 }
 
 void clear_hashmap_GC(struct hashmap_GC *t) {
-  pthread_rwlock_wrlock(&t->lock);
+  RWLOCK_WRLOCK(t->lock);
 
   t->order = 1;
   t->count = 0;
@@ -136,12 +136,12 @@ void clear_hashmap_GC(struct hashmap_GC *t) {
   if (t->list)
     memset(t->list, 0, sizeof(struct node_GC *) * t->size);
 
-  pthread_rwlock_unlock(&t->lock);
+  RWLOCK_UNLOCK_WR(t->lock);
 }
 
 struct node_GC **hashmap_GC_to_array(struct hashmap_GC *t,
                                      size_t *array_length) {
-  pthread_rwlock_rdlock(&t->lock);
+  RWLOCK_RDLOCK(t->lock);
 
   size_t cap = 8;
   *array_length = 0;
@@ -169,25 +169,25 @@ struct node_GC **hashmap_GC_to_array(struct hashmap_GC *t,
 
   qsort(arr, *array_length, sizeof(struct node_GC *), compare_node_asc);
 
-  pthread_rwlock_unlock(&t->lock);
+  RWLOCK_UNLOCK_RD(t->lock);
   return arr;
 }
 
 int hashmap_remove_GC(struct hashmap_GC *t, uint64_t hash) {
-  pthread_rwlock_wrlock(&t->lock);
+  RWLOCK_WRLOCK(t->lock);
 
   for (size_t i = 0; i < t->inline_count; i++) {
     if (t->inline_values[i].hash == hash) {
       memmove(&t->inline_values[i], &t->inline_values[i + 1],
               (t->inline_count - i - 1) * sizeof(struct node_GC));
       t->inline_count--;
-      pthread_rwlock_unlock(&t->lock);
+      RWLOCK_UNLOCK_WR(t->lock);
       return 1;
     }
   }
 
   if (!t->list) {
-    pthread_rwlock_unlock(&t->lock);
+    RWLOCK_UNLOCK_WR(t->lock);
     return 0;
   }
 
@@ -202,37 +202,37 @@ int hashmap_remove_GC(struct hashmap_GC *t, uint64_t hash) {
       else
         t->list[pos] = cur->next;
 
-      pthread_rwlock_unlock(&t->lock);
+      RWLOCK_UNLOCK_WR(t->lock);
       return 1;
     }
     prev = cur;
     cur = cur->next;
   }
 
-  pthread_rwlock_unlock(&t->lock);
+  RWLOCK_UNLOCK_WR(t->lock);
   return 0;
 }
 
 void hashmap_insert_GC(struct hashmap_GC *t, uint64_t hash, void *key,
                        void *val, size_t order) {
-  pthread_rwlock_wrlock(&t->lock);
+  RWLOCK_WRLOCK(t->lock);
   hashmap_insert_GC_nolock(t, hash, key, val, order);
-  pthread_rwlock_unlock(&t->lock);
+  RWLOCK_UNLOCK_WR(t->lock);
 }
 
 void *hashmap_lookup_GC(struct hashmap_GC *t, uint64_t hash) {
-  pthread_rwlock_rdlock(&t->lock);
+  RWLOCK_RDLOCK(t->lock);
 
   for (size_t i = 0; i < t->inline_count; i++) {
     if (t->inline_values[i].hash == hash) {
       void *v = t->inline_values[i].val;
-      pthread_rwlock_unlock(&t->lock);
+      RWLOCK_UNLOCK_RD(t->lock);
       return v;
     }
   }
 
   if (!t->list) {
-    pthread_rwlock_unlock(&t->lock);
+    RWLOCK_UNLOCK_RD(t->lock);
     return NULL;
   }
 
@@ -242,12 +242,12 @@ void *hashmap_lookup_GC(struct hashmap_GC *t, uint64_t hash) {
   while (n) {
     if (n->hash == hash) {
       void *v = n->val;
-      pthread_rwlock_unlock(&t->lock);
+      RWLOCK_UNLOCK_RD(t->lock);
       return v;
     }
     n = n->next;
   }
 
-  pthread_rwlock_unlock(&t->lock);
+  RWLOCK_UNLOCK_RD(t->lock);
   return NULL;
 }

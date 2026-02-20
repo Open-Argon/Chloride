@@ -15,7 +15,7 @@
 void darray_armem_finalizer(void *obj, void *client_data) {
   (void)client_data;
   darray_armem *hashmap = obj;
-  pthread_rwlock_destroy(&hashmap->lock);
+  RWLOCK_DESTROY(&hashmap->lock);
 }
 
 void darray_armem_init(darray_armem *arr, size_t element_size, size_t initial_size) {
@@ -44,7 +44,7 @@ void darray_armem_init(darray_armem *arr, size_t element_size, size_t initial_si
     exit(EXIT_FAILURE);
   }
 
-  pthread_rwlock_init(&arr->lock, NULL);
+  RWLOCK_CREATE(&arr->lock);
 
   GC_register_finalizer(arr, darray_armem_finalizer, NULL, NULL, NULL);
 }
@@ -67,13 +67,13 @@ static void darray_armem_resize_nolock(darray_armem *arr, size_t new_size) {
 }
 
 void darray_armem_resize(darray_armem *arr, size_t new_size) {
-  pthread_rwlock_wrlock(&arr->lock);
+  RWLOCK_WRLOCK(arr->lock);
   darray_armem_resize_nolock(arr, new_size);
-  pthread_rwlock_unlock(&arr->lock);
+  RWLOCK_UNLOCK_WR(arr->lock);
 }
 
 void darray_armem_insert(darray_armem *arr, size_t pos, void *element) {
-  pthread_rwlock_wrlock(&arr->lock);
+  RWLOCK_WRLOCK(arr->lock);
 
   if (pos > arr->size)
     pos = arr->size;
@@ -97,14 +97,14 @@ void darray_armem_insert(darray_armem *arr, size_t pos, void *element) {
 
   memcpy(target, element, arr->element_size);
 
-  pthread_rwlock_unlock(&arr->lock);
+  RWLOCK_UNLOCK_WR(arr->lock);
 }
 
 bool darray_armem_pop(darray_armem *arr, size_t pos, void*out) {
-  pthread_rwlock_wrlock(&arr->lock);
+  RWLOCK_WRLOCK(arr->lock);
 
   if (arr->size == 0) {
-    pthread_rwlock_unlock(&arr->lock);
+    RWLOCK_UNLOCK_WR(arr->lock);
     return false;
   }
 
@@ -127,30 +127,30 @@ bool darray_armem_pop(darray_armem *arr, size_t pos, void*out) {
     arr->size--;
   }
 
-  pthread_rwlock_unlock(&arr->lock);
+  RWLOCK_UNLOCK_WR(arr->lock);
   return true;
 }
 
 void *darray_armem_get(darray_armem *arr, size_t index) {
-  pthread_rwlock_rdlock(&arr->lock);
+  RWLOCK_RDLOCK(arr->lock);
 
   if (index >= arr->size) {
-    pthread_rwlock_unlock(&arr->lock);
+    RWLOCK_UNLOCK_RD(arr->lock);
     fprintf(stderr, "darray_armem_get: index out of bounds\n");
     exit(EXIT_FAILURE);
   }
 
   void *ptr = (char *)arr->data + (arr->offset + index) * arr->element_size;
 
-  pthread_rwlock_unlock(&arr->lock);
+  RWLOCK_UNLOCK_RD(arr->lock);
   return ptr;
 }
 
 darray_armem darray_armem_slice(darray_armem *arr, size_t start, size_t end) {
-  pthread_rwlock_rdlock(&arr->lock);
+  RWLOCK_RDLOCK(arr->lock);
 
   if (start > end || end > arr->size) {
-    pthread_rwlock_unlock(&arr->lock);
+    RWLOCK_UNLOCK_RD(arr->lock);
     fprintf(stderr, "darray_armem_slice: invalid slice range\n");
     exit(EXIT_FAILURE);
   }
@@ -168,8 +168,8 @@ darray_armem darray_armem_slice(darray_armem *arr, size_t start, size_t end) {
   );
 
   slice.offset = 0;
-  pthread_rwlock_init(&slice.lock, NULL);
+  RWLOCK_CREATE(&slice.lock);
 
-  pthread_rwlock_unlock(&arr->lock);
+  RWLOCK_UNLOCK_RD(arr->lock);
   return slice;
 }
