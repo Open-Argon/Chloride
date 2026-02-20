@@ -67,109 +67,105 @@ static void darray_armem_resize_nolock(darray_armem *arr, size_t new_size) {
 }
 
 void darray_armem_resize(darray_armem *arr, size_t new_size) {
-  RWLOCK_WRLOCK(arr->lock);
-  darray_armem_resize_nolock(arr, new_size);
-  RWLOCK_UNLOCK_WR(arr->lock);
+    RWLOCK_WRLOCK(arr->lock, {
+        darray_armem_resize_nolock(arr, new_size);
+    });
 }
 
 void darray_armem_insert(darray_armem *arr, size_t pos, void *element) {
-  RWLOCK_WRLOCK(arr->lock);
+    RWLOCK_WRLOCK(arr->lock, {
+        if (pos > arr->size)
+            pos = arr->size;
 
-  if (pos > arr->size)
-    pos = arr->size;
+        if (arr->size >= arr->capacity) {
+            darray_armem_resize_nolock(arr, arr->size + 1);
+        } else {
+            arr->size++;
+        }
 
-  if (arr->size >= arr->capacity) {
-    darray_armem_resize_nolock(arr, arr->size + 1);
-  } else {
-    arr->size++;
-  }
+        void *base = (char *)arr->data + arr->offset * arr->element_size;
+        void *target = (char *)base + pos * arr->element_size;
 
-  void *base = (char *)arr->data + arr->offset * arr->element_size;
-  void *target = (char *)base + pos * arr->element_size;
+        if (pos < arr->size - 1) {
+            memmove(
+                (char *)target + arr->element_size,
+                target,
+                (arr->size - pos - 1) * arr->element_size
+            );
+        }
 
-  if (pos < arr->size - 1) {
-    memmove(
-      (char *)target + arr->element_size,
-      target,
-      (arr->size - pos - 1) * arr->element_size
-    );
-  }
-
-  memcpy(target, element, arr->element_size);
-
-  RWLOCK_UNLOCK_WR(arr->lock);
+        memcpy(target, element, arr->element_size);
+    });
 }
 
-bool darray_armem_pop(darray_armem *arr, size_t pos, void*out) {
-  RWLOCK_WRLOCK(arr->lock);
+bool darray_armem_pop(darray_armem *arr, size_t pos, void *out) {
+    bool result = false;
 
-  if (arr->size == 0) {
-    RWLOCK_UNLOCK_WR(arr->lock);
-    return false;
-  }
+    RWLOCK_WRLOCK(arr->lock, {
+        if (arr->size == 0) {
+            result = false;
+            break;
+        }
 
-  if (pos >= arr->size)
-    pos = arr->size - 1;
+        if (pos >= arr->size)
+            pos = arr->size - 1;
 
-  void *base = (char *)arr->data + arr->offset * arr->element_size;
-  void *target = (char *)base + pos * arr->element_size;
+        void *base = (char *)arr->data + arr->offset * arr->element_size;
+        void *target = (char *)base + pos * arr->element_size;
 
-  memcpy(out, target, arr->element_size);
+        memcpy(out, target, arr->element_size);
 
-  if (pos < arr->size - 1) {
-    memmove(
-      target,
-      (char *)target + arr->element_size,
-      (arr->size - pos - 1) * arr->element_size
-    );
-    arr->size--;
-  } else {
-    arr->size--;
-  }
+        if (pos < arr->size - 1) {
+            memmove(
+                target,
+                (char *)target + arr->element_size,
+                (arr->size - pos - 1) * arr->element_size
+            );
+        }
+        arr->size--;
+        result = true;
+    });
 
-  RWLOCK_UNLOCK_WR(arr->lock);
-  return true;
+    return result;
 }
 
 void *darray_armem_get(darray_armem *arr, size_t index) {
-  RWLOCK_RDLOCK(arr->lock);
+    void *ptr = NULL;
 
-  if (index >= arr->size) {
-    RWLOCK_UNLOCK_RD(arr->lock);
-    fprintf(stderr, "darray_armem_get: index out of bounds\n");
-    exit(EXIT_FAILURE);
-  }
+    RWLOCK_RDLOCK(arr->lock, {
+        if (index >= arr->size) {
+            fprintf(stderr, "darray_armem_get: index out of bounds\n");
+            exit(EXIT_FAILURE);
+        }
 
-  void *ptr = (char *)arr->data + (arr->offset + index) * arr->element_size;
+        ptr = (char *)arr->data + (arr->offset + index) * arr->element_size;
+    });
 
-  RWLOCK_UNLOCK_RD(arr->lock);
-  return ptr;
+    return ptr;
 }
 
 darray_armem darray_armem_slice(darray_armem *arr, size_t start, size_t end) {
-  RWLOCK_RDLOCK(arr->lock);
+    darray_armem slice;
 
-  if (start > end || end > arr->size) {
-    RWLOCK_UNLOCK_RD(arr->lock);
-    fprintf(stderr, "darray_armem_slice: invalid slice range\n");
-    exit(EXIT_FAILURE);
-  }
+    RWLOCK_RDLOCK(arr->lock, {
+        if (start > end || end > arr->size) {
+            fprintf(stderr, "darray_armem_slice: invalid slice range\n");
+            exit(EXIT_FAILURE);
+        }
 
-  darray_armem slice;
+        slice.size = end - start;
+        slice.element_size = arr->element_size;
+        slice.capacity = ((slice.size + DARRAY_ARMEM_CHUNK_SIZE) / DARRAY_ARMEM_CHUNK_SIZE) * DARRAY_ARMEM_CHUNK_SIZE;
+        slice.data = ar_alloc(slice.capacity * slice.element_size);
+        memcpy(
+            slice.data,
+            (char *)arr->data + (arr->offset + start) * arr->element_size,
+            slice.size * arr->element_size
+        );
 
-  slice.size = end - start;
-  slice.element_size = arr->element_size;
-  slice.capacity = ((slice.size + DARRAY_ARMEM_CHUNK_SIZE) / DARRAY_ARMEM_CHUNK_SIZE) * DARRAY_ARMEM_CHUNK_SIZE;
-  slice.data = ar_alloc(slice.capacity * slice.element_size);
-  memcpy(
-    slice.data,
-    (char *)arr->data + (arr->offset + start) * arr->element_size,
-    slice.size * arr->element_size
-  );
+        slice.offset = 0;
+        RWLOCK_CREATE(&slice.lock);
+    });
 
-  slice.offset = 0;
-  RWLOCK_CREATE(&slice.lock);
-
-  RWLOCK_UNLOCK_RD(arr->lock);
-  return slice;
+    return slice;
 }
