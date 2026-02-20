@@ -9,7 +9,7 @@
 
 #include <stdbool.h>
 #include <stddef.h>
-#include <pthread.h>
+#include "../../../RWLock.h"
 
 #define DARRAY_ARMEM_CHUNK_SIZE 128
 
@@ -19,7 +19,7 @@ typedef struct {
   size_t size;
   size_t capacity;
   size_t offset;          // space at the start for efficient pops
-  pthread_rwlock_t lock;
+  RWLock lock;
 } darray_armem;
 
 // Initialize the dynamic array

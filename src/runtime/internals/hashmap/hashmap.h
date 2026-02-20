@@ -9,7 +9,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
-#include <pthread.h>
+#include "../../../RWLock.h"
 
 #define INLINE_HASHMAP_ARRAY_SIZE 3
 
@@ -31,7 +31,7 @@ struct hashmap_GC {
   size_t inline_count;
   struct node_GC inline_values[INLINE_HASHMAP_ARRAY_SIZE];
 
-  pthread_rwlock_t lock; // switched to read-write lock
+  RWLock lock; // switched to read-write lock
 };
 
 /* Public API (thread-safe) */

@@ -41,7 +41,6 @@
 #include <unistd.h>
 #endif
 #include "err.h"
-#include <pthread.h>
 #if defined(_WIN32) || defined(_WIN64)
 
 // Windows / MinGW usually uses little-endian, so these can be no-ops
