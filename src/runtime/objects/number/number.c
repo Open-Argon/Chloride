@@ -71,71 +71,70 @@ void mpq_fmod(mpq_t result, const mpq_t a, const mpq_t b) {
 
 // Round to nearest multiple of precision
 void mpq_round_prec(mpq_t result, const mpq_t n, const mpq_t precision) {
-    mpq_t div;
-    mpq_init(div);
+  mpq_t div;
+  mpq_init(div);
 
-    // div = n / precision
-    mpq_div(div, n, precision);
+  // div = n / precision
+  mpq_div(div, n, precision);
 
-    // Get numerator and denominator of div
-    mpz_t q, r;
-    mpz_init(q);
-    mpz_init(r);
-    mpz_tdiv_qr(q, r, mpq_numref(div), mpq_denref(div)); // q = floor(div), r = remainder
+  // Get numerator and denominator of div
+  mpz_t q, r;
+  mpz_init(q);
+  mpz_init(r);
+  mpz_tdiv_qr(q, r, mpq_numref(div),
+              mpq_denref(div)); // q = floor(div), r = remainder
 
-    // Decide if we round up
-    if (mpz_cmpabs_ui(r, mpz_get_ui(mpq_denref(div)))/2 >= 0) {
-        mpz_add_ui(q, q, 1); // round up if remainder >= 0.5
-    }
+  // Decide if we round up
+  if (mpz_cmpabs_ui(r, mpz_get_ui(mpq_denref(div))) / 2 >= 0) {
+    mpz_add_ui(q, q, 1); // round up if remainder >= 0.5
+  }
 
-    // result = q * precision
-    mpq_set_z(result, q);
-    mpq_mul(result, result, precision);
+  // result = q * precision
+  mpq_set_z(result, q);
+  mpq_mul(result, result, precision);
 
-    mpq_clear(div);
-    mpz_clear(q);
-    mpz_clear(r);
+  mpq_clear(div);
+  mpz_clear(q);
+  mpz_clear(r);
 }
 
 // Floor to nearest multiple of precision
 void mpq_floor_prec(mpq_t result, const mpq_t n, const mpq_t precision) {
-    mpq_t div;
-    mpq_init(div);
+  mpq_t div;
+  mpq_init(div);
 
-    mpq_div(div, n, precision);
-    mpz_t q;
-    mpz_init(q);
+  mpq_div(div, n, precision);
+  mpz_t q;
+  mpz_init(q);
 
-    // q = floor(n / precision)
-    mpz_fdiv_q(q, mpq_numref(div), mpq_denref(div));
+  // q = floor(n / precision)
+  mpz_fdiv_q(q, mpq_numref(div), mpq_denref(div));
 
-    mpq_set_z(result, q);
-    mpq_mul(result, result, precision);
+  mpq_set_z(result, q);
+  mpq_mul(result, result, precision);
 
-    mpq_clear(div);
-    mpz_clear(q);
+  mpq_clear(div);
+  mpz_clear(q);
 }
 
 // Ceil to nearest multiple of precision
 void mpq_ceil_prec(mpq_t result, const mpq_t n, const mpq_t precision) {
-    mpq_t div;
-    mpq_init(div);
+  mpq_t div;
+  mpq_init(div);
 
-    mpq_div(div, n, precision);
-    mpz_t q;
-    mpz_init(q);
+  mpq_div(div, n, precision);
+  mpz_t q;
+  mpz_init(q);
 
-    // q = ceil(n / precision)
-    mpz_cdiv_q(q, mpq_numref(div), mpq_denref(div));
+  // q = ceil(n / precision)
+  mpz_cdiv_q(q, mpq_numref(div), mpq_denref(div));
 
-    mpq_set_z(result, q);
-    mpq_mul(result, result, precision);
+  mpq_set_z(result, q);
+  mpq_mul(result, result, precision);
 
-    mpq_clear(div);
-    mpz_clear(q);
+  mpq_clear(div);
+  mpz_clear(q);
 }
-
-
 
 ArgonObject *ARGON_NUMBER_TYPE___new__(size_t argc, ArgonObject **argv,
                                        ArErr *err, RuntimeState *state,
@@ -208,8 +207,9 @@ ArgonObject *ARGON_NUMBER_TYPE___boolean__(size_t argc, ArgonObject **argv,
 //   mpq_t result;
 //   mpq_init(result);
 
-//   mpq_round_prec(result, *argv[0]->value.as_number->n.mpq, *argv[1]->value.as_number->n.mpq);
-  
+//   mpq_round_prec(result, *argv[0]->value.as_number->n.mpq,
+//   *argv[1]->value.as_number->n.mpq);
+
 //   return new_number_object(result);
 // }
 
@@ -658,7 +658,7 @@ ArgonObject *ARGON_NUMBER_TYPE___division__(size_t argc, ArgonObject **argv,
                      "Zero Division Error", "division by zero");
       return NULL;
     }
-    if (b<0) {
+    if (b < 0) {
       a = -a;
       b = -b;
     }
@@ -1379,64 +1379,64 @@ mpq_t *mpq_new_gc_from(const mpq_t src) {
 #if defined(_WIN32) && defined(__MINGW32__)
 
 bool mpq_to_int64(mpq_t q, int64_t *out) {
-    // Ensure denominator == 1
-    if (mpz_cmp_ui(mpq_denref(q), 1) != 0) {
-        return false;
-    }
+  // Ensure denominator == 1
+  if (mpz_cmp_ui(mpq_denref(q), 1) != 0) {
+    return false;
+  }
 
-    mpz_t num, min, max;
-    mpz_init(num);
-    mpz_set(num, mpq_numref(q));
+  mpz_t num, min, max;
+  mpz_init(num);
+  mpz_set(num, mpq_numref(q));
 
-    // Initialize bounds as mpz_t to avoid 32-bit long overflow
-    mpz_init_set_str(min, "-9223372036854775808", 10); // INT64_MIN
-    mpz_init_set_str(max,  "9223372036854775807", 10); // INT64_MAX
+  // Initialize bounds as mpz_t to avoid 32-bit long overflow
+  mpz_init_set_str(min, "-9223372036854775808", 10); // INT64_MIN
+  mpz_init_set_str(max, "9223372036854775807", 10);  // INT64_MAX
 
-    // Check if numerator is in int64_t range
-    if (mpz_cmp(num, min) < 0 || mpz_cmp(num, max) > 0) {
-        mpz_clear(num);
-        mpz_clear(min);
-        mpz_clear(max);
-        return false;
-    }
-
-    // Export numerator to 64-bit integer safely
-    int64_t val = 0;
-    size_t count;
-    mpz_export(&val, &count, 1, sizeof(uint64_t), 0, 0, num);
-    if (mpz_sgn(num) < 0) val = -val;
-    *out = val;
-
+  // Check if numerator is in int64_t range
+  if (mpz_cmp(num, min) < 0 || mpz_cmp(num, max) > 0) {
     mpz_clear(num);
     mpz_clear(min);
     mpz_clear(max);
-    return true;
+    return false;
+  }
+
+  // Export numerator to 64-bit integer safely
+  int64_t val = 0;
+  size_t count;
+  mpz_export(&val, &count, 1, sizeof(uint64_t), 0, 0, num);
+  if (mpz_sgn(num) < 0)
+    val = -val;
+  *out = val;
+
+  mpz_clear(num);
+  mpz_clear(min);
+  mpz_clear(max);
+  return true;
 }
 
 #else
 
 // Linux / other platforms: use original implementation
 bool mpq_to_int64(mpq_t q, int64_t *out) {
-    if (mpz_cmp_ui(mpq_denref(q), 1) != 0) {
-        return false;
-    }
+  if (mpz_cmp_ui(mpq_denref(q), 1) != 0) {
+    return false;
+  }
 
-    mpz_t num;
-    mpz_init(num);
-    mpz_set(num, mpq_numref(q));
+  mpz_t num;
+  mpz_init(num);
+  mpz_set(num, mpq_numref(q));
 
-    if (!mpz_fits_slong_p(num)) {
-        mpz_clear(num);
-        return false;
-    }
-
-    *out = mpz_get_si(num);
+  if (!mpz_fits_slong_p(num)) {
     mpz_clear(num);
-    return true;
+    return false;
+  }
+
+  *out = mpz_get_si(num);
+  mpz_clear(num);
+  return true;
 }
 
 #endif
-
 
 bool double_to_int64(double x, int64_t *out) {
   if (x < (double)INT64_MIN || x > (double)INT64_MAX) {
@@ -1533,12 +1533,8 @@ ArgonObject *new_number_object(mpq_t number) {
   if (is_int64 && i64 >= small_ints_min && i64 <= small_ints_max) {
     return &small_ints[i64 - small_ints_min];
   }
-  ArgonObject *object;
-  if (is_int64) {
-    object = new_instance(ARGON_NUMBER_TYPE, sizeof(struct as_number));
-  } else {
-    object = new_instance(ARGON_NUMBER_TYPE, sizeof(struct as_number));
-  }
+  ArgonObject *object =
+      new_small_instance(ARGON_NUMBER_TYPE, sizeof(struct as_number));
   object->value.as_number =
       (struct as_number *)((char *)object + sizeof(ArgonObject));
   object->type = TYPE_NUMBER;
@@ -1555,60 +1551,59 @@ ArgonObject *new_number_object(mpq_t number) {
 
 static inline void mpz_set_si64(mpz_t z, int64_t value) {
 #if defined(_WIN32) && defined(__MINGW32__)
-    // Windows: long is 32-bit, so split into high/low 32-bit parts
-    if (value >= 0) {
-        uint32_t hi = (uint32_t)(value >> 32);
-        uint32_t lo = (uint32_t)(value & 0xFFFFFFFFULL);
+  // Windows: long is 32-bit, so split into high/low 32-bit parts
+  if (value >= 0) {
+    uint32_t hi = (uint32_t)(value >> 32);
+    uint32_t lo = (uint32_t)(value & 0xFFFFFFFFULL);
 
-        if (hi == 0) {
-            mpz_set_ui(z, lo);
-        } else {
-            mpz_t tmp;
-            mpz_init(tmp);
-            mpz_set_ui(z, hi);
-            mpz_mul_2exp(z, z, 32); // shift left by 32 bits
-            mpz_init_set_ui(tmp, lo);
-            mpz_add(z, z, tmp);
-            mpz_clear(tmp);
-        }
+    if (hi == 0) {
+      mpz_set_ui(z, lo);
     } else {
-        // For negative numbers, recursively handle -value and then negate
-        mpz_set_si64(z, -value);
-        mpz_neg(z, z);
+      mpz_t tmp;
+      mpz_init(tmp);
+      mpz_set_ui(z, hi);
+      mpz_mul_2exp(z, z, 32); // shift left by 32 bits
+      mpz_init_set_ui(tmp, lo);
+      mpz_add(z, z, tmp);
+      mpz_clear(tmp);
     }
+  } else {
+    // For negative numbers, recursively handle -value and then negate
+    mpz_set_si64(z, -value);
+    mpz_neg(z, z);
+  }
 #else
-    // On Linux and other platforms, long is 64-bit
-    mpz_set_si(z, value);
+  // On Linux and other platforms, long is 64-bit
+  mpz_set_si(z, value);
 #endif
 }
 
 void mpq_set_si64(mpq_t q, int64_t n, int64_t d) {
-    mpz_t num, den;
-    mpz_init(num);
-    mpz_init(den);
+  mpz_t num, den;
+  mpz_init(num);
+  mpz_init(den);
 
-    mpz_set_si64(num, n);  // your own helper for int64_t -> mpz_t
-    mpz_set_si64(den, d);
+  mpz_set_si64(num, n); // your own helper for int64_t -> mpz_t
+  mpz_set_si64(den, d);
 
-    mpq_set_num(q, num);
-    mpq_set_den(q, den);
-    mpq_canonicalize(q);
+  mpq_set_num(q, num);
+  mpq_set_den(q, den);
+  mpq_canonicalize(q);
 
-    mpz_clear(num);
-    mpz_clear(den);
+  mpz_clear(num);
+  mpz_clear(den);
 }
-
 
 ArgonObject *new_number_object_from_num_and_den(int64_t n, uint64_t d) {
   if (d == 1 && n >= small_ints_min && n <= small_ints_max) {
     return &small_ints[n - small_ints_min];
   }
   ArgonObject *object =
-      new_instance(ARGON_NUMBER_TYPE, sizeof(struct as_number));
+      new_small_instance(ARGON_NUMBER_TYPE, sizeof(struct as_number));
   object->value.as_number =
       (struct as_number *)((char *)object + sizeof(ArgonObject));
   object->type = TYPE_NUMBER;
-  if (n%d==0) {
+  if (n % d == 0) {
     n /= d;
     d = 1;
   }
@@ -1633,7 +1628,7 @@ ArgonObject *new_number_object_from_int64(int64_t i64) {
     return &small_ints[i64 - small_ints_min];
   }
   ArgonObject *object =
-      new_instance(ARGON_NUMBER_TYPE, sizeof(struct as_number));
+      new_small_instance(ARGON_NUMBER_TYPE, sizeof(struct as_number));
   object->value.as_number =
       (struct as_number *)((char *)object + sizeof(ArgonObject));
   object->type = TYPE_NUMBER;
@@ -1650,7 +1645,7 @@ ArgonObject *new_number_object_from_double(double d) {
     return &small_ints[i64 - small_ints_min];
   }
   ArgonObject *object =
-      new_instance(ARGON_NUMBER_TYPE, sizeof(struct as_number));
+      new_small_instance(ARGON_NUMBER_TYPE, sizeof(struct as_number));
   object->value.as_number =
       (struct as_number *)((char *)object + sizeof(ArgonObject));
   object->type = TYPE_NUMBER;
