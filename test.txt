@@ -1,0 +1,45 @@
+{"LIGHTGRAY": <buffer object at 0x7f0eae5bbf50>, "GRAY": <buffer object at 0x7f0eae5bbee0>, "DARKGRAY": <buffer object at 0x7f0eae5bbe70>, "YELLOW": <buffer object at 0x7f0eae5bbe00>, "GOLD": <buffer object at 0x7f0eae5bbd90>, "ORANGE": <buffer object at 0x7f0eae5bbd20>, "PINK": <buffer object at 0x7f0eae5bbcb0>, "RED": <buffer object at 0x7f0eae5bbc40>, "MAROON": <buffer object at 0x7f0eae5bbbd0>, "GREEN": <buffer object at 0x7f0eae5bbb60>, "LIME": <buffer object at 0x7f0eae5bbaf0>, "DARKGREEN": <buffer object at 0x7f0eae5bba80>, "SKYBLUE": <buffer object at 0x7f0eae5bba10>, "BLUE": <buffer object at 0x7f0eae5bb9a0>, "DARKBLUE": <buffer object at 0x7f0eae5bb930>, "PURPLE": <buffer object at 0x7f0eae5bb8c0>, "VIOLET": <buffer object at 0x7f0eae5bb850>, "DARKPURPLE": <buffer object at 0x7f0eae5bb7e0>, "BEIGE": <buffer object at 0x7f0eae5bb770>, "BROWN": <buffer object at 0x7f0eae5bb700>, "DARKBROWN": <buffer object at 0x7f0eae5bb690>, "WHITE": <buffer object at 0x7f0eae5bb620>, "BLACK": <buffer object at 0x7f0eae5bb5b0>, "BLANK": <buffer object at 0x7f0eae5bb540>, "MAGENTA": <buffer object at 0x7f0eae5bb4d0>, "RAYWHITE": <buffer object at 0x7f0eae5bb460>, "InitWindow": <function InitWindow at 0x7f0eae58e180>, "SetTargetFPS": <function SetTargetFPS at 0x7f0eae58e120>, "WindowShouldClose": <function WindowShouldClose at 0x7f0eae58e0c0>, "BeginDrawing": <function BeginDrawing at 0x7f0eae58e060>, "ClearBackground": <function ClearBackground at 0x7f0eae58e000>, "DrawText": <function DrawText at 0x7f0eae5bef60>, "EndDrawing": <function EndDrawing at 0x7f0eae5bef00>, "CloseWindow": <function CloseWindow at 0x7f0eae5beea0>}
+INFO: Initializing raylib 5.5
+INFO: Platform backend: DESKTOP (GLFW)
+INFO: Supported raylib modules:
+INFO:     > rcore:..... loaded (mandatory)
+INFO:     > rlgl:...... loaded (mandatory)
+INFO:     > rshapes:... loaded (optional)
+INFO:     > rtextures:. loaded (optional)
+INFO:     > rtext:..... loaded (optional)
+INFO:     > rmodels:... loaded (optional)
+INFO:     > raudio:.... loaded (optional)
+INFO: DISPLAY: Device initialized successfully
+INFO:     > Display size: 2560 x 1440
+INFO:     > Screen size:  820 x 640
+INFO:     > Render size:  820 x 640
+INFO:     > Viewport offsets: 0, 0
+INFO: GLAD: OpenGL extensions loaded successfully
+INFO: GL: Supported extensions count: 240
+INFO: GL: OpenGL device information:
+INFO:     > Vendor:   AMD
+INFO:     > Renderer: AMD Radeon RX 7800 XT (radeonsi, navi32, ACO, DRM 3.64, 6.18.10-200.fc43.x86_64)
+INFO:     > Version:  4.6 (Core Profile) Mesa 26.0.0
+INFO:     > GLSL:     4.60
+INFO: GL: VAO extension detected, VAO functions loaded successfully
+INFO: GL: NPOT textures extension detected, full NPOT textures supported
+INFO: GL: DXT compressed textures supported
+INFO: GL: ETC2/EAC compressed textures supported
+INFO: PLATFORM: DESKTOP (GLFW - X11): Initialized successfully
+INFO: TEXTURE: [ID 1] Texture loaded successfully (1x1 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 1] Default texture loaded successfully
+INFO: SHADER: [ID 1] Vertex shader compiled successfully
+INFO: SHADER: [ID 2] Fragment shader compiled successfully
+INFO: SHADER: [ID 3] Program shader loaded successfully
+INFO: SHADER: [ID 3] Default shader loaded successfully
+INFO: RLGL: Render batch vertex buffers loaded successfully in RAM (CPU)
+INFO: RLGL: Render batch vertex buffers loaded successfully in VRAM (GPU)
+INFO: RLGL: Default OpenGL state initialized successfully
+INFO: TEXTURE: [ID 2] Texture loaded successfully (128x128 | GRAY_ALPHA | 1 mipmaps)
+INFO: FONT: Default font loaded successfully (224 glyphs)
+INFO: SYSTEM: Working Directory: /mnt/HDD/Documents/GitHub/Carbon
+INFO: TEXTURE: [ID 2] Unloaded texture data from VRAM (GPU)
+INFO: SHADER: [ID 3] Default shader unloaded successfully
+INFO: TEXTURE: [ID 1] Default texture unloaded successfully
+INFO: Window closed successfully
+bye :)

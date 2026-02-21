@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 import "../stdlib/raylib" expose raylib
+import "../stdlib/random" expose random
 
 class Based do
   this.abs(x)=do
@@ -11,25 +12,40 @@ class Based do
 
 term.log(raylib)
 
-class Game(Based) do
+class bouncing_text(Based) do
+  this.__init__(self, text, pos, speed) = do
+    self.text = text
+    self.pos = pos
+    self.speed = speed
+  this.render(self, step, max, white) = raylib.DrawText(self.text, (max[0] - super.abs(((self.pos[0]+step * self.speed) % (2 * max[0])) - max[0]))//1, (max[1] - super.abs(((self.pos[1]+step * self.speed) % (2 * max[1])) - max[1]))//1, 20, (white&&raylib.WHITE)||raylib.BLACK)
+
+
+class Game do
   this.__init__(self, width, height, fps) = do
     self.frame = 0
     self.width = width
     self.height = height
-    self.speedX = 1
-    self.speedY = 1
     raylib.InitWindow(self.width, self.height, "Hello Raylib")
     if (fps) raylib.SetTargetFPS(fps)
+    self.bouncing_texts = []
+    let x = 0
+    while (x<20) do
+      let y = 0
+      while (y<20) do
+        self.bouncing_texts.append(bouncing_text(string(x*y), tuple(x*10,y*10), x+y+1))
+        y=y+1
+      x=x+1
 
   this.render(self) = do
       # term.log("frame:",self.frame)
-      let maxX = self.width -235, maxY = self.height-20
-      raylib.ClearBackground(raylib.BLUE)
+      let maxX = self.width -10, maxY = self.height-20
+      let white = 0# random.int(0,2)
+      raylib.ClearBackground((white&&raylib.WHITE)||raylib.BLACK)
 
-      let x = maxX - super.abs(((self.frame * self.speedX) % (2 * maxX)) - maxX)
-      let y = maxY - super.abs(((self.frame * self.speedY) % (2 * maxY)) - maxY)
-      
-      raylib.DrawText("Hello world from Argon", x//1, y//1, 20, raylib.ORANGE)
+      let i = 0
+      while (i<self.bouncing_texts.length) do
+        self.bouncing_texts[i].render(self.frame,tuple(maxX, maxY), !white)
+        i=i+1
 
       self.frame=self.frame+1
   
@@ -37,7 +53,7 @@ class Game(Based) do
     return "game instance"
 
 
-let instance = Game(820, 640, 60)
+let instance = Game(820, 640, 0)
 
 while (!raylib.WindowShouldClose()) do
   raylib.BeginDrawing()
