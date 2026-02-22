@@ -18,6 +18,8 @@ typedef struct ArgonObject ArgonObject;
 
 // extern RWLock small_objects_lock;
 
+void unregister_thread_pool();
+
 ArgonObject *new_class();
 ArgonObject *new_small_instance(ArgonObject *of, size_t endSize);
 ArgonObject *new_instance(ArgonObject *of, size_t endSize);

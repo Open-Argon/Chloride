@@ -134,6 +134,7 @@ int register_thread() {
 
 int unregister_thread() {
   atomic_fetch_sub(&thread_count, 1);
+  unregister_thread_pool();
   return GC_unregister_my_thread();
 }
 
