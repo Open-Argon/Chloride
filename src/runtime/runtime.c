@@ -2678,7 +2678,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       struct StackTraceFrame frame = {currentStackFrame->source_location.line,
                                       currentStackFrame->source_location.column,
                                       currentStackFrame->translated.path};
-      darray_armem_insert(&err.stack_trace, err.stack_trace.size, &frame);
+      darray_armem_insert(err.stack_trace, err.stack_trace->size, &frame);
     }
 
     ArgonObject *result = currentStackFrame->state.registers[0];

@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: 2025 William Bell
 #
 # SPDX-License-Identifier: LGPL-3.0-or-later
+import "../maths" as maths
 
 let __rand__ = load_native_code(program.file.directory+"native/bin/random"+platform.lib_ext)
 
@@ -12,7 +13,7 @@ class Random do
   this.range(self,start,end) = do
     return start + self.random()*end
   this.int(self,start, end) = do
-    return self.range(start,end)//1
+    return maths.int(self.range(start,end))
   this.choice(self, arr) = do
     return arr[self.int(0,arr.length)]
   

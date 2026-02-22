@@ -20,6 +20,6 @@ typedef struct ArErr {
   int64_t column;
   int length;
   bool exists;
-  darray_armem stack_trace;
+  darray_armem *stack_trace;
 } ArErr;
 #endif // RETURN_TYPES_

@@ -18,6 +18,10 @@ void darray_armem_finalizer(void *obj, void *client_data) {
   RWLOCK_DESTROY(&hashmap->lock);
 }
 
+darray_armem* darray_armem_create() {
+  return ar_alloc(sizeof(darray_armem));
+}
+
 void darray_armem_init(darray_armem *arr, size_t element_size,
                        size_t initial_size) {
   if (element_size > DARRAY_ARMEM_CHUNK_SIZE) {

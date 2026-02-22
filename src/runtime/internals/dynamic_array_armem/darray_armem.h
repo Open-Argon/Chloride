@@ -22,6 +22,8 @@ typedef struct {
   RWLock lock;
 } darray_armem;
 
+darray_armem* darray_armem_create();
+
 // Initialize the dynamic array
 void darray_armem_init(darray_armem *arr, size_t element_size, size_t initial_size);
 
