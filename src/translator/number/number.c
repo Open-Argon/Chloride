@@ -31,7 +31,9 @@ size_t translate_parsed_number(Translated *translated, mpq_t *number,
   push_instruction_code(translated, num_size);
   push_instruction_code(translated, numerator_pos);
   bool is_int = mpz_cmp_ui(mpq_denref(*number), 1) == 0;
+  bool is_negative = mpq_cmp_si(*number, 0, 1) < 0;
   push_instruction_byte(translated, is_int);
+  push_instruction_byte(translated, is_negative);
   if (!is_int) {
     // Export denominator
     size_t den_size;

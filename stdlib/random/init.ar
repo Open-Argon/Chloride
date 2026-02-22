@@ -13,6 +13,8 @@ class Random do
     return start + self.random()*end
   this.int(self,start, end) = do
     return self.range(start,end)//1
+  this.choice(self, arr) = do
+    return arr[self.int(0,arr.length)]
   
 
 let random = Random(__rand__.random_os_seed())

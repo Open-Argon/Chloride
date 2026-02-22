@@ -1,0 +1,29 @@
+let abs(num) = do
+  if (num<0) return -num
+  return num
+
+let int(num) = do
+  if (num<0) return -((-num)//1)
+  return num//1
+
+let floor(num) = do
+    let i = int(num)
+
+    if (num < 0 && num != i) do
+        return i - 1
+
+    return i
+
+let ceil(num) = do
+    let i = int(num)
+
+    if (num > 0 && num != i) do
+        return i + 1
+
+    return i
+
+let round(num) = do
+    if (num >= 0) do
+        return floor(num + 0.5)
+    else do
+        return ceil(num - 0.5)

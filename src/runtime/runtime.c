@@ -31,6 +31,7 @@
 #include "objects/type/type.h"
 #include <fcntl.h>
 #include <gc/gc.h>
+#include <gmp-x86_64.h>
 #include <gmp.h>
 #include <inttypes.h>
 #include <stddef.h>
@@ -1493,19 +1494,19 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       if (is_int64) {
         int64_t num;
         POP_U64(num);
-        bool small_num = num < small_ints_min || num > small_ints_max;
-        if (small_num) {
-          cache_number = hashmap_lookup_GC(state->load_number_cache, num);
-        }
-        if (cache_number) {
-          state->registers[to_register] = cache_number;
-          continue;
-        }
+        // bool small_num = num < small_ints_min || num > small_ints_max;
+        // if (small_num) {
+        //   cache_number = hashmap_lookup_GC(state->load_number_cache, num);
+        // }
+        // if (cache_number) {
+        //   state->registers[to_register] = cache_number;
+        //   continue;
+        // }
         state->registers[to_register] = new_number_object_from_int64(num);
-        if (small_num) {
-          hashmap_insert_GC(state->load_number_cache, num, NULL,
-                            state->registers[to_register], 0);
-        }
+        // if (small_num) {
+        //   hashmap_insert_GC(state->load_number_cache, num, NULL,
+        //                     state->registers[to_register], 0);
+        // }
         continue;
       }
       size_t num_size;
@@ -1513,6 +1514,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       size_t num_pos;
       POP_U64(num_pos);
       bool is_int = POP_BYTE();
+      bool is_negative = POP_BYTE();
       size_t den_size = 0;
       size_t den_pos = 0;
       if (!is_int) {
@@ -1520,7 +1522,8 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
         POP_U64(den_pos);
       }
 
-      uint64_t uuid = make_id(num_size, num_pos, is_int, den_size, den_pos);
+      uint64_t uuid =
+          make_id(num_size, num_pos, is_int, is_negative, den_size, den_pos);
 
       cache_number = hashmap_lookup_GC(state->load_number_cache, uuid);
       if (cache_number) {
@@ -1539,6 +1542,9 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       mpz_import(num, num_size, 1, 1, 0, 0,
                  arena_get(&translated->constants, num_pos));
       mpq_set_num(r, num);
+      if (is_negative) {
+        mpq_neg(r, r);
+      }
       mpz_clear(num);
       if (!is_int) {
         mpz_t den;
@@ -1773,6 +1779,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
         mpq_neg(result, *value->value.as_number->n.mpq);
         state->registers[0] = new_number_object(result);
         mpq_clear(result);
+        continue;
       }
       ArgonObject *negation_function = get_builtin_field_for_class(
           get_builtin_field(state->registers[0], __class__), __negation__,

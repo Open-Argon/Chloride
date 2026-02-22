@@ -164,8 +164,9 @@ int mpq_set_decimal_str_exp(mpq_t r, const char *str, size_t len) {
   mpq_set_den(r, denominator);
   mpq_canonicalize(r);
 
-  if (negative)
+  if (negative){
     mpq_neg(r, r);
+  }
 
   mpz_clear(numerator);
   mpz_clear(denominator);

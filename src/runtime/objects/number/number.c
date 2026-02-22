@@ -9,6 +9,7 @@
 #include "../../../memory.h"
 #include "../functions/functions.h"
 #include "../string/string.h"
+#include <gmp-x86_64.h>
 #include <gmp.h>
 #include <inttypes.h>
 #include <mpfr.h>
@@ -1673,12 +1674,13 @@ static inline uint64_t hash_u64(uint64_t h, uint64_t x) {
   return h ^ (x + 0x9e3779b97f4a7c15ULL + (h << 6) + (h >> 2));
 }
 
-uint64_t make_id(size_t num_size, size_t num_pos, bool is_int, size_t den_size,
+uint64_t make_id(size_t num_size, size_t num_pos, bool is_int, bool is_negative, size_t den_size,
                  size_t den_pos) {
   uint64_t h = 0;
   h = hash_u64(h, num_size);
   h = hash_u64(h, num_pos);
   h = hash_u64(h, is_int);
+  h = hash_u64(h, is_negative);
   if (!is_int) {
     h = hash_u64(h, den_size);
     h = hash_u64(h, den_pos);

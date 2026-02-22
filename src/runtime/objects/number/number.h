@@ -33,7 +33,7 @@ void mpq_fdiv(mpq_t result, const mpq_t a, const mpq_t b);
 
 void mpq_fmod(mpq_t result, const mpq_t a, const mpq_t b);
 
-uint64_t make_id(size_t num_size, size_t num_pos, bool is_int, size_t den_size,
+uint64_t make_id(size_t num_size, size_t num_pos, bool is_int, bool is_negative, size_t den_size,
                  size_t den_pos);
 
 #endif // RUNTIME_NUMBER_H
