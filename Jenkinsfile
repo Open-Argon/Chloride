@@ -62,7 +62,7 @@ pipeline {
                     pip install conan
                     
                     mkdir -p archives
-                    rm archives/* *.zip *.tar.gz
+                    rm -rf archives/* *.zip *.tar.gz
                 '''
             }
         }
