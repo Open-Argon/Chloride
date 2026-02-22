@@ -16,6 +16,7 @@
 
 #include "hash_data/hash_data.h"
 #include <locale.h>
+#include <stdatomic.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -24,6 +25,8 @@
 #ifdef _WIN32
 #include <windows.h>
 #endif
+
+atomic_int thread_count = 0;
 
 char *
 get_current_directory() {

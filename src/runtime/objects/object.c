@@ -10,7 +10,6 @@
 #include "../../memory.h"
 #include "../call/call.h"
 #include "type/type.h"
-#include <pthread.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -89,32 +88,6 @@ ArgonObject *new_object(size_t endSize) {
   return object;
 }
 
-#define SMALL_OBJECT_ASSIGNMENT_AMOUNT 512
-void *small_objects;
-size_t small_objects_pos = SMALL_OBJECT_ASSIGNMENT_AMOUNT * sizeof(ArgonObject);
-pthread_mutex_t objects_mutex;
-
-ArgonObject *new_small_object(size_t endSize) {
-  ArgonObject *object;
-  pthread_mutex_lock(&objects_mutex);
-  if (small_objects_pos + sizeof(ArgonObject) + endSize <
-      SMALL_OBJECT_ASSIGNMENT_AMOUNT * sizeof(ArgonObject)) {
-    object = small_objects + small_objects_pos;
-    small_objects_pos += sizeof(ArgonObject) + endSize;
-  } else {
-    small_objects =
-        ar_alloc(sizeof(ArgonObject) * SMALL_OBJECT_ASSIGNMENT_AMOUNT);
-    object = small_objects;
-    small_objects_pos = sizeof(ArgonObject) + endSize;
-  }
-  pthread_mutex_unlock(&objects_mutex);
-  object->built_in_slot_length = 0;
-  object->type = TYPE_OBJECT;
-  object->dict = NULL;
-  object->as_bool = true;
-  return object;
-}
-
 void init_built_in_field_hashes() {
   for (int i = 0; i < BUILT_IN_FIELDS_COUNT; i++) {
     built_in_field_hashes[i] = siphash64_bytes(
@@ -146,11 +119,11 @@ ArgonObject *new_class() {
   return object;
 }
 
-ArgonObject *new_small_instance(ArgonObject *of, size_t endSize) {
-  ArgonObject *object = new_small_object(endSize);
-  add_builtin_field(object, __class__, of);
-  return object;
-}
+// ArgonObject *new_small_instance(ArgonObject *of, size_t endSize) {
+//   ArgonObject *object = new_object(endSize);
+//   add_builtin_field(object, __class__, of);
+//   return object;
+// }
 
 ArgonObject *new_instance(ArgonObject *of, size_t endSize) {
   ArgonObject *object = new_object(endSize);

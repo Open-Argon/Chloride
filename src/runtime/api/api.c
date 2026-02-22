@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 #include "api.h"
+#include "../../RWLock.h"
 #include "../../err.h"
 #include "../../memory.h"
 #include "../call/call.h"
@@ -17,6 +18,7 @@
 #include <inttypes.h>
 #include <math.h>
 #include <stdarg.h>
+#include <stdatomic.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -125,8 +127,14 @@ struct string argon_to_string(ArgonObject *obj, ArErr *err) {
 
 int register_thread() {
   struct GC_stack_base sb;
+  atomic_fetch_add(&thread_count, 1);
   GC_get_stack_base(&sb);
   return GC_register_my_thread(&sb);
+}
+
+int unregister_thread() {
+  atomic_fetch_sub(&thread_count, 1);
+  return GC_unregister_my_thread();
 }
 
 ArgonObject *create_err_object() {
@@ -152,14 +160,14 @@ void set_err(ArgonObject *object, ArErr *err) {
   return;
 }
 
-RuntimeState *new_state(ArgonObject**registers) {
+RuntimeState *new_state(ArgonObject **registers) {
   RuntimeState *new_state = ar_alloc(sizeof(RuntimeState));
-  new_state->source_location = (SourceLocation){0,0,0};
+  new_state->source_location = (SourceLocation){0, 0, 0};
   new_state->load_number_cache = createHashmap_GC();
   new_state->head = 0;
   new_state->path = "";
   // Ensure proper alignment
-  new_state->registers=registers;
+  new_state->registers = registers;
   return new_state;
 }
 
@@ -185,11 +193,10 @@ ArgonNativeAPI native_api = {
     .resize_argon_buffer = resize_ARGON_BUFFER_object,
     .argon_buffer_to_buffer = ARGON_BUFFER_to_buffer_struct,
     .register_thread = register_thread,
-    .unregister_thread = GC_unregister_my_thread,
+    .unregister_thread = unregister_thread,
     .create_err_object = create_err_object,
     .err_object_to_err = err_object_to_err,
     .new_state = new_state,
     .set_err = set_err,
-    .malloc=GC_malloc_uncollectable,
-    .free=GC_free
-  };
+    .malloc = GC_malloc_uncollectable,
+    .free = GC_free};
