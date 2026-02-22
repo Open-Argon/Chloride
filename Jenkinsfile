@@ -129,49 +129,6 @@ pipeline {
                 archiveArtifacts artifacts: "${env.OUTPUT_FILE}", allowEmptyArchive: false
             }
         }
-        stage('Publish Gitea Release') {
-            when {
-                expression { env.TAG_NAME }
-            }
-            environment {
-                GITEA_TOKEN = credentials('gitea-token')
-            }
-            steps {
-                sh '''
-                    set -e
-
-                    API="$GITEA_URL/api/v1"
-                    OWNER_REPO="$GITEA_REPO"
-                    TAG="$TAG_NAME"
-
-                    echo "Creating release for $TAG"
-
-                    RELEASE_JSON=$(curl -s -X POST \
-                    -H "Authorization: token $GITEA_TOKEN" \
-                    -H "Content-Type: application/json" \
-                    "$API/repos/$OWNER_REPO/releases" \
-                    -d "{
-                            \\"tag_name\\": \\"$TAG\\",
-                            \\"name\\": \\"$TAG\\",
-                            \\"draft\\": false,
-                            \\"prerelease\\": false
-                        }" || true)
-
-                    RELEASE_ID=$(echo "$RELEASE_JSON" | jq -r '.id')
-
-                    echo "Release ID: $RELEASE_ID"
-
-                    for f in chloride-$TAG-*; do
-                        echo "Uploading $f"
-                        curl -X POST \
-                        -H "Authorization: token $GITEA_TOKEN" \
-                        -H "Content-Type: application/octet-stream" \
-                        --data-binary @"$f" \
-                        "$API/repos/$OWNER_REPO/releases/$RELEASE_ID/assets?name=$(basename $f)"
-                    done
-                '''
-            }
-        }
     }
 
     post {
