@@ -14,6 +14,8 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
+#include <pthread.h>
+#include <stdatomic.h>
 
 int strcmp_len(const char *s1, size_t len, const char *s2) {
   size_t s2len = strlen(s2); // length of null-terminated string
@@ -79,6 +81,45 @@ const char *built_in_field_names[BUILT_IN_FIELDS_COUNT] = {
 
 uint64_t built_in_field_hashes[BUILT_IN_FIELDS_COUNT];
 
+#ifdef _WIN32
+#define THREAD_LOCAL __declspec(thread)
+#else
+#define THREAD_LOCAL __thread
+#endif
+
+#define SMALL_OBJECT_ASSIGNMENT_AMOUNT 512
+
+typedef struct {
+    void *small_objects;
+    size_t small_objects_pos;
+} ThreadLocalPool;
+
+// Thread-local pool for each thread
+THREAD_LOCAL ThreadLocalPool pool = { NULL, 0 };
+
+ArgonObject *new_small_object(size_t endSize) {
+    ArgonObject *object;
+
+    // Allocate a new block if the current pool is full
+    if (!pool.small_objects ||
+        pool.small_objects_pos + sizeof(ArgonObject) + endSize >
+            SMALL_OBJECT_ASSIGNMENT_AMOUNT * sizeof(ArgonObject)) {
+
+        pool.small_objects =
+            ar_alloc(sizeof(ArgonObject) * SMALL_OBJECT_ASSIGNMENT_AMOUNT);
+        pool.small_objects_pos = 0;
+    }
+
+    object = (ArgonObject *)((char *)pool.small_objects + pool.small_objects_pos);
+    pool.small_objects_pos += sizeof(ArgonObject) + endSize;
+
+    object->built_in_slot_length = 0;
+    object->type = TYPE_OBJECT;
+    object->dict = NULL;
+    object->as_bool = true;
+    return object;
+}
+
 ArgonObject *new_object(size_t endSize) {
   ArgonObject *object = ar_alloc(sizeof(ArgonObject) + endSize);
   object->built_in_slot_length = 0;
@@ -119,11 +160,11 @@ ArgonObject *new_class() {
   return object;
 }
 
-// ArgonObject *new_small_instance(ArgonObject *of, size_t endSize) {
-//   ArgonObject *object = new_object(endSize);
-//   add_builtin_field(object, __class__, of);
-//   return object;
-// }
+ArgonObject *new_small_instance(ArgonObject *of, size_t endSize) {
+  ArgonObject *object = new_small_object(endSize);
+  add_builtin_field(object, __class__, of);
+  return object;
+}
 
 ArgonObject *new_instance(ArgonObject *of, size_t endSize) {
   ArgonObject *object = new_object(endSize);
