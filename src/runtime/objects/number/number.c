@@ -9,7 +9,6 @@
 #include "../../../memory.h"
 #include "../functions/functions.h"
 #include "../string/string.h"
-#include <gmp-x86_64.h>
 #include <gmp.h>
 #include <inttypes.h>
 #include <mpfr.h>

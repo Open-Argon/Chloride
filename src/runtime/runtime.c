@@ -31,7 +31,6 @@
 #include "objects/type/type.h"
 #include <fcntl.h>
 #include <gc/gc.h>
-#include <gmp-x86_64.h>
 #include <gmp.h>
 #include <inttypes.h>
 #include <stddef.h>
