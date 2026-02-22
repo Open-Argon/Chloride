@@ -4,11 +4,9 @@
 
 import "../stdlib/threading" as threading
 
-let l = threading.Local()
 term.log(threading.get_id())
 
 let d() = do
-  l.test = x
   let i = 0
   while (i<1e6) do
     i=i+1
@@ -18,7 +16,7 @@ let x = 0
 
 let n = 16
 
-while (x<10) do
+while (true) do
   let threads = []
   let i = 0
   while (i<n) do
@@ -34,5 +32,4 @@ while (x<10) do
   x=x+1
 
 
-term.log(object.__getattribute__(l, "__maps__"))
-term.log(threading.get_id())
+  term.log(threading.get_id())

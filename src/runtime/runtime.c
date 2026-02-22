@@ -1449,7 +1449,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
 
   ArErr err = *err_ptr;
 
-  StackFrame *currentStackFrame = GC_MALLOC_UNCOLLECTABLE(sizeof(StackFrame));
+  StackFrame *currentStackFrame = ar_alloc(sizeof(StackFrame));
   *currentStackFrame = (StackFrame){_translated, _state, stack, NULL, 0, {}};
   currentStackFrame->state.currentStackFramePointer = &currentStackFrame;
   while (currentStackFrame) {
