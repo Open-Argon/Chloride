@@ -14,13 +14,11 @@
 
 void darray_armem_finalizer(void *obj, void *client_data) {
   (void)client_data;
-  darray_armem *hashmap = obj;
-  RWLOCK_DESTROY(&hashmap->lock);
+  darray_armem *arr = obj;
+  RWLOCK_DESTROY(&arr->lock);
 }
 
-darray_armem* darray_armem_create() {
-  return ar_alloc(sizeof(darray_armem));
-}
+darray_armem *darray_armem_create() { return ar_alloc(sizeof(darray_armem)); }
 
 void darray_armem_init(darray_armem *arr, size_t element_size,
                        size_t initial_size) {

@@ -119,8 +119,8 @@ struct hashmap_GC *createHashmap_GC(void) {
   struct hashmap_GC *t = ar_alloc(sizeof(struct hashmap_GC));
   memset(t, 0, sizeof(*t));
   t->order = 1;
-  RWLOCK_CREATE(&t->lock);
 
+  RWLOCK_CREATE(&t->lock);  
   GC_register_finalizer(t, hashmap_finalizer, NULL, NULL, NULL);
   return t;
 }

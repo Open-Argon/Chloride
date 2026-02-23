@@ -117,23 +117,24 @@ static ThreadLocalPool *get_thread_pool(void) {
 #else
 // Linux/macOS: __thread is fine if we also wrap small_objects in
 // GC_MALLOC_UNCOLLECTABLE
-static __thread ThreadLocalPool pool = {NULL, 0};
+static __thread ThreadLocalPool *pool = NULL;
 
 static ThreadLocalPool *get_thread_pool(void) {
-  return &pool;
+  if (!pool) {
+    pool = (ThreadLocalPool *)GC_MALLOC_UNCOLLECTABLE(sizeof(ThreadLocalPool));
+    pool->small_objects = NULL;
+    pool->small_objects_pos = 0;
+  }
+  return pool;
 }
 #endif
 
 void unregister_thread_pool() {
 #ifdef _WIN32
   ThreadLocalPool *pool = (ThreadLocalPool *)TlsGetValue(tls_index);
-  if (pool) {
-    GC_FREE(pool);
-    printf("pool freed\n");
-  } else {
-    printf("pool not freed\n");
-  }
 #endif
+  if (pool)
+    GC_free(pool);
 }
 
 ArgonObject *new_small_object(size_t endSize) {
