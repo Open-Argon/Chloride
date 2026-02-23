@@ -4,20 +4,16 @@
 
 import "../stdlib/raylib" expose raylib
 import "../stdlib/random" expose random
-
-class Based do
-  this.abs(x)=do
-    if (x<0) return -x
-    return x
+import "../stdlib/maths" as maths
 
 term.log(raylib)
 
-class bouncing_text(Based) do
+class bouncing_text do
   this.__init__(self, text, pos, speed) = do
     self.text = text
     self.pos = pos
     self.speed = speed
-  this.render(self, step, max, white) = raylib.DrawText(self.text, (max[0] - super.abs(((self.pos[0]+step * self.speed) % (2 * max[0])) - max[0]))//1, (max[1] - super.abs(((self.pos[1]+step * self.speed) % (2 * max[1])) - max[1]))//1, 20, (white&&raylib.WHITE)||raylib.BLACK)
+  this.render(self, step, max, white) = raylib.DrawText(self.text, (max[0] - maths.abs(((self.pos[0]+step * self.speed) % (2 * max[0])) - max[0]))//1, (max[1] - maths.abs(((self.pos[1]+step * self.speed) % (2 * max[1])) - max[1]))//1, 20, (white&&raylib.WHITE)||raylib.BLACK)
 
 
 class Game do
@@ -29,9 +25,9 @@ class Game do
     if (fps) raylib.SetTargetFPS(fps)
     self.bouncing_texts = []
     let x = 0
-    while (x<20) do
+    while (x<100) do
       let y = 0
-      while (y<20) do
+      while (y<100) do
         self.bouncing_texts.append(bouncing_text(string(x*y), tuple(x*10,y*10), x+y+1))
         y=y+1
       x=x+1

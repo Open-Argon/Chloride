@@ -13,7 +13,7 @@
 
 
 typedef struct ArErr {
-  char path[PATH_MAX];
+  char *path;
   char message[128];
   char type[64];
   int64_t line;

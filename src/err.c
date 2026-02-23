@@ -6,6 +6,7 @@
 
 #include "err.h"
 #include "../external/libdye/include/dye.h"
+#include "memory.h"
 #include "runtime/internals/dynamic_array_armem/darray_armem.h"
 #include <ctype.h>
 #include <inttypes.h>
@@ -27,10 +28,11 @@ ArErr create_err(int64_t line, int64_t column, int length, char *path,
   ArErr err;
   err.exists = true;
   if (path) {
-    memcpy(err.path, path, sizeof(err.path));
-    err.path[sizeof(err.path) - 1] = '\0';
+    size_t length = strlen(path);
+    err.path = ar_alloc_atomic(length);
+    memcpy(err.path, path, length);
   } else {
-    err.path[0] = '\0';
+    err.path = NULL;
   }
   err.line = line;
   err.column = column;
@@ -56,10 +58,11 @@ ArErr vcreate_err(int64_t line, int64_t column, int length, char *path,
   err.exists = true;
 
   if (path) {
-    memcpy(err.path, path, sizeof(err.path));
-    err.path[sizeof(err.path) - 1] = '\0';
+    size_t length = strlen(path);
+    err.path = ar_alloc_atomic(length);
+    memcpy(err.path, path, length);
   } else
-    err.path[0] = '\0';
+    err.path = NULL;
 
   err.line = line;
   err.column = column;
@@ -120,7 +123,7 @@ void output_err(ArErr err) {
   dyefg(stderr, DYE_RESET);
   fprintf(stderr, "\n");
 
-  if (strlen(err.path) && err.line) {
+  if (err.path && strlen(err.path) && err.line) {
     dyefg(stderr, DYE_GRAY);
     fprintf(stderr, "  --> ");
     dyefg(stderr, DYE_CYAN);

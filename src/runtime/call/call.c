@@ -107,7 +107,8 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
       object = function_object;
   }
   if (object->type == TYPE_FUNCTION) {
-    if (argc+binding_object_exists != object->value.argon_fn->number_of_parameters) {
+    if (argc + binding_object_exists !=
+        object->value.argon_fn->number_of_parameters) {
       ArgonObject *type_object_name = get_builtin_field_for_class(
           get_builtin_field(object, __class__), __name__, original_object);
       ArgonObject *object_name =
@@ -151,7 +152,7 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
             argc);
         return;
       }
-      ArgonObject *registers[UINT8_MAX+1];
+      ArgonObject *registers[UINT8_MAX + 1];
       runtime(
           (Translated){object->value.argon_fn->translated.registerCount,
                        object->value.argon_fn->translated.registerAssignment,
@@ -234,11 +235,14 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
     }
     state->registers[0] =
         object->value.native_fn(argc, argv, err, state, &native_api);
-    if (err->exists && strlen(err->path) == 0) {
+    if (err->exists && err->path && strlen(err->path) == 0) {
       err->line = state->source_location.line;
       err->column = state->source_location.column;
       err->length = state->source_location.length;
-      strcpy(err->path, state->path);
+
+      size_t length = strlen(state->path);
+      err->path = ar_alloc_atomic(length);
+      memcpy(err->path, state->path, length);
     }
     return;
   }

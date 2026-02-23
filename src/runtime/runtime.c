@@ -1387,11 +1387,14 @@ void add_to_scope(Stack *stack, char *name, ArgonObject *value) {
 
 void add_source_location_to_error_if_not_exists(ArErr *err,
                                                 RuntimeState *state) {
-  if (err->exists && !strlen(err->path)) {
+  if (err->exists && err->path && !strlen(err->path)) {
     err->column = state->source_location.column;
     err->length = state->source_location.length;
     err->line = state->source_location.line;
-    strcpy(err->path, state->path);
+
+    size_t length = strlen(state->path);
+    err->path = ar_alloc_atomic(length);
+    memcpy(err->path, state->path, length);
   }
 }
 
