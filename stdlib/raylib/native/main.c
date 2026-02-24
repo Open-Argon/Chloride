@@ -6,6 +6,7 @@
 
 #include "Argon.h"
 #include <raylib.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -85,6 +86,39 @@ ArgonObject *Argon_ClearBackground(size_t argc, ArgonObject **argv,
   Color color_ray = *(Color *)color.data;
   ClearBackground(color_ray);
   return api->ARGON_NULL;
+}
+
+ArgonObject *Argon_Color(size_t argc, ArgonObject **argv, ArgonError *err,
+                         ArgonState *state, ArgonNativeAPI *api) {
+  if (api->fix_to_arg_size(4, argc, err)) {
+    return api->ARGON_NULL;
+  }
+  Color color_struct;
+
+  color_struct.r = api->argon_to_i64(argv[0], err);
+  if (api->is_error(err)) {
+    return api->ARGON_NULL;
+  }
+  color_struct.g = api->argon_to_i64(argv[1], err);
+  if (api->is_error(err)) {
+    return api->ARGON_NULL;
+  }
+  color_struct.b = api->argon_to_i64(argv[2], err);
+  if (api->is_error(err)) {
+    return api->ARGON_NULL;
+  }
+  color_struct.a = api->argon_to_i64(argv[3], err);
+  if (api->is_error(err)) {
+    return api->ARGON_NULL;
+  }
+
+  ArgonObject *color = api->create_argon_buffer(sizeof(Color));
+  struct buffer color_buffer = api->argon_buffer_to_buffer(color, err);
+  if (api->is_error(err)) {
+    return api->ARGON_NULL;
+  }
+  *(Color *)color_buffer.data = color_struct;
+  return color;
 }
 
 ArgonObject *Argon_DrawText(size_t argc, ArgonObject **argv, ArgonError *err,
@@ -191,6 +225,9 @@ void argon_module_init(ArgonState *vm, ArgonNativeAPI *api, ArgonError *err,
   api->register_ArgonObject(reg, "ClearBackground",
                             api->create_argon_native_function(
                                 "ClearBackground", Argon_ClearBackground));
+
+  api->register_ArgonObject(
+      reg, "Color", api->create_argon_native_function("Color", Argon_Color));
 
   api->register_ArgonObject(
       reg, "DrawText",
