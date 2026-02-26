@@ -10,6 +10,6 @@
 
 
 size_t translate_parsed_continue(Translated *translated,
-                               ParsedContinue *parsedContinue, ArErr * err);
+                               ParsedContinueOrBreak *parsedContinue, ArErr * err);
 
 #endif // TRANSLATE_CONTINUE_H

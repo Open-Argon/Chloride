@@ -13,7 +13,7 @@ typedef struct {
   int64_t line;
   int64_t column;
   int64_t length;
-} ParsedContinue;
+} ParsedContinueOrBreak;
 
 ParsedValueReturn parse_continue(DArray *tokens, size_t *index);
 

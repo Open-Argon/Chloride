@@ -13,6 +13,7 @@
 #include "../parser/not/not.h"
 #include "access/access.h"
 #include "assignment/assignment.h"
+#include "break/break.h"
 #include "call/call.h"
 #include "class/class.h"
 #include "continue/continue.h"
@@ -95,6 +96,7 @@ Translated init_translator(char *path) {
   translated.scope_depth = 0;
   translated.continue_jump.pos = -1;
   translated.return_jump.positions = NULL;
+  translated.break_jump.positions = NULL;
   darray_init(&translated.bytecode, sizeof(uint8_t));
   arena_init(&translated.constants);
   return translated;
@@ -172,9 +174,12 @@ size_t translate_parsed(Translated *translated, ParsedValue *parsedValue,
   case AST_RETURN:
     return translate_parsed_return(translated,
                                    (ParsedReturn *)parsedValue->data, err);
+  case AST_BREAK:
+    return translate_parsed_break(translated,
+                                   (ParsedContinueOrBreak *)parsedValue->data, err);
   case AST_CONTINUE:
     return translate_parsed_continue(translated,
-                                     (ParsedContinue *)parsedValue->data, err);
+                                     (ParsedContinueOrBreak *)parsedValue->data, err);
   case AST_CALL:
     return translate_parsed_call(translated, (ParsedCall *)parsedValue->data,
                                  err);

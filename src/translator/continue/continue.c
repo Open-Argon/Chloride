@@ -10,7 +10,7 @@
 #include <stddef.h>
 
 size_t translate_parsed_continue(Translated *translated,
-                                 ParsedContinue *parsedContinue, ArErr *err) {
+                                 ParsedContinueOrBreak *parsedContinue, ArErr *err) {
   if (translated->continue_jump.pos == -1) {
     *err = create_err(parsedContinue->line, parsedContinue->column,
                       parsedContinue->length, translated->path, "Syntax Error",

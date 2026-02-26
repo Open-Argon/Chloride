@@ -17,6 +17,9 @@ size_t translate_parsed_call(Translated *translated, ParsedCall *call,
   push_instruction_byte(translated, OP_NEW_SCOPE);
   translated->scope_depth++;
 
+  struct break_or_return_jump old_break_jump = translated->break_jump;
+  translated->break_jump.positions = NULL;
+
   struct break_or_return_jump old_return_jump = translated->return_jump;
   translated->return_jump.positions = NULL;
   for (size_t i = 0; i < call->args.size; i++) {
@@ -30,6 +33,7 @@ size_t translate_parsed_call(Translated *translated, ParsedCall *call,
   }
 
   translated->return_jump = old_return_jump;
+  translated->break_jump = old_break_jump;
 
   push_instruction_byte(translated, OP_POP_SCOPE);
   translated->scope_depth--;

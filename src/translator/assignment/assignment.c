@@ -19,6 +19,9 @@ size_t translate_parsed_assignment(Translated *translated,
                                    ParsedAssign *assignment, ArErr *err) {
   set_registers(translated, 1);
 
+  struct break_or_return_jump old_break_jump = translated->break_jump;
+  translated->break_jump.positions = NULL;
+
   struct break_or_return_jump old_return_jump = translated->return_jump;
   translated->return_jump.positions = NULL;
 
@@ -119,6 +122,7 @@ size_t translate_parsed_assignment(Translated *translated,
   }
 
   translated->return_jump = old_return_jump;
+  translated->break_jump = old_break_jump;
 
   return first;
 }

@@ -5,8 +5,10 @@ term.log(do
     let i = 0
     while (i<100) do
       i = i + 1
+      if (i>(x*2)) break
       if (i>x) continue
       term.log(i)
+      
 
     term.log(i,x)
 

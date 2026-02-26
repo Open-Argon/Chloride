@@ -182,7 +182,6 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
           ar_alloc(sizeof(StackFrame) +
                    object->value.argon_fn->translated.registerCount *
                        sizeof(ArgonObject *));
-      printf("%s\n",object->value.argon_fn->translated.path);
       *currentStackFrame = (StackFrame){
           {object->value.argon_fn->translated.registerCount,
            object->value.argon_fn->translated.registerAssignment,
