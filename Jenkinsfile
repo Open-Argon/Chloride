@@ -142,9 +142,6 @@ pipeline {
                 sh '''
                 set -e
 
-                # Authenticate gh
-                echo "$GH_TOKEN" | gh auth login --with-token
-
                 # Decide what ref to build
                 REF=$(git describe --tags --exact-match 2>/dev/null || git rev-parse HEAD)
                 echo "Triggering macOS build for ref: $REF"
