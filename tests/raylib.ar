@@ -13,7 +13,11 @@ class bouncing_text do
     self.text = text
     self.pos = pos
     self.speed = speed
-  this.render(self, step, max) = raylib.DrawText(self.text, maths.int(max[0] - maths.abs(((self.pos[0]+step * self.speed) % (2 * max[0])) - max[0])), maths.int(max[1] - maths.abs(((self.pos[1]+step * self.speed) % (2 * max[1])) - max[1])), 20, raylib.Color(random.int(0,255),random.int(0,255),random.int(0,255),255))
+  this.render(self, step, max) = raylib.DrawText(
+    self.text, maths.int(max[0] - maths.abs(((self.pos[0]+step * self.speed) % (2 * max[0])) - max[0])),
+    maths.int(max[1] - maths.abs(((self.pos[1]+step * self.speed) % (2 * max[1])) - max[1])), 20,
+    raylib.Color(random.int(0,255),random.int(0,255),random.int(0,255),255)
+  )
 
 
 class Game do
@@ -25,9 +29,9 @@ class Game do
     if (fps) raylib.SetTargetFPS(fps)
     self.bouncing_texts = []
     let x = 0
-    while (x<10) do
+    while (x<20) do
       let y = 0
-      while (y<10) do
+      while (y<20) do
         self.bouncing_texts.append(bouncing_text(string(x*y), tuple(x*10,y*10), x+y+1))
         y=y+1
       x=x+1

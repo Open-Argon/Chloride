@@ -46,8 +46,8 @@ else ifeq ($(UNAME_S),Darwin)
 		-dynamiclib \
 		-Wl,-install_name,@rpath/$(LIB).dylib
 
-	PLATFORM_LDFLAGS := -lraylib
-	PLATFORM_CFLAGS :=
+	PLATFORM_LDFLAGS :=$(shell pkg-config --libs raylib)
+	PLATFORM_CFLAGS :=$(shell pkg-config --cflags raylib)
 
 else
 
