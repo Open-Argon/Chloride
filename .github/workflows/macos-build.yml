@@ -26,7 +26,7 @@ jobs:
       # -------------------
       - name: Detect tag
         run: |
-          TAG_NAME=$(git describe --tags --always)
+          TAG_NAME=$(git describe --tags)
           echo "TAG_NAME=$TAG_NAME" >> $GITHUB_ENV
           echo "Detected tag: $TAG_NAME"
 
