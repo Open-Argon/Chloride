@@ -17,19 +17,19 @@ size_t translate_parsed_call(Translated *translated, ParsedCall *call,
   push_instruction_byte(translated, OP_NEW_SCOPE);
   translated->scope_depth++;
 
-  DArray *old_return_jumps = translated->return_jumps;
-  translated->return_jumps = NULL;
+  struct break_or_return_jump old_return_jump = translated->return_jump;
+  translated->return_jump.positions = NULL;
   for (size_t i = 0; i < call->args.size; i++) {
     translate_parsed(translated, darray_get(&call->args, i), err);
     if (err->exists) {
-      translated->return_jumps = old_return_jumps;
+      translated->return_jump = old_return_jump;
       return first;
     }
     push_instruction_byte(translated, OP_INSERT_ARG);
     push_instruction_code(translated, i);
   }
 
-  translated->return_jumps = old_return_jumps;
+  translated->return_jump = old_return_jump;
 
   push_instruction_byte(translated, OP_POP_SCOPE);
   translated->scope_depth--;

@@ -14,40 +14,30 @@ size_t translate_parsed_dowrap(Translated *translated, DArray *parsedDowrap,
   size_t first = translated->bytecode.size;
 
   if (parsedDowrap->size) {
+    struct break_or_return_jump old_return_jump = translated->return_jump;
     DArray return_jumps;
-    push_instruction_byte(translated, OP_NEW_SCOPE);
+
+    if (!old_return_jump.positions) {
+      darray_init(&return_jumps, sizeof(size_t));
+      translated->return_jump.positions = &return_jumps;
+      translated->return_jump.scope_depth = translated->scope_depth;
+    }
     translated->scope_depth++;
-    darray_init(&return_jumps, sizeof(size_t));
-    DArray *old_return_jumps = translated->return_jumps;
-    translated->return_jumps = &return_jumps;
+    push_instruction_byte(translated, OP_NEW_SCOPE);
     *err = translate(translated, parsedDowrap);
     if (err->exists)
       return first;
     push_instruction_byte(translated, OP_LOAD_NULL);
     push_instruction_byte(translated, 0);
-    if (!old_return_jumps) {
-      size_t return_jump_to = push_instruction_byte(translated, OP_POP_SCOPE);
+    push_instruction_byte(translated, OP_POP_SCOPE);
+    if (!old_return_jump.positions) {
       for (size_t i = 0; i < return_jumps.size; i++) {
         size_t *index = darray_get(&return_jumps, i);
-        set_instruction_code(translated, *index, return_jump_to);
+        set_instruction_code(translated, *index, translated->bytecode.size);
       }
-    } else {
-      push_instruction_byte(translated, OP_POP_SCOPE);
-      push_instruction_byte(translated, OP_JUMP);
-      size_t not_return_jump = push_instruction_code(translated, 0);
-      size_t return_jump_to = push_instruction_byte(translated, OP_POP_SCOPE);
-      push_instruction_byte(translated, OP_JUMP);
-      size_t return_up = push_instruction_code(translated, 0);
-      darray_push(old_return_jumps, &return_up);
-      for (size_t i = 0; i < return_jumps.size; i++) {
-        size_t *index = darray_get(&return_jumps, i);
-        set_instruction_code(translated, *index, return_jump_to);
-      }
-      set_instruction_code(translated, not_return_jump,
-                           translated->bytecode.size);
+      darray_free(&return_jumps, NULL);
+      translated->return_jump = old_return_jump;
     }
-    darray_free(&return_jumps, NULL);
-    translated->return_jumps = old_return_jumps;
     translated->scope_depth--;
   } else {
     push_instruction_byte(translated, OP_LOAD_NULL);

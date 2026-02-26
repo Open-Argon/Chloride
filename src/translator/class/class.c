@@ -5,8 +5,8 @@
  */
 
 #include "class.h"
-#include "../translator.h"
 #include "../../hash_data/hash_data.h"
+#include "../translator.h"
 #include <string.h>
 
 size_t translate_parsed_class(Translated *translated, ParsedClass *parsedClass,
@@ -20,9 +20,9 @@ size_t translate_parsed_class(Translated *translated, ParsedClass *parsedClass,
 
   char *init_object_name = "this";
   size_t init_object_name_length = strlen(init_object_name);
-  size_t init_object_name_pos =
-      arena_push(&translated->constants, init_object_name, init_object_name_length);
-  
+  size_t init_object_name_pos = arena_push(
+      &translated->constants, init_object_name, init_object_name_length);
+
   char *class_parent = "super";
   size_t class_parent_length = strlen(class_parent);
   size_t class_parent_pos =
@@ -59,21 +59,17 @@ size_t translate_parsed_class(Translated *translated, ParsedClass *parsedClass,
                                         siphash_key_fixed_for_translator));
   push_instruction_byte(translated, 0);
 
-  DArray return_jumps;
   push_instruction_byte(translated, OP_NEW_SCOPE);
   translated->scope_depth++;
-  darray_init(&return_jumps, sizeof(size_t));
-  DArray *old_return_jumps = translated->return_jumps;
-  translated->return_jumps = &return_jumps;
 
   push_instruction_byte(translated, OP_DECLARE);
   push_instruction_code(translated, class_parent_length);
   push_instruction_code(translated, class_parent_pos);
-  push_instruction_code(
-      translated, siphash64_bytes(class_parent, class_parent_length,
-                                  siphash_key_fixed_for_translator));
+  push_instruction_code(translated,
+                        siphash64_bytes(class_parent, class_parent_length,
+                                        siphash_key_fixed_for_translator));
   push_instruction_byte(translated, parentRegister);
-  
+
   push_instruction_byte(translated, OP_LOAD_NULL);
   push_instruction_byte(translated, parentRegister);
 
@@ -89,30 +85,7 @@ size_t translate_parsed_class(Translated *translated, ParsedClass *parsedClass,
 
   if (err->exists)
     return 0;
-
-  if (!old_return_jumps) {
-    size_t return_jump_to = push_instruction_byte(translated, OP_POP_SCOPE);
-    for (size_t i = 0; i < return_jumps.size; i++) {
-      size_t *index = darray_get(&return_jumps, i);
-      set_instruction_code(translated, *index, return_jump_to);
-    }
-  } else {
-    push_instruction_byte(translated, OP_POP_SCOPE);
-    push_instruction_byte(translated, OP_JUMP);
-    size_t not_return_jump = push_instruction_code(translated, 0);
-    size_t return_jump_to = push_instruction_byte(translated, OP_POP_SCOPE);
-    push_instruction_byte(translated, OP_JUMP);
-    size_t return_up = push_instruction_code(translated, 0);
-    darray_push(old_return_jumps, &return_up);
-    for (size_t i = 0; i < return_jumps.size; i++) {
-      size_t *index = darray_get(&return_jumps, i);
-      set_instruction_code(translated, *index, return_jump_to);
-    }
-    set_instruction_code(translated, not_return_jump,
-                         translated->bytecode.size);
-  }
-  darray_free(&return_jumps, NULL);
-  translated->return_jumps = old_return_jumps;
+  push_instruction_byte(translated, OP_POP_SCOPE);
   translated->registerAssignment--;
   translated->scope_depth--;
   return first;

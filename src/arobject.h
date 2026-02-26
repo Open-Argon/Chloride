@@ -164,12 +164,18 @@ struct continue_jump {
   uint64_t scope_depth;
 };
 
+struct break_or_return_jump {
+  DArray *positions;
+  uint64_t scope_depth;
+};
+
 typedef struct {
   uint8_t registerCount;
   uint8_t registerAssignment;
   uint64_t scope_depth;
   struct continue_jump continue_jump;
-  DArray *return_jumps;
+  struct break_or_return_jump return_jump;
+  struct break_or_return_jump break_jump;
   DArray bytecode;
   ConstantArena constants;
   char *path;

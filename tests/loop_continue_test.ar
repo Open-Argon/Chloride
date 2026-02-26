@@ -1,14 +1,16 @@
 
-let f() = do
-  let x = 10
-  let i = 0
-  while (i<100) do
-    i = i + 1
-    if (i>x) continue
-    term.log(i)
+term.log(do
+  let f() = do
+    let x = 10
+    let i = 0
+    while (i<100) do
+      i = i + 1
+      if (i>x) continue
+      term.log(i)
 
-  term.log(i,x)
+    term.log(i,x)
 
-let g() = f()
+  let g() = f()
 
-g()
+  g()
+)

@@ -158,7 +158,8 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
                        object->value.argon_fn->translated.registerAssignment,
                        0,
                        {-1, 0},
-                       NULL,
+                       {NULL, 0},
+                       {NULL, 0},
                        {object->value.argon_fn->bytecode, sizeof(uint8_t),
                         object->value.argon_fn->bytecode_length,
                         object->value.argon_fn->bytecode_length, false},
@@ -181,12 +182,14 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
           ar_alloc(sizeof(StackFrame) +
                    object->value.argon_fn->translated.registerCount *
                        sizeof(ArgonObject *));
+      printf("%s\n",object->value.argon_fn->translated.path);
       *currentStackFrame = (StackFrame){
           {object->value.argon_fn->translated.registerCount,
            object->value.argon_fn->translated.registerAssignment,
            0,
            {-1, 0},
-           NULL,
+           {NULL, 0},
+           {NULL, 0},
            {object->value.argon_fn->bytecode, sizeof(uint8_t),
             object->value.argon_fn->bytecode_length,
             object->value.argon_fn->bytecode_length, false},

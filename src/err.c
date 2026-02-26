@@ -92,7 +92,7 @@ void output_err(ArErr err) {
       struct StackTraceFrame *frame = darray_armem_get(err.stack_trace, i);
       fprintf(stderr, " at ");
       dyefg(stderr, DYE_CYAN);
-      fprintf(stderr, "%s", frame->path);
+      if (frame->path) fprintf(stderr, "%s", frame->path);
       dyefg(stderr, DYE_GRAY);
       fprintf(stderr, ":");
       dyefg(stderr, DYE_YELLOW);

@@ -19,8 +19,8 @@ size_t translate_parsed_assignment(Translated *translated,
                                    ParsedAssign *assignment, ArErr *err) {
   set_registers(translated, 1);
 
-  DArray *old_return_jumps = translated->return_jumps;
-  translated->return_jumps = NULL;
+  struct break_or_return_jump old_return_jump = translated->return_jump;
+  translated->return_jump.positions = NULL;
 
   size_t first = translate_parsed(translated, assignment->from, err);
   if (err->exists)
@@ -118,7 +118,7 @@ size_t translate_parsed_assignment(Translated *translated,
     exit(EXIT_FAILURE);
   }
 
-  translated->return_jumps = old_return_jumps;
+  translated->return_jump = old_return_jump;
 
   return first;
 }
