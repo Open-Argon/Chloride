@@ -137,6 +137,7 @@ pipeline {
                 GH_TOKEN = credentials('github-pat')
                 GH_REPO  = 'open-argon/chloride'
                 WORKFLOW = 'macOS Build (Jenkins-triggered)'
+                BUILD_NAME_ARG = "${env.TAG_NAME ?: 'dev'}"
             }
             steps {
                 sh '''
@@ -150,7 +151,8 @@ pipeline {
                 gh workflow run "$WORKFLOW" \
                     --repo "$GH_REPO" \
                     --ref main \
-                    -f ref="$REF"
+                    -f ref="$REF" \
+                    -f build_name="$BUILD_NAME_ARG"
 
                 # Get the latest run ID
                 RUN_ID=$(gh run list \

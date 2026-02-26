@@ -6,6 +6,9 @@ on:
       ref:
         description: "Git ref (tag or branch) to build"
         required: true
+      build_name:
+        description: "Build version string (from Jenkins)"
+        required: true
 
 jobs:
   build-macos:
@@ -20,15 +23,6 @@ jobs:
         with:
           ref: ${{ inputs.ref }}
           submodules: recursive
-
-      # -------------------
-      # Detect Tag
-      # -------------------
-      - name: Detect tag
-        run: |
-          TAG_NAME=$(git describe --tags)
-          echo "TAG_NAME=$TAG_NAME" >> $GITHUB_ENV
-          echo "Detected tag: $TAG_NAME"
 
       # -------------------
       # Install dependencies
@@ -68,7 +62,8 @@ jobs:
       # -------------------
       - name: Package artifact
         run: |
-          OUTPUT_FILE="archives/chloride-${TAG_NAME}-macos-arm64.tar.gz"
+          BUILD_NAME="${{ inputs.build_name }}"
+          OUTPUT_FILE="archives/chloride-${BUILD_NAME}-macos-arm64.tar.gz"
           cp LICENSE.txt build/bin/
           tar -czf "$OUTPUT_FILE" -C build/bin .
           echo "Packaged $OUTPUT_FILE"

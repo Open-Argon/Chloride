@@ -17,7 +17,7 @@ Chloride is designed as a **drop-in replacement** for the older Go implementatio
 
 ## Build
 
-Currently, offical builds are only being made for linux x86_64 and windows x86_64 at [the project's Jenkins instance](https://jenkins.wbell.dev/job/chloride/).
+Currently, offical builds are only being made for linux x86_64, windows x86_64, and macOS arm64 at [the project's Jenkins instance](https://jenkins.wbell.dev/job/chloride/).
 
 If this does not satisfy your requirements, feel free to build for your platform. 
 
