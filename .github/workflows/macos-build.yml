@@ -1,0 +1,83 @@
+name: macOS Build (Jenkins-triggered)
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Git ref (tag or branch) to build"
+        required: true
+
+jobs:
+  build-macos:
+    runs-on: macos-latest
+
+    steps:
+      # -------------------
+      # Checkout requested ref
+      # -------------------
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+          submodules: recursive
+
+      # -------------------
+      # Detect Tag
+      # -------------------
+      - name: Detect tag
+        run: |
+          TAG_NAME=$(git describe --tags --always)
+          echo "TAG_NAME=$TAG_NAME" >> $GITHUB_ENV
+          echo "Detected tag: $TAG_NAME"
+
+      # -------------------
+      # Install dependencies
+      # -------------------
+      - name: Install dependencies
+        run: |
+          brew update
+          brew install cmake python ninja flex
+          python3 -m venv /tmp/venv
+          source /tmp/venv/bin/activate
+          pip install --upgrade pip
+          pip install conan
+          mkdir -p archives
+          rm -rf archives/* *.zip *.tar.gz
+
+      # -------------------
+      # Setup Conan
+      # -------------------
+      - name: Setup Conan profile
+        run: |
+          source /tmp/venv/bin/activate
+          rm -rf ~/.conan2
+          conan profile detect
+
+      # -------------------
+      # Build
+      # -------------------
+      - name: Build
+        run: |
+          source /tmp/venv/bin/activate
+          rm -rf build CMakeCache.txt CMakeFiles
+          conan install . --build=missing
+          conan build .
+
+      # -------------------
+      # Package
+      # -------------------
+      - name: Package artifact
+        run: |
+          OUTPUT_FILE="archives/chloride-${TAG_NAME}-macos-x86_64.tar.gz"
+          cp LICENSE.txt build/bin/
+          tar -czf "$OUTPUT_FILE" -C build/bin .
+          echo "Packaged $OUTPUT_FILE"
+
+      # -------------------
+      # Upload
+      # -------------------
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-build
+          path: archives/chloride-*-macos-x86_64.tar.gz
