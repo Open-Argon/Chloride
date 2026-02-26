@@ -55,14 +55,14 @@ pipeline {
             steps {
                 sh '''
                     apt update
-                    apt install -y cmake flex python3 python3-pip python3-venv make gcc-mingw-w64 mingw-w64 ninja-build zip jq
+                    apt install -y cmake flex python3 python3-pip python3-venv make gcc-mingw-w64 mingw-w64 ninja-build zip jq gh
                     python3 -m venv /tmp/venv
                     . /tmp/venv/bin/activate
                     pip install --upgrade pip
                     pip install conan
                     
-                    mkdir -p archives
-                    rm -rf archives/* *.zip *.tar.gz
+                    mkdir -p archives macos-artifacts
+                    rm -rf archives/* macos-artifacts/* *.zip *.tar.gz
                 '''
             }
         }
@@ -130,6 +130,54 @@ pipeline {
                     zip -r "$OUTPUT_FILE" build/bin/*
                 '''
                 archiveArtifacts artifacts: "${env.OUTPUT_FILE}", allowEmptyArchive: false
+            }
+        }
+        stage('macOS Build (GitHub Actions)') {
+            environment {
+                GH_TOKEN = credentials('github-pat')
+                GH_REPO  = 'open-argon/chloride'
+                WORKFLOW = 'macOS Build (Jenkins-triggered)'
+            }
+            steps {
+                sh '''
+                set -e
+
+                # Authenticate gh
+                echo "$GH_TOKEN" | gh auth login --with-token
+
+                # Decide what ref to build
+                REF=$(git describe --tags --exact-match 2>/dev/null || git rev-parse HEAD)
+                echo "Triggering macOS build for ref: $REF"
+
+                # Trigger workflow
+                gh workflow run "$WORKFLOW" \
+                    --repo "$GH_REPO" \
+                    --ref main \
+                    -f ref="$REF"
+
+                # Get the latest run ID
+                RUN_ID=$(gh run list \
+                    --repo "$GH_REPO" \
+                    --workflow "$WORKFLOW" \
+                    --limit 1 \
+                    --json databaseId \
+                    -q '.[0].databaseId')
+
+                echo "Waiting for GitHub Actions run $RUN_ID"
+                gh run watch "$RUN_ID" --repo "$GH_REPO"
+
+                # Download artifact
+                gh run download "$RUN_ID" \
+                    --repo "$GH_REPO" \
+                    --name macos-build \
+                    --dir macos-artifacts
+                '''
+            }
+        }
+
+        stage('Archive macOS') {
+            steps {
+                archiveArtifacts artifacts: 'macos-artifacts/**/*.tar.gz', fingerprint: true
             }
         }
     }
