@@ -1347,7 +1347,7 @@ static inline void load_variable(int64_t length, int64_t offset,
   }
   *err = create_err(state->source_location.line, state->source_location.column,
                     state->source_location.length, state->path, "Name Error",
-                    "name '%.*s' is not defined", (int)length,
+                    "Identifier '%.*s' is not defined", (int)length,
                     arena_get(&translated->constants, offset));
   return;
 }
