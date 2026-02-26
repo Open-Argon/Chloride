@@ -1,0 +1,7 @@
+let x = 10
+let i = 0
+while (true) do
+  # term.log(i)
+  i = i + 1
+  if (i == 10) do
+    continue

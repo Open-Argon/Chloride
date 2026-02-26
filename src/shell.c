@@ -5,14 +5,14 @@
  */
 #include "../external/cwalk/include/cwalk.h"
 #include "./lexer/lexer.h"
+#include "./lexer/token.h"
 #include "./runtime/call/call.h"
 #include "./runtime/objects/functions/functions.h"
 #include "./runtime/objects/term/term.h"
 #include "./runtime/runtime.h"
-#include "err.h"
-#include "./lexer/token.h"
 #include "./translator/translator.h"
 #include "LICENSE.h"
+#include "err.h"
 #include "hashmap/hashmap.h"
 #include "import.h"
 #include "memory.h"
@@ -83,9 +83,14 @@ int execute_code(char *context, char *path, Stack *scope,
   }
 
   hashmap_free(__translated.constants.hashmap, NULL);
-  Translated translated = {
-      __translated.registerCount, __translated.registerAssignment, NULL, {}, {},
-      __translated.path};
+  Translated translated = {__translated.registerCount,
+                           __translated.registerAssignment,
+                           0,
+                           {-1, 0},
+                           NULL,
+                           {},
+                           {},
+                           __translated.path};
   translated.bytecode.data = ar_alloc(__translated.bytecode.capacity);
   memcpy(translated.bytecode.data, __translated.bytecode.data,
          __translated.bytecode.capacity);
@@ -169,7 +174,7 @@ int shell() {
     RuntimeState runtime_state;
     size_t len;
     char *data = read_all_stdin(&len);
-    char*context = malloc(len+1);
+    char *context = malloc(len + 1);
     memcpy(context, data, len);
     free(data);
     context[len] = '\0';

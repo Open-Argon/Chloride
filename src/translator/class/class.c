@@ -61,6 +61,7 @@ size_t translate_parsed_class(Translated *translated, ParsedClass *parsedClass,
 
   DArray return_jumps;
   push_instruction_byte(translated, OP_NEW_SCOPE);
+  translated->scope_depth++;
   darray_init(&return_jumps, sizeof(size_t));
   DArray *old_return_jumps = translated->return_jumps;
   translated->return_jumps = &return_jumps;
@@ -113,5 +114,6 @@ size_t translate_parsed_class(Translated *translated, ParsedClass *parsedClass,
   darray_free(&return_jumps, NULL);
   translated->return_jumps = old_return_jumps;
   translated->registerAssignment--;
+  translated->scope_depth--;
   return first;
 }

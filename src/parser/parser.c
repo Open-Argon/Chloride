@@ -13,6 +13,7 @@
 #include "assignable/identifier/identifier.h"
 #include "assignable/item/item.h"
 #include "class/class.h"
+#include "continue/continue.h"
 #include "declaration/declaration.h"
 #include "dictionary/dictionary.h"
 #include "dowrap/dowrap.h"
@@ -84,6 +85,8 @@ ParsedValueReturn parse_token_full(char *file, DArray *tokens, size_t *index,
       return parse_while(file, tokens, index);
     case TOKEN_RETURN:
       return parse_return(file, tokens, index);
+    case TOKEN_CONTINUE:
+      return parse_continue(tokens, index);
     case TOKEN_LET:
       return parse_declaration(file, tokens, index);
     case TOKEN_CLASS:
@@ -286,6 +289,9 @@ void free_parsed(ParsedValue *ptr) {
     break;
   case AST_RETURN:
     free_parsed_return(parsed);
+    break;
+  case AST_CONTINUE:
+    free_parsed_continue(parsed);
     break;
   case AST_TO_BOOL:
     free_not(parsed);

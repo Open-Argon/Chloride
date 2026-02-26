@@ -4,11 +4,11 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-
 #include "dowrap.h"
 #include <stddef.h>
 
-size_t translate_parsed_dowrap(Translated *translated, DArray *parsedDowrap, ArErr *err) {
+size_t translate_parsed_dowrap(Translated *translated, DArray *parsedDowrap,
+                               ArErr *err) {
   set_registers(translated, 1);
 
   size_t first = translated->bytecode.size;
@@ -16,11 +16,13 @@ size_t translate_parsed_dowrap(Translated *translated, DArray *parsedDowrap, ArE
   if (parsedDowrap->size) {
     DArray return_jumps;
     push_instruction_byte(translated, OP_NEW_SCOPE);
+    translated->scope_depth++;
     darray_init(&return_jumps, sizeof(size_t));
     DArray *old_return_jumps = translated->return_jumps;
     translated->return_jumps = &return_jumps;
     *err = translate(translated, parsedDowrap);
-    if (err->exists) return first;
+    if (err->exists)
+      return first;
     push_instruction_byte(translated, OP_LOAD_NULL);
     push_instruction_byte(translated, 0);
     if (!old_return_jumps) {
@@ -41,10 +43,12 @@ size_t translate_parsed_dowrap(Translated *translated, DArray *parsedDowrap, ArE
         size_t *index = darray_get(&return_jumps, i);
         set_instruction_code(translated, *index, return_jump_to);
       }
-      set_instruction_code(translated, not_return_jump, translated->bytecode.size);
+      set_instruction_code(translated, not_return_jump,
+                           translated->bytecode.size);
     }
     darray_free(&return_jumps, NULL);
     translated->return_jumps = old_return_jumps;
+    translated->scope_depth--;
   } else {
     push_instruction_byte(translated, OP_LOAD_NULL);
     push_instruction_byte(translated, 0);

@@ -6,7 +6,6 @@
 
 #ifndef TRANSLATE_RETURN_H
 #define TRANSLATE_RETURN_H
-#include "../translator.h"
 #include "../../parser/return/return.h"
 
 

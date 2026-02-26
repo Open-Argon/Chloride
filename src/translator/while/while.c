@@ -18,11 +18,16 @@ size_t translate_parsed_while(Translated *translated, ParsedWhile *parsedWhile,
     translated->return_jumps = &return_jumps;
   }
   size_t first = push_instruction_byte(translated, OP_NEW_SCOPE);
+  translated->scope_depth++;
   size_t start_of_loop =
       translate_parsed(translated, parsedWhile->condition, err);
   if (err->exists) {
     return 0;
   }
+  struct continue_jump old_continue_jump = translated->continue_jump;
+  translated->continue_jump =
+      (struct continue_jump){start_of_loop, translated->scope_depth};
+
   push_instruction_byte(translated, OP_BOOL);
   push_instruction_byte(translated, OP_JUMP_IF_FALSE);
   push_instruction_byte(translated, 0);
@@ -51,5 +56,8 @@ size_t translate_parsed_while(Translated *translated, ParsedWhile *parsedWhile,
     darray_free(&return_jumps, NULL);
     translated->return_jumps = old_return_jumps;
   }
+
+  translated->continue_jump = old_continue_jump;
+  translated->scope_depth--;
   return first;
 }

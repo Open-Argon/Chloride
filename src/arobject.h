@@ -13,6 +13,7 @@
 #include <gmp.h>
 #include <limits.h>
 #include <stddef.h>
+#include <stdint.h>
 
 typedef enum {
   __base__,
@@ -158,9 +159,16 @@ typedef struct {
   struct hashmap *hashmap;
 } ConstantArena;
 
+struct continue_jump {
+  int64_t pos;
+  uint64_t scope_depth;
+};
+
 typedef struct {
   uint8_t registerCount;
   uint8_t registerAssignment;
+  uint64_t scope_depth;
+  struct continue_jump continue_jump;
   DArray *return_jumps;
   DArray bytecode;
   ConstantArena constants;

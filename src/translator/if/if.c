@@ -31,6 +31,7 @@ size_t translate_parsed_if(Translated *translated, DArray *parsedIf,
   for (uint64_t i = 0; i < parsedIf->size; i++) {
     ParsedConditional *condition = darray_get(parsedIf, i);
     push_instruction_byte(translated, OP_NEW_SCOPE);
+    translated->scope_depth++;
     if (condition->condition) {
       translate_parsed(translated, condition->condition, err);
       if (err->exists) {
@@ -64,6 +65,8 @@ size_t translate_parsed_if(Translated *translated, DArray *parsedIf,
       push_instruction_byte(translated, OP_JUMP);
       jump_after_body_positions[i] = push_instruction_code(translated, 0);
     }
+
+    translated->scope_depth--;
   }
 
   if (translated->return_jumps) {

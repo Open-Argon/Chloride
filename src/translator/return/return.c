@@ -6,6 +6,7 @@
 
 #include "return.h"
 #include "../../err.h"
+#include "../translator.h"
 
 size_t translate_parsed_return(Translated *translated,
                                ParsedReturn *parsedReturn, ArErr * err) {
