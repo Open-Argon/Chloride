@@ -99,7 +99,7 @@ pipeline {
                     cp LICENSE.txt build/bin/
                     tar -czf "$OUTPUT_FILE" -C build/bin .
                 '''
-                archiveArtifacts artifacts: "${env.OUTPUT_FILE}", allowEmptyArchive: false
+                archiveArtifacts artifacts: "${env.OUTPUT_FILE}", allowEmptyArchive: false, fingerprint: true
             }
         }
 
@@ -129,7 +129,7 @@ pipeline {
                     # Adjust packaging format if needed
                     zip -r "$OUTPUT_FILE" build/bin/*
                 '''
-                archiveArtifacts artifacts: "${env.OUTPUT_FILE}", allowEmptyArchive: false
+                archiveArtifacts artifacts: "${env.OUTPUT_FILE}", allowEmptyArchive: false, fingerprint: true
             }
         }
         stage('macOS Build (GitHub Actions)') {
