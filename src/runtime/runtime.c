@@ -25,6 +25,7 @@
 #include "objects/literals/literals.h"
 #include "objects/number/number.h"
 #include "objects/object.h"
+#include "objects/signals/signals.h"
 #include "objects/string/string.h"
 #include "objects/term/term.h"
 #include "objects/tuple/tuple.h"
@@ -1194,6 +1195,7 @@ void bootstrap_types() {
 
   init_array_type();
   init_tuple_type();
+  init_signals();
 
   native_api.ARGON_NULL = ARGON_NULL;
   native_api.ARGON_TRUE = ARGON_TRUE;
@@ -1235,6 +1237,11 @@ void bootstrap_globals() {
   add_to_scope(Global_Scope, "greater_than_equal", GREATER_THAN_EQUAL_FUNCTION);
 
   // create platform
+  hashmap_GC *signals = createHashmap_GC();
+  add_to_hashmap(signals, "end_iteration",
+                 END_ITERATION);
+  add_to_scope(Global_Scope, "signals", create_dictionary(signals));
+
   hashmap_GC *platform = createHashmap_GC();
   add_to_hashmap(platform, "os",
                  new_string_object_null_terminated(PLATFORM_OS));

@@ -192,27 +192,6 @@ ArgonObject *ARGON_NUMBER_TYPE___boolean__(size_t argc, ArgonObject **argv,
   return argv[0]->as_bool ? ARGON_TRUE : ARGON_FALSE;
 }
 
-// TODO: add rounding
-// ArgonObject *ARGON_NUMBER_TYPE___round__(size_t argc, ArgonObject **argv,
-//                                            ArErr *err, RuntimeState *state,
-//                                            ArgonNativeAPI *api) {
-//   (void)api;
-//   (void)state;
-//   if (argc != 2) {
-//     *err = create_err(0, 0, 0, "", "Runtime Error",
-//                       "__round__ expects 2 argument, got %" PRIu64, argc);
-//     return ARGON_NULL;
-//   }
-
-//   mpq_t result;
-//   mpq_init(result);
-
-//   mpq_round_prec(result, *argv[0]->value.as_number->n.mpq,
-//   *argv[1]->value.as_number->n.mpq);
-
-//   return new_number_object(result);
-// }
-
 ArgonObject *ARGON_NUMBER_TYPE___negation__(size_t argc, ArgonObject **argv,
                                             ArErr *err, RuntimeState *state,
                                             ArgonNativeAPI *api) {
@@ -1287,9 +1266,6 @@ void create_ARGON_NUMBER_TYPE() {
   add_builtin_field(ARGON_NUMBER_TYPE, __boolean__,
                     create_argon_native_function(
                         "__boolean__", ARGON_NUMBER_TYPE___boolean__));
-  // add_builtin_field(ARGON_NUMBER_TYPE, __round__,
-  //                   create_argon_native_function(
-  //                       "__round__", ARGON_NUMBER_TYPE___round__));
   add_builtin_field(ARGON_NUMBER_TYPE, __negation__,
                     create_argon_native_function(
                         "__negation__", ARGON_NUMBER_TYPE___negation__));
