@@ -643,7 +643,7 @@ ArgonObject *BASE_CLASS___new__(size_t argc, ArgonObject **argv, ArErr *err,
                    "__new__ expects at least 1 argument, got %" PRIu64, argc);
     return ARGON_NULL;
   }
-  ArgonObject *new_obj = new_instance(argv[0], 0);
+  ArgonObject *new_obj = new_small_instance(argv[0], 0);
   return new_obj;
 }
 

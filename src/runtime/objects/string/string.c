@@ -113,7 +113,7 @@ void init_string(ArgonObject *object, char *data, size_t length,
 
 ArgonObject *new_string_object_without_memcpy(char *data, size_t length,
                                               uint64_t prehash, uint64_t hash) {
-  ArgonObject *object = new_instance(ARGON_STRING_TYPE,sizeof(struct string_struct));
+  ArgonObject *object = new_small_instance(ARGON_STRING_TYPE,sizeof(struct string_struct));
   init_string(object, data, length, prehash, hash);
   return object;
 }

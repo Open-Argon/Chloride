@@ -141,18 +141,23 @@ void unregister_thread_pool() {
 ArgonObject *new_small_object(size_t endSize) {
   ThreadLocalPool *pool = get_thread_pool();
   ArgonObject *object;
+  
+  size_t objectsize = sizeof(ArgonObject) + endSize;
 
   if (!pool->small_objects ||
-      pool->small_objects_pos + sizeof(ArgonObject) + endSize >
+      pool->small_objects_pos + objectsize >
           SMALL_OBJECT_ASSIGNMENT_AMOUNT * sizeof(ArgonObject)) {
-
+    size_t size = sizeof(ArgonObject) * SMALL_OBJECT_ASSIGNMENT_AMOUNT;
+    if (objectsize>size) {
+      size = objectsize;
+    }
     pool->small_objects =
-        (char *)ar_alloc(sizeof(ArgonObject) * SMALL_OBJECT_ASSIGNMENT_AMOUNT);
+        (char *)ar_alloc(size);
     pool->small_objects_pos = 0;
   }
 
   object = (ArgonObject *)(pool->small_objects + pool->small_objects_pos);
-  pool->small_objects_pos += sizeof(ArgonObject) + endSize;
+  pool->small_objects_pos += objectsize;
 
   object->built_in_slot_length = 0;
   object->type = TYPE_OBJECT;
