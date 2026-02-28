@@ -63,9 +63,6 @@ typedef enum {
   __contains__,
   __iter__,
   __next__,
-  current,
-  stop,
-  step,
 
   BUILT_IN_FIELDS_COUNT,
 } built_in_fields;
@@ -154,6 +151,7 @@ typedef enum ArgonType {
   TYPE_BUFFER,
   TYPE_ERROR,
   TYPE_OBJECT,
+  TYPE_RANGE_ITERATOR,
 } ArgonType;
 
 typedef struct {
@@ -223,6 +221,12 @@ struct as_number {
   bool is_int64;
 };
 
+struct as_range_iterator {
+  ArgonObject*current;
+  ArgonObject*stop;
+  ArgonObject*step;
+};
+
 struct tuple_struct {
   size_t size;
   ArgonObject *data[];
@@ -240,6 +244,7 @@ struct ArgonObject {
     ArErr *err;
     struct as_number *as_number;
     struct hashmap_GC *as_hashmap;
+    struct as_range_iterator *as_range_iterator;
     struct string_struct *as_str;
     struct tuple_struct as_tuple;
     struct buffer *as_buffer;

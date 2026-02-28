@@ -106,7 +106,8 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
     if (function_object)
       object = function_object;
   }
-  if (object->type == TYPE_FUNCTION) {
+  switch (object->type) {
+  case TYPE_FUNCTION: {
     if (argc + binding_object_exists !=
         object->value.argon_fn->number_of_parameters) {
       ArgonObject *type_object_name = get_builtin_field_for_class(
@@ -177,58 +178,56 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
           scope, err);
       state->registers[0] = registers[0];
       return;
-    } else {
-      StackFrame *currentStackFrame =
-          ar_alloc(sizeof(StackFrame) +
-                   object->value.argon_fn->translated.registerCount *
-                       sizeof(ArgonObject *));
-      *currentStackFrame = (StackFrame){
-          {object->value.argon_fn->translated.registerCount,
-           object->value.argon_fn->translated.registerAssignment,
-           0,
-           {-1, 0},
-           {NULL, 0},
-           {NULL, 0},
-           {object->value.argon_fn->bytecode, sizeof(uint8_t),
-            object->value.argon_fn->bytecode_length,
-            object->value.argon_fn->bytecode_length, false},
-           object->value.argon_fn->translated.constants,
-           object->value.argon_fn->translated.path},
-          {(ArgonObject **)((char *)currentStackFrame + sizeof(StackFrame)),
-           0,
-           NULL,
-           state->currentStackFramePointer,
-           {},
-           {},
-           state->load_number_cache,
-           object->value.argon_fn->translated.path,
-           state->c_depth},
-          scope,
-          *state->currentStackFramePointer,
-          (*state->currentStackFramePointer)->depth + 1,
-          {}};
-      *state->currentStackFramePointer = currentStackFrame;
-      if ((*state->currentStackFramePointer)->depth >= 10000) {
-        double logval =
-            log10((double)(*state->currentStackFramePointer)->depth);
-        if (floor(logval) == logval) {
-          double memoryUsage = get_memory_usage_mb();
-          fprintf(stderr,
-                  "Warning: %s:%" PRIu64 ":%" PRIu64
-                  " the call stack depth has exceeded %" PRIu64,
-                  state->path, state->source_location.line,
-                  state->source_location.column,
-                  (*state->currentStackFramePointer)->depth);
-          if (memoryUsage) {
-            fprintf(stderr, ", memory usage at %f MB\n", memoryUsage);
-          } else {
-            fprintf(stderr, "\n");
-          }
-        }
-      };
-      return;
     }
-  } else if (object->type == TYPE_NATIVE_FUNCTION) {
+    StackFrame *currentStackFrame = ar_alloc(
+        sizeof(StackFrame) + object->value.argon_fn->translated.registerCount *
+                                 sizeof(ArgonObject *));
+    *currentStackFrame = (StackFrame){
+        {object->value.argon_fn->translated.registerCount,
+         object->value.argon_fn->translated.registerAssignment,
+         0,
+         {-1, 0},
+         {NULL, 0},
+         {NULL, 0},
+         {object->value.argon_fn->bytecode, sizeof(uint8_t),
+          object->value.argon_fn->bytecode_length,
+          object->value.argon_fn->bytecode_length, false},
+         object->value.argon_fn->translated.constants,
+         object->value.argon_fn->translated.path},
+        {(ArgonObject **)((char *)currentStackFrame + sizeof(StackFrame)),
+         0,
+         NULL,
+         state->currentStackFramePointer,
+         {},
+         {},
+         state->load_number_cache,
+         object->value.argon_fn->translated.path,
+         state->c_depth},
+        scope,
+        *state->currentStackFramePointer,
+        (*state->currentStackFramePointer)->depth + 1,
+        {}};
+    *state->currentStackFramePointer = currentStackFrame;
+    if ((*state->currentStackFramePointer)->depth >= 10000) {
+      double logval = log10((double)(*state->currentStackFramePointer)->depth);
+      if (floor(logval) == logval) {
+        double memoryUsage = get_memory_usage_mb();
+        fprintf(stderr,
+                "Warning: %s:%" PRIu64 ":%" PRIu64
+                " the call stack depth has exceeded %" PRIu64,
+                state->path, state->source_location.line,
+                state->source_location.column,
+                (*state->currentStackFramePointer)->depth);
+        if (memoryUsage) {
+          fprintf(stderr, ", memory usage at %f MB\n", memoryUsage);
+        } else {
+          fprintf(stderr, "\n");
+        }
+      }
+    };
+    return;
+  }
+  case TYPE_NATIVE_FUNCTION: {
     ArgonObject **single_arg = (ArgonObject *[1]){};
     if (binding_object) {
       if (argc > 0) {
@@ -242,7 +241,7 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
       } else {
         single_arg[0] = binding_object;
         argv = single_arg;
-        argc=1;
+        argc = 1;
       }
     }
     state->registers[0] =
@@ -258,11 +257,17 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
     }
     return;
   }
-  ArgonObject *type_object_name = get_builtin_field_for_class(
-      get_builtin_field(original_object, __class__), __name__, original_object);
-  *err = create_err(state->source_location.line, state->source_location.column,
-                    state->source_location.length, state->path, "Type Error",
-                    "'%.*s' object is not callable",
-                    (int)type_object_name->value.as_str->length,
-                    type_object_name->value.as_str->data);
+  default: {
+    ArgonObject *type_object_name = get_builtin_field_for_class(
+        get_builtin_field(original_object, __class__), __name__,
+        original_object);
+    *err =
+        create_err(state->source_location.line, state->source_location.column,
+                   state->source_location.length, state->path, "Type Error",
+                   "'%.*s' object is not callable",
+                   (int)type_object_name->value.as_str->length,
+                   type_object_name->value.as_str->data);
+    return;
+  }
+  }
 }
