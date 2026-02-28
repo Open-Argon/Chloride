@@ -227,6 +227,11 @@ struct as_range_iterator {
   ArgonObject*step;
 };
 
+struct as_array_iterator {
+  size_t current;
+  darray_armem*array;
+};
+
 struct tuple_struct {
   size_t size;
   ArgonObject *data[];
@@ -245,6 +250,7 @@ struct ArgonObject {
     struct as_number *as_number;
     struct hashmap_GC *as_hashmap;
     struct as_range_iterator *as_range_iterator;
+    struct as_array_iterator* as_array_iterator;
     struct string_struct *as_str;
     struct tuple_struct as_tuple;
     struct buffer *as_buffer;

@@ -11,6 +11,7 @@
 #include "../../internals/dynamic_array_armem/darray_armem.h"
 #include "../functions/functions.h"
 #include "../literals/literals.h"
+#include "../signals/signals.h"
 #include "../number/number.h"
 #include "../string/string.h"
 #include <inttypes.h>
@@ -20,6 +21,7 @@
 #include <string.h>
 
 ArgonObject *ARRAY_TYPE;
+ArgonObject *ARRAY_ITERATOR_TYPE;
 ArgonObject *ARGON_ARRAY_CREATE;
 
 ArgonObject *ARRAY_CREATE(size_t argc, ArgonObject **argv, ArErr *err,
@@ -30,7 +32,7 @@ ArgonObject *ARRAY_CREATE(size_t argc, ArgonObject **argv, ArErr *err,
   ArgonObject *object = new_small_instance(ARRAY_TYPE, sizeof(darray_armem));
   object->type = TYPE_ARRAY;
 
-  object->value.as_array =darray_armem_create();
+  object->value.as_array = darray_armem_create();
 
   darray_armem_init(object->value.as_array, sizeof(ArgonObject *), argc);
 
@@ -130,8 +132,8 @@ ArgonObject *ARGON_ARRAY_append(size_t argc, ArgonObject **argv, ArErr *err,
 }
 
 ArgonObject *ARGON_ARRAY___contains__(size_t argc, ArgonObject **argv,
-                                     ArErr *err, RuntimeState *state,
-                                     ArgonNativeAPI *api) {
+                                      ArErr *err, RuntimeState *state,
+                                      ArgonNativeAPI *api) {
   (void)state;
   (void)api;
   if (argc != 2) {
@@ -145,16 +147,21 @@ ArgonObject *ARGON_ARRAY___contains__(size_t argc, ArgonObject **argv,
   if (!object__equal__) {
     ArgonObject *cls___name__ = get_builtin_field(object_class, __name__);
     *err = create_err(0, 0, 0, "", "Runtime Error",
-                     "Object of type '%.*s' is missing __equal__ method",
-                     (int)cls___name__->value.as_str->length,
-                     cls___name__->value.as_str->data);
+                      "Object of type '%.*s' is missing __equal__ method",
+                      (int)cls___name__->value.as_str->length,
+                      cls___name__->value.as_str->data);
     return ARGON_NULL;
   }
-  darray_armem* arr = argv[0]->value.as_array;
-  for (size_t i = 0;i<arr->size;i++) {
-    ArgonObject*result = argon_call(object__equal__, 1, (ArgonObject*[]){*(ArgonObject**)darray_armem_get(arr, i)}, err, state);
-    if (api->is_error(err)) return ARGON_NULL;
-    if (result == ARGON_TRUE) return result;
+  darray_armem *arr = argv[0]->value.as_array;
+  for (size_t i = 0; i < arr->size; i++) {
+    ArgonObject *result =
+        argon_call(object__equal__, 1,
+                   (ArgonObject *[]){*(ArgonObject **)darray_armem_get(arr, i)},
+                   err, state);
+    if (api->is_error(err))
+      return ARGON_NULL;
+    if (result == ARGON_TRUE)
+      return result;
   }
   return ARGON_FALSE;
 }
@@ -266,6 +273,50 @@ ArgonObject *ARGON_ARRAY___setitem__(size_t argc, ArgonObject **argv,
   return *ptr;
 }
 
+ArgonObject *ARGON_ARRAY___iter__(size_t argc, ArgonObject **argv,
+                                                ArErr *err, RuntimeState *state,
+                                                ArgonNativeAPI *api) {
+  (void)api;
+  (void)state;
+  if (argc != 1) {
+    *err =
+        create_err(state->source_location.line, state->source_location.column,
+                   state->source_location.length, state->path, "Runtime Error",
+                   "__iter__ expects 1 argument, got %" PRIu64, argc);
+    return ARGON_NULL;
+  }
+  ArgonObject *self = argv[0];
+  ArgonObject *iterator = new_small_instance(ARRAY_ITERATOR_TYPE, sizeof(struct as_array_iterator));
+  iterator->value.as_array_iterator = (struct as_array_iterator*)((char*)iterator+sizeof(ArgonObject));
+  iterator->value.as_array_iterator->current = 0;
+  iterator->value.as_array_iterator->array = self->value.as_array;
+  return iterator;
+}
+
+ArgonObject *ARGON_ARRAY_ITERATOR___next__(size_t argc, ArgonObject **argv,
+                                           ArErr *err, RuntimeState *state,
+                                           ArgonNativeAPI *api) {
+  (void)api;
+  (void)state;
+  if (argc != 1) {
+    *err =
+        create_err(state->source_location.line, state->source_location.column,
+                   state->source_location.length, state->path, "Runtime Error",
+                   "__next__ expects 1 argument, got %" PRIu64, argc);
+    return ARGON_NULL;
+  }
+  ArgonObject *self = argv[0];
+  struct as_array_iterator *array_iterator = self->value.as_array_iterator;
+
+  if (array_iterator->current>=array_iterator->array->size) {
+    return END_ITERATION;
+  }
+
+  ArgonObject*value = *(ArgonObject**)darray_armem_get(array_iterator->array, array_iterator->current++);
+
+  return value;
+}
+
 void init_array_type() {
   ARRAY_TYPE = new_class();
   add_builtin_field(ARRAY_TYPE, __name__,
@@ -294,6 +345,15 @@ void init_array_type() {
   add_builtin_field(
       ARRAY_TYPE, __contains__,
       create_argon_native_function("__contains__", ARGON_ARRAY___contains__));
+  add_builtin_field(
+      ARRAY_TYPE, __iter__,
+      create_argon_native_function("__iter__", ARGON_ARRAY___iter__));
+
+  ARRAY_ITERATOR_TYPE = new_class();
+  add_builtin_field(
+      ARRAY_ITERATOR_TYPE, __next__,
+      create_argon_native_function("__next__", ARGON_ARRAY_ITERATOR___next__));
+
 
   ARGON_ARRAY_CREATE =
       create_argon_native_function("ARRAY_CREATE", ARRAY_CREATE);
