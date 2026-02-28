@@ -1745,13 +1745,13 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
     DO_INIT_CALL: {
       size_t length;
       POP_U64(length);
-      state->call_instance =
-          ar_alloc(sizeof(call_instance) + length * sizeof(ArgonObject *));
-      *state->call_instance =
+      call_instance* new_call_instance = ar_alloc(sizeof(call_instance) + length * sizeof(ArgonObject *));
+      *new_call_instance =
           (call_instance){state->call_instance, state->registers[0],
-                          (ArgonObject **)((char *)state->call_instance +
+                          (ArgonObject **)((char *)new_call_instance +
                                            sizeof(call_instance)),
                           length};
+      state->call_instance = new_call_instance;
       continue;
     }
     DO_INSERT_ARG:;

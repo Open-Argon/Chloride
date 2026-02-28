@@ -5,4 +5,4 @@
 
 # while ((i = next())!=end_iteration) do
 
-for (i in range(0,1e7,1)) do
+term.log("hello", range(1e7))
