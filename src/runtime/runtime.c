@@ -22,6 +22,7 @@
 #include "objects/buffer/buffer.h"
 #include "objects/dictionary/dictionary.h"
 #include "objects/functions/functions.h"
+#include "objects/iterator/range_iterator.h"
 #include "objects/literals/literals.h"
 #include "objects/number/number.h"
 #include "objects/object.h"
@@ -1196,6 +1197,7 @@ void bootstrap_types() {
   init_array_type();
   init_tuple_type();
   init_signals();
+  init_range_iterator();
 
   native_api.ARGON_NULL = ARGON_NULL;
   native_api.ARGON_TRUE = ARGON_TRUE;
@@ -1221,6 +1223,7 @@ void bootstrap_globals() {
   add_to_scope(Global_Scope, "dictionary", ARGON_DICTIONARY_TYPE);
   add_to_scope(Global_Scope, "buffer", ARGON_BUFFER_TYPE);
   add_to_scope(Global_Scope, "tuple", ARGON_TUPLE_TYPE);
+  add_to_scope(Global_Scope, "range", ARGON_RANGE_ITERATOR_TYPE);
 
   add_to_scope(Global_Scope, "add", ADDITION_FUNCTION);
   add_to_scope(Global_Scope, "subtract", SUBTRACTION_FUNCTION);

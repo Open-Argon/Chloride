@@ -1,0 +1,11 @@
+let iter = range()
+iter.current=0
+iter.stop=1e6
+iter.step=1
+let next = iter.__next__
+let end_iteration = signals.end_iteration
+
+while (true) do
+  let i = next()
+  if (i==end_iteration) break
+  term.log(i)

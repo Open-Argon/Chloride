@@ -229,15 +229,21 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
       return;
     }
   } else if (object->type == TYPE_NATIVE_FUNCTION) {
+    ArgonObject **single_arg = (ArgonObject *[1]){};
     if (binding_object) {
-      ArgonObject **new_call_args =
-          ar_alloc(sizeof(ArgonObject *) * (argc + 1));
-      new_call_args[0] = binding_object;
       if (argc > 0) {
+        ArgonObject **new_call_args =
+            ar_alloc(sizeof(ArgonObject *) * (argc + 1));
+        new_call_args[0] = binding_object;
         memcpy(new_call_args + 1, argv, argc * sizeof(ArgonObject *));
+
+        argv = new_call_args;
+        argc++;
+      } else {
+        single_arg[0] = binding_object;
+        argv = single_arg;
+        argc=1;
       }
-      argv = new_call_args;
-      argc++;
     }
     state->registers[0] =
         object->value.native_fn(argc, argv, err, state, &native_api);

@@ -67,7 +67,6 @@ int yywrap(void * unused_param) {
 "expose"            { return TOKEN_EXPOSE; }
 "to"                { return TOKEN_TO; }
 "until"             { return TOKEN_UNTIL; }
-"step"             { return TOKEN_STEP; }
 "as"                { return TOKEN_AS; }
 "from"              { return TOKEN_FROM; }
 "do"                { return TOKEN_DO; }

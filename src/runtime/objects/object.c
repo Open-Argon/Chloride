@@ -79,7 +79,10 @@ const char *built_in_field_names[BUILT_IN_FIELDS_COUNT] = {
     "pop",
     "__contains__",
     "__iter__",
-    "__next__"};
+    "__next__",
+    "current",
+    "stop",
+    "step"};
 
 uint64_t built_in_field_hashes[BUILT_IN_FIELDS_COUNT];
 

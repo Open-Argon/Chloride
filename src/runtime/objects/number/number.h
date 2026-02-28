@@ -33,7 +33,33 @@ void mpq_fdiv(mpq_t result, const mpq_t a, const mpq_t b);
 
 void mpq_fmod(mpq_t result, const mpq_t a, const mpq_t b);
 
-uint64_t make_id(size_t num_size, size_t num_pos, bool is_int, bool is_negative, size_t den_size,
-                 size_t den_pos);
+uint64_t make_id(size_t num_size, size_t num_pos, bool is_int, bool is_negative,
+                 size_t den_size, size_t den_pos);
+
+ArgonObject *ARGON_NUMBER_TYPE___add__(size_t argc, ArgonObject **argv,
+                                       ArErr *err, RuntimeState *state,
+                                       ArgonNativeAPI *api);
+
+ArgonObject *ARGON_NUMBER_TYPE___greater_than_equal__(size_t argc,
+                                                      ArgonObject **argv,
+                                                      ArErr *err,
+                                                      RuntimeState *state,
+                                                      ArgonNativeAPI *api);
+
+ArgonObject *ARGON_NUMBER_TYPE___greater_than__(size_t argc, ArgonObject **argv,
+                                                ArErr *err, RuntimeState *state,
+                                                ArgonNativeAPI *api);
+
+ArgonObject *ARGON_NUMBER_TYPE___less_than_equal__(size_t argc,
+                                                   ArgonObject **argv,
+                                                   ArErr *err,
+                                                   RuntimeState *state,
+                                                   ArgonNativeAPI *api);
+
+ArgonObject *ARGON_NUMBER_TYPE___less_than__(size_t argc, ArgonObject **argv,
+                                             ArErr *err, RuntimeState *state,
+                                             ArgonNativeAPI *api);
+
+extern ArgonObject small_ints[small_ints_max - small_ints_min + 1];
 
 #endif // RUNTIME_NUMBER_H

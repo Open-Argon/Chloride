@@ -53,7 +53,6 @@ typedef enum {
   TOKEN_EXPOSE,
   TOKEN_TO,
   TOKEN_UNTIL,
-  TOKEN_STEP,
   TOKEN_AS,
   TOKEN_FROM,
   TOKEN_DO,
