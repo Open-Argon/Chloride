@@ -15,7 +15,7 @@
 ArgonObject *ARGON_BUFFER_TYPE = NULL;
 
 ArgonObject *create_ARGON_BUFFER_object(size_t size) {
-  ArgonObject *object = new_small_instance(ARGON_BUFFER_TYPE,sizeof(struct buffer)+size);
+  ArgonObject *object = new_instance(ARGON_BUFFER_TYPE,sizeof(struct buffer)+size);
   object->type = TYPE_BUFFER;
   object->value.as_buffer = (struct buffer*)((char*)object+sizeof(ArgonObject));
   object->value.as_buffer->data = (char*)object+sizeof(ArgonObject)+sizeof(struct buffer);

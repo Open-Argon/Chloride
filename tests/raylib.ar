@@ -33,7 +33,7 @@ class Game do
     while (x<30) do
       let y = 0
       while (y<30) do
-        self.bouncing_texts.append(bouncing_text(string(x*y), tuple(x*10,y*10), (x+y+1)/20))
+        self.bouncing_texts.append(bouncing_text(string(x*y), tuple(x*10,y*10), (x+y+1)))
         y=y+1
       x=x+1
 
