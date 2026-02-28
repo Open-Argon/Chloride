@@ -643,7 +643,7 @@ ArgonObject *BASE_CLASS___new__(size_t argc, ArgonObject **argv, ArErr *err,
                    "__new__ expects at least 1 argument, got %" PRIu64, argc);
     return ARGON_NULL;
   }
-  ArgonObject *new_obj = new_small_instance(argv[0], 0);
+  ArgonObject *new_obj = new_instance(argv[0], 0);
   return new_obj;
 }
 
@@ -786,7 +786,7 @@ ArgonObject *ARGON_STRING_TYPE___new__(size_t argc, ArgonObject **argv,
                    "__new__ expects at least 1 argument, got %" PRIu64, argc);
     return ARGON_NULL;
   }
-  ArgonObject *new_obj = new_instance(argv[0], sizeof(struct string_struct));
+  ArgonObject *new_obj = new_small_instance(argv[0], sizeof(struct string_struct));
   return new_obj;
 }
 
@@ -1047,7 +1047,7 @@ void bootstrap_types() {
 
   ARGON_NULL_TYPE = new_class();
   add_builtin_field(ARGON_NULL_TYPE, __base__, BASE_CLASS);
-  ARGON_NULL = new_instance(ARGON_NULL_TYPE, 0);
+  ARGON_NULL = new_small_instance(ARGON_NULL_TYPE, 0);
   ARGON_NULL->type = TYPE_NULL;
   ARGON_NULL->as_bool = false;
 
@@ -1056,9 +1056,9 @@ void bootstrap_types() {
 
   ARGON_BOOL_TYPE = new_class();
   add_builtin_field(ARGON_BOOL_TYPE, __base__, BASE_CLASS);
-  ARGON_TRUE = new_instance(ARGON_BOOL_TYPE, 0);
+  ARGON_TRUE = new_small_instance(ARGON_BOOL_TYPE, 0);
   ARGON_TRUE->type = TYPE_BOOL;
-  ARGON_FALSE = new_instance(ARGON_BOOL_TYPE, 0);
+  ARGON_FALSE = new_small_instance(ARGON_BOOL_TYPE, 0);
   ARGON_FALSE->type = TYPE_BOOL;
   ARGON_NULL->as_bool = false;
 
@@ -1585,7 +1585,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       uint64_t number_of_parameters;
       POP_U64(number_of_parameters);
       ArgonObject *object =
-          new_instance(ARGON_FUNCTION_TYPE,
+          new_small_instance(ARGON_FUNCTION_TYPE,
                        sizeof(struct argon_function_struct) +
                            number_of_parameters * sizeof(struct string_struct));
       object->type = TYPE_FUNCTION;

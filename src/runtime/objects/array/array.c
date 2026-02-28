@@ -27,7 +27,7 @@ ArgonObject *ARRAY_CREATE(size_t argc, ArgonObject **argv, ArErr *err,
   (void)err;
   (void)state;
   (void)api;
-  ArgonObject *object = new_instance(ARRAY_TYPE, sizeof(darray_armem));
+  ArgonObject *object = new_small_instance(ARRAY_TYPE, sizeof(darray_armem));
   object->type = TYPE_ARRAY;
 
   object->value.as_array =darray_armem_create();

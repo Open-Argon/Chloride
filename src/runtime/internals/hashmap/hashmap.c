@@ -121,7 +121,7 @@ struct hashmap_GC *createHashmap_GC(void) {
   t->order = 1;
 
   RWLOCK_CREATE(&t->lock);  
-  // GC_register_finalizer(t, hashmap_finalizer, NULL, NULL, NULL);
+  GC_register_finalizer(t, hashmap_finalizer, NULL, NULL, NULL);
   return t;
 }
 
