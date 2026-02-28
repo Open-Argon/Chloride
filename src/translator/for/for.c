@@ -13,7 +13,6 @@
 size_t translate_parsed_for(Translated *translated, ParsedFor *parsedFor,
                             ArErr *err) {
   uint8_t iterator_next_register = translated->registerAssignment++;
-  uint8_t value_register = translated->registerAssignment++;
   set_registers(translated, translated->registerAssignment);
   struct break_or_return_jump old_break_jump = translated->break_jump;
   DArray break_jumps;
@@ -48,9 +47,16 @@ size_t translate_parsed_for(Translated *translated, ParsedFor *parsedFor,
 
   push_instruction_byte(translated, OP_CALL);
 
-  push_instruction_byte(translated, OP_COPY_TO_REGISTER);
+  size_t length = strlen(parsedFor->key);
+  size_t identifier_pos =
+      arena_push(&translated->constants, parsedFor->key, length);
+  push_instruction_byte(translated, OP_DECLARE);
+  push_instruction_code(translated, length);
+  push_instruction_code(translated, identifier_pos);
+  push_instruction_code(translated,
+                        siphash64_bytes(parsedFor->key, length,
+                                        siphash_key_fixed_for_translator));
   push_instruction_byte(translated, 0);
-  push_instruction_byte(translated, value_register);
 
   push_instruction_byte(translated, OP_IS_NOT_END_ITERATION);
 
@@ -62,17 +68,6 @@ size_t translate_parsed_for(Translated *translated, ParsedFor *parsedFor,
   push_instruction_byte(translated, OP_JUMP_IF_FALSE);
   push_instruction_byte(translated, 0);
   uint64_t jump_index = push_instruction_code(translated, 0);
-
-  size_t length = strlen(parsedFor->key);
-  size_t identifier_pos =
-      arena_push(&translated->constants, parsedFor->key, length);
-  push_instruction_byte(translated, OP_DECLARE);
-  push_instruction_code(translated, length);
-  push_instruction_code(translated, identifier_pos);
-  push_instruction_code(translated,
-                        siphash64_bytes(parsedFor->key, length,
-                                        siphash_key_fixed_for_translator));
-  push_instruction_byte(translated, value_register);
 
   translate_parsed(translated, parsedFor->content, err);
 
@@ -92,6 +87,6 @@ size_t translate_parsed_for(Translated *translated, ParsedFor *parsedFor,
 
   translated->continue_jump = old_continue_jump;
   translated->scope_depth--;
-  translated->registerAssignment-=2;
+  translated->registerAssignment--;
   return first;
 }
