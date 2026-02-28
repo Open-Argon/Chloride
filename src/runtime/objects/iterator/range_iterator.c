@@ -49,6 +49,20 @@ ArgonObject *ARGON_RANGE_ITERATOR_TYPE___init__(size_t argc, ArgonObject **argv,
   return ARGON_NULL;
 }
 
+ArgonObject *ARGON_RANGE_ITERATOR_TYPE___iter__(size_t argc, ArgonObject **argv,
+                                                ArErr *err, RuntimeState *state,
+                                                ArgonNativeAPI *api) {
+  (void)api;
+  (void)state;
+  if (argc != 1) {
+    *err = create_err(0, 0, 0, "", "Runtime Error",
+                      "__iter__ expects 1 argument, got %" PRIu64, argc);
+    return ARGON_NULL;
+  }
+  ArgonObject *self = argv[0];
+  return self;
+}
+
 ArgonObject *ARGON_RANGE_ITERATOR_TYPE___next__(size_t argc, ArgonObject **argv,
                                                 ArErr *err, RuntimeState *state,
                                                 ArgonNativeAPI *api) {
@@ -96,9 +110,9 @@ void init_range_iterator() {
   add_builtin_field(ARGON_RANGE_ITERATOR_TYPE, __init__,
                     create_argon_native_function(
                         "__init__", ARGON_RANGE_ITERATOR_TYPE___init__));
-  add_builtin_field(ARGON_RANGE_ITERATOR_TYPE, __next__,
+  add_builtin_field(ARGON_RANGE_ITERATOR_TYPE, __iter__,
                     create_argon_native_function(
-                        "__next__", ARGON_RANGE_ITERATOR_TYPE___next__));
+                        "__iter__", ARGON_RANGE_ITERATOR_TYPE___iter__));
   add_builtin_field(ARGON_RANGE_ITERATOR_TYPE, __next__,
                     create_argon_native_function(
                         "__next__", ARGON_RANGE_ITERATOR_TYPE___next__));

@@ -19,6 +19,8 @@
 #include "continue/continue.h"
 #include "declaration/declaration.h"
 #include "dowrap/dowrap.h"
+#include "for/for.h"
+#include "while/while.h"
 #include "function/function.h"
 #include "identifier/identifier.h"
 #include "if/if.h"
@@ -165,6 +167,9 @@ size_t translate_parsed(Translated *translated, ParsedValue *parsedValue,
                                        (ParsedIdentifier *)parsedValue->data);
   case AST_IF:
     return translate_parsed_if(translated, (DArray *)parsedValue->data, err);
+  case AST_FOR:
+    return translate_parsed_for(translated, (ParsedFor *)parsedValue->data,
+                                  err);
   case AST_WHILE:
     return translate_parsed_while(translated, (ParsedWhile *)parsedValue->data,
                                   err);

@@ -56,6 +56,7 @@ typedef enum {
   AST_CONTINUE,
   AST_BREAK,
   AST_WHILE,
+  AST_FOR,
   AST_TO_BOOL,
   AST_NEGATION,
   AST_IMPORT

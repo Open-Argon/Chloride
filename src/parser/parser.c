@@ -18,6 +18,7 @@
 #include "declaration/declaration.h"
 #include "dictionary/dictionary.h"
 #include "dowrap/dowrap.h"
+#include "for/for.h"
 #include "function/function.h"
 #include "if/if.h"
 #include "import/import.h"
@@ -84,6 +85,8 @@ ParsedValueReturn parse_token_full(char *file, DArray *tokens, size_t *index,
       return parse_if(file, tokens, index);
     case TOKEN_WHILE:
       return parse_while(file, tokens, index);
+    case TOKEN_FOR:
+      return parse_for(file, tokens, index);
     case TOKEN_RETURN:
       return parse_return(file, tokens, index);
     case TOKEN_CONTINUE:
@@ -271,6 +274,9 @@ void free_parsed(ParsedValue *ptr) {
     break;
   case AST_IF:
     free_parsed_if(parsed);
+    break;
+  case AST_FOR:
+    free_parsed_for(parsed);
     break;
   case AST_WHILE:
     free_parsed_while(parsed);

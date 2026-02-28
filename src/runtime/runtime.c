@@ -1241,8 +1241,7 @@ void bootstrap_globals() {
 
   // create platform
   hashmap_GC *signals = createHashmap_GC();
-  add_to_hashmap(signals, "end_iteration",
-                 END_ITERATION);
+  add_to_hashmap(signals, "end_iteration", END_ITERATION);
   add_to_scope(Global_Scope, "signals", create_dictionary(signals));
 
   hashmap_GC *platform = createHashmap_GC();
@@ -1457,7 +1456,10 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       [OP_EXPOSE] = &&DO_EXPOSE,
       [OP_LOAD_CREATE_ARRAY] = &&DO_LOAD_CREATE_ARRAY,
       [OP_NOT_IN] = &&DO_NOT_IN,
-      [OP_IN] = &&DO_IN};
+      [OP_IN] = &&DO_IN,
+      [OP_LOAD_ITER_METHOD] = &&DO_LOAD_ITER_METHOD,
+      [OP_IS_NOT_END_ITERATION] = &&DO_IS_NOT_END_ITERATION,
+      [OP_LOAD_NEXT_METHOD] = &&DO_LOAD_NEXT_METHOD};
   _state.head = 0;
 
   ArErr err = *err_ptr;
@@ -1691,6 +1693,10 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
                          state, currentStackFrame->stack);
       continue;
     }
+    DO_IS_NOT_END_ITERATION: {
+      state->registers[0] = state->registers[0]==END_ITERATION ? ARGON_FALSE : ARGON_TRUE;
+      continue;
+    }
     DO_BOOL: {
       if (state->registers[0] == ARGON_TRUE ||
           state->registers[0] == ARGON_FALSE)
@@ -1739,11 +1745,13 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
     DO_INIT_CALL: {
       size_t length;
       POP_U64(length);
-      call_instance call_instance = {state->call_instance, state->registers[0],
-                                     ar_alloc(length * sizeof(ArgonObject *)),
-                                     length};
-      state->call_instance = ar_alloc(sizeof(call_instance));
-      *state->call_instance = call_instance;
+      state->call_instance =
+          ar_alloc(sizeof(call_instance) + length * sizeof(ArgonObject *));
+      *state->call_instance =
+          (call_instance){state->call_instance, state->registers[0],
+                          (ArgonObject **)((char *)state->call_instance +
+                                           sizeof(call_instance)),
+                          length};
       continue;
     }
     DO_INSERT_ARG:;
@@ -1805,6 +1813,28 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       }
       ArgonObject *args[] = {};
       argon_call(negation_function, 0, args, &err, state);
+      continue;
+    DO_LOAD_ITER_METHOD:
+      state->registers[0] = get_builtin_field_for_class(
+          get_builtin_field(state->registers[0], __class__), __iter__,
+          state->registers[0]);
+      if (!state->registers[0]) {
+        err = create_err(
+            state->source_location.line, state->source_location.column,
+            state->source_location.length, state->path, "Runtime Error",
+            "unable to get __iter__ from objects class");
+      }
+      continue;
+    DO_LOAD_NEXT_METHOD:
+      state->registers[0] = get_builtin_field_for_class(
+          get_builtin_field(state->registers[0], __class__), __next__,
+          state->registers[0]);
+      if (!state->registers[0]) {
+        err = create_err(
+            state->source_location.line, state->source_location.column,
+            state->source_location.length, state->path, "Runtime Error",
+            "unable to get __next__ from objects class");
+      }
       continue;
     DO_LOAD_GETATTRIBUTE_METHOD:
       state->registers[0] = get_builtin_field_for_class(

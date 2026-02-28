@@ -120,6 +120,18 @@ sets the source location onto the runtime
 1. the column
 1. the length
 
+## OP_LOAD_ITER_METHOD
+
+loads the \_\_iter\_\_ method from the objects class in register 0 and put it into register 0
+
+## OP_LOAD_ITER_METHOD
+
+loads the \_\_next\_\_ method from the objects class in register 0 and put it into register 0
+
+## OP_IS_NOT_END_ITERATION
+
+sets a boolean if register 0 is not the END_ITERATION signal
+
 ## OP_LOAD_GETATTRIBUTE_METHOD
 
 loads the \_\_getattribute\_\_ method from the objects class in register 0 and put it into register 0

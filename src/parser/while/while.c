@@ -11,10 +11,9 @@
 #include <stddef.h>
 
 ParsedValueReturn parse_while(char *file, DArray *tokens, size_t *index) {
-  Token *token = darray_get(tokens, *index);
   (*index)++;
   // Parse ( condition )
-  token = darray_get(tokens, *index);
+  Token *token = darray_get(tokens, *index);
   if (token->type != TOKEN_LPAREN) {
     return (ParsedValueReturn){create_err(token->line, token->column,
                                           token->length, file, "Syntax Error",
