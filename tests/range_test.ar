@@ -5,4 +5,5 @@
 
 # while ((i = next())!=end_iteration) do
 
-term.log("hello", range(1e7))
+for (x in range(1e4)) do
+  for (y in range(1e3)) do

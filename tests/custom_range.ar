@@ -1,0 +1,19 @@
+class custom_range_iterator do
+  this.__init__(self,stop) = do
+    self.current = 0
+    self.stop = stop
+  this.__next__(self) = do
+    if (self.stop<=self.current) do
+      return signals.end_iteration
+    let result = self.current
+    self.current = self.current + 1
+    return result
+
+class custom_range do
+  this.__init__(self,stop) = do
+    self.stop = stop
+  this.__iter__(self) = custom_range_iterator(self.stop)
+
+
+for (x in custom_range(1e4)) do
+  for (y in custom_range(1e3)) do
