@@ -64,7 +64,6 @@ size_t translate_parsed_for(Translated *translated, ParsedFor *parsedFor,
   translated->continue_jump =
       (struct continue_jump){start_of_loop, translated->scope_depth};
 
-  push_instruction_byte(translated, OP_BOOL);
   push_instruction_byte(translated, OP_JUMP_IF_FALSE);
   push_instruction_byte(translated, 0);
   uint64_t jump_index = push_instruction_code(translated, 0);
@@ -75,8 +74,7 @@ size_t translate_parsed_for(Translated *translated, ParsedFor *parsedFor,
 
   push_instruction_byte(translated, OP_JUMP);
   push_instruction_code(translated, start_of_loop);
-  set_instruction_code(translated, jump_index, translated->bytecode.size);
-  push_instruction_byte(translated, OP_POP_SCOPE);
+  set_instruction_code(translated, jump_index, push_instruction_byte(translated, OP_POP_SCOPE));
 
   for (size_t i = 0; i < break_jumps.size; i++) {
     size_t *index = darray_get(&break_jumps, i);

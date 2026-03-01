@@ -27,7 +27,7 @@ ArgonObject *TUPLE_CREATE(size_t argc, ArgonObject **argv, ArErr *err,
   (void)state;
   (void)api;
   ArgonObject *object =
-      new_small_instance(ARGON_TUPLE_TYPE, argc * sizeof(ArgonObject *));
+      new_instance(ARGON_TUPLE_TYPE, argc * sizeof(ArgonObject *));
   object->type = TYPE_TUPLE;
   object->value.as_tuple.size = argc;
   memcpy(object->value.as_tuple.data, argv, argc * sizeof(ArgonObject *));
@@ -46,7 +46,7 @@ ArgonObject *ARGON_TUPLE___new__(size_t argc, ArgonObject **argv, ArErr *err,
     return ARGON_NULL;
   }
   ArgonObject *new_obj =
-      new_small_instance(argv[0], (argc - 1) * sizeof(ArgonObject *));
+      new_instance(argv[0], (argc - 1) * sizeof(ArgonObject *));
   new_obj->type = TYPE_TUPLE;
   new_obj->value.as_tuple.size = (argc - 1);
   return new_obj;

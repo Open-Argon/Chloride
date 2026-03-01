@@ -29,7 +29,7 @@ ArgonObject *ARRAY_CREATE(size_t argc, ArgonObject **argv, ArErr *err,
   (void)err;
   (void)state;
   (void)api;
-  ArgonObject *object = new_small_instance(ARRAY_TYPE, sizeof(darray_armem));
+  ArgonObject *object = new_instance(ARRAY_TYPE, sizeof(darray_armem));
   object->type = TYPE_ARRAY;
 
   object->value.as_array = darray_armem_create();
@@ -286,7 +286,7 @@ ArgonObject *ARGON_ARRAY___iter__(size_t argc, ArgonObject **argv,
     return ARGON_NULL;
   }
   ArgonObject *self = argv[0];
-  ArgonObject *iterator = new_small_instance(ARRAY_ITERATOR_TYPE, sizeof(struct as_array_iterator));
+  ArgonObject *iterator = new_instance(ARRAY_ITERATOR_TYPE, sizeof(struct as_array_iterator));
   iterator->value.as_array_iterator = (struct as_array_iterator*)((char*)iterator+sizeof(ArgonObject));
   iterator->value.as_array_iterator->current = 0;
   iterator->value.as_array_iterator->array = self->value.as_array;

@@ -6,4 +6,3 @@
 # while ((i = next())!=end_iteration) do
 
 for (x in range(1e7)) do
-  term.log(x)

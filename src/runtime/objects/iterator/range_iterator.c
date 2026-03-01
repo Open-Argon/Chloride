@@ -11,6 +11,7 @@
 #include "../signals/signals.h"
 #include "../string/string.h"
 #include <inttypes.h>
+#include <stdint.h>
 
 ArgonObject *ARGON_RANGE_ITERATOR_TYPE;
 
@@ -26,7 +27,7 @@ ArgonObject *ARGON_RANGE_ITERATOR_TYPE___new__(size_t argc, ArgonObject **argv,
     return ARGON_NULL;
   }
   ArgonObject *new_obj =
-      new_small_instance(argv[0], sizeof(struct as_range_iterator));
+      new_instance(argv[0], sizeof(struct as_range_iterator));
   new_obj->value.as_range_iterator =
       (struct as_range_iterator *)((char *)new_obj + sizeof(ArgonObject));
   return new_obj;
@@ -45,23 +46,44 @@ ArgonObject *ARGON_RANGE_ITERATOR_TYPE___init__(size_t argc, ArgonObject **argv,
     return ARGON_NULL;
   }
   ArgonObject *self = argv[0];
-  self->value.as_range_iterator->current = &small_ints[-small_ints_min];
-  self->value.as_range_iterator->step = &small_ints[-small_ints_min + 1];
   if (argc == 2) {
-    self->value.as_range_iterator->stop = argv[1];
+    if (argv[1]->type == TYPE_NUMBER && argv[1]->value.as_number->is_int64) {
+      self->value.as_range_iterator->is_int64 = true;
+      self->value.as_range_iterator->stop.i64 = argv[1]->value.as_number->n.i64;
+      self->value.as_range_iterator->current.i64 = 0;
+      self->value.as_range_iterator->step.i64 = 1;
+    } else {
+      self->value.as_range_iterator->is_int64 = false;
+      self->value.as_range_iterator->stop.obj = argv[1];
+      self->value.as_range_iterator->current.obj = &small_ints[-small_ints_min];
+      self->value.as_range_iterator->step.obj =
+          &small_ints[-small_ints_min + 1];
+    }
   } else {
-    self->value.as_range_iterator->current = argv[1];
-    self->value.as_range_iterator->stop = argv[2];
-
-    if (argc == 4) {
-      self->value.as_range_iterator->step = argv[3];
-      if (ARGON_NUMBER_TYPE___equal__(
-              2, (ArgonObject *[]){argv[3], &small_ints[-small_ints_min]}, err,
-              state, api) == ARGON_TRUE) {
-        *err = create_err(state->source_location.line,
-                          state->source_location.column,
-                          state->source_location.length, state->path,
-                          "Runtime Error", "step cannot be 0");
+    if ((argv[1]->type == TYPE_NUMBER && argv[1]->value.as_number->is_int64) &&
+        (argv[2]->type == TYPE_NUMBER && argv[2]->value.as_number->is_int64) &&
+        (argc != 4 || (argv[3]->type == TYPE_NUMBER &&
+                       argv[3]->value.as_number->is_int64))) {
+      self->value.as_range_iterator->is_int64 = true;
+      self->value.as_range_iterator->current.i64 =
+          argv[1]->value.as_number->n.i64;
+      self->value.as_range_iterator->stop.i64 = argv[2]->value.as_number->n.i64;
+      if (argc == 4) {
+        self->value.as_range_iterator->step.i64 =
+            argv[3]->value.as_number->n.i64;
+        if (self->value.as_range_iterator->step.i64 == 0) {
+          *err = create_err(state->source_location.line,
+                            state->source_location.column,
+                            state->source_location.length, state->path,
+                            "Runtime Error", "step cannot be 0");
+        }
+      }
+    } else {
+      self->value.as_range_iterator->is_int64 = false;
+      self->value.as_range_iterator->current.obj = argv[1];
+      self->value.as_range_iterator->stop.obj = argv[2];
+      if (argc == 4) {
+        self->value.as_range_iterator->step.obj = argv[3];
       }
     }
   }
@@ -98,29 +120,41 @@ ArgonObject *ARGON_RANGE_ITERATOR_TYPE___next__(size_t argc, ArgonObject **argv,
   }
   ArgonObject *self = argv[0];
   struct as_range_iterator *range_iterator = self->value.as_range_iterator;
-  ArgonObject *current_val = range_iterator->current;
-  ArgonObject *stop_val = range_iterator->stop;
-  ArgonObject *step_val = range_iterator->step;
+  if (range_iterator->is_int64) {
+    int64_t current_val = range_iterator->current.i64;
+    int64_t stop_val = range_iterator->stop.i64;
+    int64_t step_val = range_iterator->step.i64;
 
-  if ((ARGON_NUMBER_TYPE___greater_than__(
-           2, (ArgonObject *[]){step_val, &small_ints[-small_ints_min]}, err,
-           state, api) == ARGON_TRUE &&
-       ARGON_NUMBER_TYPE___greater_than_equal__(
-           2, (ArgonObject *[]){current_val, stop_val}, err, state, api) ==
-           ARGON_TRUE) ||
-      ((ARGON_NUMBER_TYPE___less_than__(
-            2, (ArgonObject *[]){step_val, &small_ints[-small_ints_min]}, err,
-            state, api) == ARGON_TRUE &&
-        ARGON_NUMBER_TYPE___less_than_equal__(
-            2, (ArgonObject *[]){current_val, stop_val}, err, state, api) ==
-            ARGON_TRUE))) {
-    return END_ITERATION;
+    if ((step_val>0 && current_val>=stop_val) || (step_val<0 && current_val<=stop_val)) {
+      return END_ITERATION;
+    }
+    range_iterator->current.i64 = current_val+step_val;
+    return new_number_object_from_int64(current_val);
+  } else {
+    ArgonObject *current_val = range_iterator->current.obj;
+    ArgonObject *stop_val = range_iterator->stop.obj;
+    ArgonObject *step_val = range_iterator->step.obj;
+
+    if ((ARGON_NUMBER_TYPE___greater_than__(
+             2, (ArgonObject *[]){step_val, &small_ints[-small_ints_min]}, err,
+             state, api) == ARGON_TRUE &&
+         ARGON_NUMBER_TYPE___greater_than_equal__(
+             2, (ArgonObject *[]){current_val, stop_val}, err, state, api) ==
+             ARGON_TRUE) ||
+        ((ARGON_NUMBER_TYPE___less_than__(
+              2, (ArgonObject *[]){step_val, &small_ints[-small_ints_min]}, err,
+              state, api) == ARGON_TRUE &&
+          ARGON_NUMBER_TYPE___less_than_equal__(
+              2, (ArgonObject *[]){current_val, stop_val}, err, state, api) ==
+              ARGON_TRUE))) {
+      return END_ITERATION;
+    }
+
+    range_iterator->current.obj = ARGON_NUMBER_TYPE___add__(
+        2, (ArgonObject *[]){current_val, step_val}, err, state, api);
+
+    return current_val;
   }
-
-  range_iterator->current = ARGON_NUMBER_TYPE___add__(
-      2, (ArgonObject *[]){current_val, step_val}, err, state, api);
-
-  return current_val;
 }
 
 void init_range_iterator() {

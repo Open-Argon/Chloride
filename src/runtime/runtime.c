@@ -655,6 +655,7 @@ ArgonObject *BASE_CLASS___init__(size_t argc, ArgonObject **argv, ArErr *err,
   if (argc != 1) {
     *err = create_err(0, 0, 0, "", "Runtime Error",
                       "__init__ expects 1 argument, got %" PRIu64, argc);
+    return ARGON_NULL;
   }
   return ARGON_NULL;
 }
@@ -666,8 +667,8 @@ ArgonObject *BASE_CLASS___setattr__(size_t argc, ArgonObject **argv, ArErr *err,
   if (argc != 3) {
     *err = create_err(0, 0, 0, "", "Runtime Error",
                       "__setattr__ expects 3 argument, got %" PRIu64, argc);
+    return ARGON_NULL;
   }
-
   char *name_text = argv[1]->value.as_str->data;
   size_t name_len = argv[1]->value.as_str->length;
 
@@ -786,7 +787,7 @@ ArgonObject *ARGON_STRING_TYPE___new__(size_t argc, ArgonObject **argv,
                    "__new__ expects at least 1 argument, got %" PRIu64, argc);
     return ARGON_NULL;
   }
-  ArgonObject *new_obj = new_small_instance(argv[0], sizeof(struct string_struct));
+  ArgonObject *new_obj = new_instance(argv[0], sizeof(struct string_struct));
   return new_obj;
 }
 
@@ -1047,7 +1048,7 @@ void bootstrap_types() {
 
   ARGON_NULL_TYPE = new_class();
   add_builtin_field(ARGON_NULL_TYPE, __base__, BASE_CLASS);
-  ARGON_NULL = new_small_instance(ARGON_NULL_TYPE, 0);
+  ARGON_NULL = new_instance(ARGON_NULL_TYPE, 0);
   ARGON_NULL->type = TYPE_NULL;
   ARGON_NULL->as_bool = false;
 
@@ -1056,9 +1057,9 @@ void bootstrap_types() {
 
   ARGON_BOOL_TYPE = new_class();
   add_builtin_field(ARGON_BOOL_TYPE, __base__, BASE_CLASS);
-  ARGON_TRUE = new_small_instance(ARGON_BOOL_TYPE, 0);
+  ARGON_TRUE = new_instance(ARGON_BOOL_TYPE, 0);
   ARGON_TRUE->type = TYPE_BOOL;
-  ARGON_FALSE = new_small_instance(ARGON_BOOL_TYPE, 0);
+  ARGON_FALSE = new_instance(ARGON_BOOL_TYPE, 0);
   ARGON_FALSE->type = TYPE_BOOL;
   ARGON_NULL->as_bool = false;
 
@@ -1477,7 +1478,8 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
     while (ip < bytecode_size && !err.exists) {
 
       uint8_t instruction = POP_BYTE();
-      // printf("instruction: %d\n", instruction);
+      // printf("instruction: %d %s:%zu:%zu\n", instruction, state->path,
+      //        state->source_location.line, state->source_location.column);
       // for (size_t i = 0; i < translated->bytecode.size; i++) {
       //   if (i == state->head)
       //     printf("\n");
@@ -1585,7 +1587,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       uint64_t number_of_parameters;
       POP_U64(number_of_parameters);
       ArgonObject *object =
-          new_small_instance(ARGON_FUNCTION_TYPE,
+          new_instance(ARGON_FUNCTION_TYPE,
                        sizeof(struct argon_function_struct) +
                            number_of_parameters * sizeof(struct string_struct));
       object->type = TYPE_FUNCTION;
@@ -1694,7 +1696,8 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       continue;
     }
     DO_IS_NOT_END_ITERATION: {
-      state->registers[0] = state->registers[0]==END_ITERATION ? ARGON_FALSE : ARGON_TRUE;
+      state->registers[0] =
+          state->registers[0] == END_ITERATION ? ARGON_FALSE : ARGON_TRUE;
       continue;
     }
     DO_BOOL: {
@@ -1745,12 +1748,12 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
     DO_INIT_CALL: {
       size_t length;
       POP_U64(length);
-      call_instance* new_call_instance = ar_alloc(sizeof(call_instance) + length * sizeof(ArgonObject *));
-      *new_call_instance =
-          (call_instance){state->call_instance, state->registers[0],
-                          (ArgonObject **)((char *)new_call_instance +
-                                           sizeof(call_instance)),
-                          length};
+      call_instance *new_call_instance =
+          ar_alloc(sizeof(call_instance) + length * sizeof(ArgonObject *));
+      *new_call_instance = (call_instance){
+          state->call_instance, state->registers[0],
+          (ArgonObject **)((char *)new_call_instance + sizeof(call_instance)),
+          length};
       state->call_instance = new_call_instance;
       continue;
     }

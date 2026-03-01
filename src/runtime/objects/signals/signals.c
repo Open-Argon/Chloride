@@ -16,7 +16,7 @@ void init_signals() {
   add_builtin_field(SIGNAL_CLASS, __name__,
                     new_string_object_null_terminated("signal"));
 
-  END_ITERATION = new_small_instance(SIGNAL_CLASS, 0);
+  END_ITERATION = new_instance(SIGNAL_CLASS, 0);
   add_builtin_field(END_ITERATION, __name__,
                     new_string_object_null_terminated("end_iteration"));
 }

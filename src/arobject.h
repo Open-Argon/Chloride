@@ -222,9 +222,19 @@ struct as_number {
 };
 
 struct as_range_iterator {
-  ArgonObject*current;
-  ArgonObject*stop;
-  ArgonObject*step;
+  bool is_int64;
+  union {
+  ArgonObject*obj;
+  int64_t i64;
+  } current;
+  union {
+  ArgonObject*obj;
+  int64_t i64;
+  } stop;
+  union {
+  ArgonObject*obj;
+  int64_t i64;
+  } step;
 };
 
 struct as_array_iterator {
