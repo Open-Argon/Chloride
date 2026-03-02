@@ -33,7 +33,7 @@ ParsedValueReturn parse_access(char *file, DArray *tokens, size_t *index,
   if (token->type != TOKEN_IDENTIFIER) {
     free_parsed(parsedValue);
     free(parsedValue);
-    return (ParsedValueReturn){create_err(token->line, token->column,
+    return (ParsedValueReturn){path_specific_create_err(token->line, token->column,
                                           token->length, file, "Syntax Error",
                                           "expected identifier after dot"),
                                NULL};

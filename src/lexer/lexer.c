@@ -23,7 +23,7 @@ ArErr lexer(LexerState state) {
   int token;
   while ((token = yylex(yyscanner)) != 0) {
     if (token == TOKEN_INVALID) {
-      ArErr err = create_err(state.current_line + 1, state.current_column + 1,
+      ArErr err = path_specific_create_err(state.current_line + 1, state.current_column + 1,
                              yyget_leng(yyscanner), state.path, "Syntax Error",
                              "Invalid Token '%s'", yyget_text(yyscanner));
       yylex_destroy(yyscanner);

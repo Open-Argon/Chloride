@@ -30,7 +30,7 @@ ParsedValueReturn parse_import(char *file, DArray *tokens, size_t *index) {
   if (parsedFile.err.exists) {
     return parsedFile;
   } else if (!parsedFile.value) {
-    return (ParsedValueReturn){create_err(token->line, token->column,
+    return (ParsedValueReturn){path_specific_create_err(token->line, token->column,
                                           token->length, file, "Syntax Error",
                                           "expected a value"),
                                NULL};
@@ -64,7 +64,7 @@ ParsedValueReturn parse_import(char *file, DArray *tokens, size_t *index) {
         free_parsed(parsedFile.value);
         free(parsedFile.value);
         return (ParsedValueReturn){
-            create_err(token->line, token->column, token->length, file,
+            path_specific_create_err(token->line, token->column, token->length, file,
                        "Syntax Error", "expected identifier"),
             NULL};
       }
@@ -99,7 +99,7 @@ ParsedValueReturn parse_import(char *file, DArray *tokens, size_t *index) {
             free(parsedFile.value);
             darray_free(&import.expose, free_parameter);
             return (ParsedValueReturn){
-                create_err(token->line, token->column, token->length, file,
+                path_specific_create_err(token->line, token->column, token->length, file,
                            "Syntax Error", "expected identifier"),
                 NULL};
           }
@@ -131,7 +131,7 @@ ParsedValueReturn parse_import(char *file, DArray *tokens, size_t *index) {
                 darray_free(&import.expose, free);
                 free(exposeAs.identifier);
                 return (ParsedValueReturn){
-                    create_err(token->line, token->column, token->length, file,
+                    path_specific_create_err(token->line, token->column, token->length, file,
                                "Syntax Error", "expected identifier"),
                     NULL};
               }
@@ -161,7 +161,7 @@ ParsedValueReturn parse_import(char *file, DArray *tokens, size_t *index) {
         free_parsed(parsedFile.value);
         free(parsedFile.value);
         return (ParsedValueReturn){
-            create_err(token->line, token->column, token->length, file,
+            path_specific_create_err(token->line, token->column, token->length, file,
                        "Syntax Error", "expected identifier or asterisk"),
             NULL};
       }

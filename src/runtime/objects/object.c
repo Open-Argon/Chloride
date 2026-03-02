@@ -192,7 +192,7 @@ int64_t hash_object(ArgonObject *object, ArErr *err, RuntimeState *state) {
   if (hash_result->type != TYPE_NUMBER ||
       !hash_result->value.as_number->is_int64) {
     *err =
-        create_err(err->line, err->column, err->length, err->path, "Hash Error",
+        create_err("Hash Error",
                    "hash result needs to be a 64 bit integer.");
     return 0;
   }

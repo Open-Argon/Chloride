@@ -22,7 +22,7 @@ ArgonObject *ARGON_RANGE_ITERATOR_TYPE___new__(size_t argc, ArgonObject **argv,
   (void)state;
   if (argc < 1) {
     *err =
-        create_err(0, 0, 0, "", "Runtime Error",
+        create_err("Runtime Error",
                    "__new__ expects at least 1 argument, got %" PRIu64, argc);
     return ARGON_NULL;
   }
@@ -39,10 +39,8 @@ ArgonObject *ARGON_RANGE_ITERATOR_TYPE___init__(size_t argc, ArgonObject **argv,
   (void)api;
   (void)state;
   if (argc < 2 || argc > 4) {
-    *err =
-        create_err(state->source_location.line, state->source_location.column,
-                   state->source_location.length, state->path, "Runtime Error",
-                   "__init__ expects 2 to 4 arguments, got %" PRIu64, argc);
+    *err = create_err("Runtime Error",
+                      "__init__ expects 2 to 4 arguments, got %" PRIu64, argc);
     return ARGON_NULL;
   }
   ArgonObject *self = argv[0];
@@ -72,10 +70,7 @@ ArgonObject *ARGON_RANGE_ITERATOR_TYPE___init__(size_t argc, ArgonObject **argv,
         self->value.as_range_iterator->step.i64 =
             argv[3]->value.as_number->n.i64;
         if (self->value.as_range_iterator->step.i64 == 0) {
-          *err = create_err(state->source_location.line,
-                            state->source_location.column,
-                            state->source_location.length, state->path,
-                            "Runtime Error", "step cannot be 0");
+          *err = create_err("Runtime Error", "step cannot be 0");
         }
       }
     } else {
@@ -96,10 +91,8 @@ ArgonObject *ARGON_RANGE_ITERATOR_TYPE___iter__(size_t argc, ArgonObject **argv,
   (void)api;
   (void)state;
   if (argc != 1) {
-    *err =
-        create_err(state->source_location.line, state->source_location.column,
-                   state->source_location.length, state->path, "Runtime Error",
-                   "__iter__ expects 1 argument, got %" PRIu64, argc);
+    *err = create_err("Runtime Error",
+                      "__iter__ expects 1 argument, got %" PRIu64, argc);
     return ARGON_NULL;
   }
   ArgonObject *self = argv[0];
@@ -112,10 +105,8 @@ ArgonObject *ARGON_RANGE_ITERATOR_TYPE___next__(size_t argc, ArgonObject **argv,
   (void)api;
   (void)state;
   if (argc != 1) {
-    *err =
-        create_err(state->source_location.line, state->source_location.column,
-                   state->source_location.length, state->path, "Runtime Error",
-                   "__next__ expects 1 argument, got %" PRIu64, argc);
+    *err = create_err("Runtime Error",
+                      "__next__ expects 1 argument, got %" PRIu64, argc);
     return ARGON_NULL;
   }
   ArgonObject *self = argv[0];
@@ -125,10 +116,11 @@ ArgonObject *ARGON_RANGE_ITERATOR_TYPE___next__(size_t argc, ArgonObject **argv,
     int64_t stop_val = range_iterator->stop.i64;
     int64_t step_val = range_iterator->step.i64;
 
-    if ((step_val>0 && current_val>=stop_val) || (step_val<0 && current_val<=stop_val)) {
+    if ((step_val > 0 && current_val >= stop_val) ||
+        (step_val < 0 && current_val <= stop_val)) {
       return END_ITERATION;
     }
-    range_iterator->current.i64 = current_val+step_val;
+    range_iterator->current.i64 = current_val + step_val;
     return new_number_object_from_int64(current_val);
   } else {
     ArgonObject *current_val = range_iterator->current.obj;

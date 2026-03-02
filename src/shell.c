@@ -51,7 +51,7 @@ int execute_code(char *context, char *path, Stack *scope,
   err = lexer(state);
   if (err.exists) {
     darray_free(&tokens, free_token);
-    output_err(err);
+    output_err(&err);
     return 1;
   }
 
@@ -63,7 +63,7 @@ int execute_code(char *context, char *path, Stack *scope,
   darray_free(&tokens, free_token);
   if (err.exists) {
     darray_free(&ast, (void (*)(void *))free_parsed);
-    output_err(err);
+    output_err(&err);
     return 1;
   }
 
@@ -78,7 +78,7 @@ int execute_code(char *context, char *path, Stack *scope,
     darray_free(&__translated.bytecode, NULL);
     free(__translated.constants.data);
     hashmap_free(__translated.constants.hashmap, NULL);
-    output_err(err);
+    output_err(&err);
     return 1;
   }
 
@@ -110,7 +110,7 @@ int execute_code(char *context, char *path, Stack *scope,
   init_runtime_state(runtime_state, translated, path_alloc);
   runtime(translated, *runtime_state, scope, &err);
   if (err.exists) {
-    output_err(err);
+    output_err(&err);
     return 1;
   }
   return 0;

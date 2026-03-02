@@ -120,7 +120,7 @@ size_t translate_operation(Translated *translated, ParsedOperation *operation,
       push_instruction_byte(translated, OP_IN);
       break;
     default:
-      *err = create_err(operation->line, operation->column, operation->length,
+      *err = path_specific_create_err(operation->line, operation->column, operation->length,
                         translated->path, "Syntax Error", "unknown operation");
       return 0;
     }

@@ -263,7 +263,7 @@ ParsedValueReturn parse_string(Token* token, bool to_unquote) {
     if (!parsedString->string) {
       free(parsedValue);
       free(parsedString);
-      return (ParsedValueReturn){create_err(token->line, token->column,
+      return (ParsedValueReturn){path_specific_create_err(token->line, token->column,
                                             token->length, NULL, "String Error",
                                             "failed to unquote string %s", token->value),
                                  NULL};

@@ -20,7 +20,7 @@ ParsedValueReturn parse_class(char *file, DArray *tokens, size_t *index) {
   Token *first_token = darray_get(tokens, *index);
   if (first_token->type != TOKEN_IDENTIFIER) {
     return (ParsedValueReturn){
-        create_err(first_token->line, first_token->column, first_token->length,
+        path_specific_create_err(first_token->line, first_token->column, first_token->length,
                    file, "Syntax Error", "expected identifier"),
         NULL};
   }
@@ -43,7 +43,7 @@ ParsedValueReturn parse_class(char *file, DArray *tokens, size_t *index) {
     if (parsedParent.err.exists) {
       return parsedParent;
     } else if (!parsedParent.value) {
-      return (ParsedValueReturn){create_err(token->line, token->column,
+      return (ParsedValueReturn){path_specific_create_err(token->line, token->column,
                                             token->length, file, "Syntax Error",
                                             "expected a value"),
                                  NULL};
@@ -56,7 +56,7 @@ ParsedValueReturn parse_class(char *file, DArray *tokens, size_t *index) {
     }
     token = darray_get(tokens, *index);
     if (token->type != TOKEN_RPAREN) {
-      return (ParsedValueReturn){create_err(token->line, token->column,
+      return (ParsedValueReturn){path_specific_create_err(token->line, token->column,
                                             token->length, file, "Syntax Error",
                                             "expected closing parentheses"),
                                  NULL};
@@ -68,7 +68,7 @@ ParsedValueReturn parse_class(char *file, DArray *tokens, size_t *index) {
   if (parsedBody.err.exists) {
     return parsedBody;
   } else if (!parsedBody.value) {
-    return (ParsedValueReturn){create_err(token->line, token->column,
+    return (ParsedValueReturn){path_specific_create_err(token->line, token->column,
                                           token->length, file, "Syntax Error",
                                           "expected body"),
                                NULL};

@@ -58,7 +58,7 @@ ParsedValueReturn parse_array(char *file, DArray *tokens, size_t *index) {
       } else if (token->type != TOKEN_COMMA) {
         free_parsed(parsedValue);
         free(parsedValue);
-        return (ParsedValueReturn){create_err(token->line, token->column, token->length, file, "Syntax Error", "expected comma"), NULL};
+        return (ParsedValueReturn){path_specific_create_err(token->line, token->column, token->length, file, "Syntax Error", "expected comma"), NULL};
       }
       (*index)++;
       err = error_if_finished(file, tokens, index);

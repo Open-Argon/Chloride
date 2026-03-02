@@ -43,7 +43,7 @@ ParsedValueReturn parse_parentheses(char *file, DArray *tokens, size_t *index) {
         break;
       } else if (token->type != TOKEN_COMMA) {
         darray_free(&list, (void (*)(void *))free_parsed);
-        return (ParsedValueReturn){create_err(token->line, token->column,
+        return (ParsedValueReturn){path_specific_create_err(token->line, token->column,
                                               token->length, file,
                                               "Syntax Error", "expected comma"),
                                    NULL};
@@ -75,7 +75,7 @@ ParsedValueReturn parse_parentheses(char *file, DArray *tokens, size_t *index) {
           darray_free(&list, (void (*)(void *))free_parsed);
           darray_free(&parameters, free_parameter);
           return (ParsedValueReturn){
-              create_err(token->line, token->column, token->length, file,
+              path_specific_create_err(token->line, token->column, token->length, file,
                          "Syntax Error", "expected identifier"),
               NULL};
         }
@@ -94,7 +94,7 @@ ParsedValueReturn parse_parentheses(char *file, DArray *tokens, size_t *index) {
     }
   }
   if (list.size != 1) {
-    return (ParsedValueReturn){create_err(token->line, token->column,
+    return (ParsedValueReturn){path_specific_create_err(token->line, token->column,
                                           token->length, file, "Syntax Error",
                                           "expected 1 body"),
                                NULL};

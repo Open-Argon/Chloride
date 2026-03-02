@@ -141,7 +141,7 @@ ArgonObject *ARGON_NUMBER_TYPE___new__(size_t argc, ArgonObject **argv,
                                        ArgonNativeAPI *api) {
   (void)api;
   if (argc != 2) {
-    *err = create_err(0, 0, 0, "", "Runtime Error",
+    *err = create_err( "Runtime Error",
                       "__new__ expects 2 arguments, got %" PRIu64, argc);
     return ARGON_NULL;
   }
@@ -161,7 +161,7 @@ ArgonObject *ARGON_NUMBER_TYPE___new__(size_t argc, ArgonObject **argv,
   ArgonObject *type_name = get_builtin_field_for_class(
       get_builtin_field(object, __class__), __name__, object);
   *err = create_err(
-      0, 0, 0, "", "Runtime Error", "cannot convert type '%.*s' to number",
+       "Runtime Error", "cannot convert type '%.*s' to number",
       type_name->value.as_str->length, type_name->value.as_str->data);
   return ARGON_NULL;
 }
@@ -172,7 +172,7 @@ ArgonObject *ARGON_NUMBER_TYPE___number__(size_t argc, ArgonObject **argv,
   (void)api;
   (void)state;
   if (argc != 1) {
-    *err = create_err(0, 0, 0, "", "Runtime Error",
+    *err = create_err( "Runtime Error",
                       "__number__ expects 1 argument, got %" PRIu64, argc);
     return ARGON_NULL;
   }
@@ -185,7 +185,7 @@ ArgonObject *ARGON_NUMBER_TYPE___boolean__(size_t argc, ArgonObject **argv,
   (void)api;
   (void)state;
   if (argc != 1) {
-    *err = create_err(0, 0, 0, "", "Runtime Error",
+    *err = create_err( "Runtime Error",
                       "__boolean__ expects 1 argument, got %" PRIu64, argc);
     return ARGON_NULL;
   }
@@ -198,7 +198,7 @@ ArgonObject *ARGON_NUMBER_TYPE___negation__(size_t argc, ArgonObject **argv,
   (void)api;
   (void)state;
   if (argc != 1) {
-    *err = create_err(0, 0, 0, "", "Runtime Error",
+    *err = create_err( "Runtime Error",
                       "__negation__ expects 1 argument, got %" PRIu64, argc);
     return ARGON_NULL;
   }
@@ -219,7 +219,7 @@ ArgonObject *ARGON_NUMBER_TYPE___add__(size_t argc, ArgonObject **argv,
   (void)api;
   (void)state;
   if (argc != 2) {
-    *err = create_err(0, 0, 0, "", "Runtime Error",
+    *err = create_err( "Runtime Error",
                       "__add__ expects 2 arguments, got %" PRIu64, argc);
     return ARGON_NULL;
   }
@@ -227,7 +227,7 @@ ArgonObject *ARGON_NUMBER_TYPE___add__(size_t argc, ArgonObject **argv,
     ArgonObject *type_name = get_builtin_field_for_class(
         get_builtin_field(argv[1], __class__), __name__, argv[1]);
     *err = create_err(
-        0, 0, 0, "", "Runtime Error",
+         "Runtime Error",
         "__add__ cannot perform addition between a number and %.*s",
         type_name->value.as_str->length, type_name->value.as_str->data);
     return ARGON_NULL;
@@ -285,7 +285,7 @@ ArgonObject *ARGON_NUMBER_TYPE___subtract__(size_t argc, ArgonObject **argv,
   (void)api;
   (void)state;
   if (argc != 2) {
-    *err = create_err(0, 0, 0, "", "Runtime Error",
+    *err = create_err( "Runtime Error",
                       "__subtract__ expects 2 arguments, got %" PRIu64, argc);
     return ARGON_NULL;
   }
@@ -293,7 +293,7 @@ ArgonObject *ARGON_NUMBER_TYPE___subtract__(size_t argc, ArgonObject **argv,
     ArgonObject *type_name = get_builtin_field_for_class(
         get_builtin_field(argv[1], __class__), __name__, argv[1]);
     *err = create_err(
-        0, 0, 0, "", "Runtime Error",
+         "Runtime Error",
         "__subtract__ cannot perform subtraction between number and %.*s",
         type_name->value.as_str->length, type_name->value.as_str->data);
     return ARGON_NULL;
@@ -353,7 +353,7 @@ ArgonObject *ARGON_NUMBER_TYPE___multiply__(size_t argc, ArgonObject **argv,
   (void)api;
   (void)state;
   if (argc != 2) {
-    *err = create_err(0, 0, 0, "", "Runtime Error",
+    *err = create_err( "Runtime Error",
                       "__multiply__ expects 2 arguments, got %" PRIu64, argc);
     return ARGON_NULL;
   }
@@ -361,7 +361,7 @@ ArgonObject *ARGON_NUMBER_TYPE___multiply__(size_t argc, ArgonObject **argv,
     ArgonObject *type_name = get_builtin_field_for_class(
         get_builtin_field(argv[1], __class__), __name__, argv[1]);
     *err = create_err(
-        0, 0, 0, "", "Runtime Error",
+         "Runtime Error",
         "__multiply__ cannot perform multiplication between number and %.*s",
         type_name->value.as_str->length, type_name->value.as_str->data);
     return ARGON_NULL;
@@ -421,7 +421,7 @@ ArgonObject *ARGON_NUMBER_TYPE___exponent__(size_t argc, ArgonObject **argv,
   (void)api;
   (void)state;
   if (argc != 2) {
-    *err = create_err(0, 0, 0, "", "Runtime Error",
+    *err = create_err( "Runtime Error",
                       "__exponent__ expects 2 arguments, got %" PRIu64, argc);
     return ARGON_NULL;
   }
@@ -429,7 +429,7 @@ ArgonObject *ARGON_NUMBER_TYPE___exponent__(size_t argc, ArgonObject **argv,
     ArgonObject *type_name = get_builtin_field_for_class(
         get_builtin_field(argv[1], __class__), __name__, argv[1]);
     *err = create_err(
-        0, 0, 0, "", "Runtime Error",
+         "Runtime Error",
         "__exponent__ cannot perform multiplication between number and %.*s",
         type_name->value.as_str->length, type_name->value.as_str->data);
     return ARGON_NULL;
@@ -513,8 +513,7 @@ ArgonObject *ARGON_NUMBER_TYPE___exponent__(size_t argc, ArgonObject **argv,
     /* 0^0 or 0^negative */
     if (mpq_sgn(a_GMP) == 0 && mpq_sgn(b_GMP) <= 0) {
       *err =
-          create_err(state->source_location.line, state->source_location.column,
-                     state->source_location.length, state->path, "Math Error",
+          create_err("Math Error",
                      "0 cannot be raised to zero or a negative power");
 
       mpq_clear(a_GMP);
@@ -526,8 +525,7 @@ ArgonObject *ARGON_NUMBER_TYPE___exponent__(size_t argc, ArgonObject **argv,
     /* negative base with non-integer exponent → complex */
     if (mpq_sgn(a_GMP) < 0 && mpz_cmp_ui(mpq_denref(b_GMP), 1) != 0) {
       *err = create_err(
-          state->source_location.line, state->source_location.column,
-          state->source_location.length, state->path, "Math Error",
+           "Math Error",
           "Negative base with fractional exponent is not a real number");
 
       mpq_clear(a_GMP);
@@ -595,7 +593,7 @@ ArgonObject *ARGON_NUMBER_TYPE___hash__(size_t argc, ArgonObject **argv,
   (void)api;
   (void)state;
   if (argc != 1) {
-    *err = create_err(0, 0, 0, "", "Runtime Error",
+    *err = create_err( "Runtime Error",
                       "__hash__ expects 1 argument, got %" PRIu64, argc);
   }
   uint64_t hash;
@@ -613,7 +611,7 @@ ArgonObject *ARGON_NUMBER_TYPE___division__(size_t argc, ArgonObject **argv,
   (void)api;
   (void)state;
   if (argc != 2) {
-    *err = create_err(0, 0, 0, "", "Runtime Error",
+    *err = create_err( "Runtime Error",
                       "__division__ expects 2 arguments, got %" PRIu64, argc);
     return ARGON_NULL;
   }
@@ -621,7 +619,7 @@ ArgonObject *ARGON_NUMBER_TYPE___division__(size_t argc, ArgonObject **argv,
     ArgonObject *type_name = get_builtin_field_for_class(
         get_builtin_field(argv[1], __class__), __name__, argv[1]);
     *err = create_err(
-        0, 0, 0, "", "Runtime Error",
+         "Runtime Error",
         "__division__ cannot perform division between number and %.*s",
         type_name->value.as_str->length, type_name->value.as_str->data);
     return ARGON_NULL;
@@ -632,8 +630,7 @@ ArgonObject *ARGON_NUMBER_TYPE___division__(size_t argc, ArgonObject **argv,
     int64_t b = argv[1]->value.as_number->n.i64;
     if (!b) {
       *err =
-          create_err(state->source_location.line, state->source_location.column,
-                     state->source_location.length, state->path,
+          create_err(
                      "Zero Division Error", "division by zero");
       return NULL;
     }
@@ -661,9 +658,7 @@ ArgonObject *ARGON_NUMBER_TYPE___division__(size_t argc, ArgonObject **argv,
     } else {
       mpq_set(a_GMP, *argv[0]->value.as_number->n.mpq);
       if (!argv[1]->value.as_number->n.i64) {
-        *err = create_err(state->source_location.line,
-                          state->source_location.column,
-                          state->source_location.length, state->path,
+        *err = create_err(
                           "Zero Division Error", "division by zero");
         return NULL;
       }
@@ -685,7 +680,7 @@ ArgonObject *ARGON_NUMBER_TYPE___floor_division__(size_t argc,
   (void)api;
   (void)state;
   if (argc != 2) {
-    *err = create_err(0, 0, 0, "", "Runtime Error",
+    *err = create_err( "Runtime Error",
                       "__floor_division__ expects 2 arguments, got %" PRIu64,
                       argc);
     return ARGON_NULL;
@@ -693,7 +688,7 @@ ArgonObject *ARGON_NUMBER_TYPE___floor_division__(size_t argc,
   if (argv[1]->type != TYPE_NUMBER) {
     ArgonObject *type_name = get_builtin_field_for_class(
         get_builtin_field(argv[1], __class__), __name__, argv[1]);
-    *err = create_err(0, 0, 0, "", "Runtime Error",
+    *err = create_err( "Runtime Error",
                       "__floor_division__ cannot perform floor division "
                       "between number and %.*s",
                       type_name->value.as_str->length,
@@ -706,8 +701,7 @@ ArgonObject *ARGON_NUMBER_TYPE___floor_division__(size_t argc,
     int64_t b = argv[1]->value.as_number->n.i64;
     if (!b) {
       *err =
-          create_err(state->source_location.line, state->source_location.column,
-                     state->source_location.length, state->path,
+          create_err(
                      "Zero Division Error", "floor division by zero");
       return NULL;
     }
@@ -731,9 +725,7 @@ ArgonObject *ARGON_NUMBER_TYPE___floor_division__(size_t argc,
     } else {
       mpq_set(a_GMP, *argv[0]->value.as_number->n.mpq);
       if (!argv[1]->value.as_number->n.i64) {
-        *err = create_err(state->source_location.line,
-                          state->source_location.column,
-                          state->source_location.length, state->path,
+        *err = create_err(
                           "Zero Division Error", "floor division by zero");
         return NULL;
       }
@@ -753,7 +745,7 @@ ArgonObject *ARGON_NUMBER_TYPE___modulo__(size_t argc, ArgonObject **argv,
   (void)api;
   (void)state;
   if (argc != 2) {
-    *err = create_err(0, 0, 0, "", "Runtime Error",
+    *err = create_err( "Runtime Error",
                       "__modulo__ expects 2 arguments, got %" PRIu64, argc);
     return ARGON_NULL;
   }
@@ -761,7 +753,7 @@ ArgonObject *ARGON_NUMBER_TYPE___modulo__(size_t argc, ArgonObject **argv,
     ArgonObject *type_name = get_builtin_field_for_class(
         get_builtin_field(argv[1], __class__), __name__, argv[1]);
     *err = create_err(
-        0, 0, 0, "", "Runtime Error",
+         "Runtime Error",
         "__modulo__ cannot perform modulo between number and %.*s",
         type_name->value.as_str->length, type_name->value.as_str->data);
     return ARGON_NULL;
@@ -772,8 +764,7 @@ ArgonObject *ARGON_NUMBER_TYPE___modulo__(size_t argc, ArgonObject **argv,
     int64_t b = argv[1]->value.as_number->n.i64;
     if (!b) {
       *err =
-          create_err(state->source_location.line, state->source_location.column,
-                     state->source_location.length, state->path,
+          create_err(
                      "Zero Division Error", "modulo by zero");
       return NULL;
     }
@@ -797,9 +788,7 @@ ArgonObject *ARGON_NUMBER_TYPE___modulo__(size_t argc, ArgonObject **argv,
     } else {
       mpq_set(a_GMP, *argv[0]->value.as_number->n.mpq);
       if (!argv[1]->value.as_number->n.i64) {
-        *err = create_err(state->source_location.line,
-                          state->source_location.column,
-                          state->source_location.length, state->path,
+        *err = create_err(
                           "Zero Division Error", "modulo by zero");
         return NULL;
       }
@@ -819,7 +808,7 @@ ArgonObject *ARGON_NUMBER_TYPE___equal__(size_t argc, ArgonObject **argv,
   (void)api;
   (void)state;
   if (argc != 2) {
-    *err = create_err(0, 0, 0, "", "Runtime Error",
+    *err = create_err( "Runtime Error",
                       "__equal__ expects 2 arguments, got %" PRIu64, argc);
     return ARGON_NULL;
   }
@@ -857,7 +846,7 @@ ArgonObject *ARGON_NUMBER_TYPE___not_equal__(size_t argc, ArgonObject **argv,
   (void)api;
   (void)state;
   if (argc != 2) {
-    *err = create_err(0, 0, 0, "", "Runtime Error",
+    *err = create_err( "Runtime Error",
                       "__not_equal__ expects 2 arguments, got %" PRIu64, argc);
     return ARGON_NULL;
   }
@@ -895,14 +884,14 @@ ArgonObject *ARGON_NUMBER_TYPE___less_than__(size_t argc, ArgonObject **argv,
   (void)api;
   (void)state;
   if (argc != 2) {
-    *err = create_err(0, 0, 0, "", "Runtime Error",
+    *err = create_err( "Runtime Error",
                       "__less_than__ expects 2 arguments, got %" PRIu64, argc);
     return ARGON_NULL;
   }
   if (argv[1]->type != TYPE_NUMBER) {
     ArgonObject *type_name = get_builtin_field_for_class(
         get_builtin_field(argv[1], __class__), __name__, argv[1]);
-    *err = create_err(0, 0, 0, "", "Runtime Error",
+    *err = create_err( "Runtime Error",
                       "cannot perform < between number and %.*s",
                       type_name->value.as_str->length,
                       type_name->value.as_str->data);
@@ -941,7 +930,7 @@ ArgonObject *ARGON_NUMBER_TYPE___less_than_equal__(size_t argc,
   (void)api;
   (void)state;
   if (argc != 2) {
-    *err = create_err(0, 0, 0, "", "Runtime Error",
+    *err = create_err( "Runtime Error",
                       "__less_than_equal__ expects 2 arguments, got %" PRIu64,
                       argc);
     return ARGON_NULL;
@@ -949,7 +938,7 @@ ArgonObject *ARGON_NUMBER_TYPE___less_than_equal__(size_t argc,
   if (argv[1]->type != TYPE_NUMBER) {
     ArgonObject *type_name = get_builtin_field_for_class(
         get_builtin_field(argv[1], __class__), __name__, argv[1]);
-    *err = create_err(0, 0, 0, "", "Runtime Error",
+    *err = create_err( "Runtime Error",
                       "cannot perform <= between number and %.*s",
                       type_name->value.as_str->length,
                       type_name->value.as_str->data);
@@ -987,14 +976,14 @@ ArgonObject *ARGON_NUMBER_TYPE___greater_than__(size_t argc, ArgonObject **argv,
   (void)state;
   if (argc != 2) {
     *err =
-        create_err(0, 0, 0, "", "Runtime Error",
+        create_err( "Runtime Error",
                    "__greater_than__ expects 2 arguments, got %" PRIu64, argc);
     return ARGON_NULL;
   }
   if (argv[1]->type != TYPE_NUMBER) {
     ArgonObject *type_name = get_builtin_field_for_class(
         get_builtin_field(argv[1], __class__), __name__, argv[1]);
-    *err = create_err(0, 0, 0, "", "Runtime Error",
+    *err = create_err( "Runtime Error",
                       "cannot perform > between number and %.*s",
                       type_name->value.as_str->length,
                       type_name->value.as_str->data);
@@ -1034,14 +1023,14 @@ ArgonObject *ARGON_NUMBER_TYPE___greater_than_equal__(size_t argc,
   (void)state;
   if (argc != 2) {
     *err = create_err(
-        0, 0, 0, "", "Runtime Error",
+         "Runtime Error",
         "__greater_than_equal__ expects 2 arguments, got %" PRIu64, argc);
     return ARGON_NULL;
   }
   if (argv[1]->type != TYPE_NUMBER) {
     ArgonObject *type_name = get_builtin_field_for_class(
         get_builtin_field(argv[1], __class__), __name__, argv[1]);
-    *err = create_err(0, 0, 0, "", "Runtime Error",
+    *err = create_err( "Runtime Error",
                       "cannot perform >= between number and %.*s",
                       type_name->value.as_str->length,
                       type_name->value.as_str->data);
@@ -1078,7 +1067,7 @@ ArgonObject *ARGON_NUMBER_TYPE___string__(size_t argc, ArgonObject **argv,
   (void)api;
   (void)state;
   if (argc != 1) {
-    *err = create_err(0, 0, 0, "", "Runtime Error",
+    *err = create_err( "Runtime Error",
                       "__string__ expects 1 argument, got %" PRIu64, argc);
     return NULL;
   }
@@ -1158,7 +1147,7 @@ ArgonObject *ARGON_NUMBER_TYPE___string__(size_t argc, ArgonObject **argv,
   if (!out) {
     free(mant);
     mpf_clear(f);
-    *err = create_err(0, 0, 0, "", "Runtime Error", "out of memory");
+    *err = create_err( "Runtime Error", "out of memory");
     return NULL;
   }
 

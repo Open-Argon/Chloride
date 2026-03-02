@@ -42,7 +42,7 @@ ParsedValueReturn parse_assign(char *file, DArray *tokens,
         free(assign_to);
         darray_free(&function_args, free_parameter);
         return (ParsedValueReturn){
-            create_err(
+            path_specific_create_err(
                 token->line, token->column, token->length, file, "Syntax Error",
                 "parameter names need to start with a letter "
                 "or _, "
@@ -78,7 +78,7 @@ ParsedValueReturn parse_assign(char *file, DArray *tokens,
     }
     break;
   default:;
-    ArErr err = create_err(token->line, token->column, token->length, file,
+    ArErr err = path_specific_create_err(token->line, token->column, token->length, file,
                            "Syntax Error", "can't assign to %s",
                            ValueTypeNames[assign_to->type]);
     free_parsed(assign_to);
@@ -102,7 +102,7 @@ ParsedValueReturn parse_assign(char *file, DArray *tokens,
   if (!from.value) {
     free_parsed(assign_to);
     free(assign_to);
-    return (ParsedValueReturn){create_err(token->line, token->column,
+    return (ParsedValueReturn){path_specific_create_err(token->line, token->column,
                                           token->length, file, "Syntax Error",
                                           "expected body"),
                                NULL};

@@ -25,7 +25,7 @@ ArgonObject *create_ARGON_DICTIONARY_TYPE___init__(size_t argc,
   (void)api;
   (void)state;
   if (argc != 1) {
-    *err = create_err(0, 0, 0, "", "Runtime Error",
+    *err = create_err( "Runtime Error",
                       "__init__ expects 1 argument, got %" PRIu64, argc);
     return ARGON_NULL;
   }
@@ -43,7 +43,7 @@ ArgonObject *create_ARGON_DICTIONARY_TYPE___string__(size_t argc,
   (void)api;
   (void)state;
   if (argc != 1) {
-    *err = create_err(0, 0, 0, "", "Runtime Error",
+    *err = create_err( "Runtime Error",
                       "__string__ expects 1 argument, got %" PRIu64, argc);
     return ARGON_NULL;
   }
@@ -142,7 +142,7 @@ ArgonObject *create_ARGON_DICTIONARY_TYPE___contains__(size_t argc,
   (void)api;
   (void)state;
   if (argc != 2) {
-    *err = create_err(0, 0, 0, "", "Runtime Error",
+    *err = create_err( "Runtime Error",
                       "__contains__ expects 2 argument, got %" PRIu64, argc);
     return ARGON_NULL;
   }
@@ -162,7 +162,7 @@ ArgonObject *create_ARGON_DICTIONARY_TYPE___getitem__(size_t argc,
   (void)api;
   (void)state;
   if (argc != 2) {
-    *err = create_err(0, 0, 0, "", "Runtime Error",
+    *err = create_err( "Runtime Error",
                       "__getitem__ expects 2 argument, got %" PRIu64, argc);
     return ARGON_NULL;
   }
@@ -191,7 +191,7 @@ ArgonObject *create_ARGON_DICTIONARY_TYPE___setitem__(size_t argc,
   (void)api;
   (void)state;
   if (argc != 3) {
-    *err = create_err(0, 0, 0, "", "Runtime Error",
+    *err = create_err( "Runtime Error",
                       "__setitem__ expects 3 argument, got %" PRIu64, argc);
     return ARGON_NULL;
   }

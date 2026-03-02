@@ -5,13 +5,13 @@
  */
 
 #include "declaration.h"
+#include "../../err.h"
 #include "../../hash_data/hash_data.h"
 #include "../../hashmap/hashmap.h"
 #include "../../lexer/token.h"
 #include "../../memory.h"
 #include "../function/function.h"
 #include "../literals/literals.h"
-#include "../../err.h"
 #include "../parser.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -44,8 +44,9 @@ ParsedValueReturn parse_declaration(char *file, DArray *tokens, size_t *index) {
       free_parsed(parsedValue);
       free(parsedValue);
       return (ParsedValueReturn){
-          create_err(token->line, token->column, token->length, file,
-                     "Syntax Error", "declaration requires an identifier"),
+          path_specific_create_err(token->line, token->column, token->length,
+                                   file, "Syntax Error",
+                                   "declaration requires an identifier"),
           NULL};
     }
     declaration->name =
@@ -93,7 +94,7 @@ ParsedValueReturn parse_declaration(char *file, DArray *tokens, size_t *index) {
             free_parsed(parsedValue);
             free(parsedValue);
             return (ParsedValueReturn){
-                create_err(
+                path_specific_create_err(
                     token->line, token->column, token->length, file,
                     "Syntax Error",
                     "parameter names need to start with a letter or _, only "
@@ -107,10 +108,10 @@ ParsedValueReturn parse_declaration(char *file, DArray *tokens, size_t *index) {
             free_parsed(parsedValue);
             free(parsedValue);
             return (ParsedValueReturn){
-                create_err(token->line, token->column, token->length, file,
-                           "Syntax Error",
-                           "duplicate argument in function "
-                           "definition"),
+                path_specific_create_err(token->line, token->column,
+                                         token->length, file, "Syntax Error",
+                                         "duplicate argument in function "
+                                         "definition"),
                 NULL};
           }
           char *parameter_name = checked_malloc(token->length + 1);
@@ -148,8 +149,9 @@ ParsedValueReturn parse_declaration(char *file, DArray *tokens, size_t *index) {
             free_parsed(parsedValue);
             free(parsedValue);
             return (ParsedValueReturn){
-                create_err(token->line, token->column, token->length, file,
-                           "Syntax Error", "expected comma"),
+                path_specific_create_err(token->line, token->column,
+                                         token->length, file, "Syntax Error",
+                                         "expected comma"),
                 NULL};
           }
           (*index)++;
@@ -176,7 +178,8 @@ ParsedValueReturn parse_declaration(char *file, DArray *tokens, size_t *index) {
 
       ParsedValueReturn from = parse_token(file, tokens, index, true);
       if (from.err.exists) {
-        if (isFunction) darray_free(&parameters, free_parameter);
+        if (isFunction)
+          darray_free(&parameters, free_parameter);
         free_parsed(parsedValue);
         free(parsedValue);
         return from;
@@ -184,13 +187,14 @@ ParsedValueReturn parse_declaration(char *file, DArray *tokens, size_t *index) {
       free(declaration->from);
       declaration->from = from.value;
       if (!declaration->from) {
-        if (isFunction) darray_free(&parameters, free_parameter);
+        if (isFunction)
+          darray_free(&parameters, free_parameter);
         free_parsed(parsedValue);
         free(parsedValue);
-        return (ParsedValueReturn){create_err(token->line, token->column,
-                                              token->length, file,
-                                              "Syntax Error", "expected body"),
-                                   NULL};
+        return (ParsedValueReturn){
+            path_specific_create_err(token->line, token->column, token->length,
+                                     file, "Syntax Error", "expected body"),
+            NULL};
       }
     }
     if (isFunction) {

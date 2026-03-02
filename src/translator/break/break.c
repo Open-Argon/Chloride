@@ -12,7 +12,7 @@ size_t translate_parsed_break(Translated *translated,
                               ParsedContinueOrBreak *parsedBreak, ArErr *err) {
   if (!translated->break_jump.positions) {
     *err =
-        create_err(parsedBreak->line, parsedBreak->column, parsedBreak->length,
+        path_specific_create_err(parsedBreak->line, parsedBreak->column, parsedBreak->length,
                    translated->path, "Syntax Error", "nowhere to break to");
     return 0;
   }

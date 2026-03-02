@@ -13,12 +13,8 @@
 
 
 typedef struct ArErr {
-  char *path;
   char message[128];
   char type[64];
-  int64_t line;
-  int64_t column;
-  int length;
   bool exists;
   darray_armem *stack_trace;
 } ArErr;

@@ -49,7 +49,7 @@ const char *ValueTypeNames[] = {
 ArErr error_if_finished(char *file, DArray *tokens, size_t *index) {
   if ((*index) >= tokens->size) {
     Token *token = darray_get(tokens, tokens->size - 1);
-    return create_err(token->line, token->column, token->length, file,
+    return path_specific_create_err(token->line, token->column, token->length, file,
                       "Syntax Error", "more code was expected");
   }
   return no_err;
@@ -129,7 +129,7 @@ ParsedValueReturn parse_token_full(char *file, DArray *tokens, size_t *index,
       token = darray_get(tokens, (*index) + 1);
       if (token->type != TOKEN_NEW_LINE) {
         return (ParsedValueReturn){
-            create_err(token_indent->line, token_indent->column,
+            path_specific_create_err(token_indent->line, token_indent->column,
                        token_indent->length, file, "Syntax Error",
                        "unexpected indent"),
             NULL};
@@ -164,7 +164,7 @@ ParsedValueReturn parse_token_full(char *file, DArray *tokens, size_t *index,
     output = parse_not(file, tokens, index);
     break;
   default:
-    return (ParsedValueReturn){create_err(token->line, token->column,
+    return (ParsedValueReturn){path_specific_create_err(token->line, token->column,
                                           token->length, file, "Syntax Error",
                                           "unexpected token"),
                                NULL};
@@ -223,7 +223,7 @@ ArErr parser(char *file, DArray *parsed, DArray *tokens, bool inline_flag) {
         Token *token = darray_get(tokens, old_index);
         free_parsed(parsed_code.value);
         free(parsed_code.value);
-        return create_err(token->line, token->column, token->length, file,
+        return path_specific_create_err(token->line, token->column, token->length, file,
                           "Syntax Error", "invalid syntax");
       }
       expecting_new_line = true;

@@ -12,7 +12,7 @@
 size_t translate_parsed_continue(Translated *translated,
                                  ParsedContinueOrBreak *parsedContinue, ArErr *err) {
   if (translated->continue_jump.pos == -1) {
-    *err = create_err(parsedContinue->line, parsedContinue->column,
+    *err = path_specific_create_err(parsedContinue->line, parsedContinue->column,
                       parsedContinue->length, translated->path, "Syntax Error",
                       "nowhere to continue to");
     return 0;

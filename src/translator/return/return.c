@@ -11,7 +11,7 @@
 size_t translate_parsed_return(Translated *translated,
                                ParsedReturn *parsedReturn, ArErr *err) {
   if (!translated->return_jump.positions) {
-    *err = create_err(parsedReturn->line, parsedReturn->column,
+    *err = path_specific_create_err(parsedReturn->line, parsedReturn->column,
                       parsedReturn->length, translated->path, "Syntax Error",
                       "nowhere to return to");
     return 0;

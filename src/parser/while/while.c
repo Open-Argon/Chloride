@@ -15,7 +15,7 @@ ParsedValueReturn parse_while(char *file, DArray *tokens, size_t *index) {
   // Parse ( condition )
   Token *token = darray_get(tokens, *index);
   if (token->type != TOKEN_LPAREN) {
-    return (ParsedValueReturn){create_err(token->line, token->column,
+    return (ParsedValueReturn){path_specific_create_err(token->line, token->column,
                                           token->length, file, "Syntax Error",
                                           "expected '(' after while"),
                                NULL};
@@ -31,7 +31,7 @@ ParsedValueReturn parse_while(char *file, DArray *tokens, size_t *index) {
   if (condition.err.exists) {
     return condition;
   } else if (!condition.value) {
-    return (ParsedValueReturn){create_err(token->line, token->column,
+    return (ParsedValueReturn){path_specific_create_err(token->line, token->column,
                                           token->length, file, "Syntax Error",
                                           "expected condition"),
                                NULL};
@@ -44,7 +44,7 @@ ParsedValueReturn parse_while(char *file, DArray *tokens, size_t *index) {
       free_parsed(condition.value);
       free(condition.value);
     }
-    return (ParsedValueReturn){create_err(token->line, token->column,
+    return (ParsedValueReturn){path_specific_create_err(token->line, token->column,
                                           token->length, file, "Syntax Error",
                                           "missing closing ')' in condition"),
                                NULL};
@@ -75,7 +75,7 @@ ParsedValueReturn parse_while(char *file, DArray *tokens, size_t *index) {
       free_parsed(condition.value);
       free(condition.value);
     }
-    return (ParsedValueReturn){create_err(token->line, token->column,
+    return (ParsedValueReturn){path_specific_create_err(token->line, token->column,
                                           token->length, file, "Syntax Error",
                                           "expected body"),
                                NULL};

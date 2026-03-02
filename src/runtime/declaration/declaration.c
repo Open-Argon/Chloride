@@ -15,7 +15,7 @@ void runtime_declaration(int64_t length,int64_t offset,int64_t prehash,uint8_t f
   uint64_t hash = runtime_hash(data, length, prehash);
   ArgonObject *exists = hashmap_lookup_GC(stack->scope, hash);
   if (exists) {
-    *err = create_err(
+    *err = path_specific_create_err(
         state->source_location.line, state->source_location.column,
         state->source_location.length, state->path, "Runtime Error",
         "Identifier '%.*s' has already been declared in the current scope",

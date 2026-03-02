@@ -64,12 +64,12 @@ ArgonObject *ARGON_BUFFER_of_size(size_t argc, ArgonObject **argv, ArErr *err,
 
 void resize_ARGON_BUFFER_object(ArgonObject *obj, ArErr *err, size_t new_size) {
   if (obj->type != TYPE_BUFFER) {
-    *err = create_err(0, 0, 0, "", "Runtime Error", "expected buffer object");
+    *err = create_err( "Runtime Error", "expected buffer object");
     return;
   }
   void *new_data = ar_realloc(obj->value.as_buffer->data, new_size);
   if (!new_data) {
-    *err = create_err(0, 0, 0, "", "Runtime Error",
+    *err = create_err( "Runtime Error",
                       "failed to reallocate the buffer to size %" PRIu64,
                       new_size);
     return;
@@ -80,7 +80,7 @@ void resize_ARGON_BUFFER_object(ArgonObject *obj, ArErr *err, size_t new_size) {
 
 struct buffer ARGON_BUFFER_to_buffer_struct(ArgonObject *obj, ArErr *err) {
   if (obj->type != TYPE_BUFFER) {
-    *err = create_err(0, 0, 0, "", "Runtime Error", "expected buffer object");
+    *err = create_err( "Runtime Error", "expected buffer object");
     return (struct buffer){NULL, 0};
   }
   return *obj->value.as_buffer;

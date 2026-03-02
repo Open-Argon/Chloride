@@ -16,7 +16,7 @@ ParsedValueReturn parse_for(char *file, DArray *tokens, size_t *index) {
   // Parse ( iterator )
   Token *token = darray_get(tokens, *index);
   if (token->type != TOKEN_LPAREN) {
-    return (ParsedValueReturn){create_err(token->line, token->column,
+    return (ParsedValueReturn){path_specific_create_err(token->line, token->column,
                                           token->length, file, "Syntax Error",
                                           "expected '(' after for"),
                                NULL};
@@ -30,7 +30,7 @@ ParsedValueReturn parse_for(char *file, DArray *tokens, size_t *index) {
   }
   token = darray_get(tokens, *index);
   if (token->type != TOKEN_IDENTIFIER) {
-    return (ParsedValueReturn){create_err(token->line, token->column,
+    return (ParsedValueReturn){path_specific_create_err(token->line, token->column,
                                           token->length, file, "Syntax Error",
                                           "expected identifier"),
                                NULL};
@@ -44,7 +44,7 @@ ParsedValueReturn parse_for(char *file, DArray *tokens, size_t *index) {
   }
   token = darray_get(tokens, *index);
   if (token->type != TOKEN_IN) {
-    return (ParsedValueReturn){create_err(token->line, token->column,
+    return (ParsedValueReturn){path_specific_create_err(token->line, token->column,
                                           token->length, file, "Syntax Error",
                                           "expected 'in'"),
                                NULL};
@@ -59,7 +59,7 @@ ParsedValueReturn parse_for(char *file, DArray *tokens, size_t *index) {
   if (iterator.err.exists) {
     return iterator;
   } else if (!iterator.value) {
-    return (ParsedValueReturn){create_err(token->line, token->column,
+    return (ParsedValueReturn){path_specific_create_err(token->line, token->column,
                                           token->length, file, "Syntax Error",
                                           "expected iterator"),
                                NULL};
@@ -72,7 +72,7 @@ ParsedValueReturn parse_for(char *file, DArray *tokens, size_t *index) {
       free_parsed(iterator.value);
       free(iterator.value);
     }
-    return (ParsedValueReturn){create_err(token->line, token->column,
+    return (ParsedValueReturn){path_specific_create_err(token->line, token->column,
                                           token->length, file, "Syntax Error",
                                           "missing closing ')' in iterator"),
                                NULL};
@@ -103,7 +103,7 @@ ParsedValueReturn parse_for(char *file, DArray *tokens, size_t *index) {
       free_parsed(iterator.value);
       free(iterator.value);
     }
-    return (ParsedValueReturn){create_err(token->line, token->column,
+    return (ParsedValueReturn){path_specific_create_err(token->line, token->column,
                                           token->length, file, "Syntax Error",
                                           "expected body"),
                                NULL};

@@ -98,7 +98,7 @@ ParsedValueReturn parse_item_access(char *file, DArray *tokens, size_t *index,
       free(parsedValue);
 
       return (ParsedValueReturn){
-          create_err(token->line, token->column, token->length, file,
+          path_specific_create_err(token->line, token->column, token->length, file,
                      "Syntax Error", "expected comma, colon, or left bracket"),
           NULL};
     }

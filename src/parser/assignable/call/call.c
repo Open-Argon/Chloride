@@ -51,7 +51,7 @@ ParsedValueReturn parse_call(char *file, DArray *tokens, size_t *index,
         free(parsedValue);
 
         return (ParsedValueReturn){
-            create_err(token->line, token->column, token->length, file,
+            path_specific_create_err(token->line, token->column, token->length, file,
                        "Syntax Error", "expected argument"),
             NULL};
       }
@@ -77,7 +77,7 @@ ParsedValueReturn parse_call(char *file, DArray *tokens, size_t *index,
         free_parsed(parsedValue);
         free(parsedValue);
 
-        return (ParsedValueReturn){create_err(token->line, token->column,
+        return (ParsedValueReturn){path_specific_create_err(token->line, token->column,
                                               token->length, file,
                                               "Syntax Error", "expected comma"),
                                    NULL};

@@ -25,7 +25,7 @@ ArgonObject *ARGON_LOAD_NATIVE_CODE(size_t argc, ArgonObject **argv, ArErr *err,
                                     RuntimeState *state, ArgonNativeAPI *api) {
   if (argc != 1) {
     *err =
-        create_err(0, 0, 0, "", "Runtime Error",
+        create_err( "Runtime Error",
                    "load_native_code expects 1 argument, got %" PRIu64, argc);
     return ARGON_NULL;
   }
@@ -36,7 +36,7 @@ ArgonObject *ARGON_LOAD_NATIVE_CODE(size_t argc, ArgonObject **argv, ArErr *err,
 #if defined(_WIN32) || defined(_WIN64)
   HMODULE handle = LoadLibraryA(path_c);
   if (!handle) {
-    *err = create_err(0, 0, 0, "", "Runtime Error",
+    *err = create_err( "Runtime Error",
                       "Unable to load native code at path: %s", path_c);
     free(path_c);
     return ARGON_NULL;
@@ -47,7 +47,7 @@ ArgonObject *ARGON_LOAD_NATIVE_CODE(size_t argc, ArgonObject **argv, ArErr *err,
 
   if (!proc) {
     *err = create_err(
-        0, 0, 0, "", "Runtime Error",
+         "Runtime Error",
         "Unable to find argon_module_init in the native code at path: %s",
         path_c);
     free(path_c);
@@ -59,7 +59,7 @@ ArgonObject *ARGON_LOAD_NATIVE_CODE(size_t argc, ArgonObject **argv, ArErr *err,
   void *handle = dlopen(path_c, RTLD_NOW | RTLD_LOCAL);
   if (!handle) {
     const char *dlerr = dlerror();
-    *err = create_err(0, 0, 0, "", "Runtime Error", "%s",
+    *err = create_err( "Runtime Error", "%s",
                       dlerr ? dlerr : "unknown");
     free(path_c);
     return ARGON_NULL;
@@ -71,7 +71,7 @@ ArgonObject *ARGON_LOAD_NATIVE_CODE(size_t argc, ArgonObject **argv, ArErr *err,
 
   if (!init) {
     *err = create_err(
-        0, 0, 0, "", "Runtime Error",
+         "Runtime Error",
         "Unable to find argon_module_init in the native code at path: %s",
         path_c);
     free(path_c);

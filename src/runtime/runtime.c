@@ -127,7 +127,7 @@ ArgonObject *BASE_CLASS___getattribute__(size_t argc, ArgonObject **argv,
   (void)api;
   if (argc != 2) {
     *err =
-        create_err(0, 0, 0, "", "Runtime Error",
+        create_err( "Runtime Error",
                    "__getattribute__ expects 2 arguments, got %" PRIu64, argc);
     return ARGON_NULL;
   }
@@ -182,7 +182,7 @@ ArgonObject *BASE_CLASS___getattribute__(size_t argc, ArgonObject **argv,
   ArgonObject *name =
       get_builtin_field_for_class(class_to_access, __name__, to_access);
   *err = create_err(
-      0, 0, 0, "", "Runtime Error", "'%.*s' object has no attribute '%.*s'",
+       "Runtime Error", "'%.*s' object has no attribute '%.*s'",
       (int)name->value.as_str->length, name->value.as_str->data,
       (int)access->value.as_str->length, access->value.as_str->data);
   return ARGON_NULL;
@@ -193,7 +193,7 @@ ArgonObject *ARGON_ADDITION_FUNCTION(size_t argc, ArgonObject **argv,
                                      ArgonNativeAPI *api) {
   (void)api;
   if (argc < 1) {
-    *err = create_err(0, 0, 0, "", "Runtime Error",
+    *err = create_err( "Runtime Error",
                       "add expects at least 1 argument, got %" PRIu64, argc);
     return ARGON_NULL;
   }
@@ -204,7 +204,7 @@ ArgonObject *ARGON_ADDITION_FUNCTION(size_t argc, ArgonObject **argv,
         get_builtin_field_for_class(object_class, __add__, output);
     if (!object__add__) {
       ArgonObject *cls___name__ = get_builtin_field(object_class, __name__);
-      *err = create_err(0, 0, 0, "", "Runtime Error",
+      *err = create_err( "Runtime Error",
                         "Object of type '%.*s' is missing __add__ method",
                         (int)cls___name__->value.as_str->length,
                         cls___name__->value.as_str->data);
@@ -222,7 +222,7 @@ ArgonObject *ARGON_SUBTRACTION_FUNCTION(size_t argc, ArgonObject **argv,
   (void)api;
   if (argc < 1) {
     *err =
-        create_err(0, 0, 0, "", "Runtime Error",
+        create_err( "Runtime Error",
                    "subtract expects at least 1 argument, got %" PRIu64, argc);
     return ARGON_NULL;
   }
@@ -233,7 +233,7 @@ ArgonObject *ARGON_SUBTRACTION_FUNCTION(size_t argc, ArgonObject **argv,
         get_builtin_field_for_class(object_class, __subtract__, output);
     if (!function__subtract__) {
       ArgonObject *cls___name__ = get_builtin_field(object_class, __name__);
-      *err = create_err(0, 0, 0, "", "Runtime Error",
+      *err = create_err( "Runtime Error",
                         "Object of type '%.*s' is missing __subtract__ method",
                         (int)cls___name__->value.as_str->length,
                         cls___name__->value.as_str->data);
@@ -251,7 +251,7 @@ ArgonObject *ARGON_MULTIPLY_FUNCTION(size_t argc, ArgonObject **argv,
   (void)api;
   if (argc < 1) {
     *err =
-        create_err(0, 0, 0, "", "Runtime Error",
+        create_err( "Runtime Error",
                    "multiply expects at least 1 argument, got %" PRIu64, argc);
     return ARGON_NULL;
   }
@@ -262,7 +262,7 @@ ArgonObject *ARGON_MULTIPLY_FUNCTION(size_t argc, ArgonObject **argv,
         get_builtin_field_for_class(object_class, __multiply__, output);
     if (!function__multiply__) {
       ArgonObject *cls___name__ = get_builtin_field(object_class, __name__);
-      *err = create_err(0, 0, 0, "", "Runtime Error",
+      *err = create_err( "Runtime Error",
                         "Object of type '%.*s' is missing __multiply__ method",
                         (int)cls___name__->value.as_str->length,
                         cls___name__->value.as_str->data);
@@ -280,7 +280,7 @@ ArgonObject *ARGON_EXPONENT_FUNCTION(size_t argc, ArgonObject **argv,
   (void)api;
   if (argc < 1) {
     *err =
-        create_err(0, 0, 0, "", "Runtime Error",
+        create_err( "Runtime Error",
                    "multiply expects at least 1 argument, got %" PRIu64, argc);
     return ARGON_NULL;
   }
@@ -291,7 +291,7 @@ ArgonObject *ARGON_EXPONENT_FUNCTION(size_t argc, ArgonObject **argv,
         get_builtin_field_for_class(object_class, __multiply__, output);
     if (!function__multiply__) {
       ArgonObject *cls___name__ = get_builtin_field(object_class, __name__);
-      *err = create_err(0, 0, 0, "", "Runtime Error",
+      *err = create_err( "Runtime Error",
                         "Object of type '%.*s' is missing __multiply__ method",
                         (int)cls___name__->value.as_str->length,
                         cls___name__->value.as_str->data);
@@ -307,7 +307,7 @@ ArgonObject *ARGON_DIVIDE_FUNCTION(size_t argc, ArgonObject **argv, ArErr *err,
                                    RuntimeState *state, ArgonNativeAPI *api) {
   (void)api;
   if (argc < 1) {
-    *err = create_err(0, 0, 0, "", "Runtime Error",
+    *err = create_err( "Runtime Error",
                       "divide expects at least 1 argument, got %" PRIu64, argc);
     return ARGON_NULL;
   }
@@ -318,7 +318,7 @@ ArgonObject *ARGON_DIVIDE_FUNCTION(size_t argc, ArgonObject **argv, ArErr *err,
         get_builtin_field_for_class(object_class, __division__, output);
     if (!function___divide__) {
       ArgonObject *cls___name__ = get_builtin_field(object_class, __name__);
-      *err = create_err(0, 0, 0, "", "Runtime Error",
+      *err = create_err( "Runtime Error",
                         "Object of type '%.*s' is missing __divide__ method",
                         (int)cls___name__->value.as_str->length,
                         cls___name__->value.as_str->data);
@@ -335,7 +335,7 @@ ArgonObject *ARGON_FLOOR_DIVIDE_FUNCTION(size_t argc, ArgonObject **argv,
                                          ArgonNativeAPI *api) {
   (void)api;
   if (argc < 1) {
-    *err = create_err(0, 0, 0, "", "Runtime Error",
+    *err = create_err( "Runtime Error",
                       "floor_divide expects at least 1 argument, got %" PRIu64,
                       argc);
     return ARGON_NULL;
@@ -348,7 +348,7 @@ ArgonObject *ARGON_FLOOR_DIVIDE_FUNCTION(size_t argc, ArgonObject **argv,
     if (!function___floor_divide__) {
       ArgonObject *cls___name__ = get_builtin_field(object_class, __name__);
       *err =
-          create_err(0, 0, 0, "", "Runtime Error",
+          create_err( "Runtime Error",
                      "Object of type '%.*s' is missing __floor_divide__ method",
                      (int)cls___name__->value.as_str->length,
                      cls___name__->value.as_str->data);
@@ -364,7 +364,7 @@ ArgonObject *ARGON_MODULO_FUNCTION(size_t argc, ArgonObject **argv, ArErr *err,
                                    RuntimeState *state, ArgonNativeAPI *api) {
   (void)api;
   if (argc < 1) {
-    *err = create_err(0, 0, 0, "", "Runtime Error",
+    *err = create_err( "Runtime Error",
                       "modulo expects at least 1 argument, got %" PRIu64, argc);
     return ARGON_NULL;
   }
@@ -375,7 +375,7 @@ ArgonObject *ARGON_MODULO_FUNCTION(size_t argc, ArgonObject **argv, ArErr *err,
         get_builtin_field_for_class(object_class, __modulo__, output);
     if (!function___modulo__) {
       ArgonObject *cls___name__ = get_builtin_field(object_class, __name__);
-      *err = create_err(0, 0, 0, "", "Runtime Error",
+      *err = create_err( "Runtime Error",
                         "Object of type '%.*s' is missing __modulo__ method",
                         (int)cls___name__->value.as_str->length,
                         cls___name__->value.as_str->data);
@@ -391,7 +391,7 @@ ArgonObject *ARGON_EQUAL_FUNCTION(size_t argc, ArgonObject **argv, ArErr *err,
                                   RuntimeState *state, ArgonNativeAPI *api) {
   (void)api;
   if (argc < 1) {
-    *err = create_err(0, 0, 0, "", "Runtime Error",
+    *err = create_err( "Runtime Error",
                       "equal expects at least 1 argument, got %" PRIu64, argc);
     return ARGON_NULL;
   }
@@ -402,7 +402,7 @@ ArgonObject *ARGON_EQUAL_FUNCTION(size_t argc, ArgonObject **argv, ArErr *err,
         get_builtin_field_for_class(object_class, __equal__, output);
     if (!function___equal__) {
       ArgonObject *cls___name__ = get_builtin_field(object_class, __name__);
-      *err = create_err(0, 0, 0, "", "Runtime Error",
+      *err = create_err( "Runtime Error",
                         "Object of type '%.*s' is missing __equal__ method",
                         (int)cls___name__->value.as_str->length,
                         cls___name__->value.as_str->data);
@@ -420,7 +420,7 @@ ArgonObject *ARGON_NOT_EQUAL_FUNCTION(size_t argc, ArgonObject **argv,
   (void)api;
   if (argc < 1) {
     *err =
-        create_err(0, 0, 0, "", "Runtime Error",
+        create_err( "Runtime Error",
                    "not_equal expects at least 1 argument, got %" PRIu64, argc);
     return ARGON_NULL;
   }
@@ -431,7 +431,7 @@ ArgonObject *ARGON_NOT_EQUAL_FUNCTION(size_t argc, ArgonObject **argv,
         get_builtin_field_for_class(object_class, __not_equal__, output);
     if (!function___not_equal__) {
       ArgonObject *cls___name__ = get_builtin_field(object_class, __name__);
-      *err = create_err(0, 0, 0, "", "Runtime Error",
+      *err = create_err( "Runtime Error",
                         "Object of type '%.*s' is missing __not_equal__ method",
                         (int)cls___name__->value.as_str->length,
                         cls___name__->value.as_str->data);
@@ -449,7 +449,7 @@ ArgonObject *ARGON_LESS_THAN_FUNCTION(size_t argc, ArgonObject **argv,
   (void)api;
   if (argc < 1) {
     *err =
-        create_err(0, 0, 0, "", "Runtime Error",
+        create_err( "Runtime Error",
                    "less_than expects at least 1 argument, got %" PRIu64, argc);
     return ARGON_NULL;
   }
@@ -460,7 +460,7 @@ ArgonObject *ARGON_LESS_THAN_FUNCTION(size_t argc, ArgonObject **argv,
         get_builtin_field_for_class(object_class, __less_than__, output);
     if (!function___less_than__) {
       ArgonObject *cls___name__ = get_builtin_field(object_class, __name__);
-      *err = create_err(0, 0, 0, "", "Runtime Error",
+      *err = create_err( "Runtime Error",
                         "Object of type '%.*s' is missing __less_than__ method",
                         (int)cls___name__->value.as_str->length,
                         cls___name__->value.as_str->data);
@@ -477,7 +477,7 @@ ArgonObject *ARGON_GREATER_THAN_FUNCTION(size_t argc, ArgonObject **argv,
                                          ArgonNativeAPI *api) {
   (void)api;
   if (argc < 1) {
-    *err = create_err(0, 0, 0, "", "Runtime Error",
+    *err = create_err( "Runtime Error",
                       "greater_than expects at least 1 argument, got %" PRIu64,
                       argc);
     return ARGON_NULL;
@@ -490,7 +490,7 @@ ArgonObject *ARGON_GREATER_THAN_FUNCTION(size_t argc, ArgonObject **argv,
     if (!function___greater_than__) {
       ArgonObject *cls___name__ = get_builtin_field(object_class, __name__);
       *err =
-          create_err(0, 0, 0, "", "Runtime Error",
+          create_err( "Runtime Error",
                      "Object of type '%.*s' is missing __greater_than__ method",
                      (int)cls___name__->value.as_str->length,
                      cls___name__->value.as_str->data);
@@ -508,7 +508,7 @@ ArgonObject *ARGON_LESS_THAN_EQUAL_FUNCTION(size_t argc, ArgonObject **argv,
   (void)api;
   if (argc < 1) {
     *err = create_err(
-        0, 0, 0, "", "Runtime Error",
+         "Runtime Error",
         "less_than_equal expects at least 1 argument, got %" PRIu64, argc);
     return ARGON_NULL;
   }
@@ -520,7 +520,7 @@ ArgonObject *ARGON_LESS_THAN_EQUAL_FUNCTION(size_t argc, ArgonObject **argv,
     if (!function___less_than_equal__) {
       ArgonObject *cls___name__ = get_builtin_field(object_class, __name__);
       *err = create_err(
-          0, 0, 0, "", "Runtime Error",
+           "Runtime Error",
           "Object of type '%.*s' is missing __less_than_equal__ method",
           (int)cls___name__->value.as_str->length,
           cls___name__->value.as_str->data);
@@ -538,7 +538,7 @@ ArgonObject *ARGON_GREATER_THAN_EQUAL_FUNCTION(size_t argc, ArgonObject **argv,
   (void)api;
   if (argc < 1) {
     *err = create_err(
-        0, 0, 0, "", "Runtime Error",
+         "Runtime Error",
         "greater_than_equal expects at least 1 argument, got %" PRIu64, argc);
     return ARGON_NULL;
   }
@@ -550,7 +550,7 @@ ArgonObject *ARGON_GREATER_THAN_EQUAL_FUNCTION(size_t argc, ArgonObject **argv,
     if (!function___greater_than_equal__) {
       ArgonObject *cls___name__ = get_builtin_field(object_class, __name__);
       *err = create_err(
-          0, 0, 0, "", "Runtime Error",
+           "Runtime Error",
           "Object of type '%.*s' is missing __greater_than_equal__ method",
           (int)cls___name__->value.as_str->length,
           cls___name__->value.as_str->data);
@@ -569,7 +569,7 @@ ArgonObject *ARGON_TYPE_TYPE___call__(size_t argc, ArgonObject **argv,
   (void)state;
   if (argc < 1) {
     *err =
-        create_err(0, 0, 0, "", "Runtime Error",
+        create_err( "Runtime Error",
                    "__call__ expects at least 1 argument, got %" PRIu64, argc);
     return ARGON_NULL;
   }
@@ -585,7 +585,7 @@ ArgonObject *ARGON_TYPE_TYPE___call__(size_t argc, ArgonObject **argv,
   if (!cls___new__) {
     ArgonObject *cls___name__ = get_builtin_field(argv[0], __name__);
     *err = create_err(
-        0, 0, 0, "", "Runtime Error",
+         "Runtime Error",
         "Object '%.*s' is missing __new__ method, so cannot be initialised",
         (int)cls___name__->value.as_str->length,
         cls___name__->value.as_str->data);
@@ -605,7 +605,7 @@ ArgonObject *ARGON_TYPE_TYPE___call__(size_t argc, ArgonObject **argv,
     if (!cls___init__) {
       ArgonObject *cls___name__ = get_builtin_field(argv[0], __name__);
       *err = create_err(
-          0, 0, 0, "", "Runtime Error",
+           "Runtime Error",
           "Object '%.*s' is missing __init__ method, so cannot be initialised",
           (int)cls___name__->value.as_str->length,
           cls___name__->value.as_str->data);
@@ -624,7 +624,7 @@ ArgonObject *BASE_CLASS_address(size_t argc, ArgonObject **argv, ArErr *err,
   (void)state;
   if (argc < 1) {
     *err =
-        create_err(0, 0, 0, "", "Runtime Error",
+        create_err( "Runtime Error",
                    "__new__ expects at least 1 argument, got %" PRIu64, argc);
     return ARGON_NULL;
   }
@@ -639,7 +639,7 @@ ArgonObject *BASE_CLASS___new__(size_t argc, ArgonObject **argv, ArErr *err,
   (void)state;
   if (argc < 1) {
     *err =
-        create_err(0, 0, 0, "", "Runtime Error",
+        create_err( "Runtime Error",
                    "__new__ expects at least 1 argument, got %" PRIu64, argc);
     return ARGON_NULL;
   }
@@ -653,7 +653,7 @@ ArgonObject *BASE_CLASS___init__(size_t argc, ArgonObject **argv, ArErr *err,
   (void)state;
   (void)argv;
   if (argc != 1) {
-    *err = create_err(0, 0, 0, "", "Runtime Error",
+    *err = create_err( "Runtime Error",
                       "__init__ expects 1 argument, got %" PRIu64, argc);
     return ARGON_NULL;
   }
@@ -665,7 +665,7 @@ ArgonObject *BASE_CLASS___setattr__(size_t argc, ArgonObject **argv, ArErr *err,
   (void)api;
   (void)state;
   if (argc != 3) {
-    *err = create_err(0, 0, 0, "", "Runtime Error",
+    *err = create_err( "Runtime Error",
                       "__setattr__ expects 3 argument, got %" PRIu64, argc);
     return ARGON_NULL;
   }
@@ -702,7 +702,7 @@ ArgonObject *BASE_CLASS___string__(size_t argc, ArgonObject **argv, ArErr *err,
   (void)api;
   (void)state;
   if (argc != 1) {
-    *err = create_err(0, 0, 0, "", "Runtime Error",
+    *err = create_err( "Runtime Error",
                       "__string__ expects 1 argument, got %" PRIu64, argc);
   }
 
@@ -731,7 +731,7 @@ ArgonObject *BASE_CLASS___repr__(size_t argc, ArgonObject **argv, ArErr *err,
                                  RuntimeState *state, ArgonNativeAPI *api) {
   (void)api;
   if (argc != 1) {
-    *err = create_err(0, 0, 0, "", "Runtime Error",
+    *err = create_err( "Runtime Error",
                       "__repr__ expects 1 argument, got %" PRIu64, argc);
   }
   ArgonObject *string_method = get_builtin_field_for_class(
@@ -745,7 +745,7 @@ ArgonObject *BASE_CLASS___boolean__(size_t argc, ArgonObject **argv, ArErr *err,
   (void)argv;
   (void)state;
   if (argc != 1) {
-    *err = create_err(0, 0, 0, "", "Runtime Error",
+    *err = create_err( "Runtime Error",
                       "__boolean__ expects 1 argument, got %" PRIu64, argc);
   }
   return ARGON_TRUE;
@@ -757,7 +757,7 @@ ArgonObject *BASE_CLASS___equal__(size_t argc, ArgonObject **argv, ArErr *err,
   (void)argv;
   (void)state;
   if (argc != 2) {
-    *err = create_err(0, 0, 0, "", "Runtime Error",
+    *err = create_err( "Runtime Error",
                       "__equal__ expects 2 arguments, got %" PRIu64, argc);
   }
   return argv[0] == argv[1] ? ARGON_TRUE : ARGON_FALSE;
@@ -770,7 +770,7 @@ ArgonObject *BASE_CLASS___not_equal__(size_t argc, ArgonObject **argv,
   (void)argv;
   (void)state;
   if (argc != 2) {
-    *err = create_err(0, 0, 0, "", "Runtime Error",
+    *err = create_err( "Runtime Error",
                       "__boolean__ expects 2 arguments, got %" PRIu64, argc);
   }
   return argv[0] != argv[1] ? ARGON_TRUE : ARGON_FALSE;
@@ -783,7 +783,7 @@ ArgonObject *ARGON_STRING_TYPE___new__(size_t argc, ArgonObject **argv,
   (void)state;
   if (argc < 1) {
     *err =
-        create_err(0, 0, 0, "", "Runtime Error",
+        create_err( "Runtime Error",
                    "__new__ expects at least 1 argument, got %" PRIu64, argc);
     return ARGON_NULL;
   }
@@ -796,7 +796,7 @@ ArgonObject *ARGON_STRING_TYPE___init__(size_t argc, ArgonObject **argv,
                                         ArgonNativeAPI *api) {
   (void)api;
   if (argc != 2) {
-    *err = create_err(0, 0, 0, "", "Runtime Error",
+    *err = create_err( "Runtime Error",
                       "__init__ expects 2 arguments, got %" PRIu64, argc);
     return ARGON_NULL;
   }
@@ -815,7 +815,7 @@ ArgonObject *ARGON_STRING_TYPE___init__(size_t argc, ArgonObject **argv,
                 string_object->value.as_str->hash);
     return ARGON_NULL;
   }
-  *err = create_err(0, 0, 0, "", "String Conversion Error",
+  *err = create_err( "String Conversion Error",
                     "cannot convert to string");
   return ARGON_NULL;
 }
@@ -825,7 +825,7 @@ ArgonObject *ARGON_BOOL_TYPE___new__(size_t argc, ArgonObject **argv,
                                      ArgonNativeAPI *api) {
   (void)api;
   if (argc != 2) {
-    *err = create_err(0, 0, 0, "", "Runtime Error",
+    *err = create_err( "Runtime Error",
                       "__new__ expects 2 arguments, got %" PRIu64, argc);
     return ARGON_NULL;
   }
@@ -845,7 +845,7 @@ ArgonObject *ARGON_BOOL_TYPE___new__(size_t argc, ArgonObject **argv,
   ArgonObject *type_name = get_builtin_field_for_class(
       get_builtin_field(object, __class__), __name__, object);
   *err = create_err(
-      0, 0, 0, "", "Runtime Error", "cannot convert type '%.*s' to bool",
+       "Runtime Error", "cannot convert type '%.*s' to bool",
       type_name->value.as_str->length, type_name->value.as_str->data);
   return ARGON_NULL;
 }
@@ -856,7 +856,7 @@ ArgonObject *ARGON_STRING_TYPE___add__(size_t argc, ArgonObject **argv,
   (void)api;
   (void)state;
   if (argc != 2) {
-    *err = create_err(0, 0, 0, "", "Runtime Error",
+    *err = create_err( "Runtime Error",
                       "__add__ expects 2 arguments, got %" PRIu64, argc);
     return ARGON_NULL;
   }
@@ -864,7 +864,7 @@ ArgonObject *ARGON_STRING_TYPE___add__(size_t argc, ArgonObject **argv,
     ArgonObject *type_name = get_builtin_field_for_class(
         get_builtin_field(argv[1], __class__), __name__, argv[1]);
     *err = create_err(
-        0, 0, 0, "", "Runtime Error",
+         "Runtime Error",
         "__add__ cannot perform concatenation between a string and %.*s",
         type_name->value.as_str->length, type_name->value.as_str->data);
     return ARGON_NULL;
@@ -884,7 +884,7 @@ ArgonObject *ARGON_BOOL_TYPE___string__(size_t argc, ArgonObject **argv,
   (void)api;
   (void)state;
   if (argc != 1) {
-    *err = create_err(0, 0, 0, "", "Runtime Error",
+    *err = create_err( "Runtime Error",
                       "__string__ expects 1 argument, got %" PRIu64, argc);
     return ARGON_NULL;
   }
@@ -898,7 +898,7 @@ ArgonObject *ARGON_BOOL_TYPE___number__(size_t argc, ArgonObject **argv,
   (void)api;
   (void)state;
   if (argc != 1) {
-    *err = create_err(0, 0, 0, "", "Runtime Error",
+    *err = create_err( "Runtime Error",
                       "__number__ expects 1 argument, got %" PRIu64, argc);
     return ARGON_NULL;
   }
@@ -911,7 +911,7 @@ ArgonObject *ARGON_STRING_TYPE___string__(size_t argc, ArgonObject **argv,
   (void)api;
   (void)state;
   if (argc != 1) {
-    *err = create_err(0, 0, 0, "", "Runtime Error",
+    *err = create_err( "Runtime Error",
                       "__string__ expects 1 argument, got %" PRIu64, argc);
   }
   return argv[0];
@@ -922,7 +922,7 @@ ArgonObject *ARGON_STRING_TYPE___repr__(size_t argc, ArgonObject **argv,
   (void)api;
   (void)state;
   if (argc != 1) {
-    *err = create_err(0, 0, 0, "", "Runtime Error",
+    *err = create_err( "Runtime Error",
                       "__repr__ expects 1 argument, got %" PRIu64, argc);
   }
   char *quoted = c_quote_string(argv[0]->value.as_str->data,
@@ -937,7 +937,7 @@ ArgonObject *ARGON_STRING_TYPE___hash__(size_t argc, ArgonObject **argv,
   (void)api;
   (void)state;
   if (argc != 1) {
-    *err = create_err(0, 0, 0, "", "Runtime Error",
+    *err = create_err( "Runtime Error",
                       "__hash__ expects 1 argument, got %" PRIu64, argc);
   }
   uint64_t hash;
@@ -959,7 +959,7 @@ ArgonObject *ARGON_STRING_TYPE___number__(size_t argc, ArgonObject **argv,
   (void)api;
   (void)state;
   if (argc != 1) {
-    *err = create_err(0, 0, 0, "", "Runtime Error",
+    *err = create_err( "Runtime Error",
                       "__number__ expects 1 argument, got %" PRIu64, argc);
     return ARGON_NULL;
   }
@@ -970,7 +970,7 @@ ArgonObject *ARGON_STRING_TYPE___number__(size_t argc, ArgonObject **argv,
                                        argv[0]->value.as_str->length);
   if (result != 0) {
     mpq_clear(r);
-    *err = create_err(0, 0, 0, "", "Runtime Error", "Unable to parse number",
+    *err = create_err( "Runtime Error", "Unable to parse number",
                       argc);
     return ARGON_NULL;
   }
@@ -985,7 +985,7 @@ ArgonObject *ARGON_STRING_TYPE___boolean__(size_t argc, ArgonObject **argv,
   (void)api;
   (void)state;
   if (argc != 1) {
-    *err = create_err(0, 0, 0, "", "Runtime Error",
+    *err = create_err( "Runtime Error",
                       "__boolean__ expects 1 argument, got %" PRIu64, argc);
   }
   return argv[0]->value.as_str->length == 0 ? ARGON_FALSE : ARGON_TRUE;
@@ -997,7 +997,7 @@ ArgonObject *ARGON_BOOL_TYPE___boolean__(size_t argc, ArgonObject **argv,
   (void)api;
   (void)state;
   if (argc != 1) {
-    *err = create_err(0, 0, 0, "", "Runtime Error",
+    *err = create_err( "Runtime Error",
                       "__boolean__ expects 1 argument, got %" PRIu64, argc);
   }
   return argv[0];
@@ -1010,7 +1010,7 @@ ArgonObject *ARGON_NULL_TYPE___boolean__(size_t argc, ArgonObject **argv,
   (void)argv;
   (void)state;
   if (argc != 1) {
-    *err = create_err(0, 0, 0, "", "Runtime Error",
+    *err = create_err( "Runtime Error",
                       "__boolean__ expects 1 argument, got %" PRIu64, argc);
   }
   return ARGON_FALSE;
@@ -1022,7 +1022,7 @@ ArgonObject *ARGON_NULL_TYPE___number__(size_t argc, ArgonObject **argv,
   (void)argv;
   (void)state;
   if (argc != 1) {
-    *err = create_err(0, 0, 0, "", "Runtime Error",
+    *err = create_err( "Runtime Error",
                       "__boolean__ expects 1 argument, got %" PRIu64, argc);
   }
   return new_number_object_from_int64(0);
@@ -1034,7 +1034,7 @@ ArgonObject *ARGON_NULL_TYPE___string__(size_t argc, ArgonObject **argv,
   (void)argv;
   (void)state;
   if (argc != 1) {
-    *err = create_err(0, 0, 0, "", "Runtime Error",
+    *err = create_err( "Runtime Error",
                       "__boolean__ expects 1 argument, got %" PRIu64, argc);
   }
   return new_string_object_null_terminated("null");
@@ -1355,8 +1355,7 @@ static inline void load_variable(int64_t length, int64_t offset,
     }
     current_stack = current_stack->prev;
   }
-  *err = create_err(state->source_location.line, state->source_location.column,
-                    state->source_location.length, state->path, "Name Error",
+  *err = create_err("Name Error",
                     "Identifier '%.*s' is not defined", (int)length,
                     arena_get(&translated->constants, offset));
   return;
@@ -1393,19 +1392,6 @@ void add_to_scope(Stack *stack, char *name, ArgonObject *value) {
   uint64_t hash = siphash64_bytes(name, length, siphash_key);
   ArgonObject *key = new_string_object(name, length, 0, hash);
   hashmap_insert_GC(stack->scope, hash, key, value, 0);
-}
-
-void add_source_location_to_error_if_not_exists(ArErr *err,
-                                                RuntimeState *state) {
-  if (err->exists && err->path && !strlen(err->path)) {
-    err->column = state->source_location.column;
-    err->length = state->source_location.length;
-    err->line = state->source_location.line;
-
-    size_t length = strlen(state->path);
-    err->path = ar_alloc_atomic(length);
-    memcpy(err->path, state->path, length);
-  }
 }
 
 void runtime(Translated _translated, RuntimeState _state, Stack *stack,
@@ -1622,7 +1608,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
     }
     DO_IMPORT:
       runtime_import(state, &err);
-      add_source_location_to_error_if_not_exists(&err, state);
+      
       continue;
     DO_EXPOSE_ALL: {
       size_t nodes_length;
@@ -1650,9 +1636,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
 
       ArgonObject *object = hashmap_lookup_GC(hashmap, hash);
       if (!object) {
-        err = create_err(state->source_location.line,
-                         state->source_location.column,
-                         state->source_location.length, state->path,
+        err = create_err(
                          "Runtime Error", "could not find '%.*s'", length,
                          arena_get(&translated->constants, offset));
         continue;
@@ -1809,8 +1793,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
           state->registers[0]);
       if (!state->registers[0]) {
         err = create_err(
-            state->source_location.line, state->source_location.column,
-            state->source_location.length, state->path, "Runtime Error",
+            "Runtime Error",
             "unable to get __negation__ from objects class");
         continue;
       }
@@ -1823,8 +1806,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
           state->registers[0]);
       if (!state->registers[0]) {
         err = create_err(
-            state->source_location.line, state->source_location.column,
-            state->source_location.length, state->path, "Runtime Error",
+           "Runtime Error",
             "unable to get __iter__ from objects class");
       }
       continue;
@@ -1834,8 +1816,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
           state->registers[0]);
       if (!state->registers[0]) {
         err = create_err(
-            state->source_location.line, state->source_location.column,
-            state->source_location.length, state->path, "Runtime Error",
+             "Runtime Error",
             "unable to get __next__ from objects class");
       }
       continue;
@@ -1845,8 +1826,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
           state->registers[0]);
       if (!state->registers[0]) {
         err = create_err(
-            state->source_location.line, state->source_location.column,
-            state->source_location.length, state->path, "Runtime Error",
+             "Runtime Error",
             "unable to get __getattribute__ from objects class");
       }
       continue;
@@ -1914,7 +1894,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       ArgonObject *args[] = {valueA, valueB};
       state->registers[registerC] =
           argon_call(ADDITION_FUNCTION, 2, args, &err, state);
-      add_source_location_to_error_if_not_exists(&err, state);
+      
       continue;
     }
     DO_SUBTRACTION: {
@@ -1976,7 +1956,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       ArgonObject *args[] = {valueA, valueB};
       state->registers[registerC] =
           argon_call(SUBTRACTION_FUNCTION, 2, args, &err, state);
-      add_source_location_to_error_if_not_exists(&err, state);
+      
       continue;
     }
     DO_MULTIPLICATION: {
@@ -2038,7 +2018,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       ArgonObject *args[] = {valueA, valueB};
       state->registers[registerC] =
           argon_call(MULTIPLY_FUNCTION, 2, args, &err, state);
-      add_source_location_to_error_if_not_exists(&err, state);
+      
       continue;
     }
     DO_EXPONENTIATION: {
@@ -2130,8 +2110,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
           /* 0^0 or 0^negative */
           if (mpq_sgn(a_GMP) == 0 && mpq_sgn(b_GMP) <= 0) {
             err = create_err(
-                state->source_location.line, state->source_location.column,
-                state->source_location.length, state->path, "Math Error",
+                "Math Error",
                 "0 cannot be raised to zero or a negative power");
 
             mpq_clear(a_GMP);
@@ -2143,8 +2122,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
           /* negative base with non-integer exponent → complex */
           if (mpq_sgn(a_GMP) < 0 && mpz_cmp_ui(mpq_denref(b_GMP), 1) != 0) {
             err = create_err(
-                state->source_location.line, state->source_location.column,
-                state->source_location.length, state->path, "Math Error",
+                 "Math Error",
                 "Negative base with fractional exponent is not a real number");
 
             mpq_clear(a_GMP);
@@ -2169,7 +2147,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       ArgonObject *args[] = {valueA, valueB};
       state->registers[registerC] =
           argon_call(EXPONENT_FUNCTION, 2, args, &err, state);
-      add_source_location_to_error_if_not_exists(&err, state);
+      
       continue;
     }
 
@@ -2187,9 +2165,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
           int64_t a = valueA->value.as_number->n.i64;
           int64_t b = valueB->value.as_number->n.i64;
           if (!b) {
-            err = create_err(state->source_location.line,
-                             state->source_location.column,
-                             state->source_location.length, state->path,
+            err = create_err(
                              "Zero Division Error", "division by zero");
             continue;
           }
@@ -2217,9 +2193,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
           } else {
             mpq_set(a_GMP, *valueA->value.as_number->n.mpq);
             if (!valueB->value.as_number->n.i64) {
-              err = create_err(state->source_location.line,
-                               state->source_location.column,
-                               state->source_location.length, state->path,
+              err = create_err(
                                "Zero Division Error", "division by zero");
               continue;
             }
@@ -2236,7 +2210,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       ArgonObject *args[] = {valueA, valueB};
       state->registers[registerC] =
           argon_call(DIVIDE_FUNCTION, 2, args, &err, state);
-      add_source_location_to_error_if_not_exists(&err, state);
+      
       continue;
     }
 
@@ -2254,9 +2228,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
           int64_t a = valueA->value.as_number->n.i64;
           int64_t b = valueB->value.as_number->n.i64;
           if (!b) {
-            err = create_err(state->source_location.line,
-                             state->source_location.column,
-                             state->source_location.length, state->path,
+            err = create_err(
                              "Zero Division Error", "floor division by zero");
             continue;
           }
@@ -2279,9 +2251,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
           } else {
             mpq_set(a_GMP, *valueA->value.as_number->n.mpq);
             if (!valueB->value.as_number->n.i64) {
-              err = create_err(state->source_location.line,
-                               state->source_location.column,
-                               state->source_location.length, state->path,
+              err = create_err(
                                "Zero Division Error", "floor division by zero");
               continue;
             }
@@ -2298,7 +2268,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       ArgonObject *args[] = {valueA, valueB};
       state->registers[registerC] =
           argon_call(FLOOR_DIVIDE_FUNCTION, 2, args, &err, state);
-      add_source_location_to_error_if_not_exists(&err, state);
+      
       continue;
     }
 
@@ -2316,9 +2286,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
           int64_t a = valueA->value.as_number->n.i64;
           int64_t b = valueB->value.as_number->n.i64;
           if (!b) {
-            err = create_err(state->source_location.line,
-                             state->source_location.column,
-                             state->source_location.length, state->path,
+            err = create_err(
                              "Zero Division Error", "modulo by zero");
             continue;
           }
@@ -2341,9 +2309,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
           } else {
             mpq_set(a_GMP, *valueA->value.as_number->n.mpq);
             if (!valueB->value.as_number->n.i64) {
-              err = create_err(state->source_location.line,
-                               state->source_location.column,
-                               state->source_location.length, state->path,
+              err = create_err(
                                "Zero Division Error", "modulo by zero");
               continue;
             }
@@ -2360,7 +2326,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       ArgonObject *args[] = {valueA, valueB};
       state->registers[registerC] =
           argon_call(MODULO_FUNCTION, 2, args, &err, state);
-      add_source_location_to_error_if_not_exists(&err, state);
+      
       continue;
     }
 
@@ -2404,7 +2370,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       ArgonObject *args[] = {valueA, valueB};
       state->registers[registerC] =
           argon_call(EQUAL_FUNCTION, 2, args, &err, state);
-      add_source_location_to_error_if_not_exists(&err, state);
+      
       continue;
     }
 
@@ -2448,7 +2414,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       ArgonObject *args[] = {valueA, valueB};
       state->registers[registerC] =
           argon_call(NOT_EQUAL_FUNCTION, 2, args, &err, state);
-      add_source_location_to_error_if_not_exists(&err, state);
+      
       continue;
     }
 
@@ -2492,7 +2458,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       ArgonObject *args[] = {valueA, valueB};
       state->registers[registerC] =
           argon_call(LESS_THAN_FUNCTION, 2, args, &err, state);
-      add_source_location_to_error_if_not_exists(&err, state);
+      
       continue;
     }
 
@@ -2536,7 +2502,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       ArgonObject *args[] = {valueA, valueB};
       state->registers[registerC] =
           argon_call(GREATER_THAN_FUNCTION, 2, args, &err, state);
-      add_source_location_to_error_if_not_exists(&err, state);
+      
       continue;
     }
 
@@ -2580,7 +2546,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       ArgonObject *args[] = {valueA, valueB};
       state->registers[registerC] =
           argon_call(LESS_THAN_EQUAL_FUNCTION, 2, args, &err, state);
-      add_source_location_to_error_if_not_exists(&err, state);
+      
       continue;
     }
 
@@ -2624,7 +2590,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       ArgonObject *args[] = {valueA, valueB};
       state->registers[registerC] =
           argon_call(GREATER_THAN_EQUAL_FUNCTION, 2, args, &err, state);
-      add_source_location_to_error_if_not_exists(&err, state);
+      
       continue;
     }
 
@@ -2642,7 +2608,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
           get_builtin_field_for_class(object_class, __contains__, valueB);
       if (!object__contains__) {
         ArgonObject *cls___name__ = get_builtin_field(object_class, __name__);
-        err = create_err(0, 0, 0, "", "Runtime Error",
+        err = create_err( "Runtime Error",
                          "Object of type '%.*s' is missing __contains__ method",
                          (int)cls___name__->value.as_str->length,
                          cls___name__->value.as_str->data);
@@ -2652,7 +2618,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       ArgonObject *args[] = {valueA};
       state->registers[registerC] =
           argon_call(object__contains__, 1, args, &err, state);
-      add_source_location_to_error_if_not_exists(&err, state);
+      
       if (instruction == OP_IN)
         continue;
       state->registers[registerC] =
@@ -2666,8 +2632,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
           state->registers[0]);
       if (!state->registers[0]) {
         err = create_err(
-            state->source_location.line, state->source_location.column,
-            state->source_location.length, state->path, "Runtime Error",
+             "Runtime Error",
             "unable to get __setattr__ from objects class");
       }
       continue;
@@ -2696,8 +2661,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
           state->registers[0]);
       if (!state->registers[0]) {
         err = create_err(
-            state->source_location.line, state->source_location.column,
-            state->source_location.length, state->path, "Runtime Error",
+            "Runtime Error",
             "unable to get __setitem__ from objects class");
       }
       continue;
@@ -2708,8 +2672,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
           state->registers[0]);
       if (!state->registers[0]) {
         err = create_err(
-            state->source_location.line, state->source_location.column,
-            state->source_location.length, state->path, "Runtime Error",
+            "Runtime Error",
             "unable to get __getitem__ from objects class");
       }
       continue;
@@ -2723,6 +2686,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
     if (err.exists && currentStackFrame->source_location.length) {
       struct StackTraceFrame frame = {currentStackFrame->source_location.line,
                                       currentStackFrame->source_location.column,
+                                      currentStackFrame->source_location.length,
                                       currentStackFrame->translated.path};
       darray_armem_insert(err.stack_trace, err.stack_trace->size, &frame);
     }

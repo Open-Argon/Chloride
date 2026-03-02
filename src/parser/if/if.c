@@ -72,7 +72,7 @@ ParsedValueReturn parse_if(char *file, DArray *tokens, size_t *index) {
         darray_free(parsed_if, free_conditional);
         free(parsed_if);
         return (ParsedValueReturn){
-            create_err(token->line, token->column, token->length, file,
+            path_specific_create_err(token->line, token->column, token->length, file,
                        "Syntax Error", "expected '(' after if"),
             NULL};
       }
@@ -94,7 +94,7 @@ ParsedValueReturn parse_if(char *file, DArray *tokens, size_t *index) {
         darray_free(parsed_if, free_conditional);
         free(parsed_if);
         return (ParsedValueReturn){
-            create_err(token->line, token->column, token->length, file,
+            path_specific_create_err(token->line, token->column, token->length, file,
                        "Syntax Error", "expected condition"),
             NULL};
       }
@@ -109,7 +109,7 @@ ParsedValueReturn parse_if(char *file, DArray *tokens, size_t *index) {
         darray_free(parsed_if, free_conditional);
         free(parsed_if);
         return (ParsedValueReturn){
-            create_err(token->line, token->column, token->length, file,
+            path_specific_create_err(token->line, token->column, token->length, file,
                        "Syntax Error", "missing closing ')' in condition"),
             NULL};
       }
@@ -147,7 +147,7 @@ ParsedValueReturn parse_if(char *file, DArray *tokens, size_t *index) {
       }
       darray_free(parsed_if, free_conditional);
       free(parsed_if);
-      return (ParsedValueReturn){create_err(token->line, token->column,
+      return (ParsedValueReturn){path_specific_create_err(token->line, token->column,
                                             token->length, file, "Syntax Error",
                                             "expected body"),
                                  NULL};

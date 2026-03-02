@@ -294,8 +294,7 @@ Translated load_argon_file(char *path, ArErr *err) {
   cwk_path_get_basename(path, &basename_ptr, &basename_length);
 
   if (!basename_ptr) {
-    *err = create_err(0, 0, 0, NULL, "Path Error", "path has no basename '%s'",
-                      path);
+    *err = create_err("Path Error", "path has no basename '%s'", path);
     return (Translated){};
   }
 
@@ -320,8 +319,7 @@ Translated load_argon_file(char *path, ArErr *err) {
                             cache_file_path, sizeof(cache_file_path));
   FILE *file = fopen(path, "r");
   if (!file) {
-    *err = create_err(0, 0, 0, NULL, "File Error", "Unable to open file '%s'",
-                      path);
+    *err = create_err("File Error", "Unable to open file '%s'", path);
     return (Translated){};
   }
 
@@ -346,16 +344,16 @@ Translated load_argon_file(char *path, ArErr *err) {
 
     // Seek to end to get file size
     if (fseek(file, 0, SEEK_END) != 0) {
-      *err = create_err(0, 0, 0, NULL, "File Error",
-                        "Unable determine the files size: fseek", path);
+      *err = create_err("File Error", "Unable determine the files size: fseek",
+                        path);
       fclose(file);
       return (Translated){};
     }
 
     long size = ftell(file);
     if (size < 0) {
-      *err = create_err(0, 0, 0, NULL, "File Error",
-                        "Unable determine the files size: ftell", path);
+      *err = create_err("File Error", "Unable determine the files size: ftell",
+                        path);
       fclose(file);
       return (Translated){};
     }
@@ -363,7 +361,7 @@ Translated load_argon_file(char *path, ArErr *err) {
                   // Allocate buffer (+1 for NUL terminator)
     char *buffer = malloc(size + 1);
     if (!buffer) {
-      *err = create_err(0, 0, 0, NULL, "File Error",
+      *err = create_err("File Error",
                         "Unable determine the files content: malloc", path);
       fclose(file);
       return (Translated){};
@@ -372,7 +370,7 @@ Translated load_argon_file(char *path, ArErr *err) {
     // Read the file
     size_t read = fread(buffer, 1, size, file);
     if (read != (size_t)size) {
-      *err = create_err(0, 0, 0, NULL, "File Error",
+      *err = create_err("File Error",
                         "Unable determine the files content: fread", path);
       free(buffer);
       fclose(file);
@@ -572,15 +570,14 @@ Stack *ar_import(char *current_directory, char *path_relative, ArErr *err,
     }
   }
   if (!found) {
-    *err = create_err(0, 0, 0, NULL, "File Error", "Unable to find file '%s'",
-                      path_relative);
+    *err = create_err("File Error", "Unable to find file '%s'", path_relative);
     return NULL;
   }
   uint64_t hash = siphash64_bytes(path, strlen(path), siphash_key);
 
   if (hashmap_lookup_GC(importing_hash_table, hash)) {
-    *err = create_err(0, 0, 0, NULL, "Import Error",
-                      "Circular import detected: %s", path, path_relative);
+    *err = create_err("Import Error", "Circular import detected: %s", path,
+                      path_relative);
     return NULL;
   }
 

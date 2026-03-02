@@ -54,7 +54,7 @@ ParsedValueReturn parse_dictionary(char *file, DArray *tokens, size_t *index) {
       } else if (!key.value) {
         free_parsed(parsedValue);
         free(parsedValue);
-        return (ParsedValueReturn){create_err(token->line, token->column,
+        return (ParsedValueReturn){path_specific_create_err(token->line, token->column,
                                               token->length, file,
                                               "Syntax Error", "expected key"),
                                    NULL};
@@ -92,7 +92,7 @@ ParsedValueReturn parse_dictionary(char *file, DArray *tokens, size_t *index) {
           free_parsed(key.value);
           free(key.value);
           return (ParsedValueReturn){
-              create_err(token->line, token->column, token->length, file,
+              path_specific_create_err(token->line, token->column, token->length, file,
                          "Syntax Error", "expected value"),
               NULL};
         }
@@ -118,7 +118,7 @@ ParsedValueReturn parse_dictionary(char *file, DArray *tokens, size_t *index) {
           free_parsed(value.value);
           free(value.value);
           return (ParsedValueReturn){
-              create_err(token->line, token->column, token->length, file,
+              path_specific_create_err(token->line, token->column, token->length, file,
                          "Syntax Error", "expected comma"),
               NULL};
         }
@@ -134,7 +134,7 @@ ParsedValueReturn parse_dictionary(char *file, DArray *tokens, size_t *index) {
         free(parsedValue);
         free_parsed(key.value);
         free(key.value);
-        return (ParsedValueReturn){create_err(token->line, token->column,
+        return (ParsedValueReturn){path_specific_create_err(token->line, token->column,
                                               token->length, file,
                                               "Syntax Error", "unexpected token"),
                                    NULL};

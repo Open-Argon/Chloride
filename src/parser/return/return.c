@@ -35,7 +35,7 @@ ParsedValueReturn parse_return(char *file, DArray *tokens, size_t *index) {
   if (!value.value) {
     free_parsed(parsedValue);
     free(parsedValue);
-    return (ParsedValueReturn){create_err(token->line, token->column,
+    return (ParsedValueReturn){path_specific_create_err(token->line, token->column,
                                           token->length, file, "Syntax Error",
                                           "expected value"),
                                NULL};

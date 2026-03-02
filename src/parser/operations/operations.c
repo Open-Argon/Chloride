@@ -104,7 +104,7 @@ ParsedValueReturn parse_operations(char *file, DArray *tokens, size_t *index,
     } else if (!parsedValue.value) {
       darray_free(&to_operate_on, (void (*)(void *))free_parsed);
       darray_free(&operations, NULL);
-      return (ParsedValueReturn){create_err(token->line, token->column,
+      return (ParsedValueReturn){path_specific_create_err(token->line, token->column,
                                             token->length, file, "Syntax Error",
                                             "expected value"),
                                  NULL};

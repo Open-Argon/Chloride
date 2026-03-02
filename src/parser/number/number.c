@@ -5,8 +5,8 @@
  */
 
 #include "number.h"
-#include "../../memory.h"
 #include "../../err.h"
+#include "../../memory.h"
 #include <ctype.h>
 #include <gmp.h>
 #include <stdio.h>
@@ -164,7 +164,7 @@ int mpq_set_decimal_str_exp(mpq_t r, const char *str, size_t len) {
   mpq_set_den(r, denominator);
   mpq_canonicalize(r);
 
-  if (negative){
+  if (negative) {
     mpq_neg(r, r);
   }
 
@@ -184,12 +184,11 @@ ParsedValueReturn parse_number(Token *token, char *path) {
     mpq_clear(*r_ptr);
     free(r_ptr);
     free(parsedValue);
-    return (ParsedValueReturn){create_err(token->line, token->column,
+    return (ParsedValueReturn){
+        path_specific_create_err(token->line, token->column,
                                           token->length, path, "Parsing Error",
-                                          "Unable to parse number"),
-                               NULL};
+                                          "Unable to parse number"), NULL};
   }
   parsedValue->data = r_ptr;
   return (ParsedValueReturn){no_err, parsedValue};
 }
-

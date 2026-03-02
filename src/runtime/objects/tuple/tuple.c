@@ -41,7 +41,7 @@ ArgonObject *ARGON_TUPLE___new__(size_t argc, ArgonObject **argv, ArErr *err,
   (void)state;
   if (argc < 1) {
     *err =
-        create_err(0, 0, 0, "", "Runtime Error",
+        create_err( "Runtime Error",
                    "__new__ expects at least 1 argument, got %" PRIu64, argc);
     return ARGON_NULL;
   }
@@ -59,7 +59,7 @@ ArgonObject *ARGON_TUPLE___init__(size_t argc, ArgonObject **argv, ArErr *err,
 
   if (argc < 1) {
     *err =
-        create_err(0, 0, 0, "", "Runtime Error",
+        create_err( "Runtime Error",
                    "__init__ expects at least 1 argument, got %" PRIu64, argc);
     return ARGON_NULL;
   }
@@ -73,7 +73,7 @@ ArgonObject *ARGON_TUPLE___string__(size_t argc, ArgonObject **argv, ArErr *err,
   (void)api;
 
   if (argc != 1) {
-    *err = create_err(0, 0, 0, "", "Runtime Error",
+    *err = create_err( "Runtime Error",
                       "__string__ expects 1 argument, got %" PRIu64, argc);
     return ARGON_NULL;
   }
@@ -151,7 +151,7 @@ ArgonObject *ARGON_TUPLE_get_length(size_t argc, ArgonObject **argv, ArErr *err,
   (void)api;
   (void)state;
   if (argc != 1) {
-    *err = create_err(0, 0, 0, "", "Runtime Error",
+    *err = create_err( "Runtime Error",
                       "get_length expects 1 argument, got %" PRIu64, argc);
     return ARGON_NULL;
   }
@@ -164,12 +164,12 @@ ArgonObject *ARGON_TUPLE_set_length(size_t argc, ArgonObject **argv, ArErr *err,
   (void)state;
   (void)argv;
   if (argc != 2) {
-    *err = create_err(0, 0, 0, "", "Runtime Error",
+    *err = create_err( "Runtime Error",
                       "set_length expects 2 arguments, got %" PRIu64, argc);
     return ARGON_NULL;
   }
 
-  *err = create_err(0, 0, 0, "", "Runtime Error",
+  *err = create_err( "Runtime Error",
                     "attribute 'length' is immutable");
   return ARGON_NULL;
 }
@@ -179,7 +179,7 @@ ArgonObject *ARGON_TUPLE___getitem__(size_t argc, ArgonObject **argv,
                                      ArgonNativeAPI *api) {
   (void)state;
   if (argc != 2) {
-    *err = create_err(0, 0, 0, "", "Runtime Error",
+    *err = create_err( "Runtime Error",
                       "__getitem__ expects 2 arguments, got %" PRIu64, argc);
     return ARGON_NULL;
   }
@@ -199,7 +199,7 @@ ArgonObject *ARGON_TUPLE___setitem__(size_t argc, ArgonObject **argv,
                                      ArgonNativeAPI *api) {
   (void)state;
   if (argc != 3) {
-    *err = create_err(0, 0, 0, "", "Runtime Error",
+    *err = create_err( "Runtime Error",
                       "__setitem__ expects 3 arguments, got %" PRIu64, argc);
     return ARGON_NULL;
   }

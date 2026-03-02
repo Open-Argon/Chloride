@@ -78,15 +78,11 @@ int main(int argc, char *argv[]) {
   ArErr err = no_err;
   ar_import(CWD, path_non_absolute, &err, true);
   if (err.exists) {
-    output_err(err);
+    output_err(&err);
     return 1;
   }
   free(CWD);
   ar_memory_shutdown();
-  if (err.exists) {
-    output_err(err);
-    return 1;
-  }
   // Your main thread code
   return 0;
 }

@@ -114,15 +114,14 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
           get_builtin_field(object, __class__), __name__, original_object);
       ArgonObject *object_name =
           get_builtin_field_for_class(object, __name__, original_object);
-      *err = create_err(
-          state->source_location.line, state->source_location.column,
-          state->source_location.length, state->path, "Type Error",
-          "%.*s %.*s takes %" PRIu64 " argument(s) but %" PRIu64 " was given",
-          (int)type_object_name->value.as_str->length,
-          type_object_name->value.as_str->data,
-          (int)object_name->value.as_str->length,
-          object_name->value.as_str->data,
-          object->value.argon_fn->number_of_parameters, argc);
+      *err = create_err("Type Error",
+                        "%.*s %.*s takes %" PRIu64 " argument(s) but %" PRIu64
+                        " was given",
+                        (int)type_object_name->value.as_str->length,
+                        type_object_name->value.as_str->data,
+                        (int)object_name->value.as_str->length,
+                        object_name->value.as_str->data,
+                        object->value.argon_fn->number_of_parameters, argc);
       return;
     }
     Stack *scope = create_scope(object->value.argon_fn->stack, true);
@@ -146,15 +145,15 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
     if (CStackFrame) {
       if (state->c_depth >= MAX_C_STACK_LIMIT) {
         *err = create_err(
-            state->source_location.line, state->source_location.column,
-            state->source_location.length, state->path, "Internal Error",
+            "Internal Error",
             "C stack limit exceeded (this usually indicates a builtin calling "
             "itself indirectly)",
             argc);
         return;
       }
-      ArgonObject **registers = ar_alloc(object->value.argon_fn->translated.registerCount *
-                                 sizeof(ArgonObject *));
+      ArgonObject **registers =
+          ar_alloc(object->value.argon_fn->translated.registerCount *
+                   sizeof(ArgonObject *));
       runtime(
           (Translated){object->value.argon_fn->translated.registerCount,
                        object->value.argon_fn->translated.registerAssignment,
@@ -247,27 +246,15 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
     }
     state->registers[0] =
         object->value.native_fn(argc, argv, err, state, &native_api);
-    if (err->exists && err->path && strlen(err->path) == 0) {
-      err->line = state->source_location.line;
-      err->column = state->source_location.column;
-      err->length = state->source_location.length;
-
-      size_t length = strlen(state->path);
-      err->path = ar_alloc_atomic(length);
-      memcpy(err->path, state->path, length);
-    }
     return;
   }
   default: {
     ArgonObject *type_object_name = get_builtin_field_for_class(
         get_builtin_field(original_object, __class__), __name__,
         original_object);
-    *err =
-        create_err(state->source_location.line, state->source_location.column,
-                   state->source_location.length, state->path, "Type Error",
-                   "'%.*s' object is not callable",
-                   (int)type_object_name->value.as_str->length,
-                   type_object_name->value.as_str->data);
+    *err = create_err("Type Error", "'%.*s' object is not callable",
+                      (int)type_object_name->value.as_str->length,
+                      type_object_name->value.as_str->data);
     return;
   }
   }

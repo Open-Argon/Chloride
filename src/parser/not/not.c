@@ -21,7 +21,7 @@ ParsedValueReturn parse_not(char *file, DArray *tokens, size_t *index) {
       if (value.err.exists) {
         return value;
       } else if (!value.value) {
-        return (ParsedValueReturn){create_err(token->line, token->column,
+        return (ParsedValueReturn){path_specific_create_err(token->line, token->column,
                                               token->length, file,
                                               "Syntax Error", "expected value"),
                                    NULL};
