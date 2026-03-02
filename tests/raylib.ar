@@ -10,6 +10,10 @@ term.log(raylib)
 
 class bouncing_text do
   this.__init__(self, text, pos, speed) = do
+    self.text = text
+    self.pos = pos
+    self.speed = speed
+    self.color = raylib.Color(random.int(0,255),random.int(0,255),random.int(0,255),255)
   this.render(self, frame, max) = raylib.DrawText(
     self.text, maths.round(max[0] - maths.abs(((self.pos[0]+frame * self.speed) % (2 * max[0])) - max[0])),
     maths.round(max[1] - maths.abs(((self.pos[1]+frame * self.speed) % (2 * max[1])) - max[1])), 20,
@@ -43,7 +47,7 @@ class Game do
     return "game instance"
 
 
-let instance = Game(820, 640, 60)
+let instance = Game(820, 640, 0)
 
 while (true) do
   if (raylib.WindowShouldClose()) break
