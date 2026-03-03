@@ -85,6 +85,7 @@ ArgonObject *ARGON_RANGE_ITERATOR_TYPE___init__(size_t argc, ArgonObject **argv,
       self->value.as_range_iterator->is_int64 = false;
       self->value.as_range_iterator->current.obj = argv[1];
       self->value.as_range_iterator->stop.obj = argv[2];
+        self->value.as_range_iterator->step.obj = &small_ints[-small_ints_min + 1];
       if (argc == 4) {
         self->value.as_range_iterator->step.obj = argv[3];
       }
