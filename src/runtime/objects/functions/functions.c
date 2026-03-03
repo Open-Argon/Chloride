@@ -16,7 +16,7 @@ ArgonObject *create_argon_native_function(char *name, native_fn native_fn) {
   ArgonObject *object = new_instance(ARGON_FUNCTION_TYPE,0);
   object->type = TYPE_NATIVE_FUNCTION;
   add_builtin_field(object, __name__,
-                    new_string_object(name, strlen(name), 0, 0));
+                    new_string_object(name, strlen(name), 0));
   object->value.native_fn = native_fn;
   return object;
 }

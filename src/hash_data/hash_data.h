@@ -9,8 +9,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-extern uint8_t siphash_key[16];
-extern const uint8_t  siphash_key_fixed_for_translator[16];
+extern const uint8_t  siphash_key_fixed[16];
 extern uint8_t empty_siphash_key[16];
 
 void generate_siphash_key(uint8_t siphash_key[16]);

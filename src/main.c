@@ -60,14 +60,14 @@ get_current_directory() {
 int main(int argc, char *argv[]) {
   setlocale(LC_ALL, "");
   ar_memory_init();
-  generate_siphash_key(siphash_key);
+  // generate_siphash_key(siphash_key);
   init_built_in_field_hashes();
   bootstrap_types();
   bootstrap_globals();
 
   imported_hash_table = createHashmap_GC();
   importing_hash_table = createHashmap_GC();
-  runtime_hash_table = createHashmap_GC();
+  // runtime_hash_table = createHashmap_GC();
   CWD = get_current_directory();
   EXC = get_executable_path();
   CWD_ARGON = CWD?new_string_object_null_terminated(CWD):ARGON_NULL;

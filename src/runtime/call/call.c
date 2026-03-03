@@ -6,7 +6,6 @@
 
 #include "call.h"
 #include "../../err.h"
-#include "../../hash_data/hash_data.h"
 #include "../../memory.h"
 #include "../api/api.h"
 #include "../objects/string/string.h"
@@ -128,18 +127,16 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
     if (binding_object) {
       struct string_struct key = object->value.argon_fn->parameters[0];
       ArgonObject *value = binding_object;
-      uint64_t hash = siphash64_bytes(key.data, key.length, siphash_key);
-      hashmap_insert_GC(scope->scope, hash,
-                        new_string_object(key.data, key.length, 0, hash), value,
+      hashmap_insert_GC(scope->scope, key.hash,
+                        new_string_object(key.data, key.length, key.hash), value,
                         0);
     }
     for (size_t i = 0; i < argc; i++) {
       struct string_struct key =
           object->value.argon_fn->parameters[i + binding_object_exists];
       ArgonObject *value = argv[i];
-      uint64_t hash = siphash64_bytes(key.data, key.length, siphash_key);
-      hashmap_insert_GC(scope->scope, hash,
-                        new_string_object(key.data, key.length, 0, hash), value,
+      hashmap_insert_GC(scope->scope, key.hash,
+                        new_string_object(key.data, key.length, key.hash), value,
                         0);
     }
     if (CStackFrame) {

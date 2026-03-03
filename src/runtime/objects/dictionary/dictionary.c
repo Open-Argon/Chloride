@@ -129,7 +129,7 @@ ArgonObject *create_ARGON_DICTIONARY_TYPE___string__(size_t argc,
   string = realloc(string, string_length + length);
   memcpy(string + string_length, string_obj, length);
   string_length += length;
-  ArgonObject *result = new_string_object(string, string_length, 0, 0);
+  ArgonObject *result = new_string_object(string, string_length, 0);
   free(string);
   return result;
 }

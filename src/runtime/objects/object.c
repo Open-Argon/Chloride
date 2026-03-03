@@ -178,7 +178,7 @@ ArgonObject *new_object(size_t endSize) {
 void init_built_in_field_hashes() {
   for (int i = 0; i < BUILT_IN_FIELDS_COUNT; i++) {
     built_in_field_hashes[i] = siphash64_bytes(
-        built_in_field_names[i], strlen(built_in_field_names[i]), siphash_key);
+        built_in_field_names[i], strlen(built_in_field_names[i]), siphash_key_fixed);
   }
 }
 

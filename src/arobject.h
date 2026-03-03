@@ -184,11 +184,9 @@ typedef struct {
 } Translated;
 
 struct string_struct {
-  uint64_t prehash;
   uint64_t hash;
   char *data;
   size_t length;
-  bool hash_computed;
 };
 
 typedef struct Stack {

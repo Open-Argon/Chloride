@@ -32,7 +32,7 @@ size_t translate_parsed_import(Translated *translated,
     push_instruction_code(translated, as_pos);
     push_instruction_code(translated,
                           siphash64_bytes(parsedImport->as, length,
-                                          siphash_key_fixed_for_translator));
+                                          siphash_key_fixed));
     push_instruction_byte(translated, 0);
   }
 
@@ -63,7 +63,7 @@ size_t translate_parsed_import(Translated *translated,
       push_instruction_code(translated, pos);
       push_instruction_code(translated,
                             siphash64_bytes(expose->identifier, length,
-                                            siphash_key_fixed_for_translator));
+                                            siphash_key_fixed));
 
       if (expose->as) {
         length = strlen(expose->as);
@@ -75,7 +75,7 @@ size_t translate_parsed_import(Translated *translated,
       push_instruction_code(translated, pos);
       push_instruction_code(translated,
                             siphash64_bytes(expose->as?expose->as:expose->identifier, length,
-                                            siphash_key_fixed_for_translator));
+                                            siphash_key_fixed));
       push_instruction_byte(translated, 0);
     }
     if (parsedImport->expose.size > 1) {

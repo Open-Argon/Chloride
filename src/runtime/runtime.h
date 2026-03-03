@@ -64,9 +64,9 @@ typedef struct StackFrame {
 
 void bootstrap_types();
 
-extern struct hashmap_GC *runtime_hash_table;
+// extern struct hashmap_GC *runtime_hash_table;
 
-uint64_t runtime_hash(const void *data, size_t len, uint64_t prehash);
+// uint64_t runtime_hash(const void *data, size_t len, uint64_t prehash);
 
 void bootstrap_globals();
 

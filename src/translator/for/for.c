@@ -55,7 +55,7 @@ size_t translate_parsed_for(Translated *translated, ParsedFor *parsedFor,
   push_instruction_code(translated, identifier_pos);
   push_instruction_code(translated,
                         siphash64_bytes(parsedFor->key, length,
-                                        siphash_key_fixed_for_translator));
+                                        siphash_key_fixed));
   push_instruction_byte(translated, 0);
 
   push_instruction_byte(translated, OP_IS_NOT_END_ITERATION);

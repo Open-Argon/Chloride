@@ -186,7 +186,7 @@ int shell() {
   cwk_path_join(CWD, "<shell>", path, sizeof(path));
   add_to_scope(main_scope, "license",
                new_string_object_without_memcpy((char *)LICENSE_txt,
-                                                LICENSE_txt_len, 0, 0));
+                                                LICENSE_txt_len, 0));
 
   signal(SIGINT, handle_sigint);
 

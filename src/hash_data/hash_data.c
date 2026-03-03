@@ -16,8 +16,7 @@
 #include "siphash/siphash.h"
 #include "hash_data.h"
 
-uint8_t siphash_key[16];
-const uint8_t siphash_key_fixed_for_translator[16] = {218, 19, 245, 136, 128, 160, 122, 81, 249, 147, 111, 230, 174, 145, 125 ,218};
+const uint8_t siphash_key_fixed[16] = {218, 19, 245, 136, 128, 160, 122, 81, 249, 147, 111, 230, 174, 145, 125 ,218};
 uint8_t empty_siphash_key[16];
 
 

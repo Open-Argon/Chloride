@@ -133,16 +133,7 @@ ArgonObject *BASE_CLASS___getattribute__(size_t argc, ArgonObject **argv,
   }
   ArgonObject *to_access = argv[0];
   ArgonObject *access = argv[1];
-  uint64_t hash;
-  if (access->value.as_str->hash_computed) {
-    hash = access->value.as_str->hash;
-  } else {
-    hash =
-        runtime_hash(access->value.as_str->data, access->value.as_str->length,
-                     access->value.as_str->prehash);
-    access->value.as_str->hash = hash;
-    access->value.as_str->hash_computed = true;
-  }
+  uint64_t hash=access->value.as_str->hash;
   char *name_text = access->value.as_str->data;
   size_t name_len = access->value.as_str->length;
 
@@ -159,7 +150,8 @@ ArgonObject *BASE_CLASS___getattribute__(size_t argc, ArgonObject **argv,
   memcpy(getter_name + 4, name_text, name_len);
 
   /* If your get_field_l needs a hash, recompute it */
-  uint64_t getter_hash = runtime_hash(getter_name, getter_len, 0);
+  uint64_t getter_hash = siphash64_bytes(getter_name, getter_len,
+                                          siphash_key_fixed);
 
   ArgonObject *class_to_access = get_builtin_field(to_access, __class__);
 
@@ -679,7 +671,8 @@ ArgonObject *BASE_CLASS___setattr__(size_t argc, ArgonObject **argv, ArErr *err,
   memcpy(setter_name + 4, name_text, name_len);
 
   /* If your get_field_l needs a hash, recompute it */
-  uint64_t setter_hash = runtime_hash(setter_name, setter_len, 0);
+  uint64_t setter_hash = siphash64_bytes(setter_name, setter_len,
+                                          siphash_key_fixed);
 
   ArgonObject *setter =
       get_field_for_class_l(get_builtin_field(argv[0], __class__), setter_name,
@@ -690,8 +683,8 @@ ArgonObject *BASE_CLASS___setattr__(size_t argc, ArgonObject **argv, ArErr *err,
 
   if (!argv[1]->value.as_str->hash)
     argv[1]->value.as_str->hash =
-        runtime_hash(argv[1]->value.as_str->data, argv[1]->value.as_str->length,
-                     argv[1]->value.as_str->prehash);
+        siphash64_bytes(argv[1]->value.as_str->data, argv[1]->value.as_str->length,
+                                          siphash_key_fixed);
   add_field_l(argv[0], argv[1]->value.as_str->data, argv[1]->value.as_str->hash,
               argv[1]->value.as_str->length, argv[2]);
   return argv[2];
@@ -811,7 +804,6 @@ ArgonObject *ARGON_STRING_TYPE___init__(size_t argc, ArgonObject **argv,
       return ARGON_NULL;
     init_string(self, string_object->value.as_str->data,
                 string_object->value.as_str->length,
-                string_object->value.as_str->prehash,
                 string_object->value.as_str->hash);
     return ARGON_NULL;
   }
@@ -874,7 +866,7 @@ ArgonObject *ARGON_STRING_TYPE___add__(size_t argc, ArgonObject **argv,
   memcpy(concat, argv[0]->value.as_str->data, argv[0]->value.as_str->length);
   memcpy(concat + argv[0]->value.as_str->length, argv[1]->value.as_str->data,
          argv[1]->value.as_str->length);
-  ArgonObject *object = new_string_object_without_memcpy(concat, length, 0, 0);
+  ArgonObject *object = new_string_object_without_memcpy(concat, length, 0);
   return object;
 }
 
@@ -941,14 +933,12 @@ ArgonObject *ARGON_STRING_TYPE___hash__(size_t argc, ArgonObject **argv,
                       "__hash__ expects 1 argument, got %" PRIu64, argc);
   }
   uint64_t hash;
-  if (argv[0]->value.as_str->hash_computed) {
+  if (argv[0]->value.as_str->hash) {
     hash = argv[0]->value.as_str->hash;
   } else {
-    hash =
-        runtime_hash(argv[0]->value.as_str->data, argv[0]->value.as_str->length,
-                     argv[0]->value.as_str->prehash);
+    hash =siphash64_bytes(argv[0]->value.as_str->data, argv[0]->value.as_str->length,
+                                          siphash_key_fixed);
     argv[0]->value.as_str->hash = hash;
-    argv[0]->value.as_str->hash_computed = true;
   }
   return new_number_object_from_int64(hash);
 }
@@ -1208,8 +1198,8 @@ void bootstrap_types() {
 void add_to_hashmap(struct hashmap_GC *hashmap, char *name,
                     ArgonObject *value) {
   size_t length = strlen(name);
-  uint64_t hash = siphash64_bytes(name, length, siphash_key);
-  ArgonObject *key = new_string_object(name, length, 0, hash);
+  uint64_t hash = siphash64_bytes(name, length, siphash_key_fixed);
+  ArgonObject *key = new_string_object(name, length, hash);
   hashmap_insert_GC(hashmap, hash, key, value, 0);
 }
 
@@ -1321,31 +1311,29 @@ static inline void load_const(uint8_t to_register, size_t length,
                               uint64_t offset, Translated *translated,
                               RuntimeState *state) {
   ArgonObject *object = new_string_object(
-      arena_get(&translated->constants, offset), length, 0, 0);
+      arena_get(&translated->constants, offset), length, 0);
   state->registers[to_register] = object;
 }
 
-struct hashmap_GC *runtime_hash_table = NULL;
+// struct hashmap_GC *runtime_hash_table = NULL;
 
-uint64_t runtime_hash(const void *data, size_t len, uint64_t prehash) {
-  if (prehash) {
-    void *result = hashmap_lookup_GC(runtime_hash_table, prehash);
-    if (result) {
-      return (uint64_t)result;
-    }
-  }
-  uint64_t hash = siphash64_bytes(data, len, siphash_key);
-  if (prehash)
-    hashmap_insert_GC(runtime_hash_table, prehash, 0, (void *)hash, 0);
-  return hash;
-}
+// uint64_t runtime_hash(const void *data, size_t len, uint64_t prehash) {
+//   if (prehash) {
+//     void *result = hashmap_lookup_GC(runtime_hash_table, prehash);
+//     if (result) {
+//       return (uint64_t)result;
+//     }
+//   }
+//   uint64_t hash = siphash64_bytes(data, len, siphash_key);
+//   if (prehash)
+//     hashmap_insert_GC(runtime_hash_table, prehash, 0, (void *)hash, 0);
+//   return hash;
+// }
 
 static inline void load_variable(int64_t length, int64_t offset,
-                                 uint64_t prehash, Translated *translated,
+                                 uint64_t hash, Translated *translated,
                                  RuntimeState *state, struct Stack *stack,
                                  ArErr *err) {
-  uint64_t hash =
-      runtime_hash(arena_get(&translated->constants, offset), length, prehash);
   struct Stack *current_stack = stack;
   while (current_stack) {
     ArgonObject *result = hashmap_lookup_GC(current_stack->scope, hash);
@@ -1389,8 +1377,8 @@ Stack *create_scope(Stack *prev, bool force) {
 
 void add_to_scope(Stack *stack, char *name, ArgonObject *value) {
   size_t length = strlen(name);
-  uint64_t hash = siphash64_bytes(name, length, siphash_key);
-  ArgonObject *key = new_string_object(name, length, 0, hash);
+  uint64_t hash = siphash64_bytes(name, length, siphash_key_fixed);
+  ArgonObject *key = new_string_object(name, length, hash);
   hashmap_insert_GC(stack->scope, hash, key, value, 0);
 }
 
@@ -1580,7 +1568,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       add_builtin_field(
           object, __name__,
           new_string_object(arena_get(&translated->constants, offset), length,
-                            0, 0));
+                            0));
       object->value.argon_fn =
           (struct argon_function_struct *)((char *)object +
                                            sizeof(ArgonObject));
@@ -1629,10 +1617,8 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       POP_U64(length);
       int64_t offset;
       POP_U64(offset);
-      uint64_t prehash;
-      POP_U64(prehash);
-      uint64_t hash = runtime_hash(arena_get(&translated->constants, offset),
-                                   length, prehash);
+      uint64_t hash;
+      POP_U64(hash);
 
       ArgonObject *object = hashmap_lookup_GC(hashmap, hash);
       if (!object) {
@@ -1649,9 +1635,9 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       POP_U64(length);
       int64_t offset;
       POP_U64(offset);
-      uint64_t prehash;
-      POP_U64(prehash);
-      load_variable(length, offset, prehash, translated, state,
+      uint64_t hash;
+      POP_U64(hash);
+      load_variable(length, offset, hash, translated, state,
                     currentStackFrame->stack, &err);
       continue;
     }
@@ -2647,7 +2633,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       add_builtin_field(
           class, __name__,
           new_string_object(arena_get(&translated->constants, offset), length,
-                            0, 0));
+                            0));
       state->registers[0] = class;
       continue;
     }

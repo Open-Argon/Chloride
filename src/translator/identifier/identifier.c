@@ -28,6 +28,6 @@ size_t translate_parsed_identifier(Translated *translated,
   push_instruction_code(translated, identifier_pos);
   push_instruction_code(translated,
                         siphash64_bytes(parsedIdentifier->name, length,
-                                        siphash_key_fixed_for_translator));
+                                        siphash_key_fixed));
   return start;
 }

@@ -113,7 +113,7 @@ ArgonObject *rational_to_argon(struct rational r) {
 }
 
 ArgonObject *string_to_argon(struct string str) {
-  return new_string_object(str.data, str.length, 0, 0);
+  return new_string_object(str.data, str.length, 0);
 }
 
 struct string argon_to_string(ArgonObject *obj, ArErr *err) {

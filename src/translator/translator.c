@@ -64,7 +64,7 @@ void arena_resize(ConstantArena *arena, size_t new_size) {
 }
 
 size_t arena_push(ConstantArena *arena, const void *data, size_t length) {
-  uint64_t hash = siphash64_bytes(data, length, siphash_key);
+  uint64_t hash = siphash64_bytes(data, length, siphash_key_fixed);
 
   // Look up offset in hashmap
   void *val = hashmap_lookup(arena->hashmap, hash);

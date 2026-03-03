@@ -5,17 +5,17 @@
  */
 
 #include "string.h"
-#include "../../call/call.h"
-#include "../number/number.h"
-#include "../object.h"
-#include "../literals/literals.h"
 #include "../../../err.h"
 #include "../../../memory.h"
-#include <stdlib.h>
-#include <inttypes.h>
+#include "../../call/call.h"
+#include "../literals/literals.h"
+#include "../number/number.h"
+#include "../object.h"
 #include <ctype.h>
+#include <inttypes.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 ArgonObject *ARGON_STRING_TYPE = NULL;
@@ -70,12 +70,12 @@ char *c_quote_string(const char *input, size_t len) {
 }
 
 ArgonObject *ARGON_STRING_TYPE_get_length(size_t argc, ArgonObject **argv,
-                                        ArErr *err, RuntimeState *state,
-                                        ArgonNativeAPI *api) {
+                                          ArErr *err, RuntimeState *state,
+                                          ArgonNativeAPI *api) {
   (void)api;
   (void)state;
   if (argc != 1) {
-    *err = create_err( "Runtime Error",
+    *err = create_err("Runtime Error",
                       "get_length expects 1 argument, got %" PRIu64, argc);
     return ARGON_NULL;
   }
@@ -83,46 +83,44 @@ ArgonObject *ARGON_STRING_TYPE_get_length(size_t argc, ArgonObject **argv,
 }
 
 ArgonObject *ARGON_STRING_TYPE_set_length(size_t argc, ArgonObject **argv,
-                                        ArErr *err, RuntimeState *state,
-                                        ArgonNativeAPI *api) {
+                                          ArErr *err, RuntimeState *state,
+                                          ArgonNativeAPI *api) {
   (void)api;
   (void)state;
   (void)argv;
   if (argc != 2) {
-    *err = create_err( "Runtime Error",
+    *err = create_err("Runtime Error",
                       "set_length expects 2 arguments, got %" PRIu64, argc);
     return ARGON_NULL;
   }
 
-  *err = create_err( "Runtime Error",
-                    "attribute 'length' is immutable");
+  *err = create_err("Runtime Error", "attribute 'length' is immutable");
   return ARGON_NULL;
 }
 
 void init_string(ArgonObject *object, char *data, size_t length,
-                 uint64_t prehash, uint64_t hash) {
+                 uint64_t hash) {
   object->type = TYPE_STRING;
-  object->value.as_str = (struct string_struct*)((char*)object+sizeof(ArgonObject));
+  object->value.as_str =
+      (struct string_struct *)((char *)object + sizeof(ArgonObject));
   object->value.as_str->data = data;
-  object->value.as_str->prehash = prehash;
-  object->value.as_str->hash_computed = hash;
   object->value.as_str->hash = hash;
   object->value.as_str->length = length;
   object->as_bool = length;
 }
 
 ArgonObject *new_string_object_without_memcpy(char *data, size_t length,
-                                              uint64_t prehash, uint64_t hash) {
-  ArgonObject *object = new_small_instance(ARGON_STRING_TYPE,sizeof(struct string_struct));
-  init_string(object, data, length, prehash, hash);
+                                              uint64_t hash) {
+  ArgonObject *object =
+      new_small_instance(ARGON_STRING_TYPE, sizeof(struct string_struct));
+  init_string(object, data, length, hash);
   return object;
 }
 
-ArgonObject *new_string_object(char *data, size_t length, uint64_t prehash,
-                               uint64_t hash) {
+ArgonObject *new_string_object(char *data, size_t length, uint64_t hash) {
   char *data_copy = ar_alloc_atomic(length);
   memcpy(data_copy, data, length);
-  return new_string_object_without_memcpy(data_copy, length, prehash, hash);
+  return new_string_object_without_memcpy(data_copy, length, hash);
 }
 
 char *argon_object_to_null_terminated_string(ArgonObject *object, ArErr *err,
@@ -159,5 +157,5 @@ char *argon_string_to_c_string_malloc(ArgonObject *object) {
 }
 
 ArgonObject *new_string_object_null_terminated(char *data) {
-  return new_string_object(data, strlen(data), 0, 0);
+  return new_string_object(data, strlen(data), 0);
 }

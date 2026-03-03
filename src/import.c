@@ -574,7 +574,7 @@ Stack *ar_import(char *current_directory, char *path_relative, ArErr *err,
     *err = create_err("File Error", "Unable to find file '%s'", path_relative);
     return NULL;
   }
-  uint64_t hash = siphash64_bytes(path_c, strlen(path_c), siphash_key);
+  uint64_t hash = siphash64_bytes(path_c, strlen(path_c), siphash_key_fixed);
 
   if (hashmap_lookup_GC(importing_hash_table, hash)) {
     *err = create_err("Import Error", "Circular import detected: %s", path_c,
@@ -609,9 +609,9 @@ Stack *ar_import(char *current_directory, char *path_relative, ArErr *err,
   size_t dirname_length;
   cwk_path_get_dirname(path, &dirname_length);
   add_to_hashmap(file, "name",
-                 new_string_object((char *)basename, basename_length, 0, 0));
+                 new_string_object((char *)basename, basename_length, 0));
   add_to_hashmap(file, "directory",
-                 new_string_object(path, dirname_length, 0, 0));
+                 new_string_object(path, dirname_length, 0));
   add_to_hashmap(program, "file", create_dictionary(file));
   add_to_hashmap(program, "main", is_main ? ARGON_TRUE : ARGON_FALSE);
   add_to_hashmap(program, "origin",

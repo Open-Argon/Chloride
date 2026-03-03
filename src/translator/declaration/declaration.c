@@ -42,7 +42,7 @@ size_t translate_parsed_declaration(Translated *translated, DArray delcarations,
     push_instruction_code(translated, offset);
     push_instruction_code(translated,
                           siphash64_bytes(singleDeclaration->name, length,
-                                          siphash_key_fixed_for_translator));
+                                          siphash_key_fixed));
     push_instruction_byte(translated, 0);
     translated->return_jump = old_return_jump;
     translated->break_jump = old_break_jump;

@@ -45,7 +45,7 @@ size_t translate_parsed_assignment(Translated *translated,
     push_instruction_code(translated, offset);
     push_instruction_code(translated,
                           siphash64_bytes(identifier->name, length,
-                                          siphash_key_fixed_for_translator));
+                                          siphash_key_fixed));
     push_instruction_byte(translated, 0);
     break;
   case AST_ACCESS: {

@@ -56,7 +56,7 @@ size_t translate_parsed_class(Translated *translated, ParsedClass *parsedClass,
   push_instruction_code(translated, identifier_pos);
   push_instruction_code(translated,
                         siphash64_bytes(parsedClass->name, length,
-                                        siphash_key_fixed_for_translator));
+                                        siphash_key_fixed));
   push_instruction_byte(translated, 0);
 
   push_instruction_byte(translated, OP_NEW_SCOPE);
@@ -67,7 +67,7 @@ size_t translate_parsed_class(Translated *translated, ParsedClass *parsedClass,
   push_instruction_code(translated, class_parent_pos);
   push_instruction_code(translated,
                         siphash64_bytes(class_parent, class_parent_length,
-                                        siphash_key_fixed_for_translator));
+                                        siphash_key_fixed));
   push_instruction_byte(translated, parentRegister);
 
   push_instruction_byte(translated, OP_LOAD_NULL);
@@ -78,7 +78,7 @@ size_t translate_parsed_class(Translated *translated, ParsedClass *parsedClass,
   push_instruction_code(translated, init_object_name_pos);
   push_instruction_code(
       translated, siphash64_bytes(init_object_name, init_object_name_length,
-                                  siphash_key_fixed_for_translator));
+                                  siphash_key_fixed));
   push_instruction_byte(translated, 0);
 
   translate_parsed(translated, parsedClass->body, err);

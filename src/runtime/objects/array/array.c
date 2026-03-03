@@ -111,7 +111,7 @@ ArgonObject *ARGON_ARRAY___string__(size_t argc, ArgonObject **argv, ArErr *err,
   string[string_length] = ']';
   string_length += 1;
 
-  ArgonObject *result = new_string_object(string, string_length, 0, 0);
+  ArgonObject *result = new_string_object(string, string_length, 0);
 
   free(string);
 

@@ -102,7 +102,7 @@ ParsedValueReturn parse_declaration(char *file, DArray *tokens, size_t *index) {
                 NULL};
           }
           uint64_t hash =
-              siphash64_bytes(token->value, token->length, siphash_key);
+              siphash64_bytes(token->value, token->length, siphash_key_fixed);
           if (hashmap_lookup(parameters_hashmap, hash) != NULL) {
             darray_free(&parameters, free_parameter);
             free_parsed(parsedValue);
