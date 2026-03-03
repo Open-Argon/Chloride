@@ -13,7 +13,7 @@
 #include <stdint.h>
 
 typedef enum {
-  OP_LOAD_STRING=1,
+  OP_LOAD_STRING = 1,
   OP_DECLARE,
   OP_LOAD_NULL,
   OP_LOAD_FUNCTION,
@@ -62,7 +62,8 @@ typedef enum {
   OP_LOAD_CREATE_ARRAY,
   OP_LOAD_ITER_METHOD,
   OP_LOAD_NEXT_METHOD,
-  OP_IS_NOT_END_ITERATION
+  OP_IS_NOT_END_ITERATION,
+  OP_LOAD_RANGE_CLASS,
 } OperationType;
 
 void arena_resize(ConstantArena *arena, size_t new_size);

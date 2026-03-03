@@ -1434,7 +1434,8 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       [OP_IN] = &&DO_IN,
       [OP_LOAD_ITER_METHOD] = &&DO_LOAD_ITER_METHOD,
       [OP_IS_NOT_END_ITERATION] = &&DO_IS_NOT_END_ITERATION,
-      [OP_LOAD_NEXT_METHOD] = &&DO_LOAD_NEXT_METHOD};
+      [OP_LOAD_NEXT_METHOD] = &&DO_LOAD_NEXT_METHOD,
+      [OP_LOAD_RANGE_CLASS] = &&DO_LOAD_RANGE_CLASS};
   _state.head = 0;
 
   ArErr err = *err_ptr;
@@ -2651,6 +2652,10 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
         err = create_err("Runtime Error",
                          "unable to get __getitem__ from objects class");
       }
+      continue;
+    }
+    DO_LOAD_RANGE_CLASS: {
+      state->registers[0] = ARGON_RANGE_ITERATOR_TYPE;
       continue;
     }
     DO_LOAD_CREATE_ARRAY: {

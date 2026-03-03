@@ -30,6 +30,7 @@
 #include "number/number.h"
 #include "operations/operations.h"
 #include "parentheses-and-anonymous-function/parentheses-and-anonymous-function.h"
+#include "range/range.h"
 #include "return/return.h"
 #include "string/string.h"
 #include "while/while.h"
@@ -187,6 +188,9 @@ ParsedValueReturn parse_token_full(char *file, DArray *tokens, size_t *index,
     case TOKEN_DOT:
       output = parse_access(file, tokens, index, output.value);
       break;
+    case TOKEN_UNTIL:
+      output = parse_range(file, tokens, index, output.value);
+      break;
     case TOKEN_LBRACKET:
       output = parse_item_access(file, tokens, index, output.value);
       break;
@@ -253,6 +257,9 @@ void free_parsed(ParsedValue *ptr) {
     break;
   case AST_STRING:
     free_parsed_string(parsed);
+    break;
+  case AST_RANGE:
+    free_parse_range(parsed);
     break;
   case AST_ASSIGN:
     free_parse_assign(parsed);

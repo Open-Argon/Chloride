@@ -283,6 +283,14 @@ inverts the boolean value in register 0.
 
 loads the base class into register 0.
 
+## OP_LOAD_CREATE_ARRAY
+
+loads the create array function into register 0.
+
+## OP_LOAD_RANGE_CLASS
+
+loads the range class into register 0.
+
 ## OP_CREATE_CLASS
 
 creates a class object with the base being the object in register 0, and storing the result in register 0. it uses register A as the object storing the name of the class.

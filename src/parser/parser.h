@@ -59,7 +59,8 @@ typedef enum {
   AST_FOR,
   AST_TO_BOOL,
   AST_NEGATION,
-  AST_IMPORT
+  AST_IMPORT,
+  AST_RANGE
 } ValueType;
 
 extern const char *ValueTypeNames[];

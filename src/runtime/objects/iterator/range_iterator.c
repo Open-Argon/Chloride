@@ -43,6 +43,12 @@ ArgonObject *ARGON_RANGE_ITERATOR_TYPE___init__(size_t argc, ArgonObject **argv,
                       "__init__ expects 2 to 4 arguments, got %" PRIu64, argc);
     return ARGON_NULL;
   }
+  for (uint64_t i = 1; i < argc; i++) {
+    if (argv[i]->type != TYPE_NUMBER) {
+      *err = create_err("Runtime Error", "expects number");
+      return ARGON_NULL;
+    }
+  }
   ArgonObject *self = argv[0];
   if (argc == 2) {
     if (argv[1]->type == TYPE_NUMBER && argv[1]->value.as_number->is_int64) {
@@ -66,11 +72,13 @@ ArgonObject *ARGON_RANGE_ITERATOR_TYPE___init__(size_t argc, ArgonObject **argv,
       self->value.as_range_iterator->current.i64 =
           argv[1]->value.as_number->n.i64;
       self->value.as_range_iterator->stop.i64 = argv[2]->value.as_number->n.i64;
+      self->value.as_range_iterator->step.i64 = 1;
       if (argc == 4) {
         self->value.as_range_iterator->step.i64 =
             argv[3]->value.as_number->n.i64;
         if (self->value.as_range_iterator->step.i64 == 0) {
           *err = create_err("Runtime Error", "step cannot be 0");
+          return ARGON_NULL;
         }
       }
     } else {
@@ -96,6 +104,12 @@ ArgonObject *ARGON_RANGE_ITERATOR_TYPE___iter__(size_t argc, ArgonObject **argv,
     return ARGON_NULL;
   }
   ArgonObject *self = argv[0];
+  ArgonObject *new_obj =
+      new_instance(ARGON_RANGE_ITERATOR_TYPE, sizeof(struct as_range_iterator));
+  new_obj->value.as_range_iterator =
+      (struct as_range_iterator *)((char *)new_obj + sizeof(ArgonObject));
+
+  *new_obj->value.as_range_iterator = *self->value.as_range_iterator;
   return self;
 }
 
@@ -152,7 +166,7 @@ ArgonObject *ARGON_RANGE_ITERATOR_TYPE___next__(size_t argc, ArgonObject **argv,
 void init_range_iterator() {
   ARGON_RANGE_ITERATOR_TYPE = new_class();
   add_builtin_field(ARGON_RANGE_ITERATOR_TYPE, __name__,
-                    new_string_object_null_terminated("Iterator"));
+                    new_string_object_null_terminated("Range"));
   add_builtin_field(ARGON_RANGE_ITERATOR_TYPE, __new__,
                     create_argon_native_function(
                         "__new__", ARGON_RANGE_ITERATOR_TYPE___new__));

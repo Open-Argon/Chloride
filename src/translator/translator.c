@@ -11,6 +11,7 @@
 #include "../parser/assignable/item/item.h"
 #include "../parser/dictionary/dictionary.h"
 #include "../parser/not/not.h"
+#include "../parser/range/range.h"
 #include "access/access.h"
 #include "assignment/assignment.h"
 #include "break/break.h"
@@ -20,7 +21,6 @@
 #include "declaration/declaration.h"
 #include "dowrap/dowrap.h"
 #include "for/for.h"
-#include "while/while.h"
 #include "function/function.h"
 #include "identifier/identifier.h"
 #include "if/if.h"
@@ -169,7 +169,7 @@ size_t translate_parsed(Translated *translated, ParsedValue *parsedValue,
     return translate_parsed_if(translated, (DArray *)parsedValue->data, err);
   case AST_FOR:
     return translate_parsed_for(translated, (ParsedFor *)parsedValue->data,
-                                  err);
+                                err);
   case AST_WHILE:
     return translate_parsed_while(translated, (ParsedWhile *)parsedValue->data,
                                   err);
@@ -180,11 +180,11 @@ size_t translate_parsed(Translated *translated, ParsedValue *parsedValue,
     return translate_parsed_return(translated,
                                    (ParsedReturn *)parsedValue->data, err);
   case AST_BREAK:
-    return translate_parsed_break(translated,
-                                   (ParsedContinueOrBreak *)parsedValue->data, err);
+    return translate_parsed_break(
+        translated, (ParsedContinueOrBreak *)parsedValue->data, err);
   case AST_CONTINUE:
-    return translate_parsed_continue(translated,
-                                     (ParsedContinueOrBreak *)parsedValue->data, err);
+    return translate_parsed_continue(
+        translated, (ParsedContinueOrBreak *)parsedValue->data, err);
   case AST_CALL:
     return translate_parsed_call(translated, (ParsedCall *)parsedValue->data,
                                  err);
@@ -213,6 +213,30 @@ size_t translate_parsed(Translated *translated, ParsedValue *parsedValue,
   case AST_IMPORT:
     return translate_parsed_import(translated,
                                    (ParsedImport *)parsedValue->data, err);
+  case AST_RANGE: {
+    ParsedRange *range = parsedValue->data;
+    size_t first = push_instruction_byte(translated, OP_LOAD_RANGE_CLASS);
+    push_instruction_byte(translated, OP_INIT_CALL);
+    push_instruction_code(translated, 2);
+    translate_parsed(translated, range->start, err);
+    if (err->exists)
+      return first;
+    push_instruction_byte(translated, OP_INSERT_ARG);
+    push_instruction_code(translated, 0);
+    translate_parsed(translated, range->stop, err);
+    if (err->exists)
+      return first;
+    push_instruction_byte(translated, OP_INSERT_ARG);
+    push_instruction_code(translated, 1);
+
+    push_instruction_byte(translated, OP_SOURCE_LOCATION);
+    push_instruction_code(translated, range->line);
+    push_instruction_code(translated, range->column);
+    push_instruction_code(translated, range->length);
+
+    push_instruction_byte(translated, OP_CALL);
+    return first;
+  }
   case AST_ARRAY: {
     DArray *arrayDarray = parsedValue->data;
     size_t first = push_instruction_byte(translated, OP_LOAD_CREATE_ARRAY);
