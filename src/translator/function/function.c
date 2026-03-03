@@ -6,6 +6,7 @@
 
 #include "function.h"
 #include "../translator.h"
+#include "../../hash_data/hash_data.h"
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -38,6 +39,8 @@ size_t translate_parsed_function(Translated *translated,
                         strlen(*parameter_name));
     push_instruction_code(translated, offset);
     push_instruction_code(translated, strlen(*parameter_name));
+    push_instruction_code(translated, siphash64_bytes(*parameter_name, strlen(*parameter_name),
+                                          siphash_key_fixed));
   }
   push_instruction_code(translated, function_bytecode_offset);
   push_instruction_code(translated, function_bytecode_length*translated->bytecode.element_size);

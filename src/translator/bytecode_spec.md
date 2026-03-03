@@ -17,6 +17,7 @@ this operation 4 operands.
 1. the register to write to. (*)
 1. the length of the data in the constant buffer.
 1. the offset in the constant buffer.
+1. the hash of the data.
 
 ## OP_DECLARE
 
@@ -57,7 +58,8 @@ initilises a function to a given register.
 1. the number of arguments.
 1. the offset of the name of the argument.
 1. the length of the name of the argument.
-1. instruction 4 and 5 loop for each argument.
+1. the hash of the name of the argument.
+1. instruction 4 to 6 loop for each argument.
 1. the offset of the bytecode of the function.
 1. the length of the bytecode of the function.
 
