@@ -557,14 +557,15 @@ char *get_executable_path() {
 
 Stack *ar_import(char *current_directory, char *path_relative, ArErr *err,
                  bool is_main) {
-  char path[PATH_MAX];
+  char path_c[PATH_MAX];
   bool found = false;
   for (size_t i = 0; i < sizeof(PRE_PATHS_TO_TEST) / sizeof(char *); i++) {
-    cwk_path_get_absolute(current_directory, PRE_PATHS_TO_TEST[i], path,
-                          sizeof(path));
-    cwk_path_get_absolute(path, path_relative, path, sizeof(path));
-    cwk_path_get_absolute(path, POST_PATHS_TO_TEST[i], path, sizeof(path));
-    if (file_exists(path)) {
+    cwk_path_get_absolute(current_directory, PRE_PATHS_TO_TEST[i], path_c,
+                          sizeof(path_c));
+    cwk_path_get_absolute(path_c, path_relative, path_c, sizeof(path_c));
+    cwk_path_get_absolute(path_c, POST_PATHS_TO_TEST[i], path_c,
+                          sizeof(path_c));
+    if (file_exists(path_c)) {
       found = true;
       break;
     }
@@ -573,24 +574,29 @@ Stack *ar_import(char *current_directory, char *path_relative, ArErr *err,
     *err = create_err("File Error", "Unable to find file '%s'", path_relative);
     return NULL;
   }
-  uint64_t hash = siphash64_bytes(path, strlen(path), siphash_key);
+  uint64_t hash = siphash64_bytes(path_c, strlen(path_c), siphash_key);
 
   if (hashmap_lookup_GC(importing_hash_table, hash)) {
-    *err = create_err("Import Error", "Circular import detected: %s", path,
+    *err = create_err("Import Error", "Circular import detected: %s", path_c,
                       path_relative);
     return NULL;
   }
 
-  hashmap_insert_GC(importing_hash_table, hash, path, (void *)true, 0);
+  size_t path_length = strlen(path_c);
+  char *path = ar_alloc_atomic(path_length + 1);
+  memcpy(path, path_c, path_length + 1);
+
+  hashmap_insert_GC(importing_hash_table, hash, NULL, (void *)true, 0);
 
   Translated translated = load_argon_file(path, err);
   if (err->exists) {
-    hashmap_insert_GC(importing_hash_table, hash, path, (void *)NULL, 0);
+    hashmap_insert_GC(importing_hash_table, hash, NULL, (void *)NULL, 0);
     return NULL;
   }
 #ifdef ARGON_DEBUG
   clock_t start = clock(), end;
 #endif
+
   RuntimeState state;
   init_runtime_state(&state, translated, path);
   Stack *program_scope = create_scope(Global_Scope, true);
@@ -617,7 +623,7 @@ Stack *ar_import(char *current_directory, char *path_relative, ArErr *err,
   Stack *main_scope = create_scope(program_scope, true);
   runtime(translated, state, main_scope, err);
   if (err->exists) {
-    hashmap_insert_GC(importing_hash_table, hash, path, (void *)NULL, 0);
+    hashmap_insert_GC(importing_hash_table, hash, NULL, (void *)NULL, 0);
     return NULL;
   }
 

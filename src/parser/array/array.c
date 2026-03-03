@@ -30,6 +30,12 @@ ParsedValueReturn parse_array(char *file, DArray *tokens, size_t *index) {
   Token *token = darray_get(tokens, *index);
   if (token->type != TOKEN_RBRACKET) {
     while (true) {
+      err = error_if_finished(file, tokens, index);
+      if (err.exists) {
+        free_parsed(parsedValue);
+        free(parsedValue);
+        return (ParsedValueReturn){err, NULL};
+      }
       skip_newlines_and_indents(tokens, index);
       ParsedValueReturn parsedItem = parse_token(file, tokens, index, true);
       if (parsedItem.err.exists) {
@@ -39,12 +45,6 @@ ParsedValueReturn parse_array(char *file, DArray *tokens, size_t *index) {
       }
       darray_push(list, parsedItem.value);
       free(parsedItem.value);
-      ArErr err = error_if_finished(file, tokens, index);
-      if (err.exists) {
-        free_parsed(parsedValue);
-        free(parsedValue);
-        return (ParsedValueReturn){err, NULL};
-      }
       skip_newlines_and_indents(tokens, index);
       err = error_if_finished(file, tokens, index);
       if (err.exists) {
@@ -61,12 +61,6 @@ ParsedValueReturn parse_array(char *file, DArray *tokens, size_t *index) {
         return (ParsedValueReturn){path_specific_create_err(token->line, token->column, token->length, file, "Syntax Error", "expected comma"), NULL};
       }
       (*index)++;
-      err = error_if_finished(file, tokens, index);
-      if (err.exists) {
-        free_parsed(parsedValue);
-        free(parsedValue);
-        return (ParsedValueReturn){err, NULL};
-      }
     }
   }
   (*index)++;
