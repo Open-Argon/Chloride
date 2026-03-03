@@ -29,8 +29,8 @@ class Game do
     raylib.InitWindow(self.width, self.height, "Hello Raylib")
     if (fps) raylib.SetTargetFPS(fps)
     self.bouncing_texts = []
-    for (x in range(20)) do
-      for (y in range(20)) do
+    for (x in 0 until 20) do
+      for (y in 0 until 20) do
         self.bouncing_texts.append(bouncing_text(string(x*y), tuple(x*10,y*10), x+y+1))
 
   this.render(self) = do
