@@ -6,7 +6,7 @@
 
 #include "assignment.h"
 #include <stdint.h>
-#include "../objects/string/string.h"
+// #include "../objects/string/string.h"
 
 void runtime_assignment(int64_t length,int64_t offset,int64_t hash,uint8_t from_register,Translated *translated, RuntimeState *state,
                          struct Stack *stack) {
@@ -20,7 +20,7 @@ void runtime_assignment(int64_t length,int64_t offset,int64_t hash,uint8_t from_
       return;
     }
   }
-  ArgonObject *key = new_string_object(data, length, hash);
-  hashmap_insert_GC(stack->scope, hash, key, state->registers[from_register],
+  // ArgonObject *key = new_string_object(data, length, hash);
+  hashmap_insert_GC(stack->scope, hash, NULL, state->registers[from_register],
                     0);
 }

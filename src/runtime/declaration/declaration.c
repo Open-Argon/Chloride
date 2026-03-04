@@ -7,7 +7,7 @@
 #include "declaration.h"
 #include "../../err.h"
 #include <stdint.h>
-#include "../objects/string/string.h"
+// #include "../objects/string/string.h"
 
 void runtime_declaration(int64_t length,int64_t offset,int64_t hash,uint8_t from_register,Translated *translated, RuntimeState *state,
                          struct Stack *stack, ArErr *err) {
@@ -20,7 +20,7 @@ void runtime_declaration(int64_t length,int64_t offset,int64_t hash,uint8_t from
         "Identifier '%.*s' has already been declared in the current scope",
         length, arena_get(&translated->constants, offset));
   }
-  ArgonObject *key = new_string_object(data, length, hash);
-  hashmap_insert_GC(stack->scope, hash, key, state->registers[from_register],
+  // ArgonObject *key = new_string_object(data, length, hash);
+  hashmap_insert_GC(stack->scope, hash, NULL, state->registers[from_register],
                     0);
 }
