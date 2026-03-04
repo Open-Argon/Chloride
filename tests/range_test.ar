@@ -5,5 +5,4 @@
 
 # while ((i = next())!=end_iteration) do
 
-for (x in 0 until 1e8) do
-term.log("done 2")
+for (x in 0 until 1e9) do

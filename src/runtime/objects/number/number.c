@@ -1559,7 +1559,7 @@ void mpq_set_si64(mpq_t q, int64_t n, int64_t d) {
   mpz_clear(den);
 }
 
-ArgonObject *new_number_object_from_num_and_den(int64_t n, uint64_t d) {
+ArgonObject *new_number_object_from_num_and_den(int64_t n, int64_t d) {
   if (d == 1 && n >= small_ints_min && n <= small_ints_max) {
     return &small_ints[n - small_ints_min];
   }
