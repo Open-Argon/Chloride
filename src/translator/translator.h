@@ -62,8 +62,8 @@ typedef enum {
   OP_LOAD_CREATE_ARRAY,
   OP_LOAD_ITER_METHOD,
   OP_LOAD_NEXT_METHOD,
-  OP_IS_NOT_END_ITERATION,
   OP_LOAD_RANGE_CLASS,
+  OP_FOR_LOOP_JUMP,
 } OperationType;
 
 void arena_resize(ConstantArena *arena, size_t new_size);

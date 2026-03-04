@@ -12,5 +12,9 @@ extern ArgonObject *ARGON_RANGE_ITERATOR_TYPE;
 
 void init_range_iterator();
 
+ArgonObject *ARGON_RANGE_ITERATOR_TYPE___next__(size_t argc, ArgonObject **argv,
+                                                ArErr *err, RuntimeState *state,
+                                                ArgonNativeAPI *api);
+
 
 #endif // RUNTIME_RANGE_ITERATOR_H

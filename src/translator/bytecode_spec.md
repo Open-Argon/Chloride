@@ -75,6 +75,14 @@ initilises a function to a given register.
 
 converts a value in register 0 into true or false depending on the result from \_\_bool\_\_ (using asBool if the object is a primitive)
 
+## OP_FOR_LOOP_JUMP
+
+calls the \_\_next\_\_ method stored in the register passed in, jumping if it is not END_ITERATION, storing the result of \_\_next\_\_ in register 0.
+
+1. the register storing the iterator object. (*)
+1. the register storing the \_\_next\_\_ method. (*)
+1. the index to jump to.
+
 ## OP_JUMP_IF_FALSE
 
 jumps when a the value in the given register is false.
@@ -129,10 +137,6 @@ loads the \_\_iter\_\_ method from the objects class in register 0 and put it in
 ## OP_LOAD_ITER_METHOD
 
 loads the \_\_next\_\_ method from the objects class in register 0 and put it into register 0
-
-## OP_IS_NOT_END_ITERATION
-
-sets a boolean if register 0 is not the END_ITERATION signal
 
 ## OP_LOAD_GETATTRIBUTE_METHOD
 

@@ -5,7 +5,5 @@
 
 # while ((i = next())!=end_iteration) do
 
-for (x in range(0, 1e7, 8/9)) do
-term.log("done 1")
 for (x in 0 until 1e7) do
 term.log("done 2")

@@ -152,6 +152,7 @@ typedef enum ArgonType {
   TYPE_ERROR,
   TYPE_OBJECT,
   TYPE_RANGE_ITERATOR,
+  TYPE_ARRAY_ITERATOR,
 } ArgonType;
 
 typedef struct {

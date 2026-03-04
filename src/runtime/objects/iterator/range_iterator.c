@@ -28,6 +28,7 @@ ArgonObject *ARGON_RANGE_ITERATOR_TYPE___new__(size_t argc, ArgonObject **argv,
   }
   ArgonObject *new_obj =
       new_instance(argv[0], sizeof(struct as_range_iterator));
+  new_obj->type = TYPE_RANGE_ITERATOR;
   new_obj->value.as_range_iterator =
       (struct as_range_iterator *)((char *)new_obj + sizeof(ArgonObject));
   return new_obj;
@@ -108,6 +109,7 @@ ArgonObject *ARGON_RANGE_ITERATOR_TYPE___iter__(size_t argc, ArgonObject **argv,
   ArgonObject *self = argv[0];
   ArgonObject *new_obj =
       new_instance(ARGON_RANGE_ITERATOR_TYPE, sizeof(struct as_range_iterator));
+  new_obj->type = TYPE_RANGE_ITERATOR;
   new_obj->value.as_range_iterator =
       (struct as_range_iterator *)((char *)new_obj + sizeof(ArgonObject));
 

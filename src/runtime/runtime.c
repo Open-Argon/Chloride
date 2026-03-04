@@ -1310,10 +1310,10 @@ int compare_by_order(const void *a, const void *b) {
 }
 
 static inline void load_const(uint8_t to_register, size_t length,
-                              uint64_t offset, uint64_t hash, Translated *translated,
-                              RuntimeState *state) {
-  ArgonObject *object =
-      new_string_object(arena_get(&translated->constants, offset), length, hash);
+                              uint64_t offset, uint64_t hash,
+                              Translated *translated, RuntimeState *state) {
+  ArgonObject *object = new_string_object(
+      arena_get(&translated->constants, offset), length, hash);
   state->registers[to_register] = object;
 }
 
@@ -1433,7 +1433,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       [OP_NOT_IN] = &&DO_NOT_IN,
       [OP_IN] = &&DO_IN,
       [OP_LOAD_ITER_METHOD] = &&DO_LOAD_ITER_METHOD,
-      [OP_IS_NOT_END_ITERATION] = &&DO_IS_NOT_END_ITERATION,
+      [OP_FOR_LOOP_JUMP] = &&DO_FOR_LOOP_JUMP,
       [OP_LOAD_NEXT_METHOD] = &&DO_LOAD_NEXT_METHOD,
       [OP_LOAD_RANGE_CLASS] = &&DO_LOAD_RANGE_CLASS};
   _state.head = 0;
@@ -1670,9 +1670,27 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
                          state, currentStackFrame->stack);
       continue;
     }
-    DO_IS_NOT_END_ITERATION: {
-      state->registers[0] =
-          state->registers[0] == END_ITERATION ? ARGON_FALSE : ARGON_TRUE;
+    DO_FOR_LOOP_JUMP: {
+      ArgonObject *iterator = state->registers[POP_BYTE()];
+      ArgonObject *iterator_next = state->registers[POP_BYTE()];
+      uint64_t to;
+      POP_U64(to);
+
+      switch (iterator->type) {
+      case TYPE_ARRAY_ITERATOR:
+        state->registers[0] = ARGON_ARRAY_ITERATOR___next__(
+            1, &iterator, &err, state, &native_api);
+        break;
+      case TYPE_RANGE_ITERATOR:
+        state->registers[0] = ARGON_RANGE_ITERATOR_TYPE___next__(
+            1, &iterator, &err, state, &native_api);
+        break;
+      default:
+        state->registers[0] = argon_call(iterator_next, 0, NULL, &err, state);
+      }
+      if (state->registers[0] == END_ITERATION) {
+        ip = to;
+      }
       continue;
     }
     DO_BOOL: {

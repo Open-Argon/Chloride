@@ -16,9 +16,9 @@ let d() = do
 
 let x = 0
 
-let n = 16
+let n = 256
 
-while (true) do
+while (x<10) do
   let threads = []
   let i = 0
   while (i<n) do

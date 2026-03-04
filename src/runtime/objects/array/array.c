@@ -286,6 +286,7 @@ ArgonObject *ARGON_ARRAY___iter__(size_t argc, ArgonObject **argv,
   }
   ArgonObject *self = argv[0];
   ArgonObject *iterator = new_instance(ARRAY_ITERATOR_TYPE, sizeof(struct as_array_iterator));
+  iterator->type = TYPE_ARRAY_ITERATOR;
   iterator->value.as_array_iterator = (struct as_array_iterator*)((char*)iterator+sizeof(ArgonObject));
   iterator->value.as_array_iterator->current = 0;
   iterator->value.as_array_iterator->array = self->value.as_array;
