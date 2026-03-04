@@ -7,22 +7,20 @@ import "../stdlib/threading" as threading
 let l = threading.Local()
 term.log(threading.get_id())
 
-let d() = do
+let d(x) = do
   l.test = x
-  let i = 0
-  while (i<1e6) do
-    i=i+1
-  return i
+  let output = 1e6
+  for (i in 0 until output) do
+  return output
 
-let x = 0
 
-let n = 256
+let n = 16
 
-while (x<10) do
+for (x in 0 until 10000) do
   let threads = []
   let i = 0
   while (i<n) do
-    threads.append(threading.Thread(d).start())
+    threads.append(threading.Thread(()=d(x)).start())
     i=i+1
 
   i = 0
@@ -31,7 +29,6 @@ while (x<10) do
     i=i+1
 
   term.log("done", x)
-  x=x+1
 
 
 term.log(object.__getattribute__(l, "__maps__"))

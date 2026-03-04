@@ -49,7 +49,7 @@ void darray_armem_init(darray_armem *arr, size_t element_size,
 
   RWLOCK_CREATE(&arr->lock);
 
-  GC_register_finalizer(arr, darray_armem_finalizer, NULL, NULL, NULL);
+  // GC_register_finalizer(arr, darray_armem_finalizer, NULL, NULL, NULL);
 }
 
 static void darray_armem_resize_nolock(darray_armem *arr, size_t new_size) {
