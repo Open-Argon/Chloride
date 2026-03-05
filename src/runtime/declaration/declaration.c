@@ -11,7 +11,7 @@
 
 void runtime_declaration(int64_t length,int64_t offset,int64_t hash,uint8_t from_register,Translated *translated, RuntimeState *state,
                          struct Stack *stack, ArErr *err) {
-  void *data = arena_get(&translated->constants, offset);
+  // void *data = arena_get(&translated->constants, offset);
   ArgonObject *exists = hashmap_lookup_GC(stack->scope, hash);
   if (exists) {
     *err = path_specific_create_err(

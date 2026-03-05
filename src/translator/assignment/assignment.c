@@ -32,17 +32,8 @@ size_t translate_parsed_assignment(Translated *translated,
   case AST_IDENTIFIER:;
     ParsedIdentifier *identifier = assignment->to->data;
     size_t length = strlen(identifier->name);
-    size_t offset =
-        arena_push(&translated->constants, identifier->name, length);
-
-    push_instruction_byte(translated, OP_SOURCE_LOCATION);
-    push_instruction_code(translated, identifier->line);
-    push_instruction_code(translated, identifier->column);
-    push_instruction_code(translated, length);
 
     push_instruction_byte(translated, OP_ASSIGN);
-    push_instruction_code(translated, length);
-    push_instruction_code(translated, offset);
     push_instruction_code(translated,
                           siphash64_bytes(identifier->name, length,
                                           siphash_key_fixed));

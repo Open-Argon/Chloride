@@ -8,9 +8,9 @@
 #include <stdint.h>
 // #include "../objects/string/string.h"
 
-void runtime_assignment(int64_t length,int64_t offset,int64_t hash,uint8_t from_register,Translated *translated, RuntimeState *state,
+void runtime_assignment(int64_t hash,uint8_t from_register, RuntimeState *state,
                          struct Stack *stack) {
-  void *data = arena_get(&translated->constants, offset);
+  // void *data = arena_get(&translated->constants, offset);
   for (Stack *current_stack = stack; current_stack;
        current_stack = current_stack->prev) {
     ArgonObject *exists = hashmap_lookup_GC(current_stack->scope, hash);

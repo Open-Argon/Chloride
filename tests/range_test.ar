@@ -5,4 +5,4 @@
 
 # while ((i = next())!=end_iteration) do
 
-for (x in 0 until 1e9) do
+for (x in 0 until 1e7) do

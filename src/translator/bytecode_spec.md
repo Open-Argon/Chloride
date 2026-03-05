@@ -36,8 +36,6 @@ assigns to a variable in the stack. if the variable doesnt exist on the stack, i
 
 this operation takes 4 operands.
 
-1. the length of the variable name.
-1. the offset in the constant buffer of the variable name.
 1. the fixed hash of the variable name.
 1. the register of the given value (*)
 
