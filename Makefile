@@ -88,12 +88,12 @@ native: STRIP_FLAG = -s
 native: $(BINARY)
 
 # Debug (keep symbols)
-debug: CFLAGS += -g
+debug: CFLAGS += -g -DARGON_DEBUG
 debug: STRIP_FLAG =
 debug: $(BINARY)
 
 # Full debug (keep symbols, enable ASan)
-full-debug: CFLAGS += -g -fsanitize=address -fno-omit-frame-pointer
+full-debug: CFLAGS += -g -fsanitize=address -fno-omit-frame-pointer -DARGON_DEBUG
 full-debug: STRIP_FLAG =
 full-debug: $(BINARY)
 

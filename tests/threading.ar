@@ -16,7 +16,7 @@ let d(x) = do
 
 let n = 16
 
-for (x in 0 until 10000) do
+for (x in 0 until 10) do
   let threads = []
   let i = 0
   while (i<n) do
