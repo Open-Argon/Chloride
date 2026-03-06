@@ -69,6 +69,48 @@ char *c_quote_string(const char *input, size_t len) {
   return out;
 }
 
+ArgonObject *ARGON_STRING_TYPE___equal__(size_t argc, ArgonObject **argv,
+                                         ArErr *err, RuntimeState *state,
+                                         ArgonNativeAPI *api) {
+  (void)api;
+  (void)argv;
+  (void)state;
+  if (argc != 2) {
+    *err = create_err("Runtime Error",
+                      "__equal__ expects 2 arguments, got %" PRIu64, argc);
+  }
+  return (argv[0]->type == TYPE_STRING && argv[0]->type == TYPE_STRING) &&
+                 (argv[0]->value.as_str->hash == argv[1]->value.as_str->hash) &&
+                 (argv[0]->value.as_str->length ==
+                  argv[1]->value.as_str->length) &&
+                 (memcmp(argv[0]->value.as_str->data,
+                         argv[1]->value.as_str->data,
+                         argv[0]->value.as_str->length) == 0)
+             ? ARGON_TRUE
+             : ARGON_FALSE;
+}
+
+ArgonObject *ARGON_STRING_TYPE___not_equal__(size_t argc, ArgonObject **argv,
+                                         ArErr *err, RuntimeState *state,
+                                         ArgonNativeAPI *api) {
+  (void)api;
+  (void)argv;
+  (void)state;
+  if (argc != 2) {
+    *err = create_err("Runtime Error",
+                      "__equal__ expects 2 arguments, got %" PRIu64, argc);
+  }
+  return (argv[0]->type == TYPE_STRING && argv[0]->type == TYPE_STRING) &&
+                 (argv[0]->value.as_str->hash == argv[1]->value.as_str->hash) &&
+                 (argv[0]->value.as_str->length ==
+                  argv[1]->value.as_str->length) &&
+                 (memcmp(argv[0]->value.as_str->data,
+                         argv[1]->value.as_str->data,
+                         argv[0]->value.as_str->length) == 0)
+             ? ARGON_FALSE
+             : ARGON_TRUE;
+}
+
 ArgonObject *ARGON_STRING_TYPE_get_length(size_t argc, ArgonObject **argv,
                                           ArErr *err, RuntimeState *state,
                                           ArgonNativeAPI *api) {

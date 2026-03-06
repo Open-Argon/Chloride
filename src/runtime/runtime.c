@@ -1134,6 +1134,12 @@ void bootstrap_types() {
       ARGON_STRING_TYPE, __repr__,
       create_argon_native_function("__repr__", ARGON_STRING_TYPE___repr__));
   add_builtin_field(
+      ARGON_STRING_TYPE, __equal__,
+      create_argon_native_function("__equal__", ARGON_STRING_TYPE___equal__));
+  add_builtin_field(
+      ARGON_STRING_TYPE, __not_equal__,
+      create_argon_native_function("__not_equal__", ARGON_STRING_TYPE___not_equal__));
+  add_builtin_field(
       ARGON_BOOL_TYPE, __new__,
       create_argon_native_function("__new__", ARGON_BOOL_TYPE___new__));
   add_builtin_field(
@@ -1148,6 +1154,9 @@ void bootstrap_types() {
   add_builtin_field(
       BASE_CLASS, __equal__,
       create_argon_native_function("__equal__", BASE_CLASS___equal__));
+  add_builtin_field(
+      BASE_CLASS, __not_equal__,
+      create_argon_native_function("__not_equal__", BASE_CLASS___not_equal__));
   add_builtin_field(
       ARGON_BOOL_TYPE, __string__,
       create_argon_native_function("__string__", ARGON_BOOL_TYPE___string__));
