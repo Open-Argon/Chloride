@@ -39,4 +39,20 @@ ArgonObject *ARGON_STRING_TYPE___equal__(size_t argc, ArgonObject **argv,
 ArgonObject *ARGON_STRING_TYPE___not_equal__(size_t argc, ArgonObject **argv,
                                              ArErr *err, RuntimeState *state,
                                              ArgonNativeAPI *api);
+ArgonObject *ARGON_STRING_TYPE___less_than__(size_t argc, ArgonObject **argv,
+                                             ArErr *err, RuntimeState *state,
+                                             ArgonNativeAPI *api);
+ArgonObject *ARGON_STRING_TYPE___less_than_equal__(size_t argc,
+                                                   ArgonObject **argv,
+                                                   ArErr *err,
+                                                   RuntimeState *state,
+                                                   ArgonNativeAPI *api);
+ArgonObject *ARGON_STRING_TYPE___greater_than__(size_t argc, ArgonObject **argv,
+                                                ArErr *err, RuntimeState *state,
+                                                ArgonNativeAPI *api);
+ArgonObject *ARGON_STRING_TYPE___greater_than_equal__(size_t argc,
+                                                      ArgonObject **argv,
+                                                      ArErr *err,
+                                                      RuntimeState *state,
+                                                      ArgonNativeAPI *api);
 #endif // STRING_OBJ_H

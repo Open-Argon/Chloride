@@ -1140,6 +1140,18 @@ void bootstrap_types() {
       ARGON_STRING_TYPE, __not_equal__,
       create_argon_native_function("__not_equal__", ARGON_STRING_TYPE___not_equal__));
   add_builtin_field(
+      ARGON_STRING_TYPE, __less_than__,
+      create_argon_native_function("__less_than__", ARGON_STRING_TYPE___less_than__));
+  add_builtin_field(
+      ARGON_STRING_TYPE, __less_than_equal__,
+      create_argon_native_function("__less_than_equal__", ARGON_STRING_TYPE___less_than_equal__));
+  add_builtin_field(
+      ARGON_STRING_TYPE, __greater_than__,
+      create_argon_native_function("__greater_than__", ARGON_STRING_TYPE___greater_than__));
+  add_builtin_field(
+      ARGON_STRING_TYPE, __greater_than_equal__,
+      create_argon_native_function("__greater_than_equal__", ARGON_STRING_TYPE___greater_than_equal__));
+  add_builtin_field(
       ARGON_BOOL_TYPE, __new__,
       create_argon_native_function("__new__", ARGON_BOOL_TYPE___new__));
   add_builtin_field(
@@ -1184,6 +1196,8 @@ void bootstrap_types() {
       create_argon_native_function("less_than", ARGON_LESS_THAN_FUNCTION);
   LESS_THAN_EQUAL_FUNCTION = create_argon_native_function(
       "less_than_equal", ARGON_LESS_THAN_EQUAL_FUNCTION);
+  GREATER_THAN_FUNCTION = create_argon_native_function(
+      "greater_than", ARGON_GREATER_THAN_FUNCTION);
   GREATER_THAN_EQUAL_FUNCTION = create_argon_native_function(
       "greater_than_equal", ARGON_GREATER_THAN_EQUAL_FUNCTION);
   add_builtin_field(BASE_CLASS, __getattribute__,
