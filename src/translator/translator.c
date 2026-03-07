@@ -173,6 +173,8 @@ size_t translate_parsed(Translated *translated, ParsedValue *parsedValue,
   case AST_WHILE:
     return translate_parsed_while(translated, (ParsedWhile *)parsedValue->data,
                                   err);
+  case AST_TEMPLATE:
+    return translate_parsed_template(translated,(ParsedTemplate *)parsedValue->data, err);
   case AST_DOWRAP:
     return translate_parsed_dowrap(translated, (DArray *)parsedValue->data,
                                    err);

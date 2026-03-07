@@ -1200,6 +1200,8 @@ void bootstrap_types() {
       "greater_than", ARGON_GREATER_THAN_FUNCTION);
   GREATER_THAN_EQUAL_FUNCTION = create_argon_native_function(
       "greater_than_equal", ARGON_GREATER_THAN_EQUAL_FUNCTION);
+  ARGON_RENDER_TEMPLATE = create_argon_native_function(
+      "RENDER_TEMPLATE", RENDER_TEMPLATE);
   add_builtin_field(BASE_CLASS, __getattribute__,
                     create_argon_native_function("__getattribute__",
                                                  BASE_CLASS___getattribute__));
@@ -1458,7 +1460,10 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       [OP_LOAD_ITER_METHOD] = &&DO_LOAD_ITER_METHOD,
       [OP_FOR_LOOP_JUMP] = &&DO_FOR_LOOP_JUMP,
       [OP_LOAD_NEXT_METHOD] = &&DO_LOAD_NEXT_METHOD,
-      [OP_LOAD_RANGE_CLASS] = &&DO_LOAD_RANGE_CLASS};
+      [OP_LOAD_RANGE_CLASS] = &&DO_LOAD_RANGE_CLASS,
+      [OP_LOAD_TEMPLATE_METHOD] = &&DO_LOAD_TEMPLATE_METHOD,
+    [OP_LOAD_CREATE_TUPLE] = &&DO_LOAD_CREATE_TUPLE,
+    [OP_LOAD_TEMPLATE] = &&DO_LOAD_TEMPLATE};
   _state.head = 0;
 
   ArErr err = *err_ptr;
@@ -2642,7 +2647,16 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
           state->registers[registerC] == ARGON_FALSE ? ARGON_TRUE : ARGON_FALSE;
       continue;
     }
-
+    DO_LOAD_TEMPLATE_METHOD: {
+      state->registers[0] = get_builtin_field_for_class(
+          get_builtin_field(state->registers[0], __class__), __template__,
+          state->registers[0]);
+      if (!state->registers[0]) {
+        err = create_err("Runtime Error",
+                         "unable to get __template__ from objects class");
+      }
+      continue;
+    }
     DO_LOAD_SETATTR_METHOD: {
       state->registers[0] = get_builtin_field_for_class(
           get_builtin_field(state->registers[0], __class__), __setattr__,
@@ -2693,6 +2707,14 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
     }
     DO_LOAD_RANGE_CLASS: {
       state->registers[0] = ARGON_RANGE_ITERATOR_TYPE;
+      continue;
+    }
+    DO_LOAD_TEMPLATE: {
+      state->registers[0] = ARGON_RENDER_TEMPLATE;
+      continue;
+    }
+    DO_LOAD_CREATE_TUPLE: {
+      state->registers[0] = ARGON_TUPLE_CREATE;
       continue;
     }
     DO_LOAD_CREATE_ARRAY: {

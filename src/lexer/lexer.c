@@ -9,6 +9,27 @@
 #include "../string/string.h"
 #include "lex.yy.h"
 #include "token.h"
+#include <stddef.h>
+
+size_t count_newlines(const char *str, size_t len) {
+  size_t count = 0;
+  for (size_t i = 0; i < len; i++) {
+    if (str[i] == '\n') {
+      count++;
+    }
+  }
+  return count;
+}
+
+size_t chars_after_last_newline(const char *str, size_t len) {
+  ssize_t last_newline = -1;
+  for (size_t i = 0; i < len; i++) {
+    if (str[i] == '\n') {
+      last_newline = i;
+    }
+  }
+  return len - (last_newline + 1);
+}
 
 ArErr lexer(LexerState state) {
 
@@ -23,9 +44,10 @@ ArErr lexer(LexerState state) {
   int token;
   while ((token = yylex(yyscanner)) != 0) {
     if (token == TOKEN_INVALID) {
-      ArErr err = path_specific_create_err(state.current_line + 1, state.current_column + 1,
-                             yyget_leng(yyscanner), state.path, "Syntax Error",
-                             "Invalid Token '%s'", yyget_text(yyscanner));
+      ArErr err = path_specific_create_err(
+          state.current_line + 1, state.current_column + 1,
+          yyget_leng(yyscanner), state.path, "Syntax Error",
+          "Invalid Token '%s'", yyget_text(yyscanner));
       yylex_destroy(yyscanner);
       return err;
     }
@@ -37,7 +59,14 @@ ArErr lexer(LexerState state) {
       state.current_line += 1;
       state.current_column = 0;
     } else {
-      state.current_column += yyget_leng(yyscanner);
+      size_t newlines =
+          count_newlines(yyget_text(yyscanner), yyget_leng(yyscanner));
+      if (newlines) {
+        state.current_line +=newlines;
+        state.current_column = chars_after_last_newline(yyget_text(yyscanner), yyget_leng(yyscanner));
+      } else {
+        state.current_column += yyget_leng(yyscanner);
+      }
     }
   }
   yylex_destroy(yyscanner);

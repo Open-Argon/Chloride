@@ -19,6 +19,10 @@ int yywrap(void * unused_param) {
 }
 %}
 
+%x TEMPLATE
+
+ESCAPE      \\([\"\\\/bfnrt`]|u[0-9a-fA-F]{4})
+
 %%
 
 "\0" {
@@ -78,8 +82,33 @@ int yywrap(void * unused_param) {
 "try"               { return TOKEN_TRY; }
 "catch"             { return TOKEN_CATCH; }
 
-"("                 { return TOKEN_LPAREN; }
-")"                 { return TOKEN_RPAREN; }
+"(" {
+    GET_STATE
+
+    if (state->template_stack_top >= 0 &&
+        state->template_paren_stack[state->template_stack_top] > 0) {
+
+        state->template_paren_stack[state->template_stack_top]++;
+    }
+
+    return TOKEN_LPAREN;
+}
+")" {
+    GET_STATE
+
+    if (state->template_stack_top >= 0 &&
+        state->template_paren_stack[state->template_stack_top] > 0) {
+
+        state->template_paren_stack[state->template_stack_top]--;
+
+        if (state->template_paren_stack[state->template_stack_top] == 0) {
+            BEGIN(TEMPLATE);
+            return TOKEN_TEMPLATE_EXPR_END;
+        }
+    }
+
+    return TOKEN_RPAREN;
+}
 "["                 { return TOKEN_LBRACKET; }
 "]"                 { return TOKEN_RBRACKET; }
 "{"                 { return TOKEN_LBRACE; }
@@ -99,7 +128,56 @@ int yywrap(void * unused_param) {
     return TOKEN_NUMBER;
 }
 
+
+
+"`" {
+    GET_STATE
+
+    if (state->template_stack_top + 1 >= TEMPLATE_STACK_MAX) {
+        return TOKEN_INVALID;
+    }
+
+    state->template_stack_top++;
+    state->template_paren_stack[state->template_stack_top] = 0;
+
+    BEGIN(TEMPLATE);
+    return TOKEN_TEMPLATE_START;
+}
+
+<TEMPLATE>"$(" {
+    GET_STATE
+
+    state->template_paren_stack[state->template_stack_top] = 1;
+
+    BEGIN(INITIAL);
+    return TOKEN_TEMPLATE_EXPR_START;
+}
+
+<TEMPLATE>"`" {
+    GET_STATE
+
+    state->template_stack_top--;
+
+    BEGIN(INITIAL);
+    return TOKEN_TEMPLATE_END;
+}
+
+<TEMPLATE>{ESCAPE} {
+    return TOKEN_TEMPLATE_TEXT;
+}
+
+<TEMPLATE>[^\\$`]+ {
+    return TOKEN_TEMPLATE_TEXT;
+}
+
+<TEMPLATE>.|\n {
+    return TOKEN_TEMPLATE_TEXT;
+}
+
+
 "\n" { return TOKEN_NEW_LINE; }
+
+
 
 [ \t]+ {
     GET_STATE

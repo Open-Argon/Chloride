@@ -379,7 +379,7 @@ Translated load_argon_file(char *path, ArErr *err) {
     buffer[size] = '\0'; // NUL terminate
     fclose(file);
 
-    LexerState state = {path, buffer, 0, 0, &tokens};
+    LexerState state = {path, buffer, 0, 0, {}, -1, &tokens};
 #ifdef ARGON_DEBUG
     start = clock();
 #endif

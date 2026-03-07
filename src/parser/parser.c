@@ -6,7 +6,9 @@
 
 #include "parser.h"
 #include "../dynamic_array/darray.h"
+#include "../err.h"
 #include "../lexer/token.h"
+#include "array/array.h"
 #include "assignable/access/access.h"
 #include "assignable/assign/assign.h"
 #include "assignable/call/call.h"
@@ -22,9 +24,7 @@
 #include "function/function.h"
 #include "if/if.h"
 #include "import/import.h"
-#include "array/array.h"
 #include "literals/literals.h"
-#include "../err.h"
 #include "negation/negation.h"
 #include "not/not.h"
 #include "number/number.h"
@@ -50,8 +50,9 @@ const char *ValueTypeNames[] = {
 ArErr error_if_finished(char *file, DArray *tokens, size_t *index) {
   if ((*index) >= tokens->size) {
     Token *token = darray_get(tokens, tokens->size - 1);
-    return path_specific_create_err(token->line, token->column, token->length, file,
-                      "Syntax Error", "more code was expected");
+    return path_specific_create_err(token->line, token->column, token->length,
+                                    file, "Syntax Error",
+                                    "more code was expected");
   }
   return no_err;
 }
@@ -131,8 +132,8 @@ ParsedValueReturn parse_token_full(char *file, DArray *tokens, size_t *index,
       if (token->type != TOKEN_NEW_LINE) {
         return (ParsedValueReturn){
             path_specific_create_err(token_indent->line, token_indent->column,
-                       token_indent->length, file, "Syntax Error",
-                       "unexpected indent"),
+                                     token_indent->length, file, "Syntax Error",
+                                     "unexpected indent"),
             NULL};
       }
     }
@@ -164,11 +165,14 @@ ParsedValueReturn parse_token_full(char *file, DArray *tokens, size_t *index,
   case TOKEN_EXCLAMATION:
     output = parse_not(file, tokens, index);
     break;
+  case TOKEN_TEMPLATE_START:
+    output = parse_template(file, tokens, index, NULL);
+    break;
   default:
-    return (ParsedValueReturn){path_specific_create_err(token->line, token->column,
-                                          token->length, file, "Syntax Error",
-                                          "unexpected token"),
-                               NULL};
+    return (ParsedValueReturn){
+        path_specific_create_err(token->line, token->column, token->length,
+                                 file, "Syntax Error", "unexpected token"),
+        NULL};
   }
 
   // LHS required
@@ -190,6 +194,9 @@ ParsedValueReturn parse_token_full(char *file, DArray *tokens, size_t *index,
       break;
     case TOKEN_UNTIL:
       output = parse_range(file, tokens, index, output.value);
+      break;
+    case TOKEN_TEMPLATE_START:
+      output = parse_template(file, tokens, index, output.value);
       break;
     case TOKEN_LBRACKET:
       output = parse_item_access(file, tokens, index, output.value);
@@ -227,8 +234,9 @@ ArErr parser(char *file, DArray *parsed, DArray *tokens, bool inline_flag) {
         Token *token = darray_get(tokens, old_index);
         free_parsed(parsed_code.value);
         free(parsed_code.value);
-        return path_specific_create_err(token->line, token->column, token->length, file,
-                          "Syntax Error", "invalid syntax");
+        return path_specific_create_err(token->line, token->column,
+                                        token->length, file, "Syntax Error",
+                                        "invalid syntax");
       }
       expecting_new_line = true;
       darray_push(parsed, parsed_code.value);
@@ -323,6 +331,9 @@ void free_parsed(ParsedValue *ptr) {
     break;
   case AST_IMPORT:
     free_import(parsed);
+    break;
+  case AST_TEMPLATE:
+    free_parsed_template(parsed);
     break;
   }
 }

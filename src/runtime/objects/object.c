@@ -79,7 +79,8 @@ const char *built_in_field_names[BUILT_IN_FIELDS_COUNT] = {
     "pop",
     "__contains__",
     "__iter__",
-    "__next__"};
+    "__next__",
+    "__template__"};
 
 uint64_t built_in_field_hashes[BUILT_IN_FIELDS_COUNT];
 
@@ -141,18 +142,17 @@ void unregister_thread_pool() {
 ArgonObject *new_small_object(size_t endSize) {
   ThreadLocalPool *pool = get_thread_pool();
   ArgonObject *object;
-  
+
   size_t objectsize = sizeof(ArgonObject) + endSize;
 
   if (!pool->small_objects ||
       pool->small_objects_pos + objectsize >
           SMALL_OBJECT_ASSIGNMENT_AMOUNT * sizeof(ArgonObject)) {
     size_t size = sizeof(ArgonObject) * SMALL_OBJECT_ASSIGNMENT_AMOUNT;
-    if (objectsize>size) {
+    if (objectsize > size) {
       size = objectsize;
     }
-    pool->small_objects =
-        (char *)ar_alloc(size);
+    pool->small_objects = (char *)ar_alloc(size);
     pool->small_objects_pos = 0;
   }
 
@@ -177,8 +177,9 @@ ArgonObject *new_object(size_t endSize) {
 
 void init_built_in_field_hashes() {
   for (int i = 0; i < BUILT_IN_FIELDS_COUNT; i++) {
-    built_in_field_hashes[i] = siphash64_bytes(
-        built_in_field_names[i], strlen(built_in_field_names[i]), siphash_key_fixed);
+    built_in_field_hashes[i] =
+        siphash64_bytes(built_in_field_names[i],
+                        strlen(built_in_field_names[i]), siphash_key_fixed);
   }
 }
 
@@ -192,8 +193,7 @@ int64_t hash_object(ArgonObject *object, ArErr *err, RuntimeState *state) {
   if (hash_result->type != TYPE_NUMBER ||
       !hash_result->value.as_number->is_int64) {
     *err =
-        create_err("Hash Error",
-                   "hash result needs to be a 64 bit integer.");
+        create_err("Hash Error", "hash result needs to be a 64 bit integer.");
     return 0;
   }
   return hash_result->value.as_number->n.i64;

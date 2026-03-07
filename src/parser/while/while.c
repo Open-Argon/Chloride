@@ -12,6 +12,10 @@
 
 ParsedValueReturn parse_while(char *file, DArray *tokens, size_t *index) {
   (*index)++;
+  ArErr err = error_if_finished(file, tokens, index);
+  if (err.exists) {
+    return (ParsedValueReturn){err, NULL};
+  }
   // Parse ( condition )
   Token *token = darray_get(tokens, *index);
   if (token->type != TOKEN_LPAREN) {
@@ -22,7 +26,7 @@ ParsedValueReturn parse_while(char *file, DArray *tokens, size_t *index) {
   }
 
   (*index)++;
-  ArErr err = error_if_finished(file, tokens, index);
+  err = error_if_finished(file, tokens, index);
   if (err.exists) {
     return (ParsedValueReturn){err, NULL};
   }

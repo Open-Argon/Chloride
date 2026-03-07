@@ -31,7 +31,7 @@ class Game do
     self.bouncing_texts = []
     for (x in 0 until 20) do
       for (y in 0 until 20) do
-        self.bouncing_texts.append(bouncing_text(string(x*y), tuple(x*10,y*10), x+y+1))
+        self.bouncing_texts.append(bouncing_text(string(x*y), tuple(x*10,y*10), (x+y+1)*0.01))
 
   this.render(self) = do
       # term.log("frame:",self.frame)

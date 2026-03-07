@@ -1,0 +1,11 @@
+let wow = "this is cool"
+
+term.log(
+  `hello world
+
+$(
+  do
+    term.log("wow")
+    return wow
+)`
+)

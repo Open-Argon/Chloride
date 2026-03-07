@@ -10,6 +10,11 @@
 
 extern ArgonObject *ARGON_STRING_TYPE;
 
+extern ArgonObject*ARGON_RENDER_TEMPLATE;
+
+ArgonObject *RENDER_TEMPLATE(size_t argc, ArgonObject **argv, ArErr *err,
+                             RuntimeState *state, ArgonNativeAPI *api);
+
 char *c_quote_string(const char *input, size_t len);
 
 void init_string(ArgonObject *object, char *data, size_t length, uint64_t hash);

@@ -7,278 +7,388 @@
 #include "string.h"
 #include "../../lexer/token.h"
 
-#include "../../memory.h"
 #include "../../err.h"
+#include "../../memory.h"
 #include <stddef.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdlib.h>
 #include <stdint.h>
-#include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 // Helper: Convert 4 hex digits from input to a uint16_t value
 static int parse_hex4(const char *in, uint16_t *out) {
-    uint16_t val = 0;
-    for (int i = 0; i < 4; i++) {
-        char c = in[i];
-        val <<= 4;
-        if (c >= '0' && c <= '9')
-            val |= (c - '0');
-        else if (c >= 'a' && c <= 'f')
-            val |= (c - 'a' + 10);
-        else if (c >= 'A' && c <= 'F')
-            val |= (c - 'A' + 10);
-        else
-            return 0; // invalid hex digit
-    }
-    *out = val;
-    return 1;
+  uint16_t val = 0;
+  for (int i = 0; i < 4; i++) {
+    char c = in[i];
+    val <<= 4;
+    if (c >= '0' && c <= '9')
+      val |= (c - '0');
+    else if (c >= 'a' && c <= 'f')
+      val |= (c - 'a' + 10);
+    else if (c >= 'A' && c <= 'F')
+      val |= (c - 'A' + 10);
+    else
+      return 0; // invalid hex digit
+  }
+  *out = val;
+  return 1;
 }
 
-// Helper: Encode a Unicode codepoint as UTF-8, write to *out_ptr, return bytes written
+// Helper: Encode a Unicode codepoint as UTF-8, write to *out_ptr, return bytes
+// written
 static int utf8_encode(uint32_t codepoint, char **out_ptr) {
-    char *p = *out_ptr;
-    if (codepoint <= 0x7F) {
-        *p++ = (char)codepoint;
-        *out_ptr = p;
-        return 1;
-    }
-    else if (codepoint <= 0x7FF) {
-        *p++ = (char)(0xC0 | (codepoint >> 6));
-        *p++ = (char)(0x80 | (codepoint & 0x3F));
-        *out_ptr = p;
-        return 2;
-    }
-    else if (codepoint <= 0xFFFF) {
-        *p++ = (char)(0xE0 | (codepoint >> 12));
-        *p++ = (char)(0x80 | ((codepoint >> 6) & 0x3F));
-        *p++ = (char)(0x80 | (codepoint & 0x3F));
-        *out_ptr = p;
-        return 3;
-    }
-    else if (codepoint <= 0x10FFFF) {
-        *p++ = (char)(0xF0 | (codepoint >> 18));
-        *p++ = (char)(0x80 | ((codepoint >> 12) & 0x3F));
-        *p++ = (char)(0x80 | ((codepoint >> 6) & 0x3F));
-        *p++ = (char)(0x80 | (codepoint & 0x3F));
-        *out_ptr = p;
-        return 4;
-    }
-    return 0; // invalid codepoint
+  char *p = *out_ptr;
+  if (codepoint <= 0x7F) {
+    *p++ = (char)codepoint;
+    *out_ptr = p;
+    return 1;
+  } else if (codepoint <= 0x7FF) {
+    *p++ = (char)(0xC0 | (codepoint >> 6));
+    *p++ = (char)(0x80 | (codepoint & 0x3F));
+    *out_ptr = p;
+    return 2;
+  } else if (codepoint <= 0xFFFF) {
+    *p++ = (char)(0xE0 | (codepoint >> 12));
+    *p++ = (char)(0x80 | ((codepoint >> 6) & 0x3F));
+    *p++ = (char)(0x80 | (codepoint & 0x3F));
+    *out_ptr = p;
+    return 3;
+  } else if (codepoint <= 0x10FFFF) {
+    *p++ = (char)(0xF0 | (codepoint >> 18));
+    *p++ = (char)(0x80 | ((codepoint >> 12) & 0x3F));
+    *p++ = (char)(0x80 | ((codepoint >> 6) & 0x3F));
+    *p++ = (char)(0x80 | (codepoint & 0x3F));
+    *out_ptr = p;
+    return 4;
+  }
+  return 0; // invalid codepoint
 }
 
 /**
  * unquote_json_string:
  *  Parses and unescapes a JSON string literal including quotes,
- *  returning a malloc'ed buffer with the decoded string and its length (including embedded nulls).
- *  
+ *  returning a malloc'ed buffer with the decoded string and its length
+ * (including embedded nulls).
+ *
  * Parameters:
  *  input: const char* JSON string literal (must start and end with quotes)
  *  out_len: pointer to size_t to receive decoded length
- * 
+ *
  * Returns:
  *  malloc'ed buffer with decoded string (not necessarily null-terminated)
  *  NULL on error (invalid input)
- * 
+ *
  * Caller must free() returned buffer.
  */
-char *unquote_json_string(const char *input, size_t *out_len) {
-    if (!input || input[0] != '"') return NULL;
+char *unquote(char *input, size_t *out_len, char quote_char, bool is_quoted) {
+  if (!input)
+    return NULL;
+
+  const char *src = input;
+  const char *src_end = NULL;
+
+  if (is_quoted) {
+    if (input[0] != quote_char)
+      return NULL;
 
     // Find the closing quote
     const char *p = input + 1;
     const char *end = NULL;
     while (*p) {
-        if (*p == '"') {
-            end = p;
-            break;
-        }
-        // Skip escaped quotes and escapes
-        if (*p == '\\') {
-            p++;
-            if (*p == '\0') return NULL; // invalid escape at end
-        }
+      if (*p == quote_char) {
+        end = p;
+        break;
+      }
+      if (*p == '\\') {
         p++;
+        if (*p == '\0')
+          return NULL; // invalid escape at end
+      }
+      p++;
     }
-    if (!end) return NULL; // no closing quote
+    if (!end)
+      return NULL; // no closing quote
 
-    size_t input_len = end - (input + 1); // length inside quotes
-    const char *src = input + 1;
-    // Allocate max output size = input_len, decoded string cannot be longer than input_len
-    char *outbuf = (char *)checked_malloc(input_len + 1);
-    if (!outbuf) return NULL;
+    src = input + 1;
+    src_end = end;
+  } else {
+    // treat whole input as unquoted
+    src_end = input + strlen(input);
+  }
 
-    char *dst = outbuf;
-    const char *src_end = src + input_len;
+  size_t input_len = src_end - src;
+  char *outbuf = (char *)checked_malloc(input_len + 1);
+  if (!outbuf)
+    return NULL;
 
-    while (src < src_end) {
-        if (*src != '\\') {
-            *dst++ = *src++;
-        } else {
-            // Escape sequence
-            src++;
-            if (src >= src_end) {
-                free(outbuf);
-                return NULL; // invalid escape at end
-            }
-            switch (*src) {
-                case '"': *dst++ = '"'; src++; break;
-                case '\\': *dst++ = '\\'; src++; break;
-                case '/': *dst++ = '/'; src++; break;
-                case 'b': *dst++ = '\b'; src++; break;
-                case 'f': *dst++ = '\f'; src++; break;
-                case 'n': *dst++ = '\n'; src++; break;
-                case 'r': *dst++ = '\r'; src++; break;
-                case 't': *dst++ = '\t'; src++; break;
+  char *dst = outbuf;
 
-                case 'u': {
-                    // Unicode escape \uXXXX
-                    if (src + 5 > src_end) {
-                        free(outbuf);
-                        return NULL; // not enough chars for \uXXXX
-                    }
-                    uint16_t code_unit1 = 0;
-                    if (!parse_hex4(src + 1, &code_unit1)) {
-                        free(outbuf);
-                        return NULL; // invalid hex digits
-                    }
-                    src += 5; // consume uXXXX
-
-                    // Check for surrogate pair
-                    if (code_unit1 >= 0xD800 && code_unit1 <= 0xDBFF) {
-                        // high surrogate, expect another \uXXXX
-                        if (src + 6 <= src_end && src[0] == '\\' && src[1] == 'u') {
-                            uint16_t code_unit2 = 0;
-                            if (!parse_hex4(src + 2, &code_unit2)) {
-                                free(outbuf);
-                                return NULL;
-                            }
-                            if (code_unit2 >= 0xDC00 && code_unit2 <= 0xDFFF) {
-                                // valid low surrogate, combine to codepoint
-                                uint32_t codepoint = 0x10000 + (((code_unit1 - 0xD800) << 10) | (code_unit2 - 0xDC00));
-                                utf8_encode(codepoint, &dst);
-                                src += 6; // consume \uXXXX low surrogate
-                                break;
-                            } else {
-                                free(outbuf);
-                                return NULL; // invalid low surrogate
-                            }
-                        } else {
-                            free(outbuf);
-                            return NULL; // expected low surrogate missing
-                        }
-                    } else if (code_unit1 >= 0xDC00 && code_unit1 <= 0xDFFF) {
-                        free(outbuf);
-                        return NULL; // unexpected low surrogate without high surrogate
-                    } else {
-                        // normal BMP codepoint
-                        utf8_encode(code_unit1, &dst);
-                    }
-                    break;
-                }
-
-                default:
-                    free(outbuf);
-                    return NULL; // invalid escape char
-            }
+  while (src < src_end) {
+    if (*src != '\\') {
+      *dst++ = *src++;
+    } else {
+      // Escape sequence
+      src++;
+      if (src >= src_end) {
+        free(outbuf);
+        return NULL; // invalid escape at end
+      }
+      switch (*src) {
+      case '\\':
+        *dst++ = '\\';
+        src++;
+        break;
+      case '/':
+        *dst++ = '/';
+        src++;
+        break;
+      case 'b':
+        *dst++ = '\b';
+        src++;
+        break;
+      case 'f':
+        *dst++ = '\f';
+        src++;
+        break;
+      case 'n':
+        *dst++ = '\n';
+        src++;
+        break;
+      case 'r':
+        *dst++ = '\r';
+        src++;
+        break;
+      case 't':
+        *dst++ = '\t';
+        src++;
+        break;
+      case 'u': {
+        if (src + 5 > src_end) {
+          free(outbuf);
+          return NULL;
         }
+        uint16_t code_unit1 = 0;
+        if (!parse_hex4(src + 1, &code_unit1)) {
+          free(outbuf);
+          return NULL;
+        }
+        src += 5;
+
+        // handle surrogate pairs
+        if (code_unit1 >= 0xD800 && code_unit1 <= 0xDBFF) {
+          if (src + 6 <= src_end && src[0] == '\\' && src[1] == 'u') {
+            uint16_t code_unit2 = 0;
+            if (!parse_hex4(src + 2, &code_unit2)) {
+              free(outbuf);
+              return NULL;
+            }
+            if (code_unit2 >= 0xDC00 && code_unit2 <= 0xDFFF) {
+              uint32_t codepoint = 0x10000 + (((code_unit1 - 0xD800) << 10) |
+                                              (code_unit2 - 0xDC00));
+              utf8_encode(codepoint, &dst);
+              src += 6;
+              break;
+            } else {
+              free(outbuf);
+              return NULL;
+            }
+          } else {
+            free(outbuf);
+            return NULL;
+          }
+        } else if (code_unit1 >= 0xDC00 && code_unit1 <= 0xDFFF) {
+          free(outbuf);
+          return NULL;
+        } else {
+          utf8_encode(code_unit1, &dst);
+        }
+        break;
+      }
+      default:
+        if (is_quoted) {
+          *dst++ = quote_char;
+          src++;
+          break;
+        }
+        free(outbuf);
+        return NULL;
+      }
     }
-    // decoded length:
-    size_t decoded_len = dst - outbuf;
+  }
 
-    // Optionally null terminate (not required)
-    *dst = '\0';
+  *dst = '\0';
+  if (out_len)
+    *out_len = dst - outbuf;
 
-    if (out_len)
-        *out_len = decoded_len;
-
-    return outbuf;
+  return outbuf;
 }
 
-
-
-char *swap_quotes(char *input, char quote) {
-  size_t len = strlen(input);
-  char *result = checked_malloc(len + 1);
-  if (!result)
-    return NULL;
-
-  for (size_t i = 0; i < len; ++i) {
-    if (input[i] == '"')
-      result[i] = quote;
-    else if (input[i] == quote)
-      result[i] = '"';
-    else
-      result[i] = input[i];
-  }
-  result[len] = '\0';
-  return result;
-}
-
-
-char *unquote(char *str, size_t *decoded_len) {
-  if (*str == '\0')
-    return NULL;
-
-  char quote = str[0];
-  char *swapped = NULL;
-  char *unescaped = NULL;
-
-  if (quote != '"') {
-    swapped = swap_quotes(str, quote);
-    if (!swapped)
-      return NULL;
-    str = swapped;
-  }
-
-  unescaped = unquote_json_string(str, decoded_len);
-  if (!unescaped) {
-    if (swapped)
-      free(swapped);
-    return NULL;
-  }
-
-  if (swapped)
-    free(swapped);
-
-  if (quote != '"') {
-    char *final = swap_quotes(unescaped, quote);
-    free(unescaped);
-    return final;
-  }
-
-  return unescaped;
-}
-
-ParsedValueReturn parse_string(Token* token, bool to_unquote) {
+ParsedValueReturn parse_string(Token *token, bool to_unquote) {
   ParsedValue *parsedValue = checked_malloc(sizeof(ParsedValue));
   parsedValue->type = AST_STRING;
   ParsedString *parsedString = checked_malloc(sizeof(ParsedString));
   parsedValue->data = parsedString;
   if (to_unquote) {
-    parsedString->length = 0;
-    parsedString->string = unquote(token->value, &parsedString->length);
+    parsedString->string =
+        unquote(token->value, &parsedString->length, token->value[0], true);
     if (!parsedString->string) {
       free(parsedValue);
       free(parsedString);
-      return (ParsedValueReturn){path_specific_create_err(token->line, token->column,
-                                            token->length, NULL, "String Error",
-                                            "failed to unquote string %s", token->value),
-                                 NULL};
+      return (ParsedValueReturn){
+          path_specific_create_err(token->line, token->column, token->length,
+                                   NULL, "String Error",
+                                   "failed to unquote string %s", token->value),
+          NULL};
     }
   } else {
     parsedString->string = checked_malloc(token->length);
     memcpy(parsedString->string, token->value, token->length);
     parsedString->length = token->length;
   }
-  return (ParsedValueReturn){no_err,parsedValue};
+  return (ParsedValueReturn){no_err, parsedValue};
 }
 
 void free_parsed_string(void *ptr) {
   ParsedValue *parsedValue = ptr;
   ParsedString *parsedString = parsedValue->data;
-  free(parsedString->string);
+  if (parsedString->string)
+    free(parsedString->string);
   free(parsedString);
+}
+
+void free_parsed_template_string(void *ptr) {
+  ParsedString *parsedString = ptr;
+  if (parsedString->string)
+    free(parsedString->string);
+}
+
+void free_parsed_value_with_nulls(void *ptr) {
+  ParsedValue *parsedValue = (ParsedValue *)ptr;
+  if (parsedValue)
+    free_parsed(parsedValue);
+  free(parsedValue);
+}
+
+void free_template_value(void *ptr) {
+  TemplateValue *template_value = (TemplateValue *)ptr;
+  if (template_value->is_string) {
+    free_parsed_template_string(&template_value->value.string);
+    return;
+  }
+  free_parsed_value_with_nulls(template_value->value.value);
+  return;
+}
+
+ParsedValueReturn parse_template(char *file, DArray *tokens, size_t *index,
+                                 ParsedValue *templater) {
+  (*index)++;
+  ArErr err = error_if_finished(file, tokens, index);
+  if (err.exists) {
+    return (ParsedValueReturn){err, NULL};
+  }
+  DArray template;
+  darray_init(&template, sizeof(TemplateValue));
+
+  Token *token = darray_get(tokens, *index);
+
+  while (token->type != TOKEN_TEMPLATE_END) {
+    switch (token->type) {
+    case TOKEN_TEMPLATE_TEXT: {
+      if (template.size > 0) {
+        TemplateValue *value = darray_get(&template, template.size - 1);
+        if (value->is_string) {
+          size_t length;
+          char *unquoted = unquote(token->value, &length, '`', false);
+
+          value->value.string.string = realloc(
+              value->value.string.string, value->value.string.length + length);
+          memcpy(value->value.string.string + value->value.string.length,
+                 unquoted, length);
+          value->value.string.length += length;
+          break;
+        }
+      }
+      TemplateValue value;
+      value.is_string = true;
+      value.value.string.string =
+          unquote(token->value, &value.value.string.length, '`', false);
+      darray_push(&template, &value);
+      break;
+    }
+    case TOKEN_TEMPLATE_EXPR_START: {
+      (*index)++;
+      skip_newlines_and_indents(tokens, index);
+      err = error_if_finished(file, tokens, index);
+      if (err.exists) {
+        darray_free(&template, free_template_value);
+        return (ParsedValueReturn){err, NULL};
+      }
+      ParsedValueReturn parsed = parse_token(file, tokens, index, true);
+      if (parsed.err.exists) {
+        darray_free(&template, free_template_value);
+        return parsed;
+      } else if (!parsed.value) {
+        darray_free(&template, free_template_value);
+        return (ParsedValueReturn){
+            path_specific_create_err(token->line, token->column, token->length,
+                                     file, "Syntax Error", "expected value"),
+            NULL};
+      }
+      TemplateValue value;
+      value.is_string = false;
+      value.value.value = parsed.value;
+      darray_push(&template, &value);
+      err = error_if_finished(file, tokens, index);
+      if (err.exists) {
+        return (ParsedValueReturn){err, NULL};
+      }
+      skip_newlines_and_indents(tokens, index);
+      token = darray_get(tokens, *index);
+
+      if (token->type != TOKEN_TEMPLATE_EXPR_END) {
+        darray_free(&template, free_template_value);
+        return (ParsedValueReturn){
+            path_specific_create_err(token->line, token->column, token->length,
+                                     file, "Syntax Error",
+                                     "expected end of template value"),
+            NULL};
+      }
+
+      break;
+    }
+    default: {
+      darray_free(&template, free_template_value);
+      return (ParsedValueReturn){
+          path_specific_create_err(token->line, token->column, token->length,
+                                   file, "Syntax Error", "unexpected token"),
+          NULL};
+    }
+    }
+    (*index)++;
+    err = error_if_finished(file, tokens, index);
+    if (err.exists) {
+      darray_free(&template, free_template_value);
+      return (ParsedValueReturn){err, NULL};
+    }
+    token = darray_get(tokens, *index);
+  }
+  (*index)++;
+  ParsedValue *Parsedvalue = checked_malloc(sizeof(ParsedValue));
+  Parsedvalue->type = AST_TEMPLATE;
+  ParsedTemplate *Parsed_template = checked_malloc(sizeof(ParsedTemplate));
+  Parsedvalue->data = Parsed_template;
+  Parsed_template->values = template;
+  Parsed_template->templater = templater;
+  return (ParsedValueReturn){no_err, Parsedvalue};
+}
+
+void free_parsed_template(void *ptr) {
+  ParsedValue *parsedValue = ptr;
+  ParsedTemplate *parsedTemplate = parsedValue->data;
+  darray_free(&parsedTemplate->values, free_template_value);
+  if (parsedTemplate->templater) {
+    free_parsed(parsedTemplate->templater);
+    free(parsedTemplate->templater);
+  }
+  free(parsedTemplate);
 }

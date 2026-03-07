@@ -6,6 +6,7 @@
 
 #include "while.h"
 #include <stddef.h>
+#include "../translator.h"
 
 size_t translate_parsed_while(Translated *translated, ParsedWhile *parsedWhile,
                               ArErr *err) {

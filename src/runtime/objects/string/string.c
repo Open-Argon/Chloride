@@ -13,6 +13,7 @@
 #include "../object.h"
 #include <ctype.h>
 #include <inttypes.h>
+#include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -140,7 +141,8 @@ ArgonObject *ARGON_STRING_TYPE___less_than__(size_t argc, ArgonObject **argv,
   return len1 < len2 ? ARGON_TRUE : ARGON_FALSE;
 }
 
-ArgonObject *ARGON_STRING_TYPE___less_than_equal__(size_t argc, ArgonObject **argv,
+ArgonObject *ARGON_STRING_TYPE___less_than_equal__(size_t argc,
+                                                   ArgonObject **argv,
                                                    ArErr *err,
                                                    RuntimeState *state,
                                                    ArgonNativeAPI *api) {
@@ -176,16 +178,15 @@ ArgonObject *ARGON_STRING_TYPE___less_than_equal__(size_t argc, ArgonObject **ar
 }
 
 ArgonObject *ARGON_STRING_TYPE___greater_than__(size_t argc, ArgonObject **argv,
-                                                ArErr *err,
-                                                RuntimeState *state,
+                                                ArErr *err, RuntimeState *state,
                                                 ArgonNativeAPI *api) {
   (void)api;
   (void)state;
 
   if (argc != 2) {
-    *err = create_err("Runtime Error",
-                      "__greater_than__ expects 2 arguments, got %" PRIu64,
-                      argc);
+    *err =
+        create_err("Runtime Error",
+                   "__greater_than__ expects 2 arguments, got %" PRIu64, argc);
     return ARGON_NULL;
   }
 
@@ -210,17 +211,19 @@ ArgonObject *ARGON_STRING_TYPE___greater_than__(size_t argc, ArgonObject **argv,
   return len1 > len2 ? ARGON_TRUE : ARGON_FALSE;
 }
 
-ArgonObject *ARGON_STRING_TYPE___greater_than_equal__(
-    size_t argc, ArgonObject **argv, ArErr *err, RuntimeState *state,
-    ArgonNativeAPI *api) {
+ArgonObject *ARGON_STRING_TYPE___greater_than_equal__(size_t argc,
+                                                      ArgonObject **argv,
+                                                      ArErr *err,
+                                                      RuntimeState *state,
+                                                      ArgonNativeAPI *api) {
 
   (void)api;
   (void)state;
 
   if (argc != 2) {
-    *err = create_err("Runtime Error",
-                      "__greater_than_equal__ expects 2 arguments, got %" PRIu64,
-                      argc);
+    *err = create_err(
+        "Runtime Error",
+        "__greater_than_equal__ expects 2 arguments, got %" PRIu64, argc);
     return ARGON_NULL;
   }
 
@@ -335,4 +338,62 @@ char *argon_string_to_c_string_malloc(ArgonObject *object) {
 
 ArgonObject *new_string_object_null_terminated(char *data) {
   return new_string_object(data, strlen(data), 0);
+}
+
+ArgonObject*ARGON_RENDER_TEMPLATE;
+
+ArgonObject *RENDER_TEMPLATE(size_t argc, ArgonObject **argv, ArErr *err,
+                             RuntimeState *state, ArgonNativeAPI *api) {
+  (void)api;
+  (void)state;
+  (void)argv;
+  if (argc != 1) {
+    *err = create_err("Runtime Error",
+                      "RENDER_TEMPLATE expects 1 argument, got %" PRIu64, argc);
+    return ARGON_NULL;
+  }
+
+  size_t capacity = 128;
+  char *string = checked_malloc(capacity);
+  size_t string_length = 0;
+
+  struct tuple_struct *tuple = &argv[0]->value.as_tuple;
+
+  for (size_t i = 0; i < tuple->size; i++) {
+    ArgonObject *item = tuple->data[i]->value.as_tuple.data[1];
+
+    ArgonObject *string_convert_method = get_builtin_field_for_class(
+        get_builtin_field(item, __class__), __string__, item);
+
+    if (string_convert_method) {
+      ArgonObject *string_object =
+          argon_call(string_convert_method, 0, NULL, err, state);
+      bool resized = false;
+      while (capacity < string_length + string_object->value.as_str->length) {
+        capacity *= 2;
+        resized = true;
+      }
+      if (resized)
+        string = realloc(string, capacity);
+      memcpy(string + string_length, string_object->value.as_str->data,
+             string_object->value.as_str->length);
+      string_length += string_object->value.as_str->length;
+    } else {
+      char *string_obj = "<object>";
+      size_t length = strlen(string_obj);
+      bool resized = false;
+      while (capacity < string_length + length) {
+        capacity *= 2;
+        resized = true;
+      }
+      if (resized)
+        string = realloc(string, capacity);
+      memcpy(string + string_length, string_obj, length);
+      string_length += length;
+    }
+  }
+  ArgonObject *result = new_string_object(string, string_length, 0);
+
+  free(string);
+  return result;
 }

@@ -128,6 +128,10 @@ sets the source location onto the runtime
 1. the column
 1. the length
 
+## OP_LOAD_TEMPLATE_METHOD
+
+loads the \_\_template\_\_ method from the objects class in register 0 and put it into register 0
+
 ## OP_LOAD_ITER_METHOD
 
 loads the \_\_iter\_\_ method from the objects class in register 0 and put it into register 0
@@ -288,6 +292,14 @@ loads the base class into register 0.
 ## OP_LOAD_CREATE_ARRAY
 
 loads the create array function into register 0.
+
+## OP_LOAD_CREATE_TUPLE
+
+loads the create tuple function into register 0.
+
+## OP_LOAD_TEMPLATE
+
+loads the render template function into register 0.
 
 ## OP_LOAD_RANGE_CLASS
 

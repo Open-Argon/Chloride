@@ -47,7 +47,7 @@ int execute_code(char *context, char *path, Stack *scope,
 
   DArray tokens;
   darray_init(&tokens, sizeof(Token));
-  LexerState state = {path, context, 0, 0, &tokens};
+  LexerState state = {path, context, 0, 0, {}, -1, &tokens};
   err = lexer(state);
   if (err.exists) {
     darray_free(&tokens, free_token);

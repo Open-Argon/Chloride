@@ -63,6 +63,7 @@ typedef enum {
   __contains__,
   __iter__,
   __next__,
+  __template__,
 
   BUILT_IN_FIELDS_COUNT,
 } built_in_fields;
