@@ -9,3 +9,50 @@ $(
     return wow
 )`
 )
+
+
+let execute(query) = do
+  if (type(query)!=__QUERY__) do
+    term.log("cant execute non query (theres still currently no way to throw an error within the language lol)")
+    return
+  term.log("executed the code")
+  term.log(query.__query__, query.__values__)
+
+class __QUERY__ do
+
+class my_sql_example do
+  this.__template__(self, values) = do
+    let output = __QUERY__()
+    output.__query__ = ""
+    output.__values__ = []
+    for (i in 0 until values.length) do
+      let item = values[i]
+      if (item[0]) do
+        output.__query__ = output.__query__+item[1]
+        continue
+      output.__query__=output.__query__+"?"
+      output.__values__.append(item[1])
+    return output
+
+let sql = my_sql_example()
+
+let some_id = "23869435"
+
+execute(sql`SELECT * FROM TABLE WHERE id=$(some_id)`)
+execute(`SELECT * FROM TABLE WHERE id=$(some_id)`)
+
+
+let some_title = `DO $$
+DECLARE
+    drop_statement text;
+BEGIN
+    FOR drop_statement IN
+        SELECT 'DROP TABLE IF EXISTS "' || table_name || '" CASCADE;'
+        FROM information_schema.tables
+        WHERE table_schema = 'vendor_a'
+    LOOP
+        EXECUTE drop_statement;
+    END LOOP;
+END $$;`
+
+execute(sql`SELECT * FROM TABLE WHERE id=$(some_id) title=$(some_title)`)

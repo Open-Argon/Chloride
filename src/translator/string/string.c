@@ -85,6 +85,6 @@ size_t translate_parsed_template(Translated *translated,
   push_instruction_byte(translated, OP_CALL);
 
   push_instruction_byte(translated, OP_POP_SCOPE);
-  translated->scope_depth++;
+  translated->scope_depth--;
   return first;
 }

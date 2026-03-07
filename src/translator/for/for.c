@@ -43,7 +43,8 @@ size_t translate_parsed_for(Translated *translated, ParsedFor *parsedFor,
   push_instruction_byte(translated, 0);
   push_instruction_byte(translated, iterator_next_register);
 
-  size_t start_of_loop = push_instruction_byte(translated, OP_FOR_LOOP_JUMP);
+  size_t start_of_loop = push_instruction_byte(translated, OP_EMPTY_SCOPE);
+  push_instruction_byte(translated, OP_FOR_LOOP_JUMP);
   push_instruction_byte(translated, iterator_register);
   push_instruction_byte(translated, iterator_next_register);
   uint64_t jump_index = push_instruction_code(translated, 0);
