@@ -1,0 +1,26 @@
+import "template.ar" expose sql, SQL_QUERY
+
+let __native__ = load_native_code(program.file.directory+"native/bin/sqlite"+platform.lib_ext)
+
+class cursor do
+  this.__init__(self, db) = do
+    self.__db__ = db
+    self.__cursor__ = __native__.new_cursor()
+    __native__.start_transaction_cursor(self.__db__, self.__cursor__)
+  this.execute(self, query) = do
+    if (type(query) != SQL_QUERY) do
+      term.log("not a query!")
+      return
+    return __native__.cursor_execute(self.__db__, self.__cursor__, query.__query__, query.__values__)
+  this.commit(self) = __native__.commit_cursor(self.__db__, self.__cursor__)
+  this.close(self) = __native__.close_cursor(self.__db__, self.__cursor__)
+
+
+class sqlite do
+  this.__init__(self, path) = do
+    self.__db_path__ = path
+    self.__db__ = __native__.connect_database(path)
+  
+  this.cursor(self) = cursor(self.__db__)
+  
+  this.close(self) = __native__.close_database(self.__db__)

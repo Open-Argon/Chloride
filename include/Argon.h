@@ -48,6 +48,11 @@ struct buffer {
   size_t size;
 };
 
+struct array {
+  ArgonObject **items;
+  size_t size;
+};
+
 struct ArgonNativeAPI {
   void (*register_ArgonObject)(ArgonObjectRegister *reg, char *name,
                                ArgonObject *obj);
@@ -91,6 +96,9 @@ struct ArgonNativeAPI {
 
   void* (*malloc)(size_t);
   void (*free)(void*);
+
+  ArgonObject *END_ITERATION;
+  struct array (*argon_to_array)(ArgonObject *, ArgonError *);
 };
 
 __attribute__((visibility("default"))) void

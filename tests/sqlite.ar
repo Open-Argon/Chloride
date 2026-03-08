@@ -1,0 +1,21 @@
+import "../stdlib/sqlite" expose sqlite, sql
+
+let db = sqlite("test.db")
+
+let cursor = db.cursor()
+
+let some_id = "hello"
+
+cursor.execute(sql`CREATE TABLE contacts (
+	contact_id INTEGER PRIMARY KEY,
+	first_name TEXT NOT NULL,
+	last_name TEXT NOT NULL,
+	email TEXT NOT NULL UNIQUE,
+	phone TEXT NOT NULL UNIQUE
+);`)
+
+cursor.commit()
+
+cursor.close()
+
+db.close()

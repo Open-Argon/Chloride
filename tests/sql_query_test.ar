@@ -1,0 +1,7 @@
+import "../stdlib/sqlite" expose sql
+
+let some_unsafe_user_input = "hello this is a dangerous input"
+
+let query = sql`SELECT * FROM SOME_TABLE WHERE id=$(some_unsafe_user_input)`
+
+term.log(query, query.__query__, query.__values__)

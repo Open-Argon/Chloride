@@ -26,7 +26,7 @@ ArgonObject *throw_argon_error(ArErr *err, const char *type, const char *fmt,
                                ...) {
   va_list args;
   va_start(args, fmt);
-  *err = vcreate_err( type, fmt, args);
+  *err = vcreate_err(type, fmt, args);
   va_end(args);
   return ARGON_NULL;
 }
@@ -125,6 +125,16 @@ struct string argon_to_string(ArgonObject *obj, ArErr *err) {
   return (struct string){obj->value.as_str->data, obj->value.as_str->length};
 }
 
+struct array argon_to_array(ArgonObject *obj, ArErr *err) {
+  if (obj->type == TYPE_ARRAY) {
+    return (struct array){obj->value.as_array->data, obj->value.as_array->size};
+  } else if (obj->type == TYPE_TUPLE) {
+    return (struct array){obj->value.as_tuple.data, obj->value.as_tuple.size};
+  }
+  throw_argon_error(err, "Runtime Error", "expected array or tuple");
+  return (struct array){NULL, 0};
+}
+
 int register_thread() {
   struct GC_stack_base sb;
   atomic_fetch_add(&thread_count, 1);
@@ -148,13 +158,13 @@ ArgonObject *create_err_object() {
 
 ArErr *err_object_to_err(ArgonObject *object, ArErr *err) {
   if (object->type != TYPE_ERROR)
-    *err = create_err(0, 0, 0, NULL, "Runtime Error", "Expected error object");
+    *err = create_err("Runtime Error", "Expected error object");
   return object->value.err;
 }
 
 void set_err(ArgonObject *object, ArErr *err) {
   if (object->type != TYPE_ERROR) {
-    *err = create_err(0, 0, 0, NULL, "Runtime Error", "Expected error object");
+    *err = create_err("Runtime Error", "Expected error object");
     return;
   }
   *err = *object->value.err;
@@ -200,4 +210,5 @@ ArgonNativeAPI native_api = {
     .new_state = new_state,
     .set_err = set_err,
     .malloc = GC_malloc_uncollectable,
-    .free = GC_free};
+    .free = GC_free,
+    .argon_to_array = argon_to_array};

@@ -175,8 +175,11 @@ ArgonObject *create_ARGON_DICTIONARY_TYPE___getitem__(size_t argc,
   ArgonObject *result = hashmap_lookup_GC(object->value.as_hashmap, hash);
   if (!result) {
     char *object_str = argon_object_to_null_terminated_string(key, err, state);
+    if (api->is_error(err)) return ARGON_NULL;
 
-    *err = create_err(0, 0, 0, NULL, "Attribute Error",
+    printf("%s\n",object_str);
+
+    *err = create_err( "Attribute Error",
                       "Dictionary has no item %s", object_str);
     return ARGON_NULL;
   }

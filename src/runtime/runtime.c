@@ -1220,6 +1220,7 @@ void bootstrap_types() {
   native_api.ARGON_NULL = ARGON_NULL;
   native_api.ARGON_TRUE = ARGON_TRUE;
   native_api.ARGON_FALSE = ARGON_FALSE;
+  native_api.END_ITERATION = END_ITERATION;
 }
 
 void add_to_hashmap(struct hashmap_GC *hashmap, char *name,

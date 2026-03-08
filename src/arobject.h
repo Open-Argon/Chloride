@@ -95,6 +95,11 @@ struct buffer {
   size_t size;
 };
 
+struct array {
+  ArgonObject **items;
+  size_t size;
+};
+
 struct ArgonNativeAPI {
   void (*register_ArgonObject)(hashmap_GC *reg, char *name, ArgonObject *obj);
   ArgonObject *(*create_argon_native_function)(char *name, native_fn);
@@ -136,6 +141,9 @@ struct ArgonNativeAPI {
   void (*set_err)(ArgonObject *object, ArErr *err);
   void *(*malloc)(size_t);
   void (*free)(void *);
+
+  ArgonObject *END_ITERATION;
+  struct array (*argon_to_array)(ArgonObject *, ArErr *);
 };
 
 typedef enum ArgonType {
