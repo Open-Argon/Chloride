@@ -93,3 +93,5 @@ target
 #.idea/
 
 raylib-5.5_win64_mingw-w64
+
+test.db

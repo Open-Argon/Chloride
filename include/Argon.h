@@ -16,6 +16,7 @@ extern "C" {
 
 #include <stdbool.h>
 #include <stdint.h>
+#include "ArgonTypes.h"
 
 #define ARGON_NATIVE_API_VERSION 1
 
@@ -99,6 +100,8 @@ struct ArgonNativeAPI {
 
   ArgonObject *END_ITERATION;
   struct array (*argon_to_array)(ArgonObject *, ArgonError *);
+  int (*argon_get_ArgonType)(ArgonObject *);
+  bool (*argon_is_i64)(ArgonObject *);
 };
 
 __attribute__((visibility("default"))) void

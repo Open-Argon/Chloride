@@ -10,6 +10,7 @@
 #include "dynamic_array/darray.h"
 #include "runtime/internals/dynamic_array_armem/darray_armem.h"
 #include "runtime/internals/hashmap/hashmap.h"
+#include "../include/ArgonTypes.h"
 #include <gmp.h>
 #include <limits.h>
 #include <stddef.h>
@@ -144,25 +145,9 @@ struct ArgonNativeAPI {
 
   ArgonObject *END_ITERATION;
   struct array (*argon_to_array)(ArgonObject *, ArErr *);
+  int (*argon_get_ArgonType)(ArgonObject *);
+  bool (*argon_is_i64)(ArgonObject *);
 };
-
-typedef enum ArgonType {
-  TYPE_NULL,
-  TYPE_BOOL,
-  TYPE_NUMBER,
-  TYPE_STRING,
-  TYPE_FUNCTION,
-  TYPE_NATIVE_FUNCTION,
-  TYPE_METHOD,
-  TYPE_DICTIONARY,
-  TYPE_ARRAY,
-  TYPE_TUPLE,
-  TYPE_BUFFER,
-  TYPE_ERROR,
-  TYPE_OBJECT,
-  TYPE_RANGE_ITERATOR,
-  TYPE_ARRAY_ITERATOR,
-} ArgonType;
 
 typedef struct {
   void *data;

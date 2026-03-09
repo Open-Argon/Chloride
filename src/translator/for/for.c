@@ -66,8 +66,6 @@ size_t translate_parsed_for(Translated *translated, ParsedFor *parsedFor,
 
   translate_parsed(translated, parsedFor->content, err);
 
-  push_instruction_byte(translated, OP_EMPTY_SCOPE);
-
   push_instruction_byte(translated, OP_JUMP);
   push_instruction_code(translated, start_of_loop);
   set_instruction_code(translated, jump_index, push_instruction_byte(translated, OP_POP_SCOPE));

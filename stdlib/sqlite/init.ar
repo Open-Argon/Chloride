@@ -2,6 +2,27 @@ import "template.ar" expose sql, SQL_QUERY
 
 let __native__ = load_native_code(program.file.directory+"native/bin/sqlite"+platform.lib_ext)
 
+class execution do
+  this.__init__(self, db, cursor) = do
+    self.__db__ = db
+    self.__cursor__ = cursor
+  this.__iter__(self) = self
+  this.__next__(self) = do
+    let output = []
+    if (__native__.cursor_fetch(self.__db__, self.__cursor__, output.append) == signals.end_iteration) return signals.end_iteration
+    return output
+  this.fetch_one(self) = do
+    let result = self.__next__()
+    if (result == signals.end_iteration) do
+      term.log("no more rows! throw") # todo: add error throwing please ffs me
+      return
+    return result
+  this.fetch_many(self) = do
+    let result = []
+    for (row in self) do
+      result.append(row)
+    return result
+
 class cursor do
   this.__init__(self, db) = do
     self.__db__ = db
@@ -9,9 +30,12 @@ class cursor do
     __native__.start_transaction_cursor(self.__db__, self.__cursor__)
   this.execute(self, query) = do
     if (type(query) != SQL_QUERY) do
-      term.log("not a query!")
+      term.log("not a query! throw") # todo: add error throwing please ffs me
       return
-    return __native__.cursor_execute(self.__db__, self.__cursor__, query.__query__, query.__values__)
+    return self.unsafe_execute(query.__query__, query.__values__)
+  this.unsafe_execute(self, query, values) = do
+    __native__.cursor_execute(self.__db__, self.__cursor__, query, values)
+    return execution(self.__db__, self.__cursor__)
   this.commit(self) = __native__.commit_cursor(self.__db__, self.__cursor__)
   this.close(self) = __native__.close_cursor(self.__db__, self.__cursor__)
 

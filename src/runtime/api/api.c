@@ -182,6 +182,12 @@ RuntimeState *new_state(ArgonObject **registers) {
   return new_state;
 }
 
+int argon_to_argonType(ArgonObject *obj) { return obj->type; }
+
+bool argon_is_i64(ArgonObject *obj) {
+  return obj->type == TYPE_NUMBER && obj->value.as_number->is_int64;
+}
+
 ArgonNativeAPI native_api = {
     .register_ArgonObject = add_to_hashmap,
     .create_argon_native_function = create_argon_native_function,
@@ -211,4 +217,6 @@ ArgonNativeAPI native_api = {
     .set_err = set_err,
     .malloc = GC_malloc_uncollectable,
     .free = GC_free,
-    .argon_to_array = argon_to_array};
+    .argon_to_array = argon_to_array,
+    .argon_get_ArgonType = argon_to_argonType,
+    .argon_is_i64 = argon_is_i64};
