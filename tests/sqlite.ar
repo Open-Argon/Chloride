@@ -3,46 +3,37 @@ import "../stdlib/sqlite" expose sqlite, sql
 let db = sqlite("test.db")
 
 # Create table if it doesn't exist
-let cursor = db.cursor()
 
-cursor.execute(sql`CREATE TABLE IF NOT EXISTS contacts (
+db.execute(sql`CREATE TABLE IF NOT EXISTS contacts (
     contact_id INTEGER PRIMARY KEY,
     first_name TEXT NOT NULL,
     last_name TEXT NOT NULL,
-    email TEXT NOT NULL UNIQUE,
-    phone TEXT NOT NULL UNIQUE
+    email TEXT NOT NULL,
+    phone TEXT NOT NULL 
 );`)
 
-cursor.commit()
-cursor.close()
 
 # Re-open cursor for insert
-cursor = db.cursor()
 
 let some_first_name = "will"
 let some_last_name = "bell"
 let some_email = "william@wbell.dev"
-let some_phone = "0123456789"
+let some_phone = "573403287534893278537592387958723"
 
-# Insert a row
-cursor.execute(sql`
-    INSERT INTO contacts (first_name, last_name, email, phone)
-    VALUES ($(some_first_name), $(some_last_name), $(some_email), $(some_phone))
-`)
+# Insert rows
+db.execute(sql`BEGIN TRANSACTION;`)
+for (i in 0 until 1e2) do
+    db.execute(sql`
+        INSERT INTO contacts (first_name, last_name, email, phone)
+        VALUES ($(some_first_name), $(some_last_name), $(some_email), $(i))
+    `)
+db.execute(sql`COMMIT;`)
 
-cursor.commit()
-cursor.close()
-
-# Re-open cursor for select
-cursor = db.cursor()
-
-term.log(cursor.execute(sql`
+for (row in db.execute(sql`
     SELECT * 
     FROM contacts
-    WHERE first_name=$(some_first_name) AND email=$(some_email)
-`).fetch_one())
-
-cursor.commit()
-cursor.close()
+    WHERE email=$(some_email)
+`)) do
+    term.log(row)
 
 db.close()

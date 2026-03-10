@@ -11,6 +11,9 @@
 extern ArgonObject *ARGON_TUPLE_TYPE;
 extern ArgonObject *ARGON_TUPLE_CREATE;
 
+ArgonObject *TUPLE_CREATE(size_t argc, ArgonObject **argv, ArErr *err,
+                          RuntimeState *state, ArgonNativeAPI *api);
+
 void init_tuple_type();
 
 #endif // TUPLE_OBJECT

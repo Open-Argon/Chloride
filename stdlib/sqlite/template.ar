@@ -3,14 +3,14 @@ class SQL_QUERY do
 class __sql_templater__ do
   this.__template__(self, values) = do
     let query = SQL_QUERY()
-    query.__query__ = ""
+    query.__statement__ = ""
     query.__values__ = []
     for (i in 0 until values.length) do
       let item = values[i]
       if (item[0]) do
-        query.__query__ = query.__query__+item[1]
+        query.__statement__ = query.__statement__+item[1]
         continue
-      query.__query__=query.__query__+"?"
+      query.__statement__=query.__statement__+"?"
       query.__values__.append(item[1])
     return query
 

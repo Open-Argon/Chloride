@@ -64,103 +64,10 @@ ArgonObject *Argon_close_database(size_t argc, ArgonObject **argv,
   return api->ARGON_NULL;
 }
 
-ArgonObject *Argon_new_cursor(size_t argc, ArgonObject **argv, ArgonError *err,
-                              ArgonState *state, ArgonNativeAPI *api) {
-  if (api->fix_to_arg_size(0, argc, err)) {
-    return api->ARGON_NULL;
-  }
-
-  return api->create_argon_buffer(sizeof(sqlite3_stmt *));
-}
-
-ArgonObject *Argon_close_cursor(size_t argc, ArgonObject **argv,
-                                ArgonError *err, ArgonState *state,
-                                ArgonNativeAPI *api) {
-  if (api->fix_to_arg_size(2, argc, err)) {
-    return api->ARGON_NULL;
-  }
-
-  struct buffer db = api->argon_buffer_to_buffer(argv[0], err);
-  if (api->is_error(err))
-    return api->ARGON_NULL;
-
-  struct buffer cursor = api->argon_buffer_to_buffer(argv[1], err);
-  if (api->is_error(err))
-    return api->ARGON_NULL;
-
-  int rc = sqlite3_finalize(*(sqlite3_stmt **)cursor.data);
-
-  if (rc) {
-    return api->throw_argon_error(err, "sqlite error", "%s",
-                                  sqlite3_errmsg(*(sqlite3 **)db.data));
-  }
-
-  return api->ARGON_NULL;
-}
-
-ArgonObject *Argon_start_transaction_cursor(size_t argc, ArgonObject **argv,
-                                            ArgonError *err, ArgonState *state,
-                                            ArgonNativeAPI *api) {
-  if (api->fix_to_arg_size(2, argc, err)) {
-    return api->ARGON_NULL;
-  }
-
-  struct buffer db = api->argon_buffer_to_buffer(argv[0], err);
-  if (api->is_error(err))
-    return api->ARGON_NULL;
-
-  struct buffer cursor = api->argon_buffer_to_buffer(argv[1], err);
-  if (api->is_error(err))
-    return api->ARGON_NULL;
-
-  char *err_msg = NULL;
-
-  int rc = sqlite3_exec(*(sqlite3 **)db.data, "BEGIN TRANSACTION;", NULL, NULL,
-                        &err_msg);
-
-  if (rc) {
-    ArgonObject *result =
-        api->throw_argon_error(err, "sqlite error", "%s", err_msg);
-    sqlite3_free(err_msg);
-    return result;
-  }
-
-  return api->ARGON_NULL;
-}
-
-ArgonObject *Argon_commit_cursor(size_t argc, ArgonObject **argv,
+ArgonObject *Argon_new_statement(size_t argc, ArgonObject **argv,
                                  ArgonError *err, ArgonState *state,
                                  ArgonNativeAPI *api) {
   if (api->fix_to_arg_size(2, argc, err)) {
-    return api->ARGON_NULL;
-  }
-
-  struct buffer db = api->argon_buffer_to_buffer(argv[0], err);
-  if (api->is_error(err))
-    return api->ARGON_NULL;
-
-  struct buffer cursor = api->argon_buffer_to_buffer(argv[1], err);
-  if (api->is_error(err))
-    return api->ARGON_NULL;
-
-  char *err_msg = NULL;
-
-  int rc = sqlite3_exec(*(sqlite3 **)db.data, "COMMIT;", NULL, NULL, &err_msg);
-
-  if (rc) {
-    ArgonObject *result =
-        api->throw_argon_error(err, "sqlite error", "%s", err_msg);
-    sqlite3_free(err_msg);
-    return result;
-  }
-
-  return api->ARGON_NULL;
-}
-
-ArgonObject *Argon_cursor_execute(size_t argc, ArgonObject **argv,
-                                  ArgonError *err, ArgonState *state,
-                                  ArgonNativeAPI *api) {
-  if (api->fix_to_arg_size(4, argc, err)) {
     return api->ARGON_NULL;
   }
 
@@ -168,20 +75,19 @@ ArgonObject *Argon_cursor_execute(size_t argc, ArgonObject **argv,
   if (api->is_error(err))
     return api->ARGON_NULL;
 
-  struct buffer cursor = api->argon_buffer_to_buffer(argv[1], err);
+  struct string query = api->argon_to_string(argv[1], err);
+
   if (api->is_error(err))
     return api->ARGON_NULL;
 
-  struct string query = api->argon_to_string(argv[2], err);
-  if (api->is_error(err))
-    return api->ARGON_NULL;
-
-  struct array values = api->argon_to_array(argv[3], err);
+  ArgonObject *statement_obj = api->create_argon_buffer(sizeof(sqlite3_stmt *));
+  struct buffer statement_buffer =
+      api->argon_buffer_to_buffer(statement_obj, err);
   if (api->is_error(err))
     return api->ARGON_NULL;
 
   sqlite3 **db = (sqlite3 **)db_buffer.data;
-  sqlite3_stmt **stmt = (sqlite3_stmt **)cursor.data;
+  sqlite3_stmt **stmt = (sqlite3_stmt **)statement_buffer.data;
 
   int rc = sqlite3_prepare_v2(*db, query.data, query.length, stmt,
                               (const char **)&query.data);
@@ -190,6 +96,61 @@ ArgonObject *Argon_cursor_execute(size_t argc, ArgonObject **argv,
     return api->throw_argon_error(err, "sqlite error", "%s",
                                   sqlite3_errmsg(*db));
   }
+
+  return statement_obj;
+}
+
+ArgonObject *Argon_finalise_statement(size_t argc, ArgonObject **argv,
+                                      ArgonError *err, ArgonState *state,
+                                      ArgonNativeAPI *api) {
+  if (api->fix_to_arg_size(2, argc, err)) {
+    return api->ARGON_NULL;
+  }
+
+  struct buffer db_buffer = api->argon_buffer_to_buffer(argv[0], err);
+  if (api->is_error(err))
+    return api->ARGON_NULL;
+
+  struct buffer statement_buffer = api->argon_buffer_to_buffer(argv[1], err);
+  if (api->is_error(err))
+    return api->ARGON_NULL;
+
+  sqlite3 **db = (sqlite3 **)db_buffer.data;
+  sqlite3_stmt **stmt = (sqlite3_stmt **)statement_buffer.data;
+
+  int rc = sqlite3_finalize(*stmt);
+
+  if (rc) {
+    return api->throw_argon_error(err, "sqlite error", "%s",
+                                  sqlite3_errmsg(*db));
+  }
+
+  return api->ARGON_NULL;
+}
+
+ArgonObject *Argon_execute_statement(size_t argc, ArgonObject **argv,
+                                     ArgonError *err, ArgonState *state,
+                                     ArgonNativeAPI *api) {
+  if (api->fix_to_arg_size(3, argc, err)) {
+    return api->ARGON_NULL;
+  }
+
+  struct buffer db_buffer = api->argon_buffer_to_buffer(argv[0], err);
+  if (api->is_error(err))
+    return api->ARGON_NULL;
+
+  struct buffer statement = api->argon_buffer_to_buffer(argv[1], err);
+  if (api->is_error(err))
+    return api->ARGON_NULL;
+
+  struct array values = api->argon_to_array(argv[2], err);
+  if (api->is_error(err))
+    return api->ARGON_NULL;
+
+  sqlite3 **db = (sqlite3 **)db_buffer.data;
+  sqlite3_stmt **stmt = (sqlite3_stmt **)statement.data;
+  sqlite3_reset(*stmt);
+  sqlite3_clear_bindings(*stmt);
 
   for (size_t i = 0; i < values.size; i++) {
     ArgonObject *item = values.items[i];
@@ -200,8 +161,8 @@ ArgonObject *Argon_cursor_execute(size_t argc, ArgonObject **argv,
       if (api->is_error(err)) {
         return api->ARGON_NULL;
       }
-      rc = sqlite3_bind_text(*stmt, i + 1, str.data, str.length,
-                             SQLITE_TRANSIENT);
+      int rc = sqlite3_bind_text(*stmt, i + 1, str.data, str.length,
+                                 SQLITE_TRANSIENT);
       if (rc != SQLITE_OK) {
         return api->throw_argon_error(err, "sqlite error", "%s",
                                       sqlite3_errmsg(*db));
@@ -214,7 +175,7 @@ ArgonObject *Argon_cursor_execute(size_t argc, ArgonObject **argv,
         if (api->is_error(err)) {
           return api->ARGON_NULL;
         }
-        rc = sqlite3_bind_int64(*stmt, i + 1, num);
+        int rc = sqlite3_bind_int64(*stmt, i + 1, num);
         if (rc != SQLITE_OK) {
           return api->throw_argon_error(err, "sqlite error", "%s",
                                         sqlite3_errmsg(*db));
@@ -224,7 +185,7 @@ ArgonObject *Argon_cursor_execute(size_t argc, ArgonObject **argv,
         if (api->is_error(err)) {
           return api->ARGON_NULL;
         }
-        rc = sqlite3_bind_double(*stmt, i + 1, num);
+        int rc = sqlite3_bind_double(*stmt, i + 1, num);
         if (rc != SQLITE_OK) {
           return api->throw_argon_error(err, "sqlite error", "%s",
                                         sqlite3_errmsg(*db));
@@ -232,11 +193,40 @@ ArgonObject *Argon_cursor_execute(size_t argc, ArgonObject **argv,
       }
       break;
     }
+    case TYPE_BOOL: {
+      int rc =
+          sqlite3_bind_int64(*stmt, i + 1, item == api->ARGON_TRUE ? 1 : 0);
+      if (rc != SQLITE_OK) {
+        return api->throw_argon_error(err, "sqlite error", "%s",
+                                      sqlite3_errmsg(*db));
+      }
+      break;
+    }
+    case TYPE_BUFFER: {
+      struct buffer buf = api->argon_buffer_to_buffer(item, err);
+      if (api->is_error(err))
+        break;
+      int rc =
+          sqlite3_bind_blob(*stmt, i + 1, buf.data, buf.size, SQLITE_TRANSIENT);
+      if (rc != SQLITE_OK) {
+        return api->throw_argon_error(err, "sqlite error", "%s",
+                                      sqlite3_errmsg(*db));
+      }
+      break;
+    }
+    case TYPE_NULL: {
+      int rc = sqlite3_bind_null(*stmt, i + 1);
+      if (rc != SQLITE_OK) {
+        return api->throw_argon_error(err, "sqlite error", "%s",
+                                      sqlite3_errmsg(*db));
+      }
+      break;
+    }
     }
   }
 
   if (!sqlite3_stmt_readonly(*stmt)) {
-    rc = sqlite3_step(*stmt);
+    int rc = sqlite3_step(*stmt);
 
     if (rc != SQLITE_DONE) {
       return api->throw_argon_error(err, "sqlite error", "%s",
@@ -247,9 +237,9 @@ ArgonObject *Argon_cursor_execute(size_t argc, ArgonObject **argv,
   return api->ARGON_NULL;
 }
 
-ArgonObject *Argon_cursor_fetch(size_t argc, ArgonObject **argv,
-                                ArgonError *err, ArgonState *state,
-                                ArgonNativeAPI *api) {
+ArgonObject *Argon_statement_fetch(size_t argc, ArgonObject **argv,
+                                   ArgonError *err, ArgonState *state,
+                                   ArgonNativeAPI *api) {
   if (api->fix_to_arg_size(3, argc, err)) {
     return api->ARGON_NULL;
   }
@@ -258,12 +248,12 @@ ArgonObject *Argon_cursor_fetch(size_t argc, ArgonObject **argv,
   if (api->is_error(err))
     return api->ARGON_NULL;
 
-  struct buffer cursor = api->argon_buffer_to_buffer(argv[1], err);
+  struct buffer statment = api->argon_buffer_to_buffer(argv[1], err);
   if (api->is_error(err))
     return api->ARGON_NULL;
   ArgonObject *append = argv[2];
   sqlite3 **db = (sqlite3 **)db_buffer.data;
-  sqlite3_stmt **stmt = (sqlite3_stmt **)cursor.data;
+  sqlite3_stmt **stmt = (sqlite3_stmt **)statment.data;
 
   int rc = sqlite3_step(*stmt);
 
@@ -327,23 +317,19 @@ void argon_module_init(ArgonState *vm, ArgonNativeAPI *api, ArgonError *err,
   api->register_ArgonObject(reg, "close_database",
                             api->create_argon_native_function(
                                 "close_database", Argon_close_database));
+
   api->register_ArgonObject(
-      reg, "new_cursor",
-      api->create_argon_native_function("new_cursor", Argon_new_cursor));
+      reg, "new_statement",
+      api->create_argon_native_function("new_statement", Argon_new_statement));
   api->register_ArgonObject(
-      reg, "start_transaction_cursor",
-      api->create_argon_native_function("start_transaction_cursor",
-                                        Argon_start_transaction_cursor));
+      reg, "finalise_statement",
+      api->create_argon_native_function("finalise_statement",
+                                        Argon_finalise_statement));
+
   api->register_ArgonObject(
-      reg, "commit_cursor",
-      api->create_argon_native_function("commit_cursor", Argon_commit_cursor));
-  api->register_ArgonObject(
-      reg, "close_cursor",
-      api->create_argon_native_function("close_cursor", Argon_close_cursor));
-  api->register_ArgonObject(reg, "cursor_execute",
+      reg, "execute_statement",
+      api->create_argon_native_function("execute", Argon_execute_statement));
+  api->register_ArgonObject(reg, "statement_fetch",
                             api->create_argon_native_function(
-                                "cursor_execute", Argon_cursor_execute));
-  api->register_ArgonObject(
-      reg, "cursor_fetch",
-      api->create_argon_native_function("cursor_fetch", Argon_cursor_fetch));
+                                "statement_fetch", Argon_statement_fetch));
 }

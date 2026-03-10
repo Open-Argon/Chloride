@@ -2,14 +2,15 @@ import "template.ar" expose sql, SQL_QUERY
 
 let __native__ = load_native_code(program.file.directory+"native/bin/sqlite"+platform.lib_ext)
 
-class execution do
-  this.__init__(self, db, cursor) = do
+class execute do
+  this.__init__(self, db, stmt, values) = do
     self.__db__ = db
-    self.__cursor__ = cursor
+    self.__stmt__ = stmt
+    __native__.execute_statement(db, stmt, values)
   this.__iter__(self) = self
   this.__next__(self) = do
     let output = []
-    if (__native__.cursor_fetch(self.__db__, self.__cursor__, output.append) == signals.end_iteration) return signals.end_iteration
+    if (__native__.statement_fetch(self.__db__, self.__stmt__, output.append) == signals.end_iteration) return signals.end_iteration
     return output
   this.fetch_one(self) = do
     let result = self.__next__()
@@ -23,28 +24,20 @@ class execution do
       result.append(row)
     return result
 
-class cursor do
-  this.__init__(self, db) = do
-    self.__db__ = db
-    self.__cursor__ = __native__.new_cursor()
-    __native__.start_transaction_cursor(self.__db__, self.__cursor__)
-  this.execute(self, query) = do
-    if (type(query) != SQL_QUERY) do
-      term.log("not a query! throw") # todo: add error throwing please ffs me
-      return
-    return self.unsafe_execute(query.__query__, query.__values__)
-  this.unsafe_execute(self, query, values) = do
-    __native__.cursor_execute(self.__db__, self.__cursor__, query, values)
-    return execution(self.__db__, self.__cursor__)
-  this.commit(self) = __native__.commit_cursor(self.__db__, self.__cursor__)
-  this.close(self) = __native__.close_cursor(self.__db__, self.__cursor__)
-
 
 class sqlite do
   this.__init__(self, path) = do
+    self.__stmt_cache__ = {}
     self.__db_path__ = path
     self.__db__ = __native__.connect_database(path)
+
+  this.execute(self, query) = do
+    let stmt
+    if (query.__statement__ in self.__stmt_cache__) stmt = self.__stmt_cache__[query.__statement__]
+    else self.__stmt_cache__[query.__statement__] = stmt = __native__.new_statement(self.__db__, query.__statement__)
+    return execute(self.__db__, stmt, query.__values__)
   
-  this.cursor(self) = cursor(self.__db__)
-  
-  this.close(self) = __native__.close_database(self.__db__)
+  this.close(self) = do
+    for (x in self.__stmt_cache__) do
+      __native__.finalise_statement(self.__db__, x[1])
+    __native__.close_database(self.__db__)
