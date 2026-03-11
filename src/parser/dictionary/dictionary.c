@@ -151,6 +151,10 @@ ParsedValueReturn parse_dictionary(char *file, DArray *tokens, size_t *index) {
         free(parsedValue);
         return (ParsedValueReturn){err, NULL};
       }
+      token = darray_get(tokens, *index);
+      if (token->type == TOKEN_RBRACE) {
+        break;
+      }
     }
   }
   (*index)++;

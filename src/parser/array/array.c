@@ -61,6 +61,17 @@ ParsedValueReturn parse_array(char *file, DArray *tokens, size_t *index) {
         return (ParsedValueReturn){path_specific_create_err(token->line, token->column, token->length, file, "Syntax Error", "expected comma"), NULL};
       }
       (*index)++;
+      skip_newlines_and_indents(tokens, index);
+      err = error_if_finished(file, tokens, index);
+      if (err.exists) {
+        free_parsed(parsedValue);
+        free(parsedValue);
+        return (ParsedValueReturn){err, NULL};
+      }
+      token = darray_get(tokens, *index);
+      if (token->type == TOKEN_RBRACKET) {
+        break;
+      }
     }
   }
   (*index)++;

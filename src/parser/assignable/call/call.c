@@ -89,6 +89,10 @@ ParsedValueReturn parse_call(char *file, DArray *tokens, size_t *index,
         free(parsedValue);
         return (ParsedValueReturn){err, NULL};
       }
+      token = darray_get(tokens, *index);
+      if (token->type == TOKEN_RPAREN) {
+        break;
+      }
     }
   }
   (*index)++;
