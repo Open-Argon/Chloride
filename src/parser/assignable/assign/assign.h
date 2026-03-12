@@ -8,11 +8,16 @@
 #define ASSIGN_H
 #include "../../parser.h"
 #include "../../../lexer/token.h"
+#include <stddef.h>
+#include <stdint.h>
 
 typedef struct {
   ParsedValue * to;
   ArTokenType type;
   ParsedValue * from;
+  uint64_t line;
+  uint64_t column;
+  size_t length;
 } ParsedAssign;
 
 ParsedValueReturn parse_assign(char *file, DArray *tokens, ParsedValue *assign_to,

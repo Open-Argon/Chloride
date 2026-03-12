@@ -85,6 +85,11 @@ size_t translate_parsed_assignment(Translated *translated,
       push_instruction_byte(translated, 0);
       push_instruction_byte(translated, registerOperationTo);
 
+      push_instruction_byte(translated, OP_SOURCE_LOCATION);
+      push_instruction_code(translated, assignment->line);
+      push_instruction_code(translated, assignment->column);
+      push_instruction_code(translated, assignment->length);
+
       push_instruction_byte(translated, OP_IDENTIFIER);
       push_instruction_code(translated, length);
       push_instruction_code(translated, identifier_pos);
@@ -119,6 +124,10 @@ size_t translate_parsed_assignment(Translated *translated,
       push_instruction_byte(translated, to_access_register);
     }
 
+    push_instruction_byte(translated, OP_SOURCE_LOCATION);
+    push_instruction_code(translated, assignment->line);
+    push_instruction_code(translated, assignment->column);
+    push_instruction_code(translated, assignment->length);
     push_instruction_byte(translated, OP_LOAD_SETATTR_METHOD);
     push_instruction_byte(translated, OP_INIT_CALL);
     push_instruction_code(translated, 2);
@@ -139,6 +148,10 @@ size_t translate_parsed_assignment(Translated *translated,
       push_instruction_byte(translated, to_access_register);
       push_instruction_byte(translated, 0);
 
+      push_instruction_byte(translated, OP_SOURCE_LOCATION);
+      push_instruction_code(translated, assignment->line);
+      push_instruction_code(translated, assignment->column);
+      push_instruction_code(translated, assignment->length);
       push_instruction_byte(translated, OP_LOAD_GETATTRIBUTE_METHOD);
       push_instruction_byte(translated, OP_INIT_CALL);
       push_instruction_code(translated, 1);
@@ -182,6 +195,10 @@ size_t translate_parsed_assignment(Translated *translated,
       push_instruction_byte(translated, 0);
       push_instruction_byte(translated, to_access_register);
     }
+    push_instruction_byte(translated, OP_SOURCE_LOCATION);
+    push_instruction_code(translated, assignment->line);
+    push_instruction_code(translated, assignment->column);
+    push_instruction_code(translated, assignment->length);
     push_instruction_byte(translated, OP_LOAD_SETITEM_METHOD);
     push_instruction_byte(translated, OP_INIT_CALL);
     push_instruction_code(translated, 2);
@@ -213,6 +230,10 @@ size_t translate_parsed_assignment(Translated *translated,
       push_instruction_byte(translated, to_access_register);
       push_instruction_byte(translated, 0);
 
+      push_instruction_byte(translated, OP_SOURCE_LOCATION);
+      push_instruction_code(translated, assignment->line);
+      push_instruction_code(translated, assignment->column);
+      push_instruction_code(translated, assignment->length);
       push_instruction_byte(translated, OP_LOAD_GETITEM_METHOD);
       push_instruction_byte(translated, OP_INIT_CALL);
       push_instruction_code(translated, 1);
