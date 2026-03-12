@@ -16,8 +16,6 @@ typedef enum {
   TOKEN_NEW_LINE,
   TOKEN_INDENT,
 
-  TOKEN_ASSIGN,
-
   // Operators
   TOKEN_CARET,    // ^      (Exponentiation)
   TOKEN_STAR,     // *      (Multiplication)
@@ -36,6 +34,16 @@ typedef enum {
   TOKEN_IN,       // in
   TOKEN_AND,      // &&
   TOKEN_OR,       // ||
+
+  // ASSIGNMENT
+  TOKEN_ASSIGN,
+  TOKEN_CARET_ASSIGN,    // ^=      (Exponentiation)
+  TOKEN_STAR_ASSIGN,     // *=      (Multiplication)
+  TOKEN_SLASH_ASSIGN,    // /=      (Division)
+  TOKEN_FLOORDIV_ASSIGN, // //=     (Floor Division)
+  TOKEN_MODULO_ASSIGN,   // %=      (Modulo)
+  TOKEN_MINUS_ASSIGN,    // -=      (Subtraction)
+  TOKEN_PLUS_ASSIGN,     // +=      (Addition)
 
   // Keywords
   TOKEN_IF,

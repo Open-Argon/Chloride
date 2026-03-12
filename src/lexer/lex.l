@@ -55,6 +55,14 @@ ESCAPE      \\([\"\\\/bfnrt`]|u[0-9a-fA-F]{4})
 "/"                 { return TOKEN_SLASH; }
 "^"                 { return TOKEN_CARET; }
 
+"//="                { return TOKEN_FLOORDIV_ASSIGN; }
+"+="                 { return TOKEN_PLUS_ASSIGN; }
+"-="                 { return TOKEN_MINUS_ASSIGN; }
+"%="                 { return TOKEN_MODULO_ASSIGN; }
+"*="                 { return TOKEN_STAR_ASSIGN; }
+"/="                 { return TOKEN_SLASH_ASSIGN; }
+"^="                 { return TOKEN_CARET_ASSIGN; }
+
 
 "if"                { return TOKEN_IF; }
 "else"[ \t]+"if"    { return TOKEN_ELSE_IF; }

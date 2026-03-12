@@ -11,9 +11,48 @@
 #include "../../parser/assignable/item/item.h"
 #include "../translator.h"
 #include <stddef.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/types.h>
+
+size_t add_assignment_operation(Translated *translated, ArTokenType type,
+                                uint8_t registerOutput, uint8_t registerA,
+                                uint8_t registerB) {
+  size_t first = 0;
+  switch (type) {
+  case TOKEN_PLUS_ASSIGN:;
+    first = push_instruction_byte(translated, OP_ADDITION);
+    break;
+  case TOKEN_MINUS_ASSIGN:;
+    first = push_instruction_byte(translated, OP_SUBTRACTION);
+    break;
+  case TOKEN_STAR_ASSIGN:;
+    first = push_instruction_byte(translated, OP_MULTIPLICATION);
+    break;
+  case TOKEN_CARET_ASSIGN:;
+    first = push_instruction_byte(translated, OP_EXPONENTIATION);
+    break;
+  case TOKEN_SLASH_ASSIGN:;
+    first = push_instruction_byte(translated, OP_DIVISION);
+    break;
+  case TOKEN_FLOORDIV_ASSIGN:;
+    first = push_instruction_byte(translated, OP_FLOOR_DIVISION);
+    break;
+  case TOKEN_MODULO_ASSIGN:;
+    first = push_instruction_byte(translated, OP_MODULO);
+    break;
+  default:
+    fprintf(stderr, "panic: unsupported assignment\n");
+    exit(EXIT_FAILURE);
+    break;
+  }
+  push_instruction_byte(translated, registerA);
+  push_instruction_byte(translated, registerB);
+  push_instruction_byte(translated, registerOutput);
+  return first;
+}
 
 size_t translate_parsed_assignment(Translated *translated,
                                    ParsedAssign *assignment, ArErr *err) {
@@ -32,11 +71,33 @@ size_t translate_parsed_assignment(Translated *translated,
   case AST_IDENTIFIER:;
     ParsedIdentifier *identifier = assignment->to->data;
     size_t length = strlen(identifier->name);
+    uint64_t hash =
+        siphash64_bytes(identifier->name, length, siphash_key_fixed);
+
+    if (assignment->type != TOKEN_ASSIGN) {
+      uint8_t registerOperationTo = translated->registerAssignment++;
+      set_registers(translated, translated->registerAssignment);
+      size_t length = strlen(identifier->name);
+      size_t identifier_pos =
+          arena_push(&translated->constants, identifier->name, length);
+
+      push_instruction_byte(translated, OP_COPY_TO_REGISTER);
+      push_instruction_byte(translated, 0);
+      push_instruction_byte(translated, registerOperationTo);
+
+      push_instruction_byte(translated, OP_IDENTIFIER);
+      push_instruction_code(translated, length);
+      push_instruction_code(translated, identifier_pos);
+      push_instruction_code(translated, hash);
+
+      add_assignment_operation(translated, assignment->type, 0, 0,
+                               registerOperationTo);
+
+      translated->registerAssignment--;
+    }
 
     push_instruction_byte(translated, OP_ASSIGN);
-    push_instruction_code(translated,
-                          siphash64_bytes(identifier->name, length,
-                                          siphash_key_fixed));
+    push_instruction_code(translated, hash);
     push_instruction_byte(translated, 0);
     break;
   case AST_ACCESS: {
@@ -49,6 +110,15 @@ size_t translate_parsed_assignment(Translated *translated,
     translate_parsed(translated, access->to_access, err);
     if (err->exists)
       return 0;
+    uint8_t to_access_register = 0;
+    if (assignment->type != TOKEN_ASSIGN) {
+      to_access_register = translated->registerAssignment++;
+
+      push_instruction_byte(translated, OP_COPY_TO_REGISTER);
+      push_instruction_byte(translated, 0);
+      push_instruction_byte(translated, to_access_register);
+    }
+
     push_instruction_byte(translated, OP_LOAD_SETATTR_METHOD);
     push_instruction_byte(translated, OP_INIT_CALL);
     push_instruction_code(translated, 2);
@@ -58,9 +128,35 @@ size_t translate_parsed_assignment(Translated *translated,
     push_instruction_byte(translated, OP_INSERT_ARG);
     push_instruction_code(translated, 0);
 
-    push_instruction_byte(translated, OP_COPY_TO_REGISTER);
-    push_instruction_byte(translated, registerA);
-    push_instruction_byte(translated, 0);
+    if (assignment->type != TOKEN_ASSIGN) {
+      uint8_t access_register = translated->registerAssignment++;
+      set_registers(translated, translated->registerAssignment);
+      push_instruction_byte(translated, OP_COPY_TO_REGISTER);
+      push_instruction_byte(translated, 0);
+      push_instruction_byte(translated, access_register);
+
+      push_instruction_byte(translated, OP_COPY_TO_REGISTER);
+      push_instruction_byte(translated, to_access_register);
+      push_instruction_byte(translated, 0);
+
+      push_instruction_byte(translated, OP_LOAD_GETATTRIBUTE_METHOD);
+      push_instruction_byte(translated, OP_INIT_CALL);
+      push_instruction_code(translated, 1);
+      push_instruction_byte(translated, OP_COPY_TO_REGISTER);
+      push_instruction_byte(translated, access_register);
+      push_instruction_byte(translated, 0);
+      push_instruction_byte(translated, OP_INSERT_ARG);
+      push_instruction_code(translated, 0);
+      push_instruction_byte(translated, OP_CALL);
+
+      add_assignment_operation(translated, assignment->type, 0, 0, registerA);
+
+      translated->registerAssignment -= 2;
+    } else {
+      push_instruction_byte(translated, OP_COPY_TO_REGISTER);
+      push_instruction_byte(translated, registerA);
+      push_instruction_byte(translated, 0);
+    }
     push_instruction_byte(translated, OP_INSERT_ARG);
     push_instruction_code(translated, 1);
 
@@ -78,6 +174,14 @@ size_t translate_parsed_assignment(Translated *translated,
     translate_parsed(translated, access->to_access, err);
     if (err->exists)
       return 0;
+    uint8_t to_access_register = 0;
+    if (assignment->type != TOKEN_ASSIGN) {
+      to_access_register = translated->registerAssignment++;
+
+      push_instruction_byte(translated, OP_COPY_TO_REGISTER);
+      push_instruction_byte(translated, 0);
+      push_instruction_byte(translated, to_access_register);
+    }
     push_instruction_byte(translated, OP_LOAD_SETITEM_METHOD);
     push_instruction_byte(translated, OP_INIT_CALL);
     push_instruction_code(translated, 2);
@@ -94,12 +198,39 @@ size_t translate_parsed_assignment(Translated *translated,
     } else {
       // TODO: add tuple
     }
+
     push_instruction_byte(translated, OP_INSERT_ARG);
     push_instruction_code(translated, 0);
 
-    push_instruction_byte(translated, OP_COPY_TO_REGISTER);
-    push_instruction_byte(translated, registerA);
-    push_instruction_byte(translated, 0);
+    if (assignment->type != TOKEN_ASSIGN) {
+      uint8_t access_register = translated->registerAssignment++;
+      set_registers(translated, translated->registerAssignment);
+      push_instruction_byte(translated, OP_COPY_TO_REGISTER);
+      push_instruction_byte(translated, 0);
+      push_instruction_byte(translated, access_register);
+
+      push_instruction_byte(translated, OP_COPY_TO_REGISTER);
+      push_instruction_byte(translated, to_access_register);
+      push_instruction_byte(translated, 0);
+
+      push_instruction_byte(translated, OP_LOAD_GETITEM_METHOD);
+      push_instruction_byte(translated, OP_INIT_CALL);
+      push_instruction_code(translated, 1);
+      push_instruction_byte(translated, OP_COPY_TO_REGISTER);
+      push_instruction_byte(translated, access_register);
+      push_instruction_byte(translated, 0);
+      push_instruction_byte(translated, OP_INSERT_ARG);
+      push_instruction_code(translated, 0);
+      push_instruction_byte(translated, OP_CALL);
+
+      add_assignment_operation(translated, assignment->type, 0, 0, registerA);
+
+      translated->registerAssignment -= 2;
+    } else {
+      push_instruction_byte(translated, OP_COPY_TO_REGISTER);
+      push_instruction_byte(translated, registerA);
+      push_instruction_byte(translated, 0);
+    }
     push_instruction_byte(translated, OP_INSERT_ARG);
     push_instruction_code(translated, 1);
 

@@ -14,7 +14,6 @@
 #include "runtime/runtime.h"
 #include "shell.h"
 
-#include "hash_data/hash_data.h"
 #include <locale.h>
 #include <stdatomic.h>
 #include <stdbool.h>

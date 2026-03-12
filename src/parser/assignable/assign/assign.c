@@ -22,6 +22,7 @@
 ParsedValueReturn parse_assign(char *file, DArray *tokens,
                                ParsedValue *assign_to, size_t *index) {
   Token *token = darray_get(tokens, *index);
+  ArTokenType assignment_type = token->type;
   bool is_function = false;
   char *function_name;
   bool to_free_function_name = false;
@@ -117,12 +118,11 @@ ParsedValueReturn parse_assign(char *file, DArray *tokens,
   }
   ParsedAssign *assign = checked_malloc(sizeof(ParsedAssign));
   assign->to = assign_to;
-  assign->type = 0;
-  assign->from = NULL;
+  assign->type = assignment_type;
+  assign->from = from.value;
   ParsedValue *parsedValue = checked_malloc(sizeof(ParsedValue));
   parsedValue->type = AST_ASSIGN;
   parsedValue->data = assign;
-  assign->from = from.value;
   return (ParsedValueReturn){no_err, parsedValue};
 }
 
