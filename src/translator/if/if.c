@@ -59,5 +59,8 @@ size_t translate_parsed_if(Translated *translated, DArray *parsedIf,
                          translated->bytecode.size);
   }
   free(jump_after_body_positions);
+
+  push_instruction_byte(translated, OP_LOAD_NULL);
+  push_instruction_byte(translated, 0);
   return first;
 }

@@ -12,6 +12,7 @@
 #include "../string/string.h"
 #include "../tuple/tuple.h"
 #include <inttypes.h>
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -20,22 +21,29 @@
 ArgonObject *ARGON_DICTIONARY_TYPE;
 ArgonObject *ARGON_DICTIONARY_ITERATOR_TYPE;
 
-ArgonObject *create_ARGON_DICTIONARY_TYPE___init__(size_t argc,
-                                                   ArgonObject **argv,
-                                                   ArErr *err,
-                                                   RuntimeState *state,
-                                                   ArgonNativeAPI *api) {
+ArgonObject *create_ARGON_DICTIONARY_TYPE___new__(size_t argc,
+                                                  ArgonObject **argv,
+                                                  ArErr *err,
+                                                  RuntimeState *state,
+                                                  ArgonNativeAPI *api) {
   (void)api;
   (void)state;
-  if (argc != 1) {
+  if (argc != 2) {
     *err = create_err("Runtime Error",
-                      "__init__ expects 1 argument, got %" PRIu64, argc);
+                      "__new__ expects 2 arguments, got %" PRIu64, argc);
     return ARGON_NULL;
   }
-  ArgonObject *object = argv[0];
-  object->type = TYPE_DICTIONARY;
-  object->value.as_hashmap = createHashmap_GC();
-  return ARGON_NULL;
+  ArgonObject *get_dictionary = get_builtin_field_for_class(
+      get_builtin_field(argv[1], __class__), __dictionary__, argv[1]);
+  if (!get_dictionary)
+    return api->throw_argon_error(err, "Runtime Error",
+                                  "Object doesn't have __dictionary__ method");
+  ArgonObject *object = argon_call(get_dictionary, 0, NULL, err, state);
+  if (object->type != TYPE_DICTIONARY)
+    return api->throw_argon_error(
+        err, "Runtime Error",
+        "Objects __dictionary__ method didn't return a dictionary");
+  return object;
 }
 
 ArgonObject *create_ARGON_DICTIONARY_TYPE___string__(size_t argc,
@@ -51,6 +59,12 @@ ArgonObject *create_ARGON_DICTIONARY_TYPE___string__(size_t argc,
     return ARGON_NULL;
   }
   ArgonObject *object = argv[0];
+
+  if (!is_being_repr) is_being_repr = createHashmap();
+
+  if (hashmap_lookup(is_being_repr, (uint64_t)object)) return new_string_object_null_terminated("{...}");
+
+  hashmap_insert(is_being_repr, (uint64_t)object, NULL, (void*)true, 0);
   size_t string_length = 0;
   char *string = NULL;
   size_t nodes_length;
@@ -61,6 +75,7 @@ ArgonObject *create_ARGON_DICTIONARY_TYPE___string__(size_t argc,
   string = realloc(string, string_length + length);
   memcpy(string + string_length, string_obj, length);
   string_length += length;
+
   for (size_t i = 0; i < nodes_length; i++) {
     struct node_GC *node = nodes[i];
     ArgonObject *key = node->key;
@@ -103,7 +118,7 @@ ArgonObject *create_ARGON_DICTIONARY_TYPE___string__(size_t argc,
     string_convert_method = get_builtin_field_for_class(
         get_builtin_field(value, __class__), __repr__, value);
 
-    if (string_convert_method && value != object) {
+    if (string_convert_method) {
       ArgonObject *string_object =
           argon_call(string_convert_method, 0, NULL, err, state);
       string =
@@ -134,7 +149,24 @@ ArgonObject *create_ARGON_DICTIONARY_TYPE___string__(size_t argc,
   string_length += length;
   ArgonObject *result = new_string_object(string, string_length, 0);
   free(string);
+  hashmap_remove(is_being_repr, (uint64_t)object);
+  if (!is_being_repr->count) hashmap_free(is_being_repr, NULL);
   return result;
+}
+
+ArgonObject *create_ARGON_DICTIONARY_TYPE___dictionary__(size_t argc,
+                                                         ArgonObject **argv,
+                                                         ArErr *err,
+                                                         RuntimeState *state,
+                                                         ArgonNativeAPI *api) {
+  (void)api;
+  (void)state;
+  if (argc != 1) {
+    *err = create_err("Runtime Error",
+                      "__dictionary__ expects 1 argument, got %" PRIu64, argc);
+    return ARGON_NULL;
+  }
+  return argv[0];
 }
 
 ArgonObject *create_ARGON_DICTIONARY_TYPE___contains__(size_t argc,
@@ -271,9 +303,9 @@ void create_ARGON_DICTIONARY_TYPE() {
   ARGON_DICTIONARY_TYPE = new_class();
   add_builtin_field(ARGON_DICTIONARY_TYPE, __name__,
                     new_string_object_null_terminated("dictionary"));
-  add_builtin_field(ARGON_DICTIONARY_TYPE, __init__,
+  add_builtin_field(ARGON_DICTIONARY_TYPE, __new__,
                     create_argon_native_function(
-                        "__init__", create_ARGON_DICTIONARY_TYPE___init__));
+                        "__new__", create_ARGON_DICTIONARY_TYPE___new__));
 
   ArgonObject *setter = create_argon_native_function(
       "__setitem__", create_ARGON_DICTIONARY_TYPE___setitem__);
@@ -294,13 +326,17 @@ void create_ARGON_DICTIONARY_TYPE() {
   add_builtin_field(ARGON_DICTIONARY_TYPE, __iter__,
                     create_argon_native_function(
                         "__iter__", create_ARGON_DICTIONARY_TYPE___iter__));
+  add_builtin_field(ARGON_DICTIONARY_TYPE, __dictionary__,
+                    create_argon_native_function(
+                        "__dictionary__", create_ARGON_DICTIONARY_TYPE___dictionary__));
 
   ARGON_DICTIONARY_ITERATOR_TYPE = new_class();
   add_builtin_field(ARGON_DICTIONARY_ITERATOR_TYPE, __name__,
                     new_string_object_null_terminated("dictionary_iterator"));
-  add_builtin_field(ARGON_DICTIONARY_ITERATOR_TYPE, __next__,
-                    create_argon_native_function(
-                        "__next__", create_ARGON_DICTIONARY_ITERATOR_TYPE___next__));
+  add_builtin_field(
+      ARGON_DICTIONARY_ITERATOR_TYPE, __next__,
+      create_argon_native_function(
+          "__next__", create_ARGON_DICTIONARY_ITERATOR_TYPE___next__));
 }
 
 ArgonObject *create_dictionary(struct hashmap_GC *hashmap) {

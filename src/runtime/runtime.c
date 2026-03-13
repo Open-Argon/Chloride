@@ -1241,6 +1241,7 @@ void bootstrap_globals() {
   add_to_scope(Global_Scope, "number", ARGON_NUMBER_TYPE);
   add_to_scope(Global_Scope, "dictionary", ARGON_DICTIONARY_TYPE);
   add_to_scope(Global_Scope, "buffer", ARGON_BUFFER_TYPE);
+  add_to_scope(Global_Scope, "array", ARRAY_TYPE);
   add_to_scope(Global_Scope, "tuple", ARGON_TUPLE_TYPE);
   add_to_scope(Global_Scope, "range", ARGON_RANGE_ITERATOR_TYPE);
 

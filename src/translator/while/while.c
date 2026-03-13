@@ -45,6 +45,9 @@ size_t translate_parsed_while(Translated *translated, ParsedWhile *parsedWhile,
   darray_free(&break_jumps, NULL);
   translated->break_jump = old_break_jump;
 
+  push_instruction_byte(translated, OP_LOAD_NULL);
+  push_instruction_byte(translated, 0);
+
   translated->continue_jump = old_continue_jump;
   translated->scope_depth--;
   return first;

@@ -6,5 +6,5 @@ import "../stdlib/random" expose random
 
 let x=0
 for (i in 1 until 1e6) do
-  x=x+random.random()
+  x+=random.random()
   if (i%1e5 == 0) term.log(i,x,x/i)

@@ -78,6 +78,12 @@ ArgonObject *ARGON_TUPLE___string__(size_t argc, ArgonObject **argv, ArErr *err,
     return ARGON_NULL;
   }
 
+  if (!is_being_repr) is_being_repr = createHashmap();
+
+  if (hashmap_lookup(is_being_repr, (uint64_t)argv[0])) return new_string_object_null_terminated("tuple(...)");
+
+  hashmap_insert(is_being_repr, (uint64_t)argv[0], NULL, (void*)true, 0);
+
   struct tuple_struct *tuple = &argv[0]->value.as_tuple;
 
   size_t capacity = 32;
@@ -143,6 +149,8 @@ ArgonObject *ARGON_TUPLE___string__(size_t argc, ArgonObject **argv, ArErr *err,
 
   free(string);
 
+  hashmap_remove(is_being_repr, (uint64_t)argv[0]);
+  if (!is_being_repr->count) hashmap_free(is_being_repr, NULL);
   return result;
 }
 

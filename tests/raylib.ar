@@ -31,7 +31,7 @@ class Game do
     self.bouncing_texts = []
     for (x in 0 until 20) do
       for (y in 0 until 20) do
-        self.bouncing_texts.append(bouncing_text(string(x*y), tuple(x*10,y*10), (x+y+1)*0.01))
+        self.bouncing_texts.append(bouncing_text(string(x*y), tuple(x*10,y*10), (x+y+1)))
 
   this.render(self) = do
       # term.log("frame:",self.frame)
@@ -41,10 +41,9 @@ class Game do
       for (text in self.bouncing_texts) do
         text.render(self.frame,tuple(maxX, maxY))
 
-      self.frame=self.frame+1
+      self.frame+=1
   
-  this.__string__(self) = do
-    return "game instance"
+  this.__string__(self) = "game instance"
 
 
 let instance = Game(820, 640, 0)

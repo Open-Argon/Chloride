@@ -9,8 +9,11 @@
 #include "../runtime.h"
 #include <stdbool.h>
 #include <string.h>
+#include "../../hashmap/hashmap.h"
 
 extern ArgonObject *BASE_CLASS;
+
+extern __thread struct hashmap* is_being_repr;
 
 extern const char *built_in_field_names[BUILT_IN_FIELDS_COUNT];
 

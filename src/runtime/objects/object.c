@@ -34,6 +34,8 @@ int strcmp_len(const char *s1, size_t len, const char *s2) {
 
 ArgonObject *BASE_CLASS = NULL;
 
+__thread struct hashmap *is_being_repr = NULL;
+
 const char *built_in_field_names[BUILT_IN_FIELDS_COUNT] = {
     "__base__",
     "__class__",
@@ -80,7 +82,9 @@ const char *built_in_field_names[BUILT_IN_FIELDS_COUNT] = {
     "__contains__",
     "__iter__",
     "__next__",
-    "__template__"};
+    "__template__",
+    "__dictionary__",
+    "__array__"};
 
 uint64_t built_in_field_hashes[BUILT_IN_FIELDS_COUNT];
 

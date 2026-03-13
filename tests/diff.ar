@@ -10,11 +10,10 @@ let f(x) = x^10+x^9+x^8+x^7+x^6+x^5+x^4+x^3+x^2+x+1
 let x = 100
 let d = 0
 
-do
-  while (true) do
-      let n = f(x)
-      term.log("f"+string(d)+"("+string(x)+") = "+string(n))
-      if (n) do
-        f = diff(f)
-        d = d + 1
-      else return
+while (true) do
+    let n = f(x)
+    term.log("f"+string(d)+"("+string(x)+") = "+string(n))
+    if (n) do
+      f = diff(f)
+      d += 1
+    else break

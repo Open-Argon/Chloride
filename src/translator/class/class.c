@@ -86,6 +86,9 @@ size_t translate_parsed_class(Translated *translated, ParsedClass *parsedClass,
   if (err->exists)
     return 0;
   push_instruction_byte(translated, OP_POP_SCOPE);
+
+  push_instruction_byte(translated, OP_LOAD_NULL);
+  push_instruction_byte(translated, 0);
   translated->registerAssignment--;
   translated->scope_depth--;
   return first;

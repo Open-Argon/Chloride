@@ -49,18 +49,47 @@ static void resize_hashmap_GC_nolock(struct hashmap_GC *t) {
   t->list = ar_alloc(sizeof(struct node_GC *) * new_size);
   memset(t->list, 0, sizeof(struct node_GC *) * new_size);
   t->size = new_size;
-  t->hashmap_count = 0;
 
   if (!old_list)
     return;
 
   for (int i = 0; i < old_size; i++) {
-    struct node_GC *temp = old_list[i];
-    while (temp) {
-      hashmap_insert_GC_nolock(t, temp->hash, temp->key, temp->val,
-                               temp->order);
-      temp = temp->next;
+    struct node_GC *lo = NULL;
+    struct node_GC *lo_tail = NULL;
+
+    struct node_GC *hi = NULL;
+    struct node_GC *hi_tail = NULL;
+
+    struct node_GC *n = old_list[i];
+
+    while (n) {
+      struct node_GC *next = n->next;
+
+      if ((n->hash & old_size) == 0) {
+        if (!lo)
+          lo = n;
+        else
+          lo_tail->next = n;
+        lo_tail = n;
+      } else {
+        if (!hi)
+          hi = n;
+        else
+          hi_tail->next = n;
+        hi_tail = n;
+      }
+
+      n = next;
     }
+
+    if (lo_tail)
+      lo_tail->next = NULL;
+
+    if (hi_tail)
+      hi_tail->next = NULL;
+
+    t->list[i] = lo;
+    t->list[i + old_size] = hi;
   }
 }
 
