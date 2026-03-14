@@ -39,6 +39,10 @@ this operation takes 4 operands.
 1. the fixed hash of the variable name.
 1. the register of the given value (*)
 
+## OP_MAKE_RANGE_INCLUSIVE
+
+makes the range iterator object stored in register 0 inclusive
+
 ## OP_LOAD_NULL
 
 sets a given register to null.

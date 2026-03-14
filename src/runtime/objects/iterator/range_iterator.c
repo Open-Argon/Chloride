@@ -51,6 +51,7 @@ ArgonObject *ARGON_RANGE_ITERATOR_TYPE___init__(size_t argc, ArgonObject **argv,
     }
   }
   ArgonObject *self = argv[0];
+  self->value.as_range_iterator->inclusive = false;
   if (argc == 2) {
     if (argv[1]->type == TYPE_NUMBER && argv[1]->value.as_number->is_int64) {
       self->value.as_range_iterator->is_int64 = true;
@@ -134,8 +135,11 @@ ArgonObject *ARGON_RANGE_ITERATOR_TYPE___next__(size_t argc, ArgonObject **argv,
     int64_t stop_val = range_iterator->stop.i64;
     int64_t step_val = range_iterator->step.i64;
 
-    if ((step_val > 0 && current_val >= stop_val) ||
-        (step_val < 0 && current_val <= stop_val)) {
+    if (range_iterator->inclusive
+            ? (step_val > 0 && current_val > stop_val) ||
+                  (step_val < 0 && current_val < stop_val)
+            : (step_val > 0 && current_val >= stop_val) ||
+                  (step_val < 0 && current_val <= stop_val)) {
       return END_ITERATION;
     }
     range_iterator->current.i64 = current_val + step_val;

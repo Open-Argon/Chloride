@@ -1136,21 +1136,24 @@ void bootstrap_types() {
   add_builtin_field(
       ARGON_STRING_TYPE, __equal__,
       create_argon_native_function("__equal__", ARGON_STRING_TYPE___equal__));
-  add_builtin_field(
-      ARGON_STRING_TYPE, __not_equal__,
-      create_argon_native_function("__not_equal__", ARGON_STRING_TYPE___not_equal__));
-  add_builtin_field(
-      ARGON_STRING_TYPE, __less_than__,
-      create_argon_native_function("__less_than__", ARGON_STRING_TYPE___less_than__));
+  add_builtin_field(ARGON_STRING_TYPE, __not_equal__,
+                    create_argon_native_function(
+                        "__not_equal__", ARGON_STRING_TYPE___not_equal__));
+  add_builtin_field(ARGON_STRING_TYPE, __less_than__,
+                    create_argon_native_function(
+                        "__less_than__", ARGON_STRING_TYPE___less_than__));
   add_builtin_field(
       ARGON_STRING_TYPE, __less_than_equal__,
-      create_argon_native_function("__less_than_equal__", ARGON_STRING_TYPE___less_than_equal__));
+      create_argon_native_function("__less_than_equal__",
+                                   ARGON_STRING_TYPE___less_than_equal__));
   add_builtin_field(
       ARGON_STRING_TYPE, __greater_than__,
-      create_argon_native_function("__greater_than__", ARGON_STRING_TYPE___greater_than__));
+      create_argon_native_function("__greater_than__",
+                                   ARGON_STRING_TYPE___greater_than__));
   add_builtin_field(
       ARGON_STRING_TYPE, __greater_than_equal__,
-      create_argon_native_function("__greater_than_equal__", ARGON_STRING_TYPE___greater_than_equal__));
+      create_argon_native_function("__greater_than_equal__",
+                                   ARGON_STRING_TYPE___greater_than_equal__));
   add_builtin_field(
       ARGON_BOOL_TYPE, __new__,
       create_argon_native_function("__new__", ARGON_BOOL_TYPE___new__));
@@ -1196,12 +1199,12 @@ void bootstrap_types() {
       create_argon_native_function("less_than", ARGON_LESS_THAN_FUNCTION);
   LESS_THAN_EQUAL_FUNCTION = create_argon_native_function(
       "less_than_equal", ARGON_LESS_THAN_EQUAL_FUNCTION);
-  GREATER_THAN_FUNCTION = create_argon_native_function(
-      "greater_than", ARGON_GREATER_THAN_FUNCTION);
+  GREATER_THAN_FUNCTION =
+      create_argon_native_function("greater_than", ARGON_GREATER_THAN_FUNCTION);
   GREATER_THAN_EQUAL_FUNCTION = create_argon_native_function(
       "greater_than_equal", ARGON_GREATER_THAN_EQUAL_FUNCTION);
-  ARGON_RENDER_TEMPLATE = create_argon_native_function(
-      "RENDER_TEMPLATE", RENDER_TEMPLATE);
+  ARGON_RENDER_TEMPLATE =
+      create_argon_native_function("RENDER_TEMPLATE", RENDER_TEMPLATE);
   add_builtin_field(BASE_CLASS, __getattribute__,
                     create_argon_native_function("__getattribute__",
                                                  BASE_CLASS___getattribute__));
@@ -1464,8 +1467,9 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       [OP_LOAD_NEXT_METHOD] = &&DO_LOAD_NEXT_METHOD,
       [OP_LOAD_RANGE_CLASS] = &&DO_LOAD_RANGE_CLASS,
       [OP_LOAD_TEMPLATE_METHOD] = &&DO_LOAD_TEMPLATE_METHOD,
-    [OP_LOAD_CREATE_TUPLE] = &&DO_LOAD_CREATE_TUPLE,
-    [OP_LOAD_TEMPLATE] = &&DO_LOAD_TEMPLATE};
+      [OP_LOAD_CREATE_TUPLE] = &&DO_LOAD_CREATE_TUPLE,
+      [OP_LOAD_TEMPLATE] = &&DO_LOAD_TEMPLATE,
+      [OP_MAKE_RANGE_INCLUSIVE] = &&DO_MAKE_RANGE_INCLUSIVE};
   _state.head = 0;
 
   ArErr err = *err_ptr;
@@ -1665,6 +1669,10 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       state->registers[0] = object;
       continue;
     }
+    DO_MAKE_RANGE_INCLUSIVE: {
+      state->registers[0]->value.as_range_iterator->inclusive = true;
+      continue;
+    }
     DO_IDENTIFIER: {
       int64_t length;
       POP_U64(length);
@@ -1692,8 +1700,8 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       uint64_t prehash;
       POP_U64(prehash);
       uint8_t from_register = POP_BYTE();
-      runtime_assignment(prehash, from_register,
-                         state, currentStackFrame->stack);
+      runtime_assignment(prehash, from_register, state,
+                         currentStackFrame->stack);
       continue;
     }
     DO_FOR_LOOP_JUMP: {
@@ -1704,8 +1712,8 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
 
       switch (iterator->type) {
       case TYPE_ARRAY_ITERATOR:
-        state->registers[0] = ARGON_ARRAY_ITERATOR___next__(
-            1, &iterator, &err, state, &native_api);
+        state->registers[0] = ARGON_ARRAY_ITERATOR___next__(1, &iterator, &err,
+                                                            state, &native_api);
         break;
       case TYPE_RANGE_ITERATOR:
         state->registers[0] = ARGON_RANGE_ITERATOR_TYPE___next__(

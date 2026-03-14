@@ -218,6 +218,7 @@ struct as_number {
 
 struct as_range_iterator {
   bool is_int64;
+  bool inclusive;
   union {
   ArgonObject*obj;
   int64_t i64;

@@ -237,6 +237,7 @@ size_t translate_parsed(Translated *translated, ParsedValue *parsedValue,
     push_instruction_code(translated, range->length);
 
     push_instruction_byte(translated, OP_CALL);
+    if (range->inclusive) push_instruction_byte(translated, OP_MAKE_RANGE_INCLUSIVE);
     return first;
   }
   case AST_ARRAY: {

@@ -199,6 +199,7 @@ ParsedValueReturn parse_token_full(char *file, DArray *tokens, size_t *index,
     case TOKEN_DOT:
       output = parse_access(file, tokens, index, output.value);
       break;
+    case TOKEN_TO:
     case TOKEN_UNTIL:
       output = parse_range(file, tokens, index, output.value);
       break;
