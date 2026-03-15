@@ -42,54 +42,31 @@ void hashmap_free(struct hashmap *t, free_val_func free_val) {
   free(t);
 }
 
+
+// TODO: look into why the faster resize was causing a memory leak.
 void resize_hashmap(struct hashmap *t) {
   int old_size = t->size;
   int new_size = old_size * 2;
 
   struct node **old_list = t->list;
 
-  t->list = checked_malloc(sizeof(struct node *) * new_size);
+  // Create new list
+  t->list = (struct node **)checked_malloc(sizeof(struct node *) * new_size);
   memset(t->list, 0, sizeof(struct node *) * new_size);
 
   t->size = new_size;
+  t->count = 0;
 
+  // Rehash old entries into new list
   for (int i = 0; i < old_size; i++) {
-    struct node *lo = NULL;
-    struct node *lo_tail = NULL;
-
-    struct node *hi = NULL;
-    struct node *hi_tail = NULL;
-
-    struct node *n = old_list[i];
-
-    while (n) {
-      struct node *next = n->next;
-
-      if ((n->hash & old_size) == 0) {
-        if (!lo)
-          lo = n;
-        else
-          lo_tail->next = n;
-        lo_tail = n;
-      } else {
-        if (!hi)
-          hi = n;
-        else
-          hi_tail->next = n;
-        hi_tail = n;
-      }
-
-      n = next;
+    struct node *temp = old_list[i];
+    while (temp) {
+      hashmap_insert(t, temp->hash, temp->key, temp->val,
+                     temp->order); // Will increment count
+      struct node *temp_temp = temp;
+      temp = temp->next;
+      free(temp_temp);
     }
-
-    if (lo_tail)
-      lo_tail->next = NULL;
-
-    if (hi_tail)
-      hi_tail->next = NULL;
-
-    t->list[i] = lo;
-    t->list[i + old_size] = hi;
   }
 
   free(old_list);
