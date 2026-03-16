@@ -85,7 +85,7 @@ The result is a **more predictable execution model**, lower memory usage, and be
 
 ## Project Status
 
-Chloride is still **actively developed**. Its object model is mostly complete, but some core features are missing or experimental. Certain control flow constructs, like for loops, are not implemented yet, as the syntax is being refined for clarity.
+Chloride is still **actively developed**. Its object model is mostly complete, but some core features are missing or experimental.
 
 Chloride improves on argon-v3 with **cleaner syntax and more predictable semantics**, which may require adapting older code.
 
