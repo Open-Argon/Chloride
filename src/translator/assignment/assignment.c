@@ -71,15 +71,14 @@ size_t translate_parsed_assignment(Translated *translated,
   case AST_IDENTIFIER:;
     ParsedIdentifier *identifier = assignment->to->data;
     size_t length = strlen(identifier->name);
+    size_t identifier_pos =
+        arena_push(&translated->constants, identifier->name, length);
     uint64_t hash =
         siphash64_bytes(identifier->name, length, siphash_key_fixed);
 
     if (assignment->type != TOKEN_ASSIGN) {
       uint8_t registerOperationTo = translated->registerAssignment++;
       set_registers(translated, translated->registerAssignment);
-      size_t length = strlen(identifier->name);
-      size_t identifier_pos =
-          arena_push(&translated->constants, identifier->name, length);
 
       push_instruction_byte(translated, OP_COPY_TO_REGISTER);
       push_instruction_byte(translated, 0);
@@ -102,6 +101,8 @@ size_t translate_parsed_assignment(Translated *translated,
     }
 
     push_instruction_byte(translated, OP_ASSIGN);
+    push_instruction_code(translated, length);
+    push_instruction_code(translated, identifier_pos);
     push_instruction_code(translated, hash);
     push_instruction_byte(translated, 0);
     break;

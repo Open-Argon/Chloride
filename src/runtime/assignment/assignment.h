@@ -8,7 +8,10 @@
 #define runtime_assignment_H
 #include "../runtime.h"
 
-void runtime_assignment(int64_t hash,uint8_t from_register, RuntimeState *state,
-                         struct Stack *stack);
+extern __thread struct hashmap_GC *assignable_keys;
+
+void runtime_assignment(int64_t length, int64_t offset, int64_t hash,
+                        uint8_t from_register, RuntimeState *state,
+                        Translated *translated, struct Stack *stack);
 
 #endif // runtime_assignment_H

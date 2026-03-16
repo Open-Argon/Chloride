@@ -1697,11 +1697,15 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       continue;
     }
     DO_ASSIGN: {
+      int64_t length;
+      POP_U64(length);
+      int64_t offset;
+      POP_U64(offset);
       uint64_t prehash;
       POP_U64(prehash);
       uint8_t from_register = POP_BYTE();
-      runtime_assignment(prehash, from_register, state,
-                         currentStackFrame->stack);
+      runtime_assignment(length, offset, prehash, from_register, state,
+                         translated, currentStackFrame->stack);
       continue;
     }
     DO_FOR_LOOP_JUMP: {
