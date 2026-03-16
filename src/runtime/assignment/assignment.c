@@ -8,7 +8,7 @@
 #include "../objects/string/string.h"
 #include <stdint.h>
 
-__thread struct hashmap_GC *assignable_keys = NULL;
+struct hashmap_GC *assignable_keys = NULL;
 
 void runtime_assignment(int64_t length, int64_t offset, int64_t hash,
                         uint8_t from_register, RuntimeState *state,
