@@ -71,6 +71,7 @@ typedef enum {
   TOKEN_NOT,
   TOKEN_TRY,
   TOKEN_CATCH,
+  TOKEN_THROW,
 
   // parentheses, brackets, and braces
   TOKEN_LPAREN,   // (

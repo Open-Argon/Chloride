@@ -89,6 +89,7 @@ ESCAPE      \\([\"\\\/bfnrt`]|u[0-9a-fA-F]{4})
 "not"               { return TOKEN_NOT; }
 "try"               { return TOKEN_TRY; }
 "catch"             { return TOKEN_CATCH; }
+"throw"             { return TOKEN_THROW; }
 
 "(" {
     GET_STATE
