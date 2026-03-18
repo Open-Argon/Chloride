@@ -7,10 +7,10 @@
 #ifndef AROBJECT_H
 #define AROBJECT_H
 
+#include "../include/ArgonTypes.h"
 #include "dynamic_array/darray.h"
 #include "runtime/internals/dynamic_array_armem/darray_armem.h"
 #include "runtime/internals/hashmap/hashmap.h"
-#include "../include/ArgonTypes.h"
 #include <gmp.h>
 #include <limits.h>
 #include <stddef.h>
@@ -67,14 +67,19 @@ typedef enum {
   __template__,
   __dictionary__,
   __array__,
+  message,
+  stack_trace,
 
   BUILT_IN_FIELDS_COUNT,
 } built_in_fields;
 
-typedef struct ArErr ArErr;
 typedef struct RuntimeState RuntimeState;
 
 typedef struct ArgonObject ArgonObject; // forward declaration
+
+typedef struct {
+  ArgonObject *ptr;
+} ArErr;
 
 typedef struct ArgonNativeAPI ArgonNativeAPI;
 
@@ -220,22 +225,22 @@ struct as_range_iterator {
   bool is_int64;
   bool inclusive;
   union {
-  ArgonObject*obj;
-  int64_t i64;
+    ArgonObject *obj;
+    int64_t i64;
   } current;
   union {
-  ArgonObject*obj;
-  int64_t i64;
+    ArgonObject *obj;
+    int64_t i64;
   } stop;
   union {
-  ArgonObject*obj;
-  int64_t i64;
+    ArgonObject *obj;
+    int64_t i64;
   } step;
 };
 
 struct as_array_iterator {
   size_t current;
-  darray_armem*array;
+  darray_armem *array;
 };
 
 struct as_dictionary_iterator {
@@ -258,12 +263,11 @@ struct ArgonObject {
   bool as_bool;
   // pthread_rwlock_t lock;
   union {
-    ArErr *err;
     struct as_number *as_number;
     struct hashmap_GC *as_hashmap;
     struct as_range_iterator *as_range_iterator;
-    struct as_array_iterator* as_array_iterator;
-    struct as_dictionary_iterator* as_dictionary_iterator;
+    struct as_array_iterator *as_array_iterator;
+    struct as_dictionary_iterator *as_dictionary_iterator;
     struct string_struct *as_str;
     struct tuple_struct as_tuple;
     struct buffer *as_buffer;

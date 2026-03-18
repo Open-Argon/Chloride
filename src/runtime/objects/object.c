@@ -84,7 +84,10 @@ const char *built_in_field_names[BUILT_IN_FIELDS_COUNT] = {
     "__next__",
     "__template__",
     "__dictionary__",
-    "__array__"};
+    "__array__",
+    "message",
+    "stack_trace",
+};
 
 uint64_t built_in_field_hashes[BUILT_IN_FIELDS_COUNT];
 

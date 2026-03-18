@@ -6,7 +6,7 @@
 
 #ifndef RUNTIME_H
 #define RUNTIME_H
-#include "../returnTypes.h"
+#include "../arobject.h"
 #include "internals/hashmap/hashmap.h"
 #include <stdint.h>
 #include <stdio.h>

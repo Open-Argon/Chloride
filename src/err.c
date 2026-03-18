@@ -6,8 +6,18 @@
 
 #include "err.h"
 #include "../external/libdye/include/dye.h"
+#include "ArgonTypes.h"
+#include "arobject.h"
 #include "memory.h"
+#include "runtime/api/api.h"
 #include "runtime/internals/dynamic_array_armem/darray_armem.h"
+#include "runtime/internals/hashmap/hashmap.h"
+#include "runtime/objects/array/array.h"
+#include "runtime/objects/number/number.h"
+#include "runtime/objects/object.h"
+#include "runtime/objects/string/string.h"
+#include "runtime/objects/tuple/tuple.h"
+#include "runtime/runtime.h"
 #include <ctype.h>
 #include <inttypes.h>
 #include <stdarg.h>
@@ -22,73 +32,115 @@
 #include "getline.h"
 #endif
 
-const ArErr no_err = (ArErr){"", "", false, NULL};
+char *vfmt_alloc(const char *fmt, va_list args) {
+  va_list args_copy;
+  va_copy(args_copy, args);
 
-ArErr create_err(const char *type, const char *fmt, ...) {
-  ArErr err;
-  err.exists = true;
+  int len = vsnprintf(NULL, 0, fmt, args);
+  if (len < 0) {
+    va_end(args_copy);
+    return NULL;
+  }
 
-  err.stack_trace = darray_armem_create();
+  char *buf = malloc(len + 1);
+  if (!buf) {
+    va_end(args_copy);
+    return NULL;
+  }
 
-  darray_armem_init(err.stack_trace, sizeof(struct StackTraceFrame), 0);
+  vsnprintf(buf, len + 1, fmt, args_copy);
+  va_end(args_copy);
 
-  snprintf(err.type, sizeof(err.type), "%s", (char *)type);
+  return buf;
+}
+
+ArErr create_err(ArgonObject *type, const char *fmt, ...) {
+  ArgonObject *err_instance = new_instance(type, 0);
 
   va_list args;
   va_start(args, fmt);
-  vsnprintf(err.message, sizeof(err.message), fmt, args);
+  char *msg = vfmt_alloc(fmt, args);
   va_end(args);
 
-  return err;
+  add_builtin_field(err_instance, message,
+                    new_string_object_null_terminated(msg));
+
+  free(msg);
+
+  add_builtin_field(err_instance, stack_trace,
+                    ARRAY_CREATE(0, NULL, NULL, NULL, NULL));
+
+  return (ArErr){.ptr = err_instance};
 }
+
 ArErr path_specific_create_err(int64_t line, int64_t column, int64_t length,
-                               char *path, const char *type, const char *fmt,
+                               char *path, ArgonObject *type, const char *fmt,
                                ...) {
-  ArErr err;
-  err.exists = true;
-
-  err.stack_trace = darray_armem_create();
-
-  darray_armem_init(err.stack_trace, sizeof(struct StackTraceFrame), 0);
-
-  struct StackTraceFrame frame = {line, column, length, path};
-  darray_armem_insert(err.stack_trace, err.stack_trace->size, &frame);
-
-  snprintf(err.type, sizeof(err.type), "%s", (char *)type);
+  ArgonObject *err_instance = new_instance(type, 0);
 
   va_list args;
   va_start(args, fmt);
-  vsnprintf(err.message, sizeof(err.message), fmt, args);
+  char *msg = vfmt_alloc(fmt, args);
   va_end(args);
 
-  return err;
+  add_builtin_field(err_instance, message,
+                    new_string_object_null_terminated(msg));
+
+  free(msg);
+
+  add_builtin_field(
+      err_instance, stack_trace,
+      ARRAY_CREATE(
+          1,
+          (ArgonObject *[]){TUPLE_CREATE(
+              4,
+              (ArgonObject *[]){new_string_object_null_terminated(path),
+                                new_number_object_from_int64(line),
+                                new_number_object_from_int64(column),
+                                new_number_object_from_int64(length)},
+              NULL, NULL, NULL)},
+          NULL, NULL, NULL));
+
+  return (ArErr){.ptr = err_instance};
 }
 
-ArErr vcreate_err(const char *type, const char *fmt, va_list args) {
-  ArErr err;
-  err.exists = true;
+ArErr vcreate_err(ArgonObject *type, const char *fmt, va_list args) {
+  ArgonObject *err_instance = new_instance(type, 0);
 
-  err.stack_trace = darray_armem_create();
+  char *msg = vfmt_alloc(fmt, args);
 
-  darray_armem_init(err.stack_trace, sizeof(struct StackTraceFrame), 0);
+  add_builtin_field(err_instance, message,
+                    new_string_object_null_terminated(msg));
 
-  snprintf(err.type, sizeof(err.type), "%s", type);
-  vsnprintf(err.message, sizeof(err.message), fmt, args);
-  return err;
+  free(msg);
+
+  add_builtin_field(err_instance, stack_trace,
+                    ARRAY_CREATE(0, NULL, NULL, NULL, NULL));
+
+  return (ArErr){.ptr = err_instance};
+}
+
+bool convert_to_stackTraceFrame(ArgonObject *frame_obj, struct StackTraceFrame*frame) {
+  if (frame_obj->type != TYPE_TUPLE || frame_obj->value.as_tuple.size != 4)
+    return ;
 }
 
 void output_err(ArErr *err) {
-  if (!err->exists)
+  if (!native_api.is_error(err))
     return;
-  if (err->stack_trace->size > 1) {
+  ArgonObject *stack_trace_obj = get_builtin_field(err->ptr, stack_trace);
+  darray_armem *stack_trace;
+  if (stack_trace_obj && stack_trace_obj->type == TYPE_ARRAY)
+    stack_trace = stack_trace_obj->value.as_array;
+  if (stack_trace_obj && stack_trace->size > 1) {
     dyefg(stderr, DYE_RED);
     dye_style(stderr, DYE_STYLE_BOLD);
     fprintf(stderr, "Stack trace (oldest frame first):");
     dye_style(stderr, DYE_STYLE_RESET);
     dyefg(stderr, DYE_RESET);
     fprintf(stderr, "\n");
-    for (int64_t i = err->stack_trace->size - 1; i >= 0; i--) {
-      struct StackTraceFrame *frame = darray_armem_get(err->stack_trace, i);
+    for (int64_t i = stack_trace->size - 1; i >= 0; i--) {
+      ArgonObject *frame_obj = darray_armem_get(stack_trace, i);
       fprintf(stderr, " at ");
       dyefg(stderr, DYE_CYAN);
       if (frame->path)
@@ -124,8 +176,7 @@ void output_err(ArErr *err) {
   fprintf(stderr, "\n");
 
   if (err->stack_trace->size > 0) {
-    struct StackTraceFrame *frame =
-        darray_armem_get(err->stack_trace, 0);
+    struct StackTraceFrame *frame = darray_armem_get(err->stack_trace, 0);
     dyefg(stderr, DYE_GRAY);
     fprintf(stderr, "  --> ");
     dyefg(stderr, DYE_CYAN);

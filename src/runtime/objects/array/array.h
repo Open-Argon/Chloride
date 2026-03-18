@@ -13,6 +13,9 @@ extern ArgonObject *ARGON_ARRAY_CREATE;
 
 void init_array_type();
 
+ArgonObject *ARRAY_CREATE(size_t argc, ArgonObject **argv, ArErr *err,
+                          RuntimeState *state, ArgonNativeAPI *api);
+
 ArgonObject *ARGON_ARRAY_ITERATOR___next__(size_t argc, ArgonObject **argv,
                                            ArErr *err, RuntimeState *state,
                                            ArgonNativeAPI *api);

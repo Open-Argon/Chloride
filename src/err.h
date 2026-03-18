@@ -4,25 +4,16 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#ifndef RETURN_TYPE_H
-#define RETURN_TYPE_H
-#include "returnTypes.h"
+#ifndef ERROR_H
+#define ERROR_H
+#include "arobject.h"
 #include <limits.h>
 #include <stdio.h>
 
-extern const ArErr no_err;
-
-struct StackTraceFrame {
-  uint64_t line;
-  uint64_t column;
-  uint64_t length;
-  char *path;
-};
-
-ArErr create_err(const char *type, const char *fmt, ...);
+ArErr create_err(ArgonObject *type, const char *fmt, ...);
 ArErr path_specific_create_err(int64_t line, int64_t column, int64_t length,
-                               char *path, const char *type, const char *fmt,
+                               char *path, ArgonObject *type,const char *fmt,
                                ...);
-ArErr vcreate_err(const char *type, const char *fmt, va_list args);
+ArErr vcreate_err(ArgonObject *type, const char *fmt, va_list args);
 void output_err(ArErr *err);
-#endif // RETURN_TYPE_H
+#endif // ERROR_H
