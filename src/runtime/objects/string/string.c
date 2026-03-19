@@ -6,6 +6,7 @@
 
 #include "string.h"
 #include "../../../err.h"
+#include "../../api/api.h"
 #include "../../../memory.h"
 #include "../../call/call.h"
 #include "../literals/literals.h"
@@ -313,7 +314,7 @@ char *argon_object_to_null_terminated_string(ArgonObject *object, ArErr *err,
 
   ArgonObject *string_object =
       argon_call(string_convert_method, 0, NULL, err, state);
-  if (err->exists)
+  if (native_api.is_error(err))
     return NULL;
 
   if (string_object->type != TYPE_STRING)
@@ -340,7 +341,7 @@ ArgonObject *new_string_object_null_terminated(char *data) {
   return new_string_object(data, strlen(data), 0);
 }
 
-ArgonObject*ARGON_RENDER_TEMPLATE;
+ArgonObject *ARGON_RENDER_TEMPLATE;
 
 ArgonObject *RENDER_TEMPLATE(size_t argc, ArgonObject **argv, ArErr *err,
                              RuntimeState *state, ArgonNativeAPI *api) {
