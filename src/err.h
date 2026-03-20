@@ -10,6 +10,8 @@
 #include <limits.h>
 #include <stdio.h>
 
+extern ArErr no_err;
+
 ArErr create_err(ArgonObject *type, const char *fmt, ...);
 ArErr path_specific_create_err(int64_t line, int64_t column, int64_t length,
                                char *path, ArgonObject *type,const char *fmt,

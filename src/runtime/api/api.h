@@ -9,5 +9,6 @@
 #include "../../arobject.h"
 
 extern ArgonNativeAPI native_api;
+bool is_error(ArErr *err);
 
 #endif // native_api_H

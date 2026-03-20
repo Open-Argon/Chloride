@@ -22,7 +22,7 @@
 #include <stdio.h>
 #include <string.h>
 
-ArgonObject *throw_argon_error(ArErr *err, const char *type, const char *fmt,
+ArgonObject *throw_argon_error(ArErr *err, ArgonObject *type, const char *fmt,
                                ...) {
   va_list args;
   va_start(args, fmt);
@@ -106,7 +106,7 @@ double argon_to_double(ArgonObject *obj, ArErr *err) {
   return d;
 }
 
-bool is_error(ArErr *err) { return err->exists; }
+bool is_error(ArErr *err) { return err->ptr != ARGON_NULL; }
 
 ArgonObject *rational_to_argon(struct rational r) {
   return new_number_object_from_num_and_den(r.n, r.d);

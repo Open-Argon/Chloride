@@ -32,6 +32,8 @@
 #include "getline.h"
 #endif
 
+ArErr no_err = {NULL};
+
 char *vfmt_alloc(const char *fmt, va_list args) {
   va_list args_copy;
   va_copy(args_copy, args);

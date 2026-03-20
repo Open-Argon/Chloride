@@ -1044,6 +1044,8 @@ void bootstrap_types() {
   ARGON_NULL->type = TYPE_NULL;
   ARGON_NULL->as_bool = false;
 
+  no_err.ptr = ARGON_NULL;
+
   add_builtin_field(BASE_CLASS, __base__, ARGON_NULL);
   add_builtin_field(BASE_CLASS, __class__, ARGON_TYPE_TYPE);
 
