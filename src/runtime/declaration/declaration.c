@@ -8,6 +8,7 @@
 #include "../../err.h"
 #include "../assignment/assignment.h"
 #include "../objects/string/string.h"
+#include "../objects/exceptions/exceptions.h"
 #include <stdint.h>
 
 void runtime_declaration(int64_t length, int64_t offset, int64_t hash,
@@ -18,7 +19,7 @@ void runtime_declaration(int64_t length, int64_t offset, int64_t hash,
   if (exists) {
     *err = path_specific_create_err(
         state->source_location.line, state->source_location.column,
-        state->source_location.length, state->path, "Runtime Error",
+        state->source_location.length, state->path, RuntimeError,
         "Identifier '%.*s' has already been declared in the current scope",
         length, arena_get(&translated->constants, offset));
   }

@@ -8,6 +8,7 @@
 #include "../../err.h"
 #include "../../lexer/token.h"
 #include "../../memory.h"
+#include "../../runtime/objects/exceptions/exceptions.h"
 #include "../parser.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -19,17 +20,17 @@ ParsedValueReturn parse_range(char *file, DArray *tokens, size_t *index,
   bool inclusive = token->type == TOKEN_TO;
   (*index)++;
   ArErr err = error_if_finished(file, tokens, index);
-  if (err.exists) {
+  if (is_error(&err)) {
     return (ParsedValueReturn){err, NULL};
   }
 
   ParsedValueReturn stop = parse_token(file, tokens, index, true);
-  if (stop.err.exists) {
+  if (is_error(&stop.err)) {
     return stop;
   } else if (!stop.value) {
     return (ParsedValueReturn){
         path_specific_create_err(token->line, token->column, token->length,
-                                 file, "Syntax Error", "expected value"),
+                                 file, SyntaxError, "expected value"),
         NULL};
   }
 

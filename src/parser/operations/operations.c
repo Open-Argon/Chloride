@@ -8,6 +8,7 @@
 #include "../../memory.h"
 #include "../../err.h"
 #include "../parser.h"
+#include "../../runtime/objects/exceptions/exceptions.h"
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -90,14 +91,14 @@ ParsedValueReturn parse_operations(char *file, DArray *tokens, size_t *index,
     darray_push(&operations, token);
     (*index)++;
     ArErr err = error_if_finished(file, tokens, index);
-    if (err.exists) {
+    if (is_error(&err)) {
       darray_free(&to_operate_on, (void (*)(void *))free_parsed);
       darray_free(&operations, NULL);
       return (ParsedValueReturn){err, NULL};
     }
     ParsedValueReturn parsedValue =
         parse_token_full(file, tokens, index, true, false);
-    if (parsedValue.err.exists) {
+    if (is_error(&parsedValue.err)) {
       darray_free(&to_operate_on, (void (*)(void *))free_parsed);
       darray_free(&operations, NULL);
       return parsedValue;
@@ -105,7 +106,7 @@ ParsedValueReturn parse_operations(char *file, DArray *tokens, size_t *index,
       darray_free(&to_operate_on, (void (*)(void *))free_parsed);
       darray_free(&operations, NULL);
       return (ParsedValueReturn){path_specific_create_err(token->line, token->column,
-                                            token->length, file, "Syntax Error",
+                                            token->length, file, SyntaxError,
                                             "expected value"),
                                  NULL};
     }

@@ -9,6 +9,7 @@
 #include "../../lexer/token.h"
 #include "../../memory.h"
 #include "../function/function.h"
+#include "../../runtime/objects/exceptions/exceptions.h"
 #include "../parser.h"
 #include <string.h>
 
@@ -20,18 +21,18 @@ ParsedValueReturn parse_import(char *file, DArray *tokens, size_t *index) {
   import.expose_all = false;
   import.expose.resizable = false;
   ArErr err = error_if_finished(file, tokens, index);
-  if (err.exists) {
+  if (is_error(&err)) {
     return (ParsedValueReturn){err, NULL};
   }
 
   Token *token = darray_get(tokens, *index);
   ParsedValueReturn parsedFile = parse_token(file, tokens, index, true);
 
-  if (parsedFile.err.exists) {
+  if (is_error(&parsedFile.err)) {
     return parsedFile;
   } else if (!parsedFile.value) {
     return (ParsedValueReturn){path_specific_create_err(token->line, token->column,
-                                          token->length, file, "Syntax Error",
+                                          token->length, file, SyntaxError,
                                           "expected a value"),
                                NULL};
   }
@@ -39,7 +40,7 @@ ParsedValueReturn parse_import(char *file, DArray *tokens, size_t *index) {
   import.file = parsedFile.value;
 
   err = error_if_finished(file, tokens, index);
-  if (err.exists) {
+  if (is_error(&err)) {
     free_parsed(parsedFile.value);
     free(parsedFile.value);
     return (ParsedValueReturn){err, NULL};
@@ -52,7 +53,7 @@ ParsedValueReturn parse_import(char *file, DArray *tokens, size_t *index) {
     if (token->type == TOKEN_AS) {
       (*index)++;
       err = error_if_finished(file, tokens, index);
-      if (err.exists) {
+      if (is_error(&err)) {
         free_parsed(parsedFile.value);
         free(parsedFile.value);
         return (ParsedValueReturn){err, NULL};
@@ -65,7 +66,7 @@ ParsedValueReturn parse_import(char *file, DArray *tokens, size_t *index) {
         free(parsedFile.value);
         return (ParsedValueReturn){
             path_specific_create_err(token->line, token->column, token->length, file,
-                       "Syntax Error", "expected identifier"),
+                       SyntaxError, "expected identifier"),
             NULL};
       }
 
@@ -79,7 +80,7 @@ ParsedValueReturn parse_import(char *file, DArray *tokens, size_t *index) {
     if (token->type == TOKEN_EXPOSE) {
       (*index)++;
       err = error_if_finished(file, tokens, index);
-      if (err.exists) {
+      if (is_error(&err)) {
         free_parsed(parsedFile.value);
         free(parsedFile.value);
         return (ParsedValueReturn){err, NULL};
@@ -100,7 +101,7 @@ ParsedValueReturn parse_import(char *file, DArray *tokens, size_t *index) {
             darray_free(&import.expose, free_parameter);
             return (ParsedValueReturn){
                 path_specific_create_err(token->line, token->column, token->length, file,
-                           "Syntax Error", "expected identifier"),
+                           SyntaxError, "expected identifier"),
                 NULL};
           }
           (*index)++;
@@ -117,7 +118,7 @@ ParsedValueReturn parse_import(char *file, DArray *tokens, size_t *index) {
             if (token->type == TOKEN_AS) {
               (*index)++;
               err = error_if_finished(file, tokens, index);
-              if (err.exists) {
+              if (is_error(&err)) {
                 free_parsed(parsedFile.value);
                 free(parsedFile.value);
                 darray_free(&import.expose, free);
@@ -132,7 +133,7 @@ ParsedValueReturn parse_import(char *file, DArray *tokens, size_t *index) {
                 free(exposeAs.identifier);
                 return (ParsedValueReturn){
                     path_specific_create_err(token->line, token->column, token->length, file,
-                               "Syntax Error", "expected identifier"),
+                               SyntaxError, "expected identifier"),
                     NULL};
               }
               exposeAs.as = strcpy(checked_malloc(strlen(token->value) + 1),
@@ -149,7 +150,7 @@ ParsedValueReturn parse_import(char *file, DArray *tokens, size_t *index) {
 
           (*index)++;
           ArErr err = error_if_finished(file, tokens, index);
-          if (err.exists) {
+          if (is_error(&err)) {
             free_parsed(parsedFile.value);
             free(parsedFile.value);
             darray_free(&import.expose, free);
@@ -162,7 +163,7 @@ ParsedValueReturn parse_import(char *file, DArray *tokens, size_t *index) {
         free(parsedFile.value);
         return (ParsedValueReturn){
             path_specific_create_err(token->line, token->column, token->length, file,
-                       "Syntax Error", "expected identifier or asterisk"),
+                       SyntaxError, "expected identifier or asterisk"),
             NULL};
       }
     }

@@ -113,7 +113,7 @@ struct ArgonNativeAPI {
   ArgonObject *(*create_argon_native_function)(char *name, native_fn);
   ArgonObject *(*call)(ArgonObject *original_object, size_t argc,
                        ArgonObject **argv, ArErr *err, RuntimeState *state);
-  ArgonObject *(*throw_argon_error)(ArErr *err, const char *type,
+  ArgonObject *(*throw_argon_error)(ArErr *err, ArgonObject*type,
                                     const char *fmt, ...);
   bool (*is_error)(ArErr *err);
   bool (*fix_to_arg_size)(size_t limit, size_t argc, ArErr *err);
@@ -263,6 +263,7 @@ struct ArgonObject {
   bool as_bool;
   // pthread_rwlock_t lock;
   union {
+    ArErr err;
     struct as_number *as_number;
     struct hashmap_GC *as_hashmap;
     struct as_range_iterator *as_range_iterator;
@@ -276,5 +277,7 @@ struct ArgonObject {
     struct argon_function_struct *argon_fn;
   } value;
 };
+
+bool is_error(ArErr *err);
 
 #endif // AROBJECT_H

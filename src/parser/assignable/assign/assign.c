@@ -13,6 +13,7 @@
 #include "../access/access.h"
 #include "../call/call.h"
 #include "../identifier/identifier.h"
+#include "../../../runtime/objects/exceptions/exceptions.h"
 #include "../../../err.h"
 #include <stdbool.h>
 #include <stdio.h>
@@ -44,7 +45,7 @@ ParsedValueReturn parse_assign(char *file, DArray *tokens,
         darray_free(&function_args, free_parameter);
         return (ParsedValueReturn){
             path_specific_create_err(
-                token->line, token->column, token->length, file, "Syntax Error",
+                token->line, token->column, token->length, file, SyntaxError,
                 "parameter names need to start with a letter "
                 "or _, "
                 "only use letters, digits, or _, and can't be keywords."),
@@ -80,7 +81,7 @@ ParsedValueReturn parse_assign(char *file, DArray *tokens,
     break;
   default:;
     ArErr err = path_specific_create_err(token->line, token->column, token->length, file,
-                           "Syntax Error", "can't assign to %s",
+                           SyntaxError, "can't assign to %s",
                            ValueTypeNames[assign_to->type]);
     free_parsed(assign_to);
     free(assign_to);
@@ -88,14 +89,14 @@ ParsedValueReturn parse_assign(char *file, DArray *tokens,
   }
   (*index)++;
   ArErr err = error_if_finished(file, tokens, index);
-  if (err.exists) {
+  if (is_error(&err)) {
     free_parsed(assign_to);
     free(assign_to);
     return (ParsedValueReturn){err, NULL};
   }
   token = darray_get(tokens, *index);
   ParsedValueReturn from = parse_token(file, tokens, index, true);
-  if (from.err.exists) {
+  if (is_error(&from.err)) {
     free_parsed(assign_to);
     free(assign_to);
     return from;
@@ -104,7 +105,7 @@ ParsedValueReturn parse_assign(char *file, DArray *tokens,
     free_parsed(assign_to);
     free(assign_to);
     return (ParsedValueReturn){path_specific_create_err(token->line, token->column,
-                                          token->length, file, "Syntax Error",
+                                          token->length, file, SyntaxError,
                                           "expected body"),
                                NULL};
   }

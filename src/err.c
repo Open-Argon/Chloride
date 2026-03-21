@@ -6,18 +6,16 @@
 
 #include "err.h"
 #include "../external/libdye/include/dye.h"
-#include "ArgonTypes.h"
 #include "arobject.h"
 #include "memory.h"
 #include "runtime/api/api.h"
 #include "runtime/internals/dynamic_array_armem/darray_armem.h"
-#include "runtime/internals/hashmap/hashmap.h"
 #include "runtime/objects/array/array.h"
+#include "runtime/objects/literals/literals.h"
 #include "runtime/objects/number/number.h"
 #include "runtime/objects/object.h"
 #include "runtime/objects/string/string.h"
 #include "runtime/objects/tuple/tuple.h"
-#include "runtime/runtime.h"
 #include <ctype.h>
 #include <inttypes.h>
 #include <stdarg.h>
@@ -33,6 +31,8 @@
 #endif
 
 ArErr no_err = {NULL};
+
+bool is_error(ArErr *err) { return err->ptr != ARGON_NULL; }
 
 char *vfmt_alloc(const char *fmt, va_list args) {
   va_list args_copy;
@@ -205,8 +205,8 @@ void output_err(ArErr *err) {
   fprintf(stderr, ": ");
   dyefg(stderr, DYE_RED);
   ArgonObject *message_obj = get_builtin_field(err->ptr, message);
-  if (type_name_obj && type_name_obj->type == TYPE_STRING) {
-    char *msg = argon_string_to_c_string_malloc(type_name_obj);
+  if (message_obj && message_obj->type == TYPE_STRING) {
+    char *msg = argon_string_to_c_string_malloc(message_obj);
     fprintf(stderr, "%s", msg);
     free(msg);
   }
@@ -237,10 +237,10 @@ void output_err(ArErr *err) {
       if (file) {
         dye_style(stderr, DYE_STYLE_RESET);
         dyefg(stderr, DYE_RESET);
-        uint64_t line_number_width = snprintf(NULL, 0, "%" PRIu64, frame.line);
+        int64_t line_number_width = snprintf(NULL, 0, "%" PRIu64, frame.line);
         char *buffer = NULL;
         size_t size = 0;
-        uint64_t current_line = 1;
+        int64_t current_line = 1;
         ssize_t len;
 
         while ((len = getline(&buffer, &size, file)) != -1) {
@@ -250,7 +250,7 @@ void output_err(ArErr *err) {
           current_line++;
         }
         fprintf(stderr, "  ");
-        for (uint64_t i = 0; i < line_number_width; i++) {
+        for (int64_t i = 0; i < line_number_width; i++) {
           fprintf(stderr, " ");
         }
         fprintf(stderr, "|\n");
@@ -281,7 +281,7 @@ void output_err(ArErr *err) {
                   (int)len - (int)skipped_chars - (int)frame.column -
                       (int)frame.length + 1,
                   line_starts + (int)frame.column + frame.length - 1);
-          for (uint64_t i = 0; i < frame.column - 1; i++) {
+          for (int64_t i = 0; i < frame.column - 1; i++) {
             fprintf(stderr, " ");
           }
         } else {
@@ -289,17 +289,17 @@ void output_err(ArErr *err) {
         }
         free(buffer);
         fprintf(stderr, "\n  ");
-        for (uint64_t i = 0; i < line_number_width; i++) {
+        for (int64_t i = 0; i < line_number_width; i++) {
           fprintf(stderr, " ");
         }
         fprintf(stderr, "| ");
 
-        for (uint64_t i = 1; i < frame.column; i++) {
+        for (int64_t i = 1; i < frame.column; i++) {
           fprintf(stderr, " ");
         }
         dyefg(stderr, DYE_RED);
         dye_style(stderr, DYE_STYLE_BOLD);
-        for (uint64_t i = 0; i < frame.length; i++) {
+        for (int64_t i = 0; i < frame.length; i++) {
           fprintf(stderr, "^");
         }
         dye_style(stderr, DYE_STYLE_RESET);

@@ -23,7 +23,7 @@ size_t translate_parsed_for(Translated *translated, ParsedFor *parsedFor,
   size_t first = push_instruction_byte(translated, OP_NEW_SCOPE);
   translated->scope_depth++;
   translate_parsed(translated, parsedFor->iterator, err);
-  if (err->exists) {
+  if (is_error(err)) {
     return 0;
   }
   push_instruction_byte(translated, OP_LOAD_ITER_METHOD);

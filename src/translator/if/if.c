@@ -27,7 +27,7 @@ size_t translate_parsed_if(Translated *translated, DArray *parsedIf,
     translated->scope_depth++;
     if (condition->condition) {
       translate_parsed(translated, condition->condition, err);
-      if (err->exists) {
+      if (is_error(err)) {
         return 0;
       }
       push_instruction_byte(translated, OP_BOOL);
@@ -35,7 +35,7 @@ size_t translate_parsed_if(Translated *translated, DArray *parsedIf,
       push_instruction_byte(translated, 0);
       uint64_t last_jump_index = push_instruction_code(translated, 0);
       translate_parsed(translated, condition->content, err);
-      if (err->exists) {
+      if (is_error(err)) {
         return 0;
       }
       push_instruction_byte(translated, OP_POP_SCOPE);

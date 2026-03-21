@@ -7,12 +7,13 @@
 #include "return.h"
 #include "../../err.h"
 #include "../translator.h"
+#include "../../runtime/objects/exceptions/exceptions.h"
 
 size_t translate_parsed_return(Translated *translated,
                                ParsedReturn *parsedReturn, ArErr *err) {
   if (!translated->return_jump.positions) {
     *err = path_specific_create_err(parsedReturn->line, parsedReturn->column,
-                      parsedReturn->length, translated->path, "Syntax Error",
+                      parsedReturn->length, translated->path, SyntaxError,
                       "nowhere to return to");
     return 0;
   }

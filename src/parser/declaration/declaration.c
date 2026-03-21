@@ -12,6 +12,7 @@
 #include "../../memory.h"
 #include "../function/function.h"
 #include "../literals/literals.h"
+#include "../../runtime/objects/exceptions/exceptions.h"
 #include "../parser.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -20,7 +21,7 @@
 ParsedValueReturn parse_declaration(char *file, DArray *tokens, size_t *index) {
   (*index)++;
   ArErr err = error_if_finished(file, tokens, index);
-  if (err.exists) {
+  if (is_error(&err)) {
     return (ParsedValueReturn){err, NULL};
   }
   Token *token = darray_get(tokens, *index);
@@ -45,7 +46,7 @@ ParsedValueReturn parse_declaration(char *file, DArray *tokens, size_t *index) {
       free(parsedValue);
       return (ParsedValueReturn){
           path_specific_create_err(token->line, token->column, token->length,
-                                   file, "Syntax Error",
+                                   file, SyntaxError,
                                    "declaration requires an identifier"),
           NULL};
     }
@@ -62,7 +63,7 @@ ParsedValueReturn parse_declaration(char *file, DArray *tokens, size_t *index) {
       darray_init(&parameters, sizeof(char *));
       (*index)++;
       ArErr err = error_if_finished(file, tokens, index);
-      if (err.exists) {
+      if (is_error(&err)) {
         hashmap_free(parameters_hashmap, NULL);
         darray_free(&parameters, free_parameter);
         free_parsed(parsedValue);
@@ -83,7 +84,7 @@ ParsedValueReturn parse_declaration(char *file, DArray *tokens, size_t *index) {
         while ((*index) < tokens->size) {
           skip_newlines_and_indents(tokens, index);
           ArErr err = error_if_finished(file, tokens, index);
-          if (err.exists) {
+          if (is_error(&err)) {
             free_parsed(parsedValue);
             free(parsedValue);
             return (ParsedValueReturn){err, NULL};
@@ -96,7 +97,7 @@ ParsedValueReturn parse_declaration(char *file, DArray *tokens, size_t *index) {
             return (ParsedValueReturn){
                 path_specific_create_err(
                     token->line, token->column, token->length, file,
-                    "Syntax Error",
+                    SyntaxError,
                     "parameter names need to start with a letter or _, only "
                     "use letters, digits, or _, and can't be keywords."),
                 NULL};
@@ -109,7 +110,7 @@ ParsedValueReturn parse_declaration(char *file, DArray *tokens, size_t *index) {
             free(parsedValue);
             return (ParsedValueReturn){
                 path_specific_create_err(token->line, token->column,
-                                         token->length, file, "Syntax Error",
+                                         token->length, file, SyntaxError,
                                          "duplicate argument in function "
                                          "definition"),
                 NULL};
@@ -121,7 +122,7 @@ ParsedValueReturn parse_declaration(char *file, DArray *tokens, size_t *index) {
           darray_push(&parameters, &parameter_name);
           (*index)++;
           err = error_if_finished(file, tokens, index);
-          if (err.exists) {
+          if (is_error(&err)) {
             hashmap_free(parameters_hashmap, NULL);
             darray_free(&parameters, free_parameter);
             free_parsed(parsedValue);
@@ -130,7 +131,7 @@ ParsedValueReturn parse_declaration(char *file, DArray *tokens, size_t *index) {
           }
           skip_newlines_and_indents(tokens, index);
           err = error_if_finished(file, tokens, index);
-          if (err.exists) {
+          if (is_error(&err)) {
             hashmap_free(parameters_hashmap, NULL);
             darray_free(&parameters, free_parameter);
             free_parsed(parsedValue);
@@ -150,13 +151,13 @@ ParsedValueReturn parse_declaration(char *file, DArray *tokens, size_t *index) {
             free(parsedValue);
             return (ParsedValueReturn){
                 path_specific_create_err(token->line, token->column,
-                                         token->length, file, "Syntax Error",
+                                         token->length, file, SyntaxError,
                                          "expected comma"),
                 NULL};
           }
           (*index)++;
           err = error_if_finished(file, tokens, index);
-          if (err.exists) {
+          if (is_error(&err)) {
             hashmap_free(parameters_hashmap, NULL);
             darray_free(&parameters, free_parameter);
             free_parsed(parsedValue);
@@ -170,14 +171,14 @@ ParsedValueReturn parse_declaration(char *file, DArray *tokens, size_t *index) {
     if (token->type == TOKEN_ASSIGN) {
       (*index)++;
       ArErr err = error_if_finished(file, tokens, index);
-      if (err.exists) {
+      if (is_error(&err)) {
         free_parsed(parsedValue);
         free(parsedValue);
         return (ParsedValueReturn){err, NULL};
       }
 
       ParsedValueReturn from = parse_token(file, tokens, index, true);
-      if (from.err.exists) {
+      if (is_error(&from.err)) {
         if (isFunction)
           darray_free(&parameters, free_parameter);
         free_parsed(parsedValue);
@@ -193,7 +194,7 @@ ParsedValueReturn parse_declaration(char *file, DArray *tokens, size_t *index) {
         free(parsedValue);
         return (ParsedValueReturn){
             path_specific_create_err(token->line, token->column, token->length,
-                                     file, "Syntax Error", "expected body"),
+                                     file, SyntaxError, "expected body"),
             NULL};
       }
     }
@@ -215,14 +216,14 @@ ParsedValueReturn parse_declaration(char *file, DArray *tokens, size_t *index) {
     }
     (*index)++;
     ArErr err = error_if_finished(file, tokens, index);
-    if (err.exists) {
+    if (is_error(&err)) {
       free_parsed(parsedValue);
       free(parsedValue);
       return (ParsedValueReturn){err, NULL};
     }
     skip_newlines_and_indents(tokens, index);
     err = error_if_finished(file, tokens, index);
-    if (err.exists) {
+    if (is_error(&err)) {
       free_parsed(parsedValue);
       free(parsedValue);
       return (ParsedValueReturn){err, NULL};

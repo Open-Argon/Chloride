@@ -9,6 +9,7 @@
 
 #include "../../err.h"
 #include "../../memory.h"
+#include "../../runtime/objects/exceptions/exceptions.h"
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -236,7 +237,7 @@ ParsedValueReturn parse_string(Token *token, bool to_unquote) {
       free(parsedString);
       return (ParsedValueReturn){
           path_specific_create_err(token->line, token->column, token->length,
-                                   NULL, "String Error",
+                                   NULL, InternalError,
                                    "failed to unquote string %s", token->value),
           NULL};
     }
@@ -283,7 +284,7 @@ ParsedValueReturn parse_template(char *file, DArray *tokens, size_t *index,
                                  ParsedValue *templater) {
   (*index)++;
   ArErr err = error_if_finished(file, tokens, index);
-  if (err.exists) {
+  if (is_error(&err)) {
     return (ParsedValueReturn){err, NULL};
   }
   DArray template;
@@ -319,19 +320,19 @@ ParsedValueReturn parse_template(char *file, DArray *tokens, size_t *index,
       (*index)++;
       skip_newlines_and_indents(tokens, index);
       err = error_if_finished(file, tokens, index);
-      if (err.exists) {
+      if (is_error(&err)) {
         darray_free(&template, free_template_value);
         return (ParsedValueReturn){err, NULL};
       }
       ParsedValueReturn parsed = parse_token(file, tokens, index, true);
-      if (parsed.err.exists) {
+      if (is_error(&parsed.err)) {
         darray_free(&template, free_template_value);
         return parsed;
       } else if (!parsed.value) {
         darray_free(&template, free_template_value);
         return (ParsedValueReturn){
             path_specific_create_err(token->line, token->column, token->length,
-                                     file, "Syntax Error", "expected value"),
+                                     file, SyntaxError, "expected value"),
             NULL};
       }
       TemplateValue value;
@@ -339,7 +340,7 @@ ParsedValueReturn parse_template(char *file, DArray *tokens, size_t *index,
       value.value.value = parsed.value;
       darray_push(&template, &value);
       err = error_if_finished(file, tokens, index);
-      if (err.exists) {
+      if (is_error(&err)) {
         return (ParsedValueReturn){err, NULL};
       }
       skip_newlines_and_indents(tokens, index);
@@ -349,7 +350,7 @@ ParsedValueReturn parse_template(char *file, DArray *tokens, size_t *index,
         darray_free(&template, free_template_value);
         return (ParsedValueReturn){
             path_specific_create_err(token->line, token->column, token->length,
-                                     file, "Syntax Error",
+                                     file, SyntaxError,
                                      "expected end of template value"),
             NULL};
       }
@@ -360,13 +361,13 @@ ParsedValueReturn parse_template(char *file, DArray *tokens, size_t *index,
       darray_free(&template, free_template_value);
       return (ParsedValueReturn){
           path_specific_create_err(token->line, token->column, token->length,
-                                   file, "Syntax Error", "unexpected token"),
+                                   file, SyntaxError, "unexpected token"),
           NULL};
     }
     }
     (*index)++;
     err = error_if_finished(file, tokens, index);
-    if (err.exists) {
+    if (is_error(&err)) {
       darray_free(&template, free_template_value);
       return (ParsedValueReturn){err, NULL};
     }

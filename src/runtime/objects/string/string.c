@@ -10,6 +10,7 @@
 #include "../../../memory.h"
 #include "../../call/call.h"
 #include "../literals/literals.h"
+#include "../exceptions/exceptions.h"
 #include "../number/number.h"
 #include "../object.h"
 #include <ctype.h>
@@ -78,7 +79,7 @@ ArgonObject *ARGON_STRING_TYPE___equal__(size_t argc, ArgonObject **argv,
   (void)argv;
   (void)state;
   if (argc != 2) {
-    *err = create_err("Runtime Error",
+    *err = create_err(RuntimeError,
                       "__equal__ expects 2 arguments, got %" PRIu64, argc);
     return ARGON_NULL;
   }
@@ -100,7 +101,7 @@ ArgonObject *ARGON_STRING_TYPE___not_equal__(size_t argc, ArgonObject **argv,
   (void)argv;
   (void)state;
   if (argc != 2) {
-    *err = create_err("Runtime Error",
+    *err = create_err(RuntimeError,
                       "__not_equal__ expects 2 arguments, got %" PRIu64, argc);
     return ARGON_NULL;
   }
@@ -116,13 +117,13 @@ ArgonObject *ARGON_STRING_TYPE___less_than__(size_t argc, ArgonObject **argv,
   (void)argv;
   (void)state;
   if (argc != 2) {
-    *err = create_err("Runtime Error",
+    *err = create_err(RuntimeError,
                       "__less_than__ expects 2 arguments, got %" PRIu64, argc);
     return ARGON_NULL;
   }
 
   if (argv[0]->type != TYPE_STRING || argv[1]->type != TYPE_STRING) {
-    *err = create_err("Runtime Error", "__less_than__ expects strings");
+    *err = create_err(RuntimeError, "__less_than__ expects strings");
     return ARGON_NULL;
   }
 
@@ -151,14 +152,14 @@ ArgonObject *ARGON_STRING_TYPE___less_than_equal__(size_t argc,
   (void)state;
 
   if (argc != 2) {
-    *err = create_err("Runtime Error",
+    *err = create_err(RuntimeError,
                       "__less_than_equal__ expects 2 arguments, got %" PRIu64,
                       argc);
     return ARGON_NULL;
   }
 
   if (argv[0]->type != TYPE_STRING || argv[1]->type != TYPE_STRING) {
-    *err = create_err("Runtime Error", "__less_than_equal__ expects strings");
+    *err = create_err(RuntimeError, "__less_than_equal__ expects strings");
     return ARGON_NULL;
   }
 
@@ -186,13 +187,13 @@ ArgonObject *ARGON_STRING_TYPE___greater_than__(size_t argc, ArgonObject **argv,
 
   if (argc != 2) {
     *err =
-        create_err("Runtime Error",
+        create_err(RuntimeError,
                    "__greater_than__ expects 2 arguments, got %" PRIu64, argc);
     return ARGON_NULL;
   }
 
   if (argv[0]->type != TYPE_STRING || argv[1]->type != TYPE_STRING) {
-    *err = create_err("Runtime Error", "__greater_than__ expects strings");
+    *err = create_err(RuntimeError, "__greater_than__ expects strings");
     return ARGON_NULL;
   }
 
@@ -223,14 +224,14 @@ ArgonObject *ARGON_STRING_TYPE___greater_than_equal__(size_t argc,
 
   if (argc != 2) {
     *err = create_err(
-        "Runtime Error",
+        RuntimeError,
         "__greater_than_equal__ expects 2 arguments, got %" PRIu64, argc);
     return ARGON_NULL;
   }
 
   if (argv[0]->type != TYPE_STRING || argv[1]->type != TYPE_STRING) {
     *err =
-        create_err("Runtime Error", "__greater_than_equal__ expects strings");
+        create_err(RuntimeError, "__greater_than_equal__ expects strings");
     return ARGON_NULL;
   }
 
@@ -256,7 +257,7 @@ ArgonObject *ARGON_STRING_TYPE_get_length(size_t argc, ArgonObject **argv,
   (void)api;
   (void)state;
   if (argc != 1) {
-    *err = create_err("Runtime Error",
+    *err = create_err(RuntimeError,
                       "get_length expects 1 argument, got %" PRIu64, argc);
     return ARGON_NULL;
   }
@@ -270,12 +271,12 @@ ArgonObject *ARGON_STRING_TYPE_set_length(size_t argc, ArgonObject **argv,
   (void)state;
   (void)argv;
   if (argc != 2) {
-    *err = create_err("Runtime Error",
+    *err = create_err(RuntimeError,
                       "set_length expects 2 arguments, got %" PRIu64, argc);
     return ARGON_NULL;
   }
 
-  *err = create_err("Runtime Error", "attribute 'length' is immutable");
+  *err = create_err(RuntimeError, "attribute 'length' is immutable");
   return ARGON_NULL;
 }
 
@@ -349,7 +350,7 @@ ArgonObject *RENDER_TEMPLATE(size_t argc, ArgonObject **argv, ArErr *err,
   (void)state;
   (void)argv;
   if (argc != 1) {
-    *err = create_err("Runtime Error",
+    *err = create_err(RuntimeError,
                       "RENDER_TEMPLATE expects 1 argument, got %" PRIu64, argc);
     return ARGON_NULL;
   }

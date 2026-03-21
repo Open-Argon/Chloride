@@ -32,7 +32,7 @@ size_t translate_parsed_template(Translated *translated,
   size_t first;
   if (parsedTemplate->templater) {
     first = translate_parsed(translated, parsedTemplate->templater, err);
-    if (err->exists)
+    if (is_error(err))
       return 0;
     push_instruction_byte(translated, OP_LOAD_TEMPLATE_METHOD);
   } else {
@@ -57,7 +57,7 @@ size_t translate_parsed_template(Translated *translated,
 
     if (!item->is_string) {
       translate_parsed(translated, item->value.value, err);
-      if (err->exists)
+      if (is_error(err))
         return 0;
     } else {
       size_t string_pos =

@@ -7,13 +7,14 @@
 #include "break.h"
 #include "../../err.h"
 #include "../translator.h"
+#include "../../runtime/objects/exceptions/exceptions.h"
 
 size_t translate_parsed_break(Translated *translated,
                               ParsedContinueOrBreak *parsedBreak, ArErr *err) {
   if (!translated->break_jump.positions) {
     *err =
         path_specific_create_err(parsedBreak->line, parsedBreak->column, parsedBreak->length,
-                   translated->path, "Syntax Error", "nowhere to break to");
+                   translated->path, SyntaxError, "nowhere to break to");
     return 0;
   }
   size_t first;

@@ -49,7 +49,7 @@ int execute_code(char *context, char *path, Stack *scope,
   darray_init(&tokens, sizeof(Token));
   LexerState state = {path, context, 0, 0, {}, -1, &tokens};
   err = lexer(state);
-  if (err.exists) {
+  if (is_error(&err)) {
     darray_free(&tokens, free_token);
     output_err(&err);
     return 1;
@@ -61,7 +61,7 @@ int execute_code(char *context, char *path, Stack *scope,
 
   err = parser(path, &ast, &tokens, false);
   darray_free(&tokens, free_token);
-  if (err.exists) {
+  if (is_error(&err)) {
     darray_free(&ast, (void (*)(void *))free_parsed);
     output_err(&err);
     return 1;
@@ -74,7 +74,7 @@ int execute_code(char *context, char *path, Stack *scope,
   Translated __translated = init_translator(path_alloc);
   err = translate(&__translated, &ast);
   darray_free(&ast, (void (*)(void *))free_parsed);
-  if (err.exists) {
+  if (is_error(&err)) {
     darray_free(&__translated.bytecode, NULL);
     free(__translated.constants.data);
     hashmap_free(__translated.constants.hashmap, NULL);
@@ -109,7 +109,7 @@ int execute_code(char *context, char *path, Stack *scope,
   free(__translated.constants.data);
   init_runtime_state(runtime_state, translated, path_alloc);
   runtime(translated, *runtime_state, scope, &err);
-  if (err.exists) {
+  if (is_error(&err)) {
     output_err(&err);
     return 1;
   }

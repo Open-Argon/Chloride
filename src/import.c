@@ -16,6 +16,7 @@
 #include "memory.h"
 #include "runtime/internals/hashmap/hashmap.h"
 #include "runtime/objects/dictionary/dictionary.h"
+#include "runtime/objects/exceptions/exceptions.h"
 #include "runtime/objects/literals/literals.h"
 #include "runtime/objects/string/string.h"
 #include "runtime/runtime.h"
@@ -294,7 +295,7 @@ Translated load_argon_file(char *path, ArErr *err) {
   cwk_path_get_basename(path, &basename_ptr, &basename_length);
 
   if (!basename_ptr) {
-    *err = create_err("Path Error", "path has no basename '%s'", path);
+    *err = create_err(PathError, "path has no basename '%s'", path);
     return (Translated){};
   }
 
@@ -319,7 +320,7 @@ Translated load_argon_file(char *path, ArErr *err) {
                             cache_file_path, sizeof(cache_file_path));
   FILE *file = fopen(path, "r");
   if (!file) {
-    *err = create_err("File Error", "Unable to open file '%s'", path);
+    *err = create_err(FileError, "Unable to open file '%s'", path);
     return (Translated){};
   }
 
@@ -344,7 +345,7 @@ Translated load_argon_file(char *path, ArErr *err) {
 
     // Seek to end to get file size
     if (fseek(file, 0, SEEK_END) != 0) {
-      *err = create_err("File Error", "Unable determine the files size: fseek",
+      *err = create_err(FileError, "Unable determine the files size: fseek",
                         path);
       fclose(file);
       return (Translated){};
@@ -352,7 +353,7 @@ Translated load_argon_file(char *path, ArErr *err) {
 
     long size = ftell(file);
     if (size < 0) {
-      *err = create_err("File Error", "Unable determine the files size: ftell",
+      *err = create_err(FileError, "Unable determine the files size: ftell",
                         path);
       fclose(file);
       return (Translated){};
@@ -361,7 +362,7 @@ Translated load_argon_file(char *path, ArErr *err) {
                   // Allocate buffer (+1 for NUL terminator)
     char *buffer = malloc(size + 1);
     if (!buffer) {
-      *err = create_err("File Error",
+      *err = create_err(FileError,
                         "Unable determine the files content: malloc", path);
       fclose(file);
       return (Translated){};
@@ -370,7 +371,7 @@ Translated load_argon_file(char *path, ArErr *err) {
     // Read the file
     size_t read = fread(buffer, 1, size, file);
     if (read != (size_t)size) {
-      *err = create_err("File Error",
+      *err = create_err(FileError,
                         "Unable determine the files content: fread", path);
       free(buffer);
       fclose(file);
@@ -384,7 +385,7 @@ Translated load_argon_file(char *path, ArErr *err) {
     start = clock();
 #endif
     *err = lexer(state);
-    if (native_api) {
+    if (is_error(err)) {
       darray_free(&tokens, free_token);
       return (Translated){};
     }
@@ -404,7 +405,7 @@ Translated load_argon_file(char *path, ArErr *err) {
 #endif
     *err = parser(path, &ast, &tokens, false);
     darray_free(&tokens, free_token);
-    if (err->exists) {
+    if (is_error(err)) {
       darray_free(&ast, (void (*)(void *))free_parsed);
       return (Translated){};
     }
@@ -419,7 +420,7 @@ Translated load_argon_file(char *path, ArErr *err) {
     translated = init_translator(path);
     *err = translate(&translated, &ast);
     darray_free(&ast, (void (*)(void *))free_parsed);
-    if (err->exists) {
+    if (is_error(err)) {
       darray_free(&translated.bytecode, NULL);
       free(translated.constants.data);
       hashmap_free(translated.constants.hashmap, NULL);
@@ -571,13 +572,13 @@ Stack *ar_import(char *current_directory, char *path_relative, ArErr *err,
     }
   }
   if (!found) {
-    *err = create_err("File Error", "Unable to find file '%s'", path_relative);
+    *err = create_err(FileError, "Unable to find file '%s'", path_relative);
     return NULL;
   }
   uint64_t hash = siphash64_bytes(path_c, strlen(path_c), siphash_key_fixed);
 
   if (hashmap_lookup_GC(importing_hash_table, hash)) {
-    *err = create_err("Import Error", "Circular import detected: %s", path_c,
+    *err = create_err(ImportError, "Circular import detected: %s", path_c,
                       path_relative);
     return NULL;
   }
@@ -589,7 +590,7 @@ Stack *ar_import(char *current_directory, char *path_relative, ArErr *err,
   hashmap_insert_GC(importing_hash_table, hash, NULL, (void *)true, 0);
 
   Translated translated = load_argon_file(path, err);
-  if (err->exists) {
+  if (is_error(err)) {
     hashmap_insert_GC(importing_hash_table, hash, NULL, (void *)NULL, 0);
     return NULL;
   }
@@ -622,7 +623,7 @@ Stack *ar_import(char *current_directory, char *path_relative, ArErr *err,
   add_to_scope(program_scope, "program", create_dictionary(program));
   Stack *main_scope = create_scope(program_scope, true);
   runtime(translated, state, main_scope, err);
-  if (err->exists) {
+  if (is_error(err)) {
     hashmap_insert_GC(importing_hash_table, hash, NULL, (void *)NULL, 0);
     return NULL;
   }

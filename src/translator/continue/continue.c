@@ -7,13 +7,14 @@
 #include "continue.h"
 #include "../../err.h"
 #include "../translator.h"
+#include "../../runtime/objects/exceptions/exceptions.h"
 #include <stddef.h>
 
 size_t translate_parsed_continue(Translated *translated,
                                  ParsedContinueOrBreak *parsedContinue, ArErr *err) {
   if (translated->continue_jump.pos == -1) {
     *err = path_specific_create_err(parsedContinue->line, parsedContinue->column,
-                      parsedContinue->length, translated->path, "Syntax Error",
+                      parsedContinue->length, translated->path, SyntaxError,
                       "nowhere to continue to");
     return 0;
   }

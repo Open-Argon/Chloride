@@ -7,6 +7,7 @@
 #include "../../err.h"
 #include "../../lexer/token.h"
 #include "../../string/string.h"
+#include "../../runtime/objects/exceptions/exceptions.h"
 #include "../../memory.h"
 #include "../parser.h"
 #include <stddef.h>
@@ -17,7 +18,7 @@ ParsedValueReturn parse_for(char *file, DArray *tokens, size_t *index) {
   Token *token = darray_get(tokens, *index);
   if (token->type != TOKEN_LPAREN) {
     return (ParsedValueReturn){path_specific_create_err(token->line, token->column,
-                                          token->length, file, "Syntax Error",
+                                          token->length, file, SyntaxError,
                                           "expected '(' after for"),
                                NULL};
   }
@@ -25,13 +26,13 @@ ParsedValueReturn parse_for(char *file, DArray *tokens, size_t *index) {
   (*index)++;
   skip_newlines_and_indents(tokens, index);
   ArErr err = error_if_finished(file, tokens, index);
-  if (err.exists) {
+  if (is_error(&err)) {
     return (ParsedValueReturn){err, NULL};
   }
   token = darray_get(tokens, *index);
   if (token->type != TOKEN_IDENTIFIER) {
     return (ParsedValueReturn){path_specific_create_err(token->line, token->column,
-                                          token->length, file, "Syntax Error",
+                                          token->length, file, SyntaxError,
                                           "expected identifier"),
                                NULL};
   }
@@ -39,28 +40,28 @@ ParsedValueReturn parse_for(char *file, DArray *tokens, size_t *index) {
   (*index)++;
   skip_newlines_and_indents(tokens, index);
   err = error_if_finished(file, tokens, index);
-  if (err.exists) {
+  if (is_error(&err)) {
     return (ParsedValueReturn){err, NULL};
   }
   token = darray_get(tokens, *index);
   if (token->type != TOKEN_IN) {
     return (ParsedValueReturn){path_specific_create_err(token->line, token->column,
-                                          token->length, file, "Syntax Error",
+                                          token->length, file, SyntaxError,
                                           "expected 'in'"),
                                NULL};
   }
   (*index)++;
   skip_newlines_and_indents(tokens, index);
   err = error_if_finished(file, tokens, index);
-  if (err.exists) {
+  if (is_error(&err)) {
     return (ParsedValueReturn){err, NULL};
   }
   ParsedValueReturn iterator = parse_token(file, tokens, index, true);
-  if (iterator.err.exists) {
+  if (is_error(&iterator.err)) {
     return iterator;
   } else if (!iterator.value) {
     return (ParsedValueReturn){path_specific_create_err(token->line, token->column,
-                                          token->length, file, "Syntax Error",
+                                          token->length, file, SyntaxError,
                                           "expected iterator"),
                                NULL};
   }
@@ -73,14 +74,14 @@ ParsedValueReturn parse_for(char *file, DArray *tokens, size_t *index) {
       free(iterator.value);
     }
     return (ParsedValueReturn){path_specific_create_err(token->line, token->column,
-                                          token->length, file, "Syntax Error",
+                                          token->length, file, SyntaxError,
                                           "missing closing ')' in iterator"),
                                NULL};
   }
 
   (*index)++;
   err = error_if_finished(file, tokens, index);
-  if (err.exists) {
+  if (is_error(&err)) {
     if (iterator.value) {
       free_parsed(iterator.value);
       free(iterator.value);
@@ -90,7 +91,7 @@ ParsedValueReturn parse_for(char *file, DArray *tokens, size_t *index) {
   // Parse the body
   ParsedValueReturn parsed_content = parse_token(file, tokens, index, false);
 
-  if (parsed_content.err.exists) {
+  if (is_error(&parsed_content.err)) {
     if (iterator.value) {
       free_parsed(iterator.value);
       free(iterator.value);
@@ -104,7 +105,7 @@ ParsedValueReturn parse_for(char *file, DArray *tokens, size_t *index) {
       free(iterator.value);
     }
     return (ParsedValueReturn){path_specific_create_err(token->line, token->column,
-                                          token->length, file, "Syntax Error",
+                                          token->length, file, SyntaxError,
                                           "expected body"),
                                NULL};
   }

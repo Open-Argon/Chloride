@@ -9,6 +9,7 @@
 #include "../../../memory.h"
 #include "../../parser.h"
 #include "../../string/string.h"
+#include "../../../runtime/objects/exceptions/exceptions.h"
 #include "../../../err.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -24,7 +25,7 @@ ParsedValueReturn parse_access(char *file, DArray *tokens, size_t *index,
   parsedValue->data = parsedAccess;
   (*index)++;
   ArErr err = error_if_finished(file, tokens, index);
-  if (err.exists) {
+  if (is_error(&err)) {
     free_parsed(parsedValue);
     free(parsedValue);
     return (ParsedValueReturn){err, NULL};
@@ -34,7 +35,7 @@ ParsedValueReturn parse_access(char *file, DArray *tokens, size_t *index,
     free_parsed(parsedValue);
     free(parsedValue);
     return (ParsedValueReturn){path_specific_create_err(token->line, token->column,
-                                          token->length, file, "Syntax Error",
+                                          token->length, file, SyntaxError,
                                           "expected identifier after dot"),
                                NULL};
   }
@@ -42,7 +43,7 @@ ParsedValueReturn parse_access(char *file, DArray *tokens, size_t *index,
   parsedAccess->column = token->column;
   parsedAccess->length = token->length;
   ParsedValueReturn parsedString = parse_string(token, false);
-  if (parsedString.err.exists) {
+  if (is_error(&parsedString.err)) {
     free_parsed(parsedValue);
     free(parsedValue);
     return parsedString;

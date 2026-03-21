@@ -76,7 +76,7 @@ int main(int argc, char *argv[]) {
   char *path_non_absolute = argv[1];
   ArErr err = {.ptr=ARGON_NULL};
   ar_import(CWD, path_non_absolute, &err, true);
-  if (err.exists) {
+  if (is_error(&err)) {
     output_err(&err);
     return 1;
   }

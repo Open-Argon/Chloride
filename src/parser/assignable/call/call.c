@@ -9,6 +9,7 @@
 #include "../../../memory.h"
 #include "../../parser.h"
 #include "../../../err.h"
+#include "../../../runtime/objects/exceptions/exceptions.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -26,7 +27,7 @@ ParsedValueReturn parse_call(char *file, DArray *tokens, size_t *index,
   darray_init(&call->args, sizeof(ParsedValue));
   (*index)++;
   ArErr err = error_if_finished(file, tokens, index);
-  if (err.exists) {
+  if (is_error(&err)) {
     free_parsed(parsedValue);
     free(parsedValue);
     return (ParsedValueReturn){err, NULL};
@@ -36,13 +37,13 @@ ParsedValueReturn parse_call(char *file, DArray *tokens, size_t *index,
     while ((*index) < tokens->size) {
       skip_newlines_and_indents(tokens, index);
       ArErr err = error_if_finished(file, tokens, index);
-      if (err.exists) {
+      if (is_error(&err)) {
         free_parsed(parsedValue);
         free(parsedValue);
         return (ParsedValueReturn){err, NULL};
       }
       ParsedValueReturn parsedArg = parse_token(file, tokens, index, true);
-      if (parsedArg.err.exists) {
+      if (is_error(&parsedArg.err)) {
         free_parsed(parsedValue);
         free(parsedValue);
         return parsedArg;
@@ -52,20 +53,20 @@ ParsedValueReturn parse_call(char *file, DArray *tokens, size_t *index,
 
         return (ParsedValueReturn){
             path_specific_create_err(token->line, token->column, token->length, file,
-                       "Syntax Error", "expected argument"),
+                       SyntaxError, "expected argument"),
             NULL};
       }
       darray_push(&call->args, parsedArg.value);
       free(parsedArg.value);
       err = error_if_finished(file, tokens, index);
-      if (err.exists) {
+      if (is_error(&err)) {
         free_parsed(parsedValue);
         free(parsedValue);
         return (ParsedValueReturn){err, NULL};
       }
       skip_newlines_and_indents(tokens, index);
       err = error_if_finished(file, tokens, index);
-      if (err.exists) {
+      if (is_error(&err)) {
         free_parsed(parsedValue);
         free(parsedValue);
         return (ParsedValueReturn){err, NULL};
@@ -79,12 +80,12 @@ ParsedValueReturn parse_call(char *file, DArray *tokens, size_t *index,
 
         return (ParsedValueReturn){path_specific_create_err(token->line, token->column,
                                               token->length, file,
-                                              "Syntax Error", "expected comma"),
+                                              SyntaxError, "expected comma"),
                                    NULL};
       }
       (*index)++;
       err = error_if_finished(file, tokens, index);
-      if (err.exists) {
+      if (is_error(&err)) {
         free_parsed(parsedValue);
         free(parsedValue);
         return (ParsedValueReturn){err, NULL};

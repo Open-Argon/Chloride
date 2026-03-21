@@ -25,7 +25,7 @@ size_t translate_parsed_dowrap(Translated *translated, DArray *parsedDowrap,
     translated->scope_depth++;
     push_instruction_byte(translated, OP_NEW_SCOPE);
     *err = translate(translated, parsedDowrap);
-    if (err->exists)
+    if (is_error(err))
       return first;
     push_instruction_byte(translated, OP_LOAD_NULL);
     push_instruction_byte(translated, 0);

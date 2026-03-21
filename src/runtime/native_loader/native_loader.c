@@ -9,6 +9,7 @@
 #include "../objects/dictionary/dictionary.h"
 #include "../objects/literals/literals.h"
 #include "../objects/string/string.h"
+#include "../objects/exceptions/exceptions.h"
 #include <inttypes.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -25,7 +26,7 @@ ArgonObject *ARGON_LOAD_NATIVE_CODE(size_t argc, ArgonObject **argv, ArErr *err,
                                     RuntimeState *state, ArgonNativeAPI *api) {
   if (argc != 1) {
     *err =
-        create_err( "Runtime Error",
+        create_err( RuntimeError,
                    "load_native_code expects 1 argument, got %" PRIu64, argc);
     return ARGON_NULL;
   }
@@ -36,7 +37,7 @@ ArgonObject *ARGON_LOAD_NATIVE_CODE(size_t argc, ArgonObject **argv, ArErr *err,
 #if defined(_WIN32) || defined(_WIN64)
   HMODULE handle = LoadLibraryA(path_c);
   if (!handle) {
-    *err = create_err( "Runtime Error",
+    *err = create_err( RuntimeError,
                       "Unable to load native code at path: %s", path_c);
     free(path_c);
     return ARGON_NULL;
@@ -47,7 +48,7 @@ ArgonObject *ARGON_LOAD_NATIVE_CODE(size_t argc, ArgonObject **argv, ArErr *err,
 
   if (!proc) {
     *err = create_err(
-         "Runtime Error",
+         RuntimeError,
         "Unable to find argon_module_init in the native code at path: %s",
         path_c);
     free(path_c);
@@ -59,7 +60,7 @@ ArgonObject *ARGON_LOAD_NATIVE_CODE(size_t argc, ArgonObject **argv, ArErr *err,
   void *handle = dlopen(path_c, RTLD_NOW | RTLD_LOCAL);
   if (!handle) {
     const char *dlerr = dlerror();
-    *err = create_err( "Runtime Error", "%s",
+    *err = create_err( RuntimeError, "%s",
                       dlerr ? dlerr : "unknown");
     free(path_c);
     return ARGON_NULL;
@@ -71,7 +72,7 @@ ArgonObject *ARGON_LOAD_NATIVE_CODE(size_t argc, ArgonObject **argv, ArErr *err,
 
   if (!init) {
     *err = create_err(
-         "Runtime Error",
+         RuntimeError,
         "Unable to find argon_module_init in the native code at path: %s",
         path_c);
     free(path_c);
@@ -86,7 +87,7 @@ ArgonObject *ARGON_LOAD_NATIVE_CODE(size_t argc, ArgonObject **argv, ArErr *err,
 
   free(path_c);
 
-  if (err->exists)
+  if (is_error(err))
     return ARGON_NULL;
 
   return create_dictionary(reg);

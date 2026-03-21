@@ -8,27 +8,28 @@
 #include "../../lexer/token.h"
 #include "../../memory.h"
 #include "../parser.h"
+#include "../../runtime/objects/exceptions/exceptions.h"
 #include <stdlib.h>
 #include <string.h>
 
 ParsedValueReturn parse_class(char *file, DArray *tokens, size_t *index) {
   (*index)++;
   ArErr err = error_if_finished(file, tokens, index);
-  if (err.exists) {
+  if (is_error(&err)) {
     return (ParsedValueReturn){err, NULL};
   }
   Token *first_token = darray_get(tokens, *index);
   if (first_token->type != TOKEN_IDENTIFIER) {
     return (ParsedValueReturn){
         path_specific_create_err(first_token->line, first_token->column, first_token->length,
-                   file, "Syntax Error", "expected identifier"),
+                   file, SyntaxError, "expected identifier"),
         NULL};
   }
   char *name = first_token->value;
   ParsedValue *parent = NULL;
   (*index)++;
   err = error_if_finished(file, tokens, index);
-  if (err.exists) {
+  if (is_error(&err)) {
     return (ParsedValueReturn){err, NULL};
   }
   Token *token = darray_get(tokens, *index);
@@ -36,28 +37,28 @@ ParsedValueReturn parse_class(char *file, DArray *tokens, size_t *index) {
     (*index)++;
     skip_newlines_and_indents(tokens, index);
     err = error_if_finished(file, tokens, index);
-    if (err.exists) {
+    if (is_error(&err)) {
       return (ParsedValueReturn){err, NULL};
     }
     ParsedValueReturn parsedParent = parse_token(file, tokens, index, true);
-    if (parsedParent.err.exists) {
+    if (is_error(&parsedParent.err)) {
       return parsedParent;
     } else if (!parsedParent.value) {
       return (ParsedValueReturn){path_specific_create_err(token->line, token->column,
-                                            token->length, file, "Syntax Error",
+                                            token->length, file, SyntaxError,
                                             "expected a value"),
                                  NULL};
     }
     parent = parsedParent.value;
     skip_newlines_and_indents(tokens, index);
     err = error_if_finished(file, tokens, index);
-    if (err.exists) {
+    if (is_error(&err)) {
       return (ParsedValueReturn){err, NULL};
     }
     token = darray_get(tokens, *index);
     if (token->type != TOKEN_RPAREN) {
       return (ParsedValueReturn){path_specific_create_err(token->line, token->column,
-                                            token->length, file, "Syntax Error",
+                                            token->length, file, SyntaxError,
                                             "expected closing parentheses"),
                                  NULL};
     }
@@ -65,11 +66,11 @@ ParsedValueReturn parse_class(char *file, DArray *tokens, size_t *index) {
   }
 
   ParsedValueReturn parsedBody = parse_token(file, tokens, index, true);
-  if (parsedBody.err.exists) {
+  if (is_error(&parsedBody.err)) {
     return parsedBody;
   } else if (!parsedBody.value) {
     return (ParsedValueReturn){path_specific_create_err(token->line, token->column,
-                                          token->length, file, "Syntax Error",
+                                          token->length, file, SyntaxError,
                                           "expected body"),
                                NULL};
   }

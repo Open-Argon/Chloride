@@ -20,7 +20,7 @@ size_t translate_parsed_while(Translated *translated, ParsedWhile *parsedWhile,
   translated->scope_depth++;
   size_t start_of_loop =
       translate_parsed(translated, parsedWhile->condition, err);
-  if (err->exists) {
+  if (is_error(err)) {
     return 0;
   }
   struct continue_jump old_continue_jump = translated->continue_jump;

@@ -13,7 +13,7 @@ size_t translate_parsed_import(Translated *translated,
                                ParsedImport *parsedImport, ArErr *err) {
   size_t first = translate_parsed(translated, parsedImport->file, err);
 
-  if (err->exists)
+  if (is_error(err))
     return 0;
 
   push_instruction_byte(translated, OP_SOURCE_LOCATION);

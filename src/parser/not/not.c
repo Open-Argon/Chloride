@@ -8,6 +8,7 @@
 #include "../../memory.h"
 #include "../parser.h"
 #include "../../err.h"
+#include "../../runtime/objects/exceptions/exceptions.h"
 #include <stdio.h>
 
 ParsedValueReturn parse_not(char *file, DArray *tokens, size_t *index) {
@@ -18,12 +19,12 @@ ParsedValueReturn parse_not(char *file, DArray *tokens, size_t *index) {
     if (token->type != TOKEN_EXCLAMATION) {
       ParsedValueReturn value =
           parse_token_full(file, tokens, index, true, false);
-      if (value.err.exists) {
+      if (is_error(&value.err)) {
         return value;
       } else if (!value.value) {
         return (ParsedValueReturn){path_specific_create_err(token->line, token->column,
                                               token->length, file,
-                                              "Syntax Error", "expected value"),
+                                              SyntaxError, "expected value"),
                                    NULL};
       }
 

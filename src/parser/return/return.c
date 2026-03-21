@@ -9,6 +9,7 @@
 #include "../../memory.h"
 #include "../../err.h"
 #include "../literals/literals.h"
+#include "../../runtime/objects/exceptions/exceptions.h"
 
 ParsedValueReturn parse_return(char *file, DArray *tokens, size_t *index) {
   Token *token = darray_get(tokens, *index);
@@ -27,7 +28,7 @@ ParsedValueReturn parse_return(char *file, DArray *tokens, size_t *index) {
   if (token->type == TOKEN_NEW_LINE)
     return (ParsedValueReturn){no_err, parsedValue};
   ParsedValueReturn value = parse_token(file, tokens, index, true);
-  if (value.err.exists) {
+  if (is_error(&value.err)) {
     free_parsed(parsedValue);
     free(parsedValue);
     return value;
@@ -36,7 +37,7 @@ ParsedValueReturn parse_return(char *file, DArray *tokens, size_t *index) {
     free_parsed(parsedValue);
     free(parsedValue);
     return (ParsedValueReturn){path_specific_create_err(token->line, token->column,
-                                          token->length, file, "Syntax Error",
+                                          token->length, file, SyntaxError,
                                           "expected value"),
                                NULL};
   }

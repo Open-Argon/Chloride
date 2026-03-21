@@ -30,6 +30,7 @@
 #include "number/number.h"
 #include "operations/operations.h"
 #include "parentheses-and-anonymous-function/parentheses-and-anonymous-function.h"
+#include "../runtime/objects/exceptions/exceptions.h"
 #include "range/range.h"
 #include "return/return.h"
 #include "string/string.h"
@@ -51,7 +52,7 @@ ArErr error_if_finished(char *file, DArray *tokens, size_t *index) {
   if ((*index) >= tokens->size) {
     Token *token = darray_get(tokens, tokens->size - 1);
     return path_specific_create_err(token->line, token->column, token->length,
-                                    file, "Syntax Error",
+                                    file, SyntaxError,
                                     "more code was expected");
   }
   return no_err;
@@ -132,7 +133,7 @@ ParsedValueReturn parse_token_full(char *file, DArray *tokens, size_t *index,
       if (token->type != TOKEN_NEW_LINE) {
         return (ParsedValueReturn){
             path_specific_create_err(token_indent->line, token_indent->column,
-                                     token_indent->length, file, "Syntax Error",
+                                     token_indent->length, file, SyntaxError,
                                      "unexpected indent"),
             NULL};
       }
@@ -171,14 +172,14 @@ ParsedValueReturn parse_token_full(char *file, DArray *tokens, size_t *index,
   default:
     return (ParsedValueReturn){
         path_specific_create_err(token->line, token->column, token->length,
-                                 file, "Syntax Error", "unexpected token"),
+                                 file, SyntaxError, "unexpected token"),
         NULL};
   }
 
   // LHS required
   bool passed = false;
   while (!passed && (*index) < tokens->size) {
-    if (output.err.exists) {
+    if (is_error(&output.err)) {
       return output;
     }
     token = darray_get(tokens, *index);
@@ -235,7 +236,7 @@ ArErr parser(char *file, DArray *parsed, DArray *tokens, bool inline_flag) {
     size_t old_index = index;
     ParsedValueReturn parsed_code =
         parse_token(file, tokens, &index, inline_flag);
-    if (parsed_code.err.exists) {
+    if (is_error(&parsed_code.err)) {
       return parsed_code.err;
     } else if (parsed_code.value) {
       if (expecting_new_line) {
@@ -243,7 +244,7 @@ ArErr parser(char *file, DArray *parsed, DArray *tokens, bool inline_flag) {
         free_parsed(parsed_code.value);
         free(parsed_code.value);
         return path_specific_create_err(token->line, token->column,
-                                        token->length, file, "Syntax Error",
+                                        token->length, file, SyntaxError,
                                         "invalid syntax");
       }
       expecting_new_line = true;

@@ -7,6 +7,7 @@
 #include "number.h"
 #include "../../err.h"
 #include "../../memory.h"
+#include "../../runtime/objects/exceptions/exceptions.h"
 #include <ctype.h>
 #include <gmp.h>
 #include <stdio.h>
@@ -186,7 +187,7 @@ ParsedValueReturn parse_number(Token *token, char *path) {
     free(parsedValue);
     return (ParsedValueReturn){
         path_specific_create_err(token->line, token->column,
-                                          token->length, path, "Parsing Error",
+                                          token->length, path, SyntaxError,
                                           "Unable to parse number"), NULL};
   }
   parsedValue->data = r_ptr;

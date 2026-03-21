@@ -221,12 +221,12 @@ size_t translate_parsed(Translated *translated, ParsedValue *parsedValue,
     push_instruction_byte(translated, OP_INIT_CALL);
     push_instruction_code(translated, 2);
     translate_parsed(translated, range->start, err);
-    if (err->exists)
+    if (is_error(err))
       return first;
     push_instruction_byte(translated, OP_INSERT_ARG);
     push_instruction_code(translated, 0);
     translate_parsed(translated, range->stop, err);
-    if (err->exists)
+    if (is_error(err))
       return first;
     push_instruction_byte(translated, OP_INSERT_ARG);
     push_instruction_code(translated, 1);
@@ -247,7 +247,7 @@ size_t translate_parsed(Translated *translated, ParsedValue *parsedValue,
     push_instruction_code(translated, arrayDarray->size);
     for (size_t i = 0; i < arrayDarray->size; i++) {
       translate_parsed(translated, darray_get(arrayDarray, i), err);
-      if (err->exists)
+      if (is_error(err))
         return first;
 
       push_instruction_byte(translated, OP_INSERT_ARG);
@@ -285,14 +285,14 @@ size_t translate_parsed(Translated *translated, ParsedValue *parsedValue,
       push_instruction_code(translated, 2);
 
       translate_parsed(translated, entry->key, err);
-      if (err->exists)
+      if (is_error(err))
         return first;
 
       push_instruction_byte(translated, OP_INSERT_ARG);
       push_instruction_code(translated, 0);
 
       translate_parsed(translated, entry->value, err);
-      if (err->exists)
+      if (is_error(err))
         return first;
 
       push_instruction_byte(translated, OP_INSERT_ARG);
@@ -325,7 +325,7 @@ ArErr translate(Translated *translated, DArray *ast) {
   for (size_t i = 0; i < ast->size; i++) {
     ParsedValue *parsedValue = darray_get(ast, i);
     translate_parsed(translated, parsedValue, &err);
-    if (err.exists) {
+    if (is_error(&err)) {
       break;
     }
   }

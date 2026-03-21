@@ -35,7 +35,7 @@ size_t translate_parsed_class(Translated *translated, ParsedClass *parsedClass,
     first = push_instruction_byte(translated, OP_LOAD_BASE_CLASS);
   }
 
-  if (err->exists)
+  if (is_error(err))
     return 0;
 
   push_instruction_byte(translated, OP_COPY_TO_REGISTER);
@@ -83,7 +83,7 @@ size_t translate_parsed_class(Translated *translated, ParsedClass *parsedClass,
 
   translate_parsed(translated, parsedClass->body, err);
 
-  if (err->exists)
+  if (is_error(err))
     return 0;
   push_instruction_byte(translated, OP_POP_SCOPE);
 
