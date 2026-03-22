@@ -113,7 +113,7 @@ struct ArgonNativeAPI {
   ArgonObject *(*create_argon_native_function)(char *name, native_fn);
   ArgonObject *(*call)(ArgonObject *original_object, size_t argc,
                        ArgonObject **argv, ArErr *err, RuntimeState *state);
-  ArgonObject *(*throw_argon_error)(ArErr *err, ArgonObject*type,
+  ArgonObject *(*throw_argon_error)(ArErr *err, ArgonObject *type,
                                     const char *fmt, ...);
   bool (*is_error)(ArErr *err);
   bool (*fix_to_arg_size)(size_t limit, size_t argc, ArErr *err);
@@ -154,6 +154,22 @@ struct ArgonNativeAPI {
   struct array (*argon_to_array)(ArgonObject *, ArErr *);
   int (*argon_get_ArgonType)(ArgonObject *);
   bool (*argon_is_i64)(ArgonObject *);
+
+  ArgonObject *BaseException;
+  ArgonObject *Exception;
+  ArgonObject *RuntimeError;
+  ArgonObject *SyntaxError;
+  ArgonObject *ConversionError;
+  ArgonObject *MathsError;
+  ArgonObject *ZeroDivisionError;
+  ArgonObject *NameError;
+  ArgonObject *TypeError;
+  ArgonObject *InternalError;
+  ArgonObject *IndexError;
+  ArgonObject *AttributeError;
+  ArgonObject *PathError;
+  ArgonObject *FileError;
+  ArgonObject *ImportError;
 };
 
 typedef struct {

@@ -102,6 +102,22 @@ struct ArgonNativeAPI {
   struct array (*argon_to_array)(ArgonObject *, ArgonError *);
   int (*argon_get_ArgonType)(ArgonObject *);
   bool (*argon_is_i64)(ArgonObject *);
+
+  ArgonObject *BaseException;
+  ArgonObject *Exception;
+  ArgonObject *RuntimeError;
+  ArgonObject *SyntaxError;
+  ArgonObject *ConversionError;
+  ArgonObject *MathsError;
+  ArgonObject *ZeroDivisionError;
+  ArgonObject *NameError;
+  ArgonObject *TypeError;
+  ArgonObject *InternalError;
+  ArgonObject *IndexError;
+  ArgonObject *AttributeError;
+  ArgonObject *PathError;
+  ArgonObject *FileError;
+  ArgonObject *ImportError;
 };
 
 __attribute__((visibility("default"))) void

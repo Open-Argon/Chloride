@@ -1267,6 +1267,22 @@ void bootstrap_globals() {
   add_to_scope(Global_Scope, "greater_than", GREATER_THAN_FUNCTION);
   add_to_scope(Global_Scope, "greater_than_equal", GREATER_THAN_EQUAL_FUNCTION);
 
+  add_to_scope(Global_Scope, "BaseException", BaseException);
+  add_to_scope(Global_Scope, "Exception", Exception);
+  add_to_scope(Global_Scope, "RuntimeError", RuntimeError);
+  add_to_scope(Global_Scope, "SyntaxError", SyntaxError);
+  add_to_scope(Global_Scope, "ConversionError", ConversionError);
+  add_to_scope(Global_Scope, "MathsError", MathsError);
+  add_to_scope(Global_Scope, "ZeroDivisionError", ZeroDivisionError);
+  add_to_scope(Global_Scope, "NameError", NameError);
+  add_to_scope(Global_Scope, "TypeError", TypeError);
+  add_to_scope(Global_Scope, "InternalError", InternalError);
+  add_to_scope(Global_Scope, "IndexError", IndexError);
+  add_to_scope(Global_Scope, "AttributeError", AttributeError);
+  add_to_scope(Global_Scope, "PathError", PathError);
+  add_to_scope(Global_Scope, "FileError", FileError);
+  add_to_scope(Global_Scope, "ImportError", ImportError);
+
   // create platform
   hashmap_GC *signals = createHashmap_GC();
   add_to_hashmap(signals, "end_iteration", END_ITERATION);

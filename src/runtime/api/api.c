@@ -9,12 +9,12 @@
 #include "../../memory.h"
 #include "../call/call.h"
 #include "../objects/buffer/buffer.h"
+#include "../objects/exceptions/exceptions.h"
 #include "../objects/functions/functions.h"
 #include "../objects/literals/literals.h"
 #include "../objects/number/number.h"
 #include "../objects/object.h"
 #include "../objects/string/string.h"
-#include "../objects/exceptions/exceptions.h"
 #include <gmp.h>
 #include <inttypes.h>
 #include <math.h>
@@ -217,4 +217,5 @@ ArgonNativeAPI native_api = {
     .free = GC_free,
     .argon_to_array = argon_to_array,
     .argon_get_ArgonType = argon_to_argonType,
-    .argon_is_i64 = argon_is_i64};
+    .argon_is_i64 = argon_is_i64,
+};
