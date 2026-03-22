@@ -162,9 +162,9 @@ void output_err(ArErr *err) {
     dyefg(stderr, DYE_RESET);
     fprintf(stderr, "\n");
     for (int64_t i = stack_trace->size - 1; i >= 0; i--) {
-      ArgonObject *frame_obj = darray_armem_get(stack_trace, i);
+      ArgonObject **frame_obj = darray_armem_get(stack_trace, i);
       struct StackTraceFrame frame;
-      if (!convert_to_stackTraceFrame(frame_obj, &frame))
+      if (!convert_to_stackTraceFrame(*frame_obj, &frame))
         continue;
       fprintf(stderr, " at ");
       dyefg(stderr, DYE_CYAN);
@@ -215,9 +215,9 @@ void output_err(ArErr *err) {
   fprintf(stderr, "\n");
 
   if (stack_trace->size > 0) {
-    ArgonObject *frame_obj = darray_armem_get(stack_trace, 0);
+    ArgonObject **frame_obj = darray_armem_get(stack_trace, 0);
     struct StackTraceFrame frame;
-    if (convert_to_stackTraceFrame(frame_obj, &frame)) {
+    if (convert_to_stackTraceFrame(*frame_obj, &frame)) {
       dyefg(stderr, DYE_GRAY);
       fprintf(stderr, "  --> ");
       dyefg(stderr, DYE_CYAN);
