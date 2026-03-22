@@ -70,6 +70,8 @@ void bootstrap_types();
 
 void bootstrap_globals();
 
+bool is_instance(ArgonObject*object, ArgonObject*type);
+
 static inline void *arena_get(ConstantArena *arena, size_t offset) {
   return (uint8_t *)arena->data + offset;
 }

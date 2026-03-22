@@ -6,11 +6,10 @@
 
 #include "string.h"
 #include "../../../err.h"
-#include "../../api/api.h"
 #include "../../../memory.h"
 #include "../../call/call.h"
-#include "../literals/literals.h"
 #include "../exceptions/exceptions.h"
+#include "../literals/literals.h"
 #include "../number/number.h"
 #include "../object.h"
 #include <ctype.h>
@@ -230,8 +229,7 @@ ArgonObject *ARGON_STRING_TYPE___greater_than_equal__(size_t argc,
   }
 
   if (argv[0]->type != TYPE_STRING || argv[1]->type != TYPE_STRING) {
-    *err =
-        create_err(RuntimeError, "__greater_than_equal__ expects strings");
+    *err = create_err(RuntimeError, "__greater_than_equal__ expects strings");
     return ARGON_NULL;
   }
 
@@ -305,6 +303,31 @@ ArgonObject *new_string_object(char *data, size_t length, uint64_t hash) {
   return new_string_object_without_memcpy(data_copy, length, hash);
 }
 
+char *argon_object_to_length_terminated_string_from___string__(
+    ArgonObject *object, ArErr *err, RuntimeState *state, size_t *length) {
+  ArgonObject *string_convert_method = get_builtin_field_for_class(
+      get_builtin_field(object, __class__), __string__, object);
+
+  if (!string_convert_method) {
+    *length = sizeof("<object>") - 1;
+    return "<object>";
+  }
+
+  ArgonObject *string_object =
+      argon_call(string_convert_method, 0, NULL, err, state);
+  if (is_error(err)){
+    *length = 0;
+    return "";}
+
+  if (string_object->type != TYPE_STRING){
+    *length = sizeof("<object>") - 1;
+    return "<object>";
+  }
+  
+  *length = string_object->value.as_str->length;
+  return string_object->value.as_str->data;
+}
+
 char *argon_object_to_null_terminated_string(ArgonObject *object, ArErr *err,
                                              RuntimeState *state) {
   ArgonObject *string_convert_method = get_builtin_field_for_class(
@@ -315,8 +338,8 @@ char *argon_object_to_null_terminated_string(ArgonObject *object, ArErr *err,
 
   ArgonObject *string_object =
       argon_call(string_convert_method, 0, NULL, err, state);
-  if (native_api.is_error(err))
-    return NULL;
+  if (is_error(err))
+    return "";
 
   if (string_object->type != TYPE_STRING)
     return "<object>";

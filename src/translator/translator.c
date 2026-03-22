@@ -10,6 +10,7 @@
 #include "../hashmap/hashmap.h"
 #include "../parser/assignable/item/item.h"
 #include "../parser/dictionary/dictionary.h"
+#include "../parser/throw/throw.h"
 #include "../parser/not/not.h"
 #include "../parser/range/range.h"
 #include "access/access.h"
@@ -178,6 +179,19 @@ size_t translate_parsed(Translated *translated, ParsedValue *parsedValue,
   case AST_DOWRAP:
     return translate_parsed_dowrap(translated, (DArray *)parsedValue->data,
                                    err);
+  case AST_THROW:{
+    ParsedThrow* throw = (ParsedThrow *)parsedValue->data;
+    size_t first = translate_parsed(
+        translated, throw->value, err);
+
+    push_instruction_byte(translated, OP_SOURCE_LOCATION);
+    push_instruction_code(translated, throw->line);
+    push_instruction_code(translated, throw->column);
+    push_instruction_code(translated, throw->length);
+    
+    push_instruction_byte(translated, OP_THROW);
+    return first;
+  }
   case AST_RETURN:
     return translate_parsed_return(translated,
                                    (ParsedReturn *)parsedValue->data, err);

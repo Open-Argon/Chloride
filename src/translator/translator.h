@@ -67,7 +67,8 @@ typedef enum {
   OP_LOAD_TEMPLATE_METHOD,
   OP_LOAD_CREATE_TUPLE,
   OP_LOAD_TEMPLATE,
-  OP_MAKE_RANGE_INCLUSIVE
+  OP_MAKE_RANGE_INCLUSIVE,
+  OP_THROW
 } OperationType;
 
 void arena_resize(ConstantArena *arena, size_t new_size);

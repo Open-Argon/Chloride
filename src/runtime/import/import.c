@@ -37,7 +37,6 @@ void runtime_import(RuntimeState *state, ArErr *err) {
   }
   memcpy(current_directory, state->path, current_directory_length);
   current_directory[current_directory_length]='\0';
-  
   Stack *result = ar_import(current_directory, path_c, err, false);
   if (!result)
     return;

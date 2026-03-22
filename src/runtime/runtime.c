@@ -710,13 +710,13 @@ ArgonObject *BASE_CLASS___string__(size_t argc, ArgonObject **argv, ArErr *err,
       get_builtin_field(argv[0], __class__), __name__, NULL);
 
   char buffer[100];
-  if (class_name && object_name)
+  if (class_name && object_name && class_name->type==TYPE_STRING && object_name->type==TYPE_STRING)
     snprintf(buffer, sizeof(buffer), "<%.*s %.*s at %p>",
              (int)class_name->value.as_str->length,
              class_name->value.as_str->data,
              (int)object_name->value.as_str->length,
              object_name->value.as_str->data, argv[0]);
-  else if (class_name)
+  else if (class_name && class_name->type==TYPE_STRING)
     snprintf(buffer, sizeof(buffer), "<%.*s object at %p>",
              (int)class_name->value.as_str->length,
              class_name->value.as_str->data, argv[0]);
@@ -1032,6 +1032,17 @@ ArgonObject *ARGON_NULL_TYPE___string__(size_t argc, ArgonObject **argv,
   }
   return new_string_object_null_terminated("null");
 }
+ArgonObject *ARGON_is_instance(size_t argc, ArgonObject **argv, ArErr *err,
+                               RuntimeState *state, ArgonNativeAPI *api) {
+  (void)api;
+  (void)argv;
+  (void)state;
+  if (argc != 2) {
+    *err = create_err(RuntimeError,
+                      "is_instance expects 2 arguments, got %" PRIu64, argc);
+  }
+  return is_instance(argv[0], argv[1]) ? ARGON_TRUE : ARGON_FALSE;
+}
 
 void bootstrap_types() {
   BASE_CLASS = new_class();
@@ -1266,6 +1277,8 @@ void bootstrap_globals() {
   add_to_scope(Global_Scope, "less_than_equal", LESS_THAN_EQUAL_FUNCTION);
   add_to_scope(Global_Scope, "greater_than", GREATER_THAN_FUNCTION);
   add_to_scope(Global_Scope, "greater_than_equal", GREATER_THAN_EQUAL_FUNCTION);
+  add_to_scope(Global_Scope, "is_instance",
+               create_argon_native_function("is_instance", ARGON_is_instance));
 
   add_to_scope(Global_Scope, "BaseException", BaseException);
   add_to_scope(Global_Scope, "Exception", Exception);
@@ -1433,6 +1446,21 @@ void add_to_scope(Stack *stack, char *name, ArgonObject *value) {
   hashmap_insert_GC(stack->scope, hash, key, value, 0);
 }
 
+bool is_instance(ArgonObject *object, ArgonObject *type_) {
+  ArgonObject *objects_type = get_builtin_field(object, __class__);
+
+  if (!objects_type)
+    return false;
+
+  do {
+    if (objects_type == type_)
+      return true;
+    objects_type = get_builtin_field(objects_type, __base__);
+  } while (objects_type && objects_type != ARGON_NULL);
+
+  return false;
+}
+
 void runtime(Translated _translated, RuntimeState _state, Stack *stack,
              ArErr *err_ptr) {
   static void *const dispatch_table[] = {
@@ -1490,7 +1518,8 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       [OP_LOAD_TEMPLATE_METHOD] = &&DO_LOAD_TEMPLATE_METHOD,
       [OP_LOAD_CREATE_TUPLE] = &&DO_LOAD_CREATE_TUPLE,
       [OP_LOAD_TEMPLATE] = &&DO_LOAD_TEMPLATE,
-      [OP_MAKE_RANGE_INCLUSIVE] = &&DO_MAKE_RANGE_INCLUSIVE};
+      [OP_MAKE_RANGE_INCLUSIVE] = &&DO_MAKE_RANGE_INCLUSIVE,
+      [OP_THROW] = &&DO_THROW};
   _state.head = 0;
 
   ArErr err = *err_ptr;
@@ -2328,6 +2357,15 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       state->registers[registerC] =
           argon_call(FLOOR_DIVIDE_FUNCTION, 2, args, &err, state);
 
+      continue;
+    }
+
+    DO_THROW: {
+      if (!is_instance(state->registers[0], BaseException)) {
+        err = create_err(TypeError, "exceptions must derive from BaseException");
+        continue;
+      }
+      err.ptr = state->registers[0];
       continue;
     }
 

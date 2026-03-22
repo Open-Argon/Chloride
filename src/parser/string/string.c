@@ -306,6 +306,7 @@ ParsedValueReturn parse_template(char *file, DArray *tokens, size_t *index,
           memcpy(value->value.string.string + value->value.string.length,
                  unquoted, length);
           value->value.string.length += length;
+          free(unquoted);
           break;
         }
       }

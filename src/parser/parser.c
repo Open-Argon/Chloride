@@ -34,6 +34,7 @@
 #include "range/range.h"
 #include "return/return.h"
 #include "string/string.h"
+#include "throw/throw.h"
 #include "while/while.h"
 #include <gmp.h>
 #include <stdbool.h>
@@ -90,6 +91,8 @@ ParsedValueReturn parse_token_full(char *file, DArray *tokens, size_t *index,
       return parse_while(file, tokens, index);
     case TOKEN_FOR:
       return parse_for(file, tokens, index);
+    case TOKEN_THROW:
+      return parse_throw(file, tokens, index);
     case TOKEN_RETURN:
       return parse_return(file, tokens, index);
     case TOKEN_CONTINUE:
@@ -319,6 +322,9 @@ void free_parsed(ParsedValue *ptr) {
     break;
   case AST_FUNCTION:
     free_function(parsed);
+    break;
+  case AST_THROW:
+    free_parsed_throw(parsed);
     break;
   case AST_RETURN:
     free_parsed_return(parsed);

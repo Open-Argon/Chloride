@@ -27,8 +27,7 @@
 
 atomic_int thread_count = 0;
 
-char *
-get_current_directory() {
+char *get_current_directory() {
   char *buffer = NULL;
 
 #ifdef _WIN32
@@ -69,12 +68,12 @@ int main(int argc, char *argv[]) {
   // runtime_hash_table = createHashmap_GC();
   CWD = get_current_directory();
   EXC = get_executable_path();
-  CWD_ARGON = CWD?new_string_object_null_terminated(CWD):ARGON_NULL;
-  EXC_ARGON = EXC?new_string_object_null_terminated(EXC):ARGON_NULL;
+  CWD_ARGON = CWD ? new_string_object_null_terminated(CWD) : ARGON_NULL;
+  EXC_ARGON = EXC ? new_string_object_null_terminated(EXC) : ARGON_NULL;
   if (argc <= 1)
     return shell();
   char *path_non_absolute = argv[1];
-  ArErr err = {.ptr=ARGON_NULL};
+  ArErr err = {.ptr = ARGON_NULL};
   ar_import(CWD, path_non_absolute, &err, true);
   if (is_error(&err)) {
     output_err(&err);

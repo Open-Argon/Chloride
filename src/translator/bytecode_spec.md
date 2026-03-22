@@ -53,6 +53,10 @@ this operation takes 1 operand.
 
 1. the register to set to null. (*)
 
+## OP_THROW
+
+throws the error stored in register 0
+
 ## OP_LOAD_FUNCTION
 
 initilises a function to a given register.

@@ -16,6 +16,7 @@
 #include "runtime/objects/object.h"
 #include "runtime/objects/string/string.h"
 #include "runtime/objects/tuple/tuple.h"
+#include "runtime/runtime.h"
 #include <ctype.h>
 #include <inttypes.h>
 #include <stdarg.h>
@@ -148,7 +149,11 @@ bool convert_to_stackTraceFrame(ArgonObject *frame_obj,
 }
 
 void output_err(ArErr *err) {
-  if (!native_api.is_error(err))
+  Translated gc_translated = {UINT8_MAX,         0,  0,  {-1, 0},  {NULL, 0},
+                              {NULL, 0}, {}, {}, "<error>"};
+  RuntimeState state;
+  init_runtime_state(&state, gc_translated, "<error>");
+  if (!is_error(err))
     return;
   ArgonObject *stack_trace_obj = get_builtin_field(err->ptr, stack_trace);
   darray_armem *stack_trace = NULL;
@@ -193,10 +198,12 @@ void output_err(ArErr *err) {
   dye_style(stderr, DYE_STYLE_BOLD);
   ArgonObject *type_name_obj = get_builtin_field_for_class(
       get_builtin_field(err->ptr, __class__), __name__, err->ptr);
-  if (type_name_obj && type_name_obj->type == TYPE_STRING) {
-    char *type_name = argon_string_to_c_string_malloc(type_name_obj);
-    fprintf(stderr, "%s", type_name);
-    free(type_name);
+  if (type_name_obj) {
+    ArErr err = {ARGON_NULL};
+    size_t length;
+    char *msg = argon_object_to_length_terminated_string_from___string__(
+        type_name_obj, &err, &state, &length);
+    fwrite(msg, sizeof(char), length, stderr);
   } else {
     fprintf(stderr, "UnknownException");
   }
@@ -205,10 +212,12 @@ void output_err(ArErr *err) {
   fprintf(stderr, ": ");
   dyefg(stderr, DYE_RED);
   ArgonObject *message_obj = get_builtin_field(err->ptr, message);
-  if (message_obj && message_obj->type == TYPE_STRING) {
-    char *msg = argon_string_to_c_string_malloc(message_obj);
-    fprintf(stderr, "%s", msg);
-    free(msg);
+  if (message_obj) {
+    ArErr err = {ARGON_NULL};
+    size_t length;
+    char *msg = argon_object_to_length_terminated_string_from___string__(
+        message_obj, &err, &state, &length);
+    fwrite(msg, sizeof(char), length, stderr);
   }
   dye_style(stderr, DYE_STYLE_RESET);
   dyefg(stderr, DYE_RESET);

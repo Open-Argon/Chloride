@@ -597,8 +597,7 @@ Stack *ar_import(char *current_directory, char *path_relative, ArErr *err,
 #ifdef ARGON_DEBUG
   clock_t start = clock(), end;
 #endif
-
-  RuntimeState state;
+RuntimeState state;
   init_runtime_state(&state, translated, path);
   Stack *program_scope = create_scope(Global_Scope, true);
   hashmap_GC *program = createHashmap_GC();
