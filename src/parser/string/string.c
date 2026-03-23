@@ -300,6 +300,14 @@ ParsedValueReturn parse_template(char *file, DArray *tokens, size_t *index,
         if (value->is_string) {
           size_t length;
           char *unquoted = unquote(token->value, &length, '`', false);
+          if (!unquoted) {
+            darray_free(&template, free_template_value);
+            return (ParsedValueReturn){
+                path_specific_create_err(token->line, token->column,
+                                         token->length, file, SyntaxError,
+                                         "failed to unquote"),
+                NULL};
+          }
 
           value->value.string.string = realloc(
               value->value.string.string, value->value.string.length + length);
