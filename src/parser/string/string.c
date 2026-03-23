@@ -322,6 +322,13 @@ ParsedValueReturn parse_template(char *file, DArray *tokens, size_t *index,
       value.is_string = true;
       value.value.string.string =
           unquote(token->value, &value.value.string.length, '`', false);
+      if (!value.value.string.string) {
+        darray_free(&template, free_template_value);
+        return (ParsedValueReturn){
+            path_specific_create_err(token->line, token->column, token->length,
+                                     file, SyntaxError, "failed to unquote"),
+            NULL};
+      }
       darray_push(&template, &value);
       break;
     }
