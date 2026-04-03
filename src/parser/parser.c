@@ -35,6 +35,7 @@
 #include "return/return.h"
 #include "string/string.h"
 #include "throw/throw.h"
+#include "trycatch/trycatch.h"
 #include "while/while.h"
 #include <gmp.h>
 #include <stdbool.h>
@@ -87,6 +88,8 @@ ParsedValueReturn parse_token_full(char *file, DArray *tokens, size_t *index,
     switch (token->type) {
     case TOKEN_IF:
       return parse_if(file, tokens, index);
+    case TOKEN_TRY:
+      return parse_try(file, tokens, index);
     case TOKEN_WHILE:
       return parse_while(file, tokens, index);
     case TOKEN_FOR:
@@ -304,6 +307,9 @@ void free_parsed(ParsedValue *ptr) {
     break;
   case AST_FOR:
     free_parsed_for(parsed);
+    break;
+  case AST_TRY:
+    free_parsed_try(parsed);
     break;
   case AST_WHILE:
     free_parsed_while(parsed);

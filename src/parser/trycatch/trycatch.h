@@ -9,6 +9,10 @@
 #include "../parser.h"
 
 typedef struct {
+  ParsedValue*try_body;
+  ParsedValue*catch_body;
+  ParsedValue*exception_type;
+  char*exception_name;
 } ParsedTry;
 
 ParsedValueReturn parse_try(char *file, DArray *tokens, size_t *index);
