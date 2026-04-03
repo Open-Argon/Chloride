@@ -3,6 +3,6 @@ class CustomError(Exception) do
 class MyError(CustomError) do
 
 let f() = do
-  throw MyError(`hel\u132lo`)
+  throw MyError(`hel\u1324lo`)
 
 f()
