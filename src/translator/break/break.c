@@ -26,8 +26,16 @@ size_t translate_parsed_break(Translated *translated,
     if (i == 0)
       first = pos;
   }
+  uint64_t x;
+  for (x = 0;
+       x < (translated->exception_handler_depth - translated->continue_jump.exception_handler_depth);
+       x++) {
+    size_t pos = push_instruction_byte(translated, OP_EXCEPTION_CATCHER_POP);
+    if (i == 0 && x == 0)
+      first = pos;
+  }
   size_t pos = push_instruction_byte(translated, OP_JUMP);
-  if (i == 0)
+  if (i == 0 && x==0)
     first = pos;
   size_t break_up = push_instruction_code(translated, 0);
   darray_push(translated->break_jump.positions, &break_up);

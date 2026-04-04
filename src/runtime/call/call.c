@@ -8,8 +8,8 @@
 #include "../../err.h"
 #include "../../memory.h"
 #include "../api/api.h"
-#include "../objects/string/string.h"
 #include "../objects/exceptions/exceptions.h"
+#include "../objects/string/string.h"
 #include <inttypes.h>
 #include <math.h>
 #include <stdbool.h>
@@ -129,16 +129,16 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
       struct string_struct key = object->value.argon_fn->parameters[0];
       ArgonObject *value = binding_object;
       hashmap_insert_GC(scope->scope, key.hash,
-                        new_string_object(key.data, key.length, key.hash), value,
-                        0);
+                        new_string_object(key.data, key.length, key.hash),
+                        value, 0);
     }
     for (size_t i = 0; i < argc; i++) {
       struct string_struct key =
           object->value.argon_fn->parameters[i + binding_object_exists];
       ArgonObject *value = argv[i];
       hashmap_insert_GC(scope->scope, key.hash,
-                        new_string_object(key.data, key.length, key.hash), value,
-                        0);
+                        new_string_object(key.data, key.length, key.hash),
+                        value, 0);
     }
     if (CStackFrame) {
       if (state->c_depth >= MAX_C_STACK_LIMIT) {
@@ -156,9 +156,10 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
           (Translated){object->value.argon_fn->translated.registerCount,
                        object->value.argon_fn->translated.registerAssignment,
                        0,
-                       {-1, 0},
-                       {NULL, 0},
-                       {NULL, 0},
+                       0,
+                       {-1, 0, 0},
+                       {NULL, 0, 0},
+                       {NULL, 0, 0},
                        {object->value.argon_fn->bytecode, sizeof(uint8_t),
                         object->value.argon_fn->bytecode_length,
                         object->value.argon_fn->bytecode_length, false},
@@ -184,9 +185,10 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
         {object->value.argon_fn->translated.registerCount,
          object->value.argon_fn->translated.registerAssignment,
          0,
-         {-1, 0},
-         {NULL, 0},
-         {NULL, 0},
+         0,
+         {-1, 0, 0},
+         {NULL, 0, 0},
+         {NULL, 0, 0},
          {object->value.argon_fn->bytecode, sizeof(uint8_t),
           object->value.argon_fn->bytecode_length,
           object->value.argon_fn->bytecode_length, false},

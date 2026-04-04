@@ -27,8 +27,16 @@ size_t translate_parsed_continue(Translated *translated,
     if (i == 0)
       first = pos;
   }
+  uint64_t x;
+  for (x = 0;
+       x < (translated->exception_handler_depth - translated->continue_jump.exception_handler_depth);
+       x++) {
+    size_t pos = push_instruction_byte(translated, OP_EXCEPTION_CATCHER_POP);
+    if (i == 0 && x == 0)
+      first = pos;
+  }
   size_t pos = push_instruction_byte(translated, OP_JUMP);
-  if (i == 0)
+  if (i == 0 && x==0)
     first = pos;
   push_instruction_code(translated, translated->continue_jump.pos);
   return first;

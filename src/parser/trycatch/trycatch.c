@@ -117,6 +117,43 @@ ParsedValueReturn parse_try(char *file, DArray *tokens, size_t *index) {
             NULL};
       }
       exception_name = cloneString(token->value);
+
+      (*index)++;
+      skip_newlines_and_indents(tokens, index);
+      err = error_if_finished(file, tokens, index);
+      if (is_error(&err)) {
+        free_parsed(try_body.value);
+        free(try_body.value);
+        free_parsed(exception_type);
+        free(exception_type);
+        free(exception_name);
+        return (ParsedValueReturn){err, NULL};
+      }
+    }
+    token = darray_get(tokens, *index);
+
+    if (token->type != TOKEN_RPAREN) {
+      free_parsed(try_body.value);
+      free(try_body.value);
+      free_parsed(exception_type);
+      free(exception_type);
+      if (exception_name) free(exception_name);
+      return (ParsedValueReturn){
+          path_specific_create_err(token->line, token->column, token->length,
+                                   file, SyntaxError,
+                                   "expected right parenthesis"),
+          NULL};
+    }
+
+    (*index)++;
+    skip_newlines_and_indents(tokens, index);
+    err = error_if_finished(file, tokens, index);
+    if (is_error(&err)) {
+      free_parsed(try_body.value);
+      free(try_body.value);
+      free_parsed(exception_type);
+      free(exception_type);
+      return (ParsedValueReturn){err, NULL};
     }
   }
 

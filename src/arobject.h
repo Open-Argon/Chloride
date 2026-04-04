@@ -181,11 +181,13 @@ typedef struct {
 
 struct continue_jump {
   int64_t pos;
+  uint64_t exception_handler_depth;
   uint64_t scope_depth;
 };
 
 struct break_or_return_jump {
   DArray *positions;
+  uint64_t exception_handler_depth;
   uint64_t scope_depth;
 };
 
@@ -193,6 +195,7 @@ typedef struct {
   uint8_t registerCount;
   uint8_t registerAssignment;
   uint64_t scope_depth;
+  uint64_t exception_handler_depth;
   struct continue_jump continue_jump;
   struct break_or_return_jump return_jump;
   struct break_or_return_jump break_jump;

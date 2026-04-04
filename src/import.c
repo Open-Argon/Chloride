@@ -480,10 +480,10 @@ Translated load_argon_file(char *path, ArErr *err) {
   hashmap_free(translated.constants.hashmap, NULL);
   Translated gc_translated = {translated.registerCount,
                               translated.registerAssignment,
-                              0,
-                              {-1, 0},
-                              {NULL, 0},
-                              {NULL, 0},
+                              0, 0,
+                              {-1, 0, 0},
+                              {NULL, 0, 0},
+                              {NULL, 0, 0},
                               {},
                               {},
                               path_alloc};

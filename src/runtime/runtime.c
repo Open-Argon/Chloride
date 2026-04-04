@@ -109,6 +109,7 @@ ArgonObject *ARGON_METHOD_TYPE;
 Stack *Global_Scope = NULL;
 ArgonObject *ADDITION_FUNCTION;
 ArgonObject *SUBTRACTION_FUNCTION;
+ArgonObject *IS_INSTANCE;
 ArgonObject *MULTIPLY_FUNCTION;
 ArgonObject *EXPONENT_FUNCTION;
 ArgonObject *DIVIDE_FUNCTION;
@@ -710,13 +711,14 @@ ArgonObject *BASE_CLASS___string__(size_t argc, ArgonObject **argv, ArErr *err,
       get_builtin_field(argv[0], __class__), __name__, NULL);
 
   char buffer[100];
-  if (class_name && object_name && class_name->type==TYPE_STRING && object_name->type==TYPE_STRING)
+  if (class_name && object_name && class_name->type == TYPE_STRING &&
+      object_name->type == TYPE_STRING)
     snprintf(buffer, sizeof(buffer), "<%.*s %.*s at %p>",
              (int)class_name->value.as_str->length,
              class_name->value.as_str->data,
              (int)object_name->value.as_str->length,
              object_name->value.as_str->data, argv[0]);
-  else if (class_name && class_name->type==TYPE_STRING)
+  else if (class_name && class_name->type == TYPE_STRING)
     snprintf(buffer, sizeof(buffer), "<%.*s object at %p>",
              (int)class_name->value.as_str->length,
              class_name->value.as_str->data, argv[0]);
@@ -1277,8 +1279,9 @@ void bootstrap_globals() {
   add_to_scope(Global_Scope, "less_than_equal", LESS_THAN_EQUAL_FUNCTION);
   add_to_scope(Global_Scope, "greater_than", GREATER_THAN_FUNCTION);
   add_to_scope(Global_Scope, "greater_than_equal", GREATER_THAN_EQUAL_FUNCTION);
-  add_to_scope(Global_Scope, "is_instance",
-               create_argon_native_function("is_instance", ARGON_is_instance));
+
+  IS_INSTANCE = create_argon_native_function("is_instance", ARGON_is_instance);
+  add_to_scope(Global_Scope, "is_instance", IS_INSTANCE);
 
   add_to_scope(Global_Scope, "BaseException", BaseException);
   add_to_scope(Global_Scope, "Exception", Exception);
@@ -1425,6 +1428,8 @@ void init_runtime_state(RuntimeState *runtime, Translated translated,
                      createHashmap_GC(),
                      path,
                      0};
+
+  darray_armem_init(&runtime->catch_errors, sizeof(ErrorCatch), 0);
 }
 
 Stack *create_scope(Stack *prev, bool force) {
@@ -1519,7 +1524,11 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       [OP_LOAD_CREATE_TUPLE] = &&DO_LOAD_CREATE_TUPLE,
       [OP_LOAD_TEMPLATE] = &&DO_LOAD_TEMPLATE,
       [OP_MAKE_RANGE_INCLUSIVE] = &&DO_MAKE_RANGE_INCLUSIVE,
-      [OP_THROW] = &&DO_THROW};
+      [OP_THROW] = &&DO_THROW,
+      [OP_EXCEPTION_CATCHER_PUSH] = &&DO_EXCEPTION_CATCHER_PUSH,
+      [OP_EXCEPTION_CATCHER_POP] = &&DO_EXCEPTION_CATCHER_POP,
+      [OP_LOAD_IS_INSTANCE_FUNCTION] = &&DO_LOAD_IS_INSTANCE_FUNCTION,
+      [OP_LOAD_EXCEPTION_CLASS] = &&DO_LOAD_EXCEPTION_CLASS};
   _state.head = 0;
 
   ArErr err = *err_ptr;
@@ -2362,10 +2371,25 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
 
     DO_THROW: {
       if (!is_instance(state->registers[0], BaseException)) {
-        err = create_err(TypeError, "exceptions must derive from BaseException");
+        err =
+            create_err(TypeError, "exceptions must derive from BaseException");
         continue;
       }
       err.ptr = state->registers[0];
+      continue;
+    }
+
+    DO_EXCEPTION_CATCHER_PUSH: {
+      ErrorCatch err_catch;
+      POP_U64(err_catch.jump_to);
+      err_catch.stackFrame = currentStackFrame;
+      darray_armem_insert(&state->catch_errors, state->catch_errors.size,
+                          &err_catch);
+      continue;
+    }
+
+    DO_EXCEPTION_CATCHER_POP: {
+      darray_armem_pop(&state->catch_errors, state->catch_errors.size, NULL);
       continue;
     }
 
@@ -2720,6 +2744,14 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
           state->registers[registerC] == ARGON_FALSE ? ARGON_TRUE : ARGON_FALSE;
       continue;
     }
+    DO_LOAD_IS_INSTANCE_FUNCTION: {
+      state->registers[0] = IS_INSTANCE;
+      continue;
+    }
+    DO_LOAD_EXCEPTION_CLASS: {
+      state->registers[0] = Exception;
+      continue;
+    }
     DO_LOAD_TEMPLATE_METHOD: {
       state->registers[0] = get_builtin_field_for_class(
           get_builtin_field(state->registers[0], __class__), __template__,
@@ -2813,8 +2845,17 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
         darray_armem_insert(stack_trace_obj->value.as_array,
                             stack_trace_obj->value.as_array->size, &frame);
       }
-    }
+      ErrorCatch err_catch;
 
+      if (darray_armem_pop(&state->catch_errors, state->catch_errors.size,
+                           &err_catch)) {
+        state->registers[0] = err.ptr;
+        err.ptr = ARGON_NULL;
+        currentStackFrame = err_catch.stackFrame;
+        currentStackFrame->state.head = err_catch.jump_to;
+        continue;
+      }
+    }
     ArgonObject *result = currentStackFrame->state.registers[0];
     currentStackFrame = currentStackFrame->previousStackFrame;
     if (currentStackFrame)

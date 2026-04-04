@@ -19,6 +19,7 @@ size_t translate_parsed_for(Translated *translated, ParsedFor *parsedFor,
   DArray break_jumps;
   darray_init(&break_jumps, sizeof(size_t));
   translated->break_jump.positions = &break_jumps;
+  translated->break_jump.exception_handler_depth = translated->exception_handler_depth;
   translated->break_jump.scope_depth = translated->scope_depth;
   size_t first = push_instruction_byte(translated, OP_NEW_SCOPE);
   translated->scope_depth++;
@@ -51,7 +52,7 @@ size_t translate_parsed_for(Translated *translated, ParsedFor *parsedFor,
 
   struct continue_jump old_continue_jump = translated->continue_jump;
   translated->continue_jump =
-      (struct continue_jump){start_of_loop, translated->scope_depth};
+      (struct continue_jump){start_of_loop, translated->exception_handler_depth, translated->scope_depth};
 
   size_t length = strlen(parsedFor->key);
   size_t identifier_pos =

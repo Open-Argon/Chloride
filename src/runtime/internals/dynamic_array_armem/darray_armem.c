@@ -112,7 +112,9 @@ bool darray_armem_pop(darray_armem *arr, size_t pos_, void *out) {
       void *base = (char *)arr->data + arr->offset * arr->element_size;
       void *target = (char *)base + pos * arr->element_size;
 
-      memcpy(out, target, arr->element_size);
+      if (out) {
+        memcpy(out, target, arr->element_size);
+      }
 
       if (pos < arr->size - 1) {
         memmove(target, (char *)target + arr->element_size,

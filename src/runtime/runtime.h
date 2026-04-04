@@ -7,7 +7,9 @@
 #ifndef RUNTIME_H
 #define RUNTIME_H
 #include "../arobject.h"
+#include "internals/dynamic_array_armem/darray_armem.h"
 #include "internals/hashmap/hashmap.h"
+#include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 
@@ -37,7 +39,6 @@ typedef struct call_instance {
 
 typedef struct ErrorCatch {
   size_t jump_to;
-  Stack *stack;
   StackFrame *stackFrame;
 } ErrorCatch;
 
@@ -47,7 +48,7 @@ typedef struct RuntimeState {
   call_instance *call_instance;
   StackFrame **currentStackFramePointer;
   SourceLocation source_location;
-  DArray catch_errors; // ErrorCatch[]
+  darray_armem catch_errors; // ErrorCatch[]
   hashmap_GC *load_number_cache;
   char *path;
   uint16_t c_depth;

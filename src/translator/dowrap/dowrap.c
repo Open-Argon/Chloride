@@ -20,6 +20,7 @@ size_t translate_parsed_dowrap(Translated *translated, DArray *parsedDowrap,
     if (!old_return_jump.positions) {
       darray_init(&return_jumps, sizeof(size_t));
       translated->return_jump.positions = &return_jumps;
+      translated->return_jump.exception_handler_depth = translated->exception_handler_depth;
       translated->return_jump.scope_depth = translated->scope_depth;
     }
     translated->scope_depth++;

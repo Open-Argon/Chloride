@@ -31,6 +31,7 @@
 #include "operation/operation.h"
 #include "return/return.h"
 #include "string/string.h"
+#include "try/try.h"
 #include "while/while.h"
 #include <stddef.h>
 #include <stdint.h>
@@ -96,6 +97,7 @@ Translated init_translator(char *path) {
   translated.path = path;
   translated.registerCount = 1;
   translated.registerAssignment = 1;
+  translated.exception_handler_depth = 0;
   translated.scope_depth = 0;
   translated.continue_jump.pos = -1;
   translated.return_jump.positions = NULL;
@@ -171,6 +173,9 @@ size_t translate_parsed(Translated *translated, ParsedValue *parsedValue,
   case AST_FOR:
     return translate_parsed_for(translated, (ParsedFor *)parsedValue->data,
                                 err);
+  case AST_TRY:
+    return translate_parsed_try(translated, (ParsedTry *)parsedValue->data,
+                                  err);
   case AST_WHILE:
     return translate_parsed_while(translated, (ParsedWhile *)parsedValue->data,
                                   err);

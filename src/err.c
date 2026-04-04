@@ -149,8 +149,9 @@ bool convert_to_stackTraceFrame(ArgonObject *frame_obj,
 }
 
 void output_err(ArErr *err) {
-  Translated gc_translated = {UINT8_MAX,         0,  0,  {-1, 0},  {NULL, 0},
-                              {NULL, 0}, {}, {}, "<error>"};
+  Translated gc_translated = {
+      UINT8_MAX,    0,  0,  0,        {-1, 0, 0}, {NULL, 0, 0},
+      {NULL, 0, 0}, {}, {}, "<error>"};
   RuntimeState state;
   init_runtime_state(&state, gc_translated, "<error>");
   if (!is_error(err))
