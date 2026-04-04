@@ -25,7 +25,7 @@ size_t translate_parsed_return(Translated *translated,
     push_instruction_byte(translated, OP_POP_SCOPE);
   }
   for (i = 0;
-       i < (translated->exception_handler_depth - translated->continue_jump.exception_handler_depth);
+       i < (translated->exception_handler_depth - translated->return_jump.exception_handler_depth);
        i++) {
     push_instruction_byte(translated, OP_EXCEPTION_CATCHER_POP);
   }

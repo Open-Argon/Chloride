@@ -28,7 +28,7 @@ size_t translate_parsed_break(Translated *translated,
   }
   uint64_t x;
   for (x = 0;
-       x < (translated->exception_handler_depth - translated->continue_jump.exception_handler_depth);
+       x < (translated->exception_handler_depth - translated->break_jump.exception_handler_depth);
        x++) {
     size_t pos = push_instruction_byte(translated, OP_EXCEPTION_CATCHER_POP);
     if (i == 0 && x == 0)

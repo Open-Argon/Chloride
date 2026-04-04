@@ -8,6 +8,7 @@
 #include "../../hash_data/hash_data.h"
 #include "../translator.h"
 #include <stddef.h>
+#include <stdio.h>
 #include <string.h>
 
 size_t translate_parsed_for(Translated *translated, ParsedFor *parsedFor,
