@@ -170,6 +170,8 @@ struct ArgonNativeAPI {
   ArgonObject *PathError;
   ArgonObject *FileError;
   ArgonObject *ImportError;
+  ArgonObject *SytemException;
+  ArgonObject *KeyboardInterrupt;
 };
 
 typedef struct {

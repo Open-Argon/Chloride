@@ -1283,7 +1283,10 @@ void bootstrap_globals() {
   IS_INSTANCE = create_argon_native_function("is_instance", ARGON_is_instance);
   add_to_scope(Global_Scope, "is_instance", IS_INSTANCE);
 
+  // exceptions
   add_to_scope(Global_Scope, "BaseException", BaseException);
+
+  // standard exceptions
   add_to_scope(Global_Scope, "Exception", Exception);
   add_to_scope(Global_Scope, "RuntimeError", RuntimeError);
   add_to_scope(Global_Scope, "SyntaxError", SyntaxError);
@@ -1298,6 +1301,10 @@ void bootstrap_globals() {
   add_to_scope(Global_Scope, "PathError", PathError);
   add_to_scope(Global_Scope, "FileError", FileError);
   add_to_scope(Global_Scope, "ImportError", ImportError);
+
+  // system exceptions
+  add_to_scope(Global_Scope, "SytemException", SytemException);
+  add_to_scope(Global_Scope, "KeyboardInterrupt", KeyboardInterrupt);
 
   // create platform
   hashmap_GC *signals = createHashmap_GC();
@@ -1544,6 +1551,12 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
     Translated *translated = &currentStackFrame->translated;
     RuntimeState *state = &currentStackFrame->state;
     while (ip < bytecode_size && !is_error(&err)) {
+
+      if (KeyboardInterrupted) {
+        err.ptr = KeyboardInterrupt_instance;
+        KeyboardInterrupted = false;
+        break;
+      }
 
       uint8_t instruction = POP_BYTE();
       // printf("instruction: %d %s:%zu:%zu\n", instruction, state->path,

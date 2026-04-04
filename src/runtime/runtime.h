@@ -63,6 +63,8 @@ typedef struct StackFrame {
   SourceLocation source_location;
 } StackFrame;
 
+extern bool KeyboardInterrupted;
+
 void bootstrap_types();
 
 // extern struct hashmap_GC *runtime_hash_table;

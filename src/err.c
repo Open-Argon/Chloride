@@ -208,12 +208,12 @@ void output_err(ArErr *err) {
   } else {
     fprintf(stderr, "UnknownException");
   }
-  dye_style(stderr, DYE_STYLE_RESET);
-  dyefg(stderr, DYE_RESET);
-  fprintf(stderr, ": ");
-  dyefg(stderr, DYE_RED);
   ArgonObject *message_obj = get_builtin_field(err->ptr, message);
   if (message_obj) {
+    dye_style(stderr, DYE_STYLE_RESET);
+    dyefg(stderr, DYE_RESET);
+    fprintf(stderr, ": ");
+    dyefg(stderr, DYE_RED);
     ArErr err = {ARGON_NULL};
     size_t length;
     char *msg = argon_object_to_length_terminated_string_from___string__(
@@ -224,7 +224,7 @@ void output_err(ArErr *err) {
   dyefg(stderr, DYE_RESET);
   fprintf(stderr, "\n");
 
-  if (stack_trace->size > 0) {
+  if (stack_trace && stack_trace->size > 0) {
     ArgonObject **frame_obj = darray_armem_get(stack_trace, 0);
     struct StackTraceFrame frame;
     if (convert_to_stackTraceFrame(*frame_obj, &frame)) {

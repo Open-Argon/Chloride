@@ -38,6 +38,12 @@ extern ArgonObject* FileError;
 
 extern ArgonObject* ImportError;
 
+extern ArgonObject *SytemException;
+
+extern ArgonObject *KeyboardInterrupt;
+
+extern ArgonObject *KeyboardInterrupt_instance;
+
 void init_exceptions();
 
 #endif // EXCEPTIONS

@@ -14,6 +14,7 @@
 #include <inttypes.h>
 
 ArgonObject *BaseException;
+
 ArgonObject *Exception;
 ArgonObject *RuntimeError;
 ArgonObject *SyntaxError;
@@ -28,6 +29,11 @@ ArgonObject *AttributeError;
 ArgonObject *PathError;
 ArgonObject *FileError;
 ArgonObject *ImportError;
+
+ArgonObject *SytemException;
+ArgonObject *KeyboardInterrupt;
+
+ArgonObject *KeyboardInterrupt_instance;
 
 ArgonObject *BaseException___new__(size_t argc, ArgonObject **argv, ArErr *err,
                                    RuntimeState *state, ArgonNativeAPI *api) {
@@ -54,7 +60,9 @@ void init_exceptions() {
   add_builtin_field(
       BaseException, __new__,
       create_argon_native_function("__new__", BaseException___new__));
+  native_api.BaseException = BaseException;
 
+  // normal errors
   Exception = new_class();
   add_builtin_field(Exception, __base__, BaseException);
   add_builtin_field(Exception, __name__,
@@ -125,7 +133,6 @@ void init_exceptions() {
   add_builtin_field(ImportError, __name__,
                     new_string_object_null_terminated("ImportError"));
 
-  native_api.BaseException = BaseException;
   native_api.Exception = Exception;
   native_api.RuntimeError = RuntimeError;
   native_api.SyntaxError = SyntaxError;
@@ -140,4 +147,20 @@ void init_exceptions() {
   native_api.PathError = PathError;
   native_api.FileError = FileError;
   native_api.ImportError = ImportError;
+
+  // system errors
+  SytemException = new_class();
+  add_builtin_field(SytemException, __base__, BaseException);
+  add_builtin_field(SytemException, __name__,
+                    new_string_object_null_terminated("SytemException"));
+  KeyboardInterrupt = new_class();
+  add_builtin_field(KeyboardInterrupt, __base__, SytemException);
+  add_builtin_field(KeyboardInterrupt, __name__,
+                    new_string_object_null_terminated("KeyboardInterrupt"));
+
+
+  KeyboardInterrupt_instance = new_instance(KeyboardInterrupt, 0);
+
+  native_api.SytemException = SytemException;
+  native_api.KeyboardInterrupt = KeyboardInterrupt;
 }
