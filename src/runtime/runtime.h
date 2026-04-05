@@ -42,6 +42,7 @@ typedef struct ErrorCatch {
   size_t jump_to;
   Stack *stack;
   StackFrame *stackFrame;
+  call_instance*callInstance;
 } ErrorCatch;
 
 typedef struct RuntimeState {

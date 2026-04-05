@@ -2386,6 +2386,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       ErrorCatch err_catch;
       POP_U64(err_catch.jump_to);
       err_catch.stack = currentStackFrame->stack;
+      err_catch.callInstance = state->call_instance;
       err_catch.stackFrame = currentStackFrame;
       if (!state->catch_errors.data)
         darray_armem_init(&state->catch_errors, sizeof(ErrorCatch), 0);
@@ -2864,6 +2865,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
         currentStackFrame = err_catch.stackFrame;
         currentStackFrame->stack = err_catch.stack;
         currentStackFrame->state.registers[0] = err.ptr;
+        currentStackFrame->state.call_instance = err_catch.callInstance;
         err.ptr = ARGON_NULL;
         currentStackFrame->state.head = err_catch.jump_to;
         continue;
