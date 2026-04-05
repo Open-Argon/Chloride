@@ -68,6 +68,8 @@ typedef struct StackFrame {
 
 extern volatile sig_atomic_t KeyboardInterrupted;
 
+void sigint_handler(int signum);
+
 void bootstrap_types();
 
 // extern struct hashmap_GC *runtime_hash_table;

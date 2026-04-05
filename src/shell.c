@@ -33,9 +33,14 @@
 #include "../external/linenoise/linenoise.h"
 #endif
 
+void handle_sigint(int sig) {
+  printf("\nBye :)\n");
+  exit(sig);
+}
+
 int execute_code(char *context, char *path, Stack *scope,
                  RuntimeState *runtime_state) {
-
+  signal(SIGINT, sigint_handler);
   ArErr err = no_err;
 
   DArray tokens;
@@ -45,7 +50,7 @@ int execute_code(char *context, char *path, Stack *scope,
   if (is_error(&err)) {
     darray_free(&tokens, free_token);
     output_err(&err);
-    return 1;
+    goto ERROR;
   }
 
   DArray ast;
@@ -57,7 +62,7 @@ int execute_code(char *context, char *path, Stack *scope,
   if (is_error(&err)) {
     darray_free(&ast, (void (*)(void *))free_parsed);
     output_err(&err);
-    return 1;
+    goto ERROR;
   }
 
   char path_length = strlen(path) + 1;
@@ -72,16 +77,17 @@ int execute_code(char *context, char *path, Stack *scope,
     free(__translated.constants.data);
     hashmap_free(__translated.constants.hashmap, NULL);
     output_err(&err);
-    return 1;
+    goto ERROR;
   }
 
   hashmap_free(__translated.constants.hashmap, NULL);
   Translated translated = {__translated.registerCount,
                            __translated.registerAssignment,
-                           0,0,
-                           {-1,0, 0},
-                           {NULL,0, 0},
-                           {NULL,0, 0},
+                           0,
+                           0,
+                           {-1, 0, 0},
+                           {NULL, 0, 0},
+                           {NULL, 0, 0},
                            {},
                            {},
                            __translated.path};
@@ -104,9 +110,13 @@ int execute_code(char *context, char *path, Stack *scope,
   runtime(translated, *runtime_state, scope, &err);
   if (is_error(&err)) {
     output_err(&err);
-    return 1;
+    goto ERROR;
   }
+  signal(SIGINT, handle_sigint);
   return 0;
+ERROR:
+  signal(SIGINT, handle_sigint);
+  return 1;
 }
 
 // Simple input function
@@ -159,6 +169,7 @@ char *read_all_stdin(size_t *out_len) {
 }
 
 int shell() {
+  signal(SIGINT, handle_sigint);
   Stack *main_scope = create_scope(Global_Scope, true);
 
   char path[PATH_MAX];

@@ -63,7 +63,6 @@ void sigint_handler(int signum) {
 }
 
 int main(int argc, char *argv[]) {
-  signal(SIGINT, sigint_handler);
   setlocale(LC_ALL, "");
   ar_memory_init();
   // generate_siphash_key(siphash_key);
@@ -80,6 +79,7 @@ int main(int argc, char *argv[]) {
   EXC_ARGON = EXC ? new_string_object_null_terminated(EXC) : ARGON_NULL;
   if (argc <= 1)
     return shell();
+  signal(SIGINT, sigint_handler);
   char *path_non_absolute = argv[1];
   ArErr err = {.ptr = ARGON_NULL};
 
