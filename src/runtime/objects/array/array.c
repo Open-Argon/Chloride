@@ -12,7 +12,6 @@
 #include "../functions/functions.h"
 #include "../literals/literals.h"
 #include "../number/number.h"
-#include "../signals/signals.h"
 #include "../string/string.h"
 #include "../exceptions/exceptions.h"
 #include "../../../../include/ArgonTypes.h"
@@ -382,7 +381,8 @@ ArgonObject *ARGON_ARRAY_ITERATOR___next__(size_t argc, ArgonObject **argv,
   struct as_array_iterator *array_iterator = self->value.as_array_iterator;
 
   if (array_iterator->current >= array_iterator->array->size) {
-    return END_ITERATION;
+      err->ptr = StopIteration_instance;
+      return ARGON_NULL;
   }
 
   ArgonObject *value = *(ArgonObject **)darray_armem_get(

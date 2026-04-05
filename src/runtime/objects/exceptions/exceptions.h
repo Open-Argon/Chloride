@@ -8,13 +8,13 @@
 #define EXCEPTIONS
 #include "../../../arobject.h"
 
-extern ArgonObject*BaseException;
+extern ArgonObject *BaseException;
 
-extern ArgonObject*Exception;
+extern ArgonObject *Exception;
 
-extern ArgonObject*RuntimeError;
+extern ArgonObject *RuntimeError;
 
-extern ArgonObject*SyntaxError;
+extern ArgonObject *SyntaxError;
 
 extern ArgonObject *ConversionError;
 
@@ -26,23 +26,27 @@ extern ArgonObject *NameError;
 
 extern ArgonObject *TypeError;
 
-extern ArgonObject* InternalError;
+extern ArgonObject *InternalError;
 
-extern ArgonObject* IndexError;
+extern ArgonObject *IndexError;
 
-extern ArgonObject* AttributeError;
+extern ArgonObject *AttributeError;
 
-extern ArgonObject* PathError;
+extern ArgonObject *PathError;
 
-extern ArgonObject* FileError;
+extern ArgonObject *FileError;
 
-extern ArgonObject* ImportError;
+extern ArgonObject *ImportError;
 
-extern ArgonObject *SytemException;
+extern ArgonObject *SignalException;
 
 extern ArgonObject *KeyboardInterrupt;
 
 extern ArgonObject *KeyboardInterrupt_instance;
+
+extern ArgonObject *StopIteration;
+
+extern ArgonObject *StopIteration_instance;
 
 void init_exceptions();
 

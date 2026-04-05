@@ -9,7 +9,6 @@
 #include "../exceptions/exceptions.h"
 #include "../functions/functions.h"
 #include "../literals/literals.h"
-#include "../signals/signals.h"
 #include "../string/string.h"
 #include "../tuple/tuple.h"
 #include <inttypes.h>
@@ -292,7 +291,8 @@ create_ARGON_DICTIONARY_ITERATOR_TYPE___next__(size_t argc, ArgonObject **argv,
 
   if (self->value.as_dictionary_iterator->size <=
       self->value.as_dictionary_iterator->current) {
-    return END_ITERATION;
+      err->ptr = StopIteration_instance;
+      return ARGON_NULL;
   }
 
   struct node_GC *node =

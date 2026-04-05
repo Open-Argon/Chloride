@@ -8,7 +8,6 @@
 #include "import.h"
 #include "memory.h"
 #include "runtime/internals/hashmap/hashmap.h"
-#include "runtime/objects/exceptions/exceptions.h"
 #include "runtime/objects/literals/literals.h"
 #include "runtime/objects/object.h"
 #include "runtime/objects/string/string.h"
@@ -57,13 +56,21 @@ char *get_current_directory() {
   return buffer;
 }
 
-bool KeyboardInterrupted = false;
+int KeyboardInterrupted = 0;
 
 void sigint_handler(int signum) {
-  KeyboardInterrupted = true;
+  KeyboardInterrupted = signum;
 }
 
 int main(int argc, char *argv[]) {
+  struct sigaction sa;
+  sa.sa_handler = sigint_handler;
+  sigemptyset(&sa.sa_mask);
+  sa.sa_flags = 0;
+  if (sigaction(SIGINT, &sa, NULL) == -1) {
+    perror("sigaction");
+    exit(1);
+  }
   setlocale(LC_ALL, "");
   ar_memory_init();
   // generate_siphash_key(siphash_key);
@@ -82,24 +89,8 @@ int main(int argc, char *argv[]) {
     return shell();
   char *path_non_absolute = argv[1];
   ArErr err = {.ptr = ARGON_NULL};
-  struct sigaction sa;
 
-  // Set up initial signal handler for SIGINT
-  sa.sa_handler = sigint_handler;
-  sigemptyset(&sa.sa_mask);
-  sa.sa_flags = 0;
-  if (sigaction(SIGINT, &sa, NULL) == -1) {
-    perror("sigaction");
-    exit(1);
-  }
   ar_import(CWD, path_non_absolute, &err, true);
-  sa.sa_handler = SIG_DFL; // Set it back to default
-  sigemptyset(&sa.sa_mask);
-  sa.sa_flags = 0;
-  if (sigaction(SIGINT, &sa, NULL) == -1) {
-    perror("sigaction");
-    exit(1);
-  }
   if (is_error(&err)) {
     output_err(&err);
     return 1;

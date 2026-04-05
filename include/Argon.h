@@ -98,7 +98,6 @@ struct ArgonNativeAPI {
   void* (*malloc)(size_t);
   void (*free)(void*);
 
-  ArgonObject *END_ITERATION;
   struct array (*argon_to_array)(ArgonObject *, ArgonError *);
   int (*argon_get_ArgonType)(ArgonObject *);
   bool (*argon_is_i64)(ArgonObject *);
@@ -118,6 +117,9 @@ struct ArgonNativeAPI {
   ArgonObject *PathError;
   ArgonObject *FileError;
   ArgonObject *ImportError;
+  ArgonObject *SignalException;
+  ArgonObject *KeyboardInterrupt;
+  ArgonObject *StopIteration;
 };
 
 __attribute__((visibility("default"))) void

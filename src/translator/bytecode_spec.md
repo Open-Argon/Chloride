@@ -81,11 +81,10 @@ converts a value in register 0 into true or false depending on the result from \
 
 ## OP_FOR_LOOP_JUMP
 
-calls the \_\_next\_\_ method stored in the register passed in, jumping if it is not END_ITERATION, storing the result of \_\_next\_\_ in register 0.
+calls the \_\_next\_\_ method stored in the register passed in, storing the result of \_\_next\_\_ in register 0.
 
 1. the register storing the iterator object. (*)
 1. the register storing the \_\_next\_\_ method. (*)
-1. the index to jump to.
 
 ## OP_JUMP_IF_FALSE
 
@@ -374,3 +373,7 @@ loads the is_instance function into register 0
 ## OP_LOAD_EXCEPTION_CLASS
 
 loads the Exception class into register 0
+
+## OP_LOAD_STOPITERATION_CLASS
+
+loads the StopIteration class into register 0

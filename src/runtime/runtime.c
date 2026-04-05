@@ -27,7 +27,6 @@
 #include "objects/literals/literals.h"
 #include "objects/number/number.h"
 #include "objects/object.h"
-#include "objects/signals/signals.h"
 #include "objects/string/string.h"
 #include "objects/term/term.h"
 #include "objects/tuple/tuple.h"
@@ -1235,13 +1234,11 @@ void bootstrap_types() {
 
   init_array_type();
   init_tuple_type();
-  init_signals();
   init_range_iterator();
 
   native_api.ARGON_NULL = ARGON_NULL;
   native_api.ARGON_TRUE = ARGON_TRUE;
   native_api.ARGON_FALSE = ARGON_FALSE;
-  native_api.END_ITERATION = END_ITERATION;
 }
 
 void add_to_hashmap(struct hashmap_GC *hashmap, char *name,
@@ -1303,12 +1300,12 @@ void bootstrap_globals() {
   add_to_scope(Global_Scope, "ImportError", ImportError);
 
   // system exceptions
-  add_to_scope(Global_Scope, "SytemException", SytemException);
+  add_to_scope(Global_Scope, "SignalException", SignalException);
   add_to_scope(Global_Scope, "KeyboardInterrupt", KeyboardInterrupt);
+  add_to_scope(Global_Scope, "StopIteration", StopIteration);
 
   // create platform
   hashmap_GC *signals = createHashmap_GC();
-  add_to_hashmap(signals, "end_iteration", END_ITERATION);
   add_to_scope(Global_Scope, "signals", create_dictionary(signals));
 
   hashmap_GC *platform = createHashmap_GC();
@@ -1431,12 +1428,10 @@ void init_runtime_state(RuntimeState *runtime, Translated translated,
                      NULL,
                      NULL,
                      {0, 0, 0},
-                     {},
+                     {NULL},
                      createHashmap_GC(),
                      path,
                      0};
-
-  darray_armem_init(&runtime->catch_errors, sizeof(ErrorCatch), 0);
 }
 
 Stack *create_scope(Stack *prev, bool force) {
@@ -1535,7 +1530,8 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       [OP_EXCEPTION_CATCHER_PUSH] = &&DO_EXCEPTION_CATCHER_PUSH,
       [OP_EXCEPTION_CATCHER_POP] = &&DO_EXCEPTION_CATCHER_POP,
       [OP_LOAD_IS_INSTANCE_FUNCTION] = &&DO_LOAD_IS_INSTANCE_FUNCTION,
-      [OP_LOAD_EXCEPTION_CLASS] = &&DO_LOAD_EXCEPTION_CLASS};
+      [OP_LOAD_EXCEPTION_CLASS] = &&DO_LOAD_EXCEPTION_CLASS,
+      [OP_LOAD_STOPITERATION_CLASS] = &&DO_LOAD_STOPITERATION_CLASS};
   _state.head = 0;
 
   ArErr err = *err_ptr;
@@ -1586,7 +1582,6 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       continue;
     }
     DO_LOAD_NUMBER: {
-
       uint8_t to_register = POP_BYTE();
       uint8_t is_int64 = POP_BYTE();
       ArgonObject *cache_number = NULL;
@@ -1783,8 +1778,6 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
     DO_FOR_LOOP_JUMP: {
       ArgonObject *iterator = state->registers[POP_BYTE()];
       ArgonObject *iterator_next = state->registers[POP_BYTE()];
-      uint64_t to;
-      POP_U64(to);
 
       switch (iterator->type) {
       case TYPE_ARRAY_ITERATOR:
@@ -1797,9 +1790,6 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
         break;
       default:
         state->registers[0] = argon_call(iterator_next, 0, NULL, &err, state);
-      }
-      if (state->registers[0] == END_ITERATION) {
-        ip = to;
       }
       continue;
     }
@@ -2395,14 +2385,18 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
     DO_EXCEPTION_CATCHER_PUSH: {
       ErrorCatch err_catch;
       POP_U64(err_catch.jump_to);
+      err_catch.stack = currentStackFrame->stack;
       err_catch.stackFrame = currentStackFrame;
+      if (!state->catch_errors.data)
+        darray_armem_init(&state->catch_errors, sizeof(ErrorCatch), 0);
       darray_armem_insert(&state->catch_errors, state->catch_errors.size,
                           &err_catch);
       continue;
     }
 
     DO_EXCEPTION_CATCHER_POP: {
-      darray_armem_pop(&state->catch_errors, state->catch_errors.size, NULL);
+      if (state->catch_errors.data)
+        darray_armem_pop(&state->catch_errors, state->catch_errors.size, NULL);
       continue;
     }
 
@@ -2765,6 +2759,10 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       state->registers[0] = Exception;
       continue;
     }
+    DO_LOAD_STOPITERATION_CLASS: {
+      state->registers[0] = StopIteration;
+      continue;
+    }
     DO_LOAD_TEMPLATE_METHOD: {
       state->registers[0] = get_builtin_field_for_class(
           get_builtin_field(state->registers[0], __class__), __template__,
@@ -2860,11 +2858,13 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       }
       ErrorCatch err_catch;
 
-      if (darray_armem_pop(&state->catch_errors, state->catch_errors.size,
+      if (state->catch_errors.data &&
+          darray_armem_pop(&state->catch_errors, state->catch_errors.size,
                            &err_catch)) {
-        state->registers[0] = err.ptr;
-        err.ptr = ARGON_NULL;
         currentStackFrame = err_catch.stackFrame;
+        currentStackFrame->stack = err_catch.stack;
+        currentStackFrame->state.registers[0] = err.ptr;
+        err.ptr = ARGON_NULL;
         currentStackFrame->state.head = err_catch.jump_to;
         continue;
       }

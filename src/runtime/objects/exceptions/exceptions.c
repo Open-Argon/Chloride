@@ -30,10 +30,12 @@ ArgonObject *PathError;
 ArgonObject *FileError;
 ArgonObject *ImportError;
 
-ArgonObject *SytemException;
+ArgonObject *SignalException;
 ArgonObject *KeyboardInterrupt;
+ArgonObject *StopIteration;
 
 ArgonObject *KeyboardInterrupt_instance;
+ArgonObject *StopIteration_instance;
 
 ArgonObject *BaseException___new__(size_t argc, ArgonObject **argv, ArErr *err,
                                    RuntimeState *state, ArgonNativeAPI *api) {
@@ -42,7 +44,7 @@ ArgonObject *BaseException___new__(size_t argc, ArgonObject **argv, ArErr *err,
   if (argc < 2) {
     *err =
         create_err(RuntimeError,
-                   "__new__ expects at least 2 argument, got %" PRIu64, argc);
+                   "__new__ expects at least 2 arguments, got %" PRIu64, argc);
     return ARGON_NULL;
   }
   ArgonObject *new_obj = new_instance(argv[0], 0);
@@ -51,6 +53,33 @@ ArgonObject *BaseException___new__(size_t argc, ArgonObject **argv, ArErr *err,
   add_builtin_field(new_obj, stack_trace,
                     ARRAY_CREATE(0, NULL, NULL, NULL, NULL));
   return new_obj;
+}
+
+ArgonObject *KeyboardInterrupt___new__(size_t argc, ArgonObject **argv,
+                                       ArErr *err, RuntimeState *state,
+                                       ArgonNativeAPI *api) {
+  (void)argv;
+  (void)api;
+  (void)state;
+  if (argc != 1) {
+    *err = create_err(RuntimeError, "__new__ expects 1 argument, got %" PRIu64,
+                      argc);
+    return ARGON_NULL;
+  }
+  return KeyboardInterrupt_instance;
+}
+
+ArgonObject *StopIteration___new__(size_t argc, ArgonObject **argv, ArErr *err,
+                                   RuntimeState *state, ArgonNativeAPI *api) {
+  (void)argv;
+  (void)api;
+  (void)state;
+  if (argc != 1) {
+    *err = create_err(RuntimeError, "__new__ expects 1 argument, got %" PRIu64,
+                      argc);
+    return ARGON_NULL;
+  }
+  return StopIteration_instance;
 }
 
 void init_exceptions() {
@@ -148,19 +177,32 @@ void init_exceptions() {
   native_api.FileError = FileError;
   native_api.ImportError = ImportError;
 
-  // system errors
-  SytemException = new_class();
-  add_builtin_field(SytemException, __base__, BaseException);
-  add_builtin_field(SytemException, __name__,
-                    new_string_object_null_terminated("SytemException"));
+  // Signal Exceptions
+  SignalException = new_class();
+  add_builtin_field(SignalException, __base__, BaseException);
+  add_builtin_field(SignalException, __name__,
+                    new_string_object_null_terminated("SignalException"));
+
   KeyboardInterrupt = new_class();
-  add_builtin_field(KeyboardInterrupt, __base__, SytemException);
+  add_builtin_field(KeyboardInterrupt, __base__, SignalException);
   add_builtin_field(KeyboardInterrupt, __name__,
                     new_string_object_null_terminated("KeyboardInterrupt"));
+  add_builtin_field(
+      KeyboardInterrupt, __new__,
+      create_argon_native_function("__new__", KeyboardInterrupt___new__));
 
+  StopIteration = new_class();
+  add_builtin_field(StopIteration, __base__, SignalException);
+  add_builtin_field(StopIteration, __name__,
+                    new_string_object_null_terminated("StopIteration"));
+  add_builtin_field(
+      StopIteration, __new__,
+      create_argon_native_function("__new__", StopIteration___new__));
 
   KeyboardInterrupt_instance = new_instance(KeyboardInterrupt, 0);
+  StopIteration_instance = new_instance(StopIteration, 0);
 
-  native_api.SytemException = SytemException;
+  native_api.SignalException = SignalException;
   native_api.KeyboardInterrupt = KeyboardInterrupt;
+  native_api.StopIteration = StopIteration;
 }

@@ -39,6 +39,7 @@ typedef struct call_instance {
 
 typedef struct ErrorCatch {
   size_t jump_to;
+  Stack *stack;
   StackFrame *stackFrame;
 } ErrorCatch;
 
@@ -63,7 +64,7 @@ typedef struct StackFrame {
   SourceLocation source_location;
 } StackFrame;
 
-extern bool KeyboardInterrupted;
+extern int KeyboardInterrupted;
 
 void bootstrap_types();
 

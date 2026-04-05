@@ -19,7 +19,6 @@
 #include "runtime/objects/literals/literals.h"
 #include "runtime/objects/string/string.h"
 #include <limits.h>
-#include <signal.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -33,12 +32,6 @@
 #else
 #include "../external/linenoise/linenoise.h"
 #endif
-
-// Ctrl+C handler
-void handle_sigint(int sig) {
-  printf("\nBye :)\n");
-  exit(sig);
-}
 
 int execute_code(char *context, char *path, Stack *scope,
                  RuntimeState *runtime_state) {
@@ -187,8 +180,6 @@ int shell() {
   add_to_scope(main_scope, "license",
                new_string_object_without_memcpy((char *)LICENSE_txt,
                                                 LICENSE_txt_len, 0));
-
-  signal(SIGINT, handle_sigint);
 
   printf("Chloride %s Copyright (C) 2026 William Bell\n"
          "This program comes with ABSOLUTELY NO WARRANTY; for details type "
