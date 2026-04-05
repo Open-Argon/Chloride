@@ -50,7 +50,7 @@ int execute_code(char *context, char *path, Stack *scope,
   if (is_error(&err)) {
     darray_free(&tokens, free_token);
     output_err(&err);
-    goto ERROR;
+    goto cleanup;
   }
 
   DArray ast;
@@ -62,7 +62,7 @@ int execute_code(char *context, char *path, Stack *scope,
   if (is_error(&err)) {
     darray_free(&ast, (void (*)(void *))free_parsed);
     output_err(&err);
-    goto ERROR;
+    goto cleanup;
   }
 
   char path_length = strlen(path) + 1;
@@ -77,7 +77,7 @@ int execute_code(char *context, char *path, Stack *scope,
     free(__translated.constants.data);
     hashmap_free(__translated.constants.hashmap, NULL);
     output_err(&err);
-    goto ERROR;
+    goto cleanup;
   }
 
   hashmap_free(__translated.constants.hashmap, NULL);
@@ -110,11 +110,11 @@ int execute_code(char *context, char *path, Stack *scope,
   runtime(translated, *runtime_state, scope, &err);
   if (is_error(&err)) {
     output_err(&err);
-    goto ERROR;
+    goto cleanup;
   }
   signal(SIGINT, handle_sigint);
   return 0;
-ERROR:
+cleanup:
   signal(SIGINT, handle_sigint);
   return 1;
 }
