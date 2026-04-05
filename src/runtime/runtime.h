@@ -9,6 +9,7 @@
 #include "../arobject.h"
 #include "internals/dynamic_array_armem/darray_armem.h"
 #include "internals/hashmap/hashmap.h"
+#include <signal.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -64,7 +65,7 @@ typedef struct StackFrame {
   SourceLocation source_location;
 } StackFrame;
 
-extern int KeyboardInterrupted;
+extern volatile sig_atomic_t KeyboardInterrupted;
 
 void bootstrap_types();
 

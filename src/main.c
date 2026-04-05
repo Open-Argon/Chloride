@@ -56,21 +56,14 @@ char *get_current_directory() {
   return buffer;
 }
 
-int KeyboardInterrupted = 0;
+volatile sig_atomic_t KeyboardInterrupted = 0;
 
 void sigint_handler(int signum) {
   KeyboardInterrupted = signum;
 }
 
 int main(int argc, char *argv[]) {
-  struct sigaction sa;
-  sa.sa_handler = sigint_handler;
-  sigemptyset(&sa.sa_mask);
-  sa.sa_flags = 0;
-  if (sigaction(SIGINT, &sa, NULL) == -1) {
-    perror("sigaction");
-    exit(1);
-  }
+  signal(SIGINT, sigint_handler);
   setlocale(LC_ALL, "");
   ar_memory_init();
   // generate_siphash_key(siphash_key);
