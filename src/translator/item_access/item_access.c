@@ -30,9 +30,14 @@ size_t translate_item_access(Translated *translated, ParsedItemAccess *access,
     }
     for (size_t j = 0; j < subscript->size; j++) {
       ParsedValue *item = *(ParsedValue **)darray_get(subscript, j);
-      translate_parsed(translated, item, err);
-      if (is_error(err))
-        return 0;
+      if (item) {
+        translate_parsed(translated, item, err);
+        if (is_error(err))
+          return 0;
+      } else {
+        push_instruction_byte(translated, OP_LOAD_NULL);
+        push_instruction_byte(translated, 0);
+      }
       if (subscript->size != 1) {
         push_instruction_byte(translated, OP_INSERT_ARG);
         push_instruction_code(translated, j);

@@ -5,16 +5,17 @@
  */
 
 #include "array.h"
+#include "../../../../include/ArgonTypes.h"
 #include "../../../err.h"
 #include "../../../memory.h"
 #include "../../call/call.h"
 #include "../../internals/dynamic_array_armem/darray_armem.h"
+#include "../exceptions/exceptions.h"
 #include "../functions/functions.h"
 #include "../literals/literals.h"
 #include "../number/number.h"
+#include "../slice/slice.h"
 #include "../string/string.h"
-#include "../exceptions/exceptions.h"
-#include "../../../../include/ArgonTypes.h"
 #include <inttypes.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -42,16 +43,13 @@ ArgonObject *ARRAY_CREATE(size_t argc, ArgonObject **argv, ArErr *err,
   return object;
 }
 
-ArgonObject *ARGON_ARRAY___new__(size_t argc,
-                                                  ArgonObject **argv,
-                                                  ArErr *err,
-                                                  RuntimeState *state,
-                                                  ArgonNativeAPI *api) {
+ArgonObject *ARGON_ARRAY___new__(size_t argc, ArgonObject **argv, ArErr *err,
+                                 RuntimeState *state, ArgonNativeAPI *api) {
   (void)api;
   (void)state;
   if (argc != 2) {
-    *err = create_err(RuntimeError,
-                      "__new__ expects 2 arguments, got %" PRIu64, argc);
+    *err = create_err(RuntimeError, "__new__ expects 2 arguments, got %" PRIu64,
+                      argc);
     return ARGON_NULL;
   }
   ArgonObject *get_dictionary = get_builtin_field_for_class(
@@ -62,8 +60,7 @@ ArgonObject *ARGON_ARRAY___new__(size_t argc,
   ArgonObject *object = argon_call(get_dictionary, 0, NULL, err, state);
   if (object->type != TYPE_ARRAY)
     return api->throw_argon_error(
-        err, RuntimeError,
-        "Objects __array__ method didn't return an array");
+        err, RuntimeError, "Objects __array__ method didn't return an array");
   return object;
 }
 
@@ -77,11 +74,13 @@ ArgonObject *ARGON_ARRAY___string__(size_t argc, ArgonObject **argv, ArErr *err,
     return ARGON_NULL;
   }
 
-  if (!is_being_repr) is_being_repr = createHashmap();
+  if (!is_being_repr)
+    is_being_repr = createHashmap();
 
-  if (hashmap_lookup(is_being_repr, (uint64_t)argv[0])) return new_string_object_null_terminated("[...]");
+  if (hashmap_lookup(is_being_repr, (uint64_t)argv[0]))
+    return new_string_object_null_terminated("[...]");
 
-  hashmap_insert(is_being_repr, (uint64_t)argv[0], NULL, (void*)true, 0);
+  hashmap_insert(is_being_repr, (uint64_t)argv[0], NULL, (void *)true, 0);
 
   darray_armem *array = argv[0]->value.as_array;
 
@@ -147,7 +146,8 @@ ArgonObject *ARGON_ARRAY___string__(size_t argc, ArgonObject **argv, ArErr *err,
 
   free(string);
   hashmap_remove(is_being_repr, (uint64_t)argv[0]);
-  if (!is_being_repr->count) hashmap_free(is_being_repr, NULL);
+  if (!is_being_repr->count)
+    hashmap_free(is_being_repr, NULL);
   return result;
 }
 
@@ -156,8 +156,8 @@ ArgonObject *ARGON_ARRAY_append(size_t argc, ArgonObject **argv, ArErr *err,
   (void)state;
   (void)api;
   if (argc != 2) {
-    *err = create_err(RuntimeError,
-                      "append expects 2 arguments, got %" PRIu64, argc);
+    *err = create_err(RuntimeError, "append expects 2 arguments, got %" PRIu64,
+                      argc);
     return ARGON_NULL;
   }
   darray_armem_insert(argv[0]->value.as_array, UINT64_MAX, &argv[1]);
@@ -169,8 +169,8 @@ ArgonObject *ARGON_ARRAY_of_size(size_t argc, ArgonObject **argv, ArErr *err,
   (void)state;
   (void)api;
   if (argc != 1) {
-    *err = create_err(RuntimeError,
-                      "of_size expects 1 argument, got %" PRIu64, argc);
+    *err = create_err(RuntimeError, "of_size expects 1 argument, got %" PRIu64,
+                      argc);
     return ARGON_NULL;
   }
   int64_t size = api->argon_to_i64(argv[0], err);
@@ -182,7 +182,6 @@ ArgonObject *ARGON_ARRAY_of_size(size_t argc, ArgonObject **argv, ArErr *err,
   object->value.as_array = darray_armem_create();
 
   darray_armem_init(object->value.as_array, sizeof(ArgonObject *), size);
-  
 
   for (int64_t i = 0; i < size; i++) {
     ((ArgonObject **)object->value.as_array->data)[i] = ARGON_NULL;
@@ -191,11 +190,8 @@ ArgonObject *ARGON_ARRAY_of_size(size_t argc, ArgonObject **argv, ArErr *err,
   return object;
 }
 
-ArgonObject *ARGON_ARRAY___array__(size_t argc,
-                                                         ArgonObject **argv,
-                                                         ArErr *err,
-                                                         RuntimeState *state,
-                                                         ArgonNativeAPI *api) {
+ArgonObject *ARGON_ARRAY___array__(size_t argc, ArgonObject **argv, ArErr *err,
+                                   RuntimeState *state, ArgonNativeAPI *api) {
   (void)api;
   (void)state;
   if (argc != 1) {
@@ -272,8 +268,8 @@ ArgonObject *ARGON_ARRAY_insert(size_t argc, ArgonObject **argv, ArErr *err,
                                 RuntimeState *state, ArgonNativeAPI *api) {
   (void)state;
   if (argc != 3) {
-    *err = create_err(RuntimeError,
-                      "insert expects 3 arguments, got %" PRIu64, argc);
+    *err = create_err(RuntimeError, "insert expects 3 arguments, got %" PRIu64,
+                      argc);
     return ARGON_NULL;
   }
   size_t pos = api->argon_to_i64(argv[1], err);
@@ -312,10 +308,49 @@ ArgonObject *ARGON_ARRAY___getitem__(size_t argc, ArgonObject **argv,
                       "__getitem__ expects 2 arguments, got %" PRIu64, argc);
     return ARGON_NULL;
   }
+  darray_armem *arr = argv[0]->value.as_array;
+  if (argv[1]->type == TYPE_SLICE) { // slice
+    ArgonObject *indices = ARGON_SLICE_TYPE_indices(
+        2,
+        (ArgonObject *[]){argv[1], new_number_object_from_int64(
+                                       arr->size)},
+        err, state, api);
+    if (api->is_error(err))
+      return ARGON_NULL;
+    int64_t start = api->argon_to_i64(indices->value.as_tuple.data[0],err);
+    if (api->is_error(err))
+      return ARGON_NULL;
+    int64_t stop = api->argon_to_i64(indices->value.as_tuple.data[1],err);
+    if (api->is_error(err))
+      return ARGON_NULL;
+    int64_t step = api->argon_to_i64(indices->value.as_tuple.data[2],err);
+    if (api->is_error(err))
+      return ARGON_NULL;
+
+    ArgonObject *slice = new_instance(ARRAY_TYPE, sizeof(darray_armem));
+    slice->type = TYPE_ARRAY;
+
+    slice->value.as_array = darray_armem_create();
+
+    int64_t size = 0;
+    if (step > 0 && stop > start)
+        size = (stop - start + step - 1) / step;
+    else if (step < 0 && stop < start)
+        size = (start - stop - step - 1) / (-step);
+
+    darray_armem_init(slice->value.as_array, sizeof(ArgonObject *), size);
+
+    for (int64_t i = 0; i < size; i++) {
+        int64_t src_index = start + i * step;  // source index follows step
+        ((ArgonObject**)slice->value.as_array->data)[i] =
+            *(ArgonObject **)darray_armem_get(arr, src_index);
+    }
+
+    return slice;
+  }
   int64_t index = api->argon_to_i64(argv[1], err);
   if (api->is_error(err))
     return ARGON_NULL;
-  darray_armem *arr = argv[0]->value.as_array;
   if (index < 0)
     index += arr->size;
   if (index >= (int64_t)arr->size || index < 0) {
@@ -352,8 +387,8 @@ ArgonObject *ARGON_ARRAY___iter__(size_t argc, ArgonObject **argv, ArErr *err,
   (void)api;
   (void)state;
   if (argc != 1) {
-    *err = create_err(RuntimeError,
-                      "__iter__ expects 1 argument, got %" PRIu64, argc);
+    *err = create_err(RuntimeError, "__iter__ expects 1 argument, got %" PRIu64,
+                      argc);
     return ARGON_NULL;
   }
   ArgonObject *self = argv[0];
@@ -373,16 +408,16 @@ ArgonObject *ARGON_ARRAY_ITERATOR___next__(size_t argc, ArgonObject **argv,
   (void)api;
   (void)state;
   if (argc != 1) {
-    *err = create_err(RuntimeError,
-                      "__next__ expects 1 argument, got %" PRIu64, argc);
+    *err = create_err(RuntimeError, "__next__ expects 1 argument, got %" PRIu64,
+                      argc);
     return ARGON_NULL;
   }
   ArgonObject *self = argv[0];
   struct as_array_iterator *array_iterator = self->value.as_array_iterator;
 
   if (array_iterator->current >= array_iterator->array->size) {
-      err->ptr = StopIteration_instance;
-      return ARGON_NULL;
+    err->ptr = StopIteration_instance;
+    return ARGON_NULL;
   }
 
   ArgonObject *value = *(ArgonObject **)darray_armem_get(

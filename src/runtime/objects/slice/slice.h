@@ -12,4 +12,8 @@ extern ArgonObject *ARGON_SLICE_TYPE;
 
 void init_slice_type();
 
+ArgonObject *ARGON_SLICE_TYPE_indices(size_t argc, ArgonObject **argv,
+                                      ArErr *err, RuntimeState *state,
+                                      ArgonNativeAPI *api);
+
 #endif // RUNTIME_SLICE_H
