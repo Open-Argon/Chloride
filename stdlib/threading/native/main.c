@@ -98,7 +98,7 @@ ArgonObject *Argon_Thread(size_t argc, ArgonObject **argv, ArgonError *err,
   atomic_init(&gc_args->finished, 0);
   atomic_init(&gc_args->freed, 0);
   if (mt_thread_start(&gc_args->thread, thread_fn, gc_args) != 0) {
-    return api->throw_argon_error(err, "Runtime Error",
+    return api->throw_argon_error(err, api->RuntimeError,
                                   "Failed to create thread");
   }
   return GC_managed_args_object;
@@ -119,7 +119,7 @@ ArgonObject *Argon_Thread_join(size_t argc, ArgonObject **argv, ArgonError *err,
   }
 
   if (buf.size != sizeof(struct thread_arg *)) {
-    return api->throw_argon_error(err, "Type Error", "Invalid Thread object");
+    return api->throw_argon_error(err, api->TypeError, "Invalid Thread object");
   }
 
   struct thread_arg **thread_ptr = buf.data;
@@ -138,7 +138,7 @@ ArgonObject *Argon_Thread_join(size_t argc, ArgonObject **argv, ArgonError *err,
     return api->ARGON_NULL;
   }
 
-  return api->throw_argon_error(err, "Runtime Error",
+  return api->throw_argon_error(err, api->RuntimeError,
                                 "Thread already joined or detached.");
 }
 
@@ -158,7 +158,7 @@ ArgonObject *Argon_Thread_detach(size_t argc, ArgonObject **argv,
   }
 
   if (buf.size != sizeof(struct thread_arg *)) {
-    return api->throw_argon_error(err, "Type Error", "Invalid Thread object");
+    return api->throw_argon_error(err, api->TypeError, "Invalid Thread object");
   }
 
   struct thread_arg **thread_ptr = buf.data;
@@ -178,7 +178,7 @@ ArgonObject *Argon_Thread_detach(size_t argc, ArgonObject **argv,
     return api->ARGON_NULL;
   }
 
-  return api->throw_argon_error(err, "Runtime Error",
+  return api->throw_argon_error(err, api->RuntimeError,
                                 "Thread already joined or detached.");
 }
 

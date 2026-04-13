@@ -69,6 +69,10 @@ typedef enum {
   __array__,
   message,
   stack_trace,
+  indices,
+  start,
+  step,
+  stop,
 
   BUILT_IN_FIELDS_COUNT,
 } built_in_fields;
@@ -170,8 +174,10 @@ struct ArgonNativeAPI {
   ArgonObject *FileError;
   ArgonObject *ImportError;
   ArgonObject *SignalException;
-  ArgonObject *KeyboardInterrupt;
-  ArgonObject *StopIteration;
+  ArgonObject *SignalKeyboardInterrupt;
+  ArgonObject *SignalStopIteration;
+
+  ArgonObject* (*throw_argon_signal)(ArErr*, ArgonObject*);
 };
 
 typedef struct {

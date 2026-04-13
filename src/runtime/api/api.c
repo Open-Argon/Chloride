@@ -29,6 +29,18 @@ ArgonObject *throw_argon_error(ArErr *err, ArgonObject *type, const char *fmt,
   va_start(args, fmt);
   *err = vcreate_err(type, fmt, args);
   va_end(args);
+  if (!is_instance(err->ptr, BaseException)) {
+    *err = create_err(TypeError, "exceptions must derive from BaseException");
+  }
+  return ARGON_NULL;
+}
+
+ArgonObject *throw_argon_signal(ArErr *err, ArgonObject *signal) {
+  if (!is_instance(signal, SignalException)) {
+    *err = create_err(TypeError, "signals must derive from SignalException");
+    return ARGON_NULL;
+  }
+  err->ptr = signal;
   return ARGON_NULL;
 }
 
@@ -218,4 +230,5 @@ ArgonNativeAPI native_api = {
     .argon_to_array = argon_to_array,
     .argon_get_ArgonType = argon_to_argonType,
     .argon_is_i64 = argon_is_i64,
-};
+
+    .throw_argon_signal = throw_argon_signal};

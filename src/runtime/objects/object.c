@@ -88,6 +88,10 @@ const char *built_in_field_names[BUILT_IN_FIELDS_COUNT] = {
     "__array__",
     "message",
     "stack_trace",
+  "indices",
+  "start",
+  "step",
+  "stop",
 };
 
 uint64_t built_in_field_hashes[BUILT_IN_FIELDS_COUNT];

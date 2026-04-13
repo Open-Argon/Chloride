@@ -25,6 +25,7 @@ typedef enum ArgonType {
   TYPE_RANGE_ITERATOR,
   TYPE_ARRAY_ITERATOR,
   TYPE_DICTIONARY_ITERATOR,
+  TYPE_SLICE,
 } ArgonType;
 
 #ifdef __cplusplus

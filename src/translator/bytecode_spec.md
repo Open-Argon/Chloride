@@ -377,3 +377,7 @@ loads the Exception class into register 0
 ## OP_LOAD_STOPITERATION_CLASS
 
 loads the StopIteration class into register 0
+
+## OP_LOAD_SLICE_CLASS
+
+loads the slice class into register 0

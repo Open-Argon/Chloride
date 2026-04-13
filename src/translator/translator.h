@@ -73,7 +73,8 @@ typedef enum {
   OP_EXCEPTION_CATCHER_POP,
   OP_LOAD_IS_INSTANCE_FUNCTION,
   OP_LOAD_EXCEPTION_CLASS,
-  OP_LOAD_STOPITERATION_CLASS
+  OP_LOAD_STOPITERATION_CLASS,
+  OP_LOAD_SLICE_CLASS
 } OperationType;
 
 void arena_resize(ConstantArena *arena, size_t new_size);

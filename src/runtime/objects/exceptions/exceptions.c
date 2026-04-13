@@ -203,6 +203,6 @@ void init_exceptions() {
   StopIteration_instance = new_instance(StopIteration, 0);
 
   native_api.SignalException = SignalException;
-  native_api.KeyboardInterrupt = KeyboardInterrupt;
-  native_api.StopIteration = StopIteration;
+  native_api.SignalKeyboardInterrupt = KeyboardInterrupt_instance;
+  native_api.SignalStopIteration = StopIteration_instance;
 }

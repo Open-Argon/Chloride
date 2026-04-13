@@ -14,9 +14,9 @@ extern "C" {
 #include <stddef.h>
 #endif
 
+#include "ArgonTypes.h"
 #include <stdbool.h>
 #include <stdint.h>
-#include "ArgonTypes.h"
 
 #define ARGON_NATIVE_API_VERSION 1
 
@@ -59,8 +59,8 @@ struct ArgonNativeAPI {
                                ArgonObject *obj);
   ArgonObject *(*create_argon_native_function)(char *name, native_fn);
   ArgonObject *(*call)(ArgonObject *original_object, size_t argc,
-                        ArgonObject **argv, ArgonError *err, ArgonState *state);
-  ArgonObject *(*throw_argon_error)(ArgonError *err, const char *type,
+                       ArgonObject **argv, ArgonError *err, ArgonState *state);
+  ArgonObject *(*throw_argon_error)(ArgonError *err, ArgonObject *type,
                                     const char *fmt, ...);
   bool (*is_error)(ArgonError *err);
   bool (*fix_to_arg_size)(size_t limit, size_t argc, ArgonError *err);
@@ -79,7 +79,8 @@ struct ArgonNativeAPI {
 
   // buffers
   ArgonObject *(*create_argon_buffer)(size_t size);
-  void (*resize_argon_buffer)(ArgonObject *obj, ArgonError *err, size_t new_size);
+  void (*resize_argon_buffer)(ArgonObject *obj, ArgonError *err,
+                              size_t new_size);
   struct buffer (*argon_buffer_to_buffer)(ArgonObject *obj, ArgonError *err);
 
   // literals
@@ -92,11 +93,11 @@ struct ArgonNativeAPI {
 
   ArgonObject *(*create_err_object)();
   ArgonError *(*err_object_to_err)(ArgonObject *, ArgonError *);
-  ArgonState *(*new_state)(ArgonObject**registers);
+  ArgonState *(*new_state)(ArgonObject **registers);
   void (*set_err)(ArgonObject *object, ArgonError *err);
 
-  void* (*malloc)(size_t);
-  void (*free)(void*);
+  void *(*malloc)(size_t);
+  void (*free)(void *);
 
   struct array (*argon_to_array)(ArgonObject *, ArgonError *);
   int (*argon_get_ArgonType)(ArgonObject *);
@@ -118,12 +119,14 @@ struct ArgonNativeAPI {
   ArgonObject *FileError;
   ArgonObject *ImportError;
   ArgonObject *SignalException;
-  ArgonObject *KeyboardInterrupt;
-  ArgonObject *StopIteration;
+  ArgonObject *SignalKeyboardInterrupt;
+  ArgonObject *SignalStopIteration;
+
+  ArgonObject* (*throw_argon_signal)(ArgonError*, ArgonObject*);
 };
 
 __attribute__((visibility("default"))) void
-argon_module_init(ArgonState *vm, ArgonNativeAPI *api, ArgonError*err,
+argon_module_init(ArgonState *vm, ArgonNativeAPI *api, ArgonError *err,
                   ArgonObjectRegister *reg);
 
 #ifdef __cplusplus

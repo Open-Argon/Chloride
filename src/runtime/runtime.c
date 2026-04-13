@@ -27,6 +27,7 @@
 #include "objects/literals/literals.h"
 #include "objects/number/number.h"
 #include "objects/object.h"
+#include "objects/slice/slice.h"
 #include "objects/string/string.h"
 #include "objects/term/term.h"
 #include "objects/tuple/tuple.h"
@@ -1235,6 +1236,7 @@ void bootstrap_types() {
   init_array_type();
   init_tuple_type();
   init_range_iterator();
+  init_slice_type();
 
   native_api.ARGON_NULL = ARGON_NULL;
   native_api.ARGON_TRUE = ARGON_TRUE;
@@ -1262,6 +1264,7 @@ void bootstrap_globals() {
   add_to_scope(Global_Scope, "array", ARRAY_TYPE);
   add_to_scope(Global_Scope, "tuple", ARGON_TUPLE_TYPE);
   add_to_scope(Global_Scope, "range", ARGON_RANGE_ITERATOR_TYPE);
+  add_to_scope(Global_Scope, "slice", ARGON_SLICE_TYPE);
 
   add_to_scope(Global_Scope, "add", ADDITION_FUNCTION);
   add_to_scope(Global_Scope, "subtract", SUBTRACTION_FUNCTION);
@@ -1531,7 +1534,8 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       [OP_EXCEPTION_CATCHER_POP] = &&DO_EXCEPTION_CATCHER_POP,
       [OP_LOAD_IS_INSTANCE_FUNCTION] = &&DO_LOAD_IS_INSTANCE_FUNCTION,
       [OP_LOAD_EXCEPTION_CLASS] = &&DO_LOAD_EXCEPTION_CLASS,
-      [OP_LOAD_STOPITERATION_CLASS] = &&DO_LOAD_STOPITERATION_CLASS};
+      [OP_LOAD_STOPITERATION_CLASS] = &&DO_LOAD_STOPITERATION_CLASS,
+      [OP_LOAD_SLICE_CLASS] = &&DO_LOAD_SLICE_CLASS};
   _state.head = 0;
 
   ArErr err = *err_ptr;
@@ -2762,6 +2766,10 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
     }
     DO_LOAD_STOPITERATION_CLASS: {
       state->registers[0] = StopIteration;
+      continue;
+    }
+    DO_LOAD_SLICE_CLASS: {
+      state->registers[0] = ARGON_SLICE_TYPE;
       continue;
     }
     DO_LOAD_TEMPLATE_METHOD: {

@@ -195,10 +195,11 @@ int shell() {
   printf("Chloride %s Copyright (C) 2026 William Bell\n"
          "This program comes with ABSOLUTELY NO WARRANTY; for details type "
          "\"license\".\n"
-         "This is libre (freedom-respecting) software released under the GNU "
+         "This is free software released under the GNU "
          "GPL Version 3 or later,\n"
          "and you are welcome to redistribute it under certain conditions; "
-         "type \"license\" for details.\n\n",
+         "type \"license\" for details.\n"
+         "You can learn more about what the term \"free software\" means at https://www.gnu.org/philosophy/free-sw.html\n\n",
          version_string);
 
   ArgonObject *output_object = create_argon_native_function("log", term_log);
