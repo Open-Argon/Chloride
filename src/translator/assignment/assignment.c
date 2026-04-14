@@ -225,7 +225,6 @@ size_t translate_parsed_assignment(Translated *translated,
           push_instruction_byte(translated, OP_LOAD_NULL);
           push_instruction_byte(translated, 0);
         }
-        return 0;
         if (subscript->size != 1) {
           push_instruction_byte(translated, OP_INSERT_ARG);
           push_instruction_code(translated, j);
@@ -242,7 +241,6 @@ size_t translate_parsed_assignment(Translated *translated,
     if (access->subscripts.size != 1) {
       push_instruction_byte(translated, OP_CALL);
     }
-
     push_instruction_byte(translated, OP_INSERT_ARG);
     push_instruction_code(translated, 0);
 
