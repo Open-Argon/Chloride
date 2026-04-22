@@ -52,15 +52,37 @@ ArgonObject *ARGON_ARRAY___new__(size_t argc, ArgonObject **argv, ArErr *err,
                       argc);
     return ARGON_NULL;
   }
-  ArgonObject *get_dictionary = get_builtin_field_for_class(
-      get_builtin_field(argv[1], __class__), __array__, argv[1]);
-  if (!get_dictionary)
+
+  ArgonObject *iter_method = get_builtin_field_for_class(
+      get_builtin_field(argv[1], __class__), __iter__, argv[1]);
+  if (!iter_method)
     return api->throw_argon_error(err, RuntimeError,
-                                  "Object doesn't have __array__ method");
-  ArgonObject *object = argon_call(get_dictionary, 0, NULL, err, state);
-  if (object->type != TYPE_ARRAY)
+                                  "Object doesn't have __iter__ method");
+  ArgonObject *iter_obj = argon_call(iter_method, 0, NULL, err, state);
+
+  ArgonObject *next_method = get_builtin_field_for_class(
+      get_builtin_field(iter_obj, __class__), __next__, iter_obj);
+  if (!next_method)
     return api->throw_argon_error(
-        err, RuntimeError, "Objects __array__ method didn't return an array");
+        err, RuntimeError, "Iterator object doesn't have __next__ method");
+
+  ArgonObject *object = new_instance(ARRAY_TYPE, sizeof(darray_armem));
+  object->type = TYPE_ARRAY;
+  object->value.as_array = darray_armem_create();
+  darray_armem_init(object->value.as_array, sizeof(ArgonObject *), 0);
+
+  while (true) {
+    ArgonObject *item = argon_call(next_method, 0, NULL, err, state);
+    if (err->ptr == StopIteration_instance) {
+      err->ptr = ARGON_NULL;
+      break;
+    } else if (api->is_error(err)) {
+      return ARGON_NULL;
+    }
+    darray_armem_insert(object->value.as_array, object->value.as_array->size,
+                        &item);
+  }
+
   return object;
 }
 
@@ -190,18 +212,6 @@ ArgonObject *ARGON_ARRAY_of_size(size_t argc, ArgonObject **argv, ArErr *err,
   return object;
 }
 
-ArgonObject *ARGON_ARRAY___array__(size_t argc, ArgonObject **argv, ArErr *err,
-                                   RuntimeState *state, ArgonNativeAPI *api) {
-  (void)api;
-  (void)state;
-  if (argc != 1) {
-    *err = create_err(RuntimeError,
-                      "__array__ expects 1 argument, got %" PRIu64, argc);
-    return ARGON_NULL;
-  }
-  return argv[0];
-}
-
 ArgonObject *ARGON_ARRAY___contains__(size_t argc, ArgonObject **argv,
                                       ArErr *err, RuntimeState *state,
                                       ArgonNativeAPI *api) {
@@ -310,21 +320,9 @@ ArgonObject *ARGON_ARRAY___getitem__(size_t argc, ArgonObject **argv,
   }
   darray_armem *arr = argv[0]->value.as_array;
   if (argv[1]->type == TYPE_SLICE) { // slice
-    ArgonObject *indices = ARGON_SLICE_TYPE_indices(
-        2,
-        (ArgonObject *[]){argv[1], new_number_object_from_int64(
-                                       arr->size)},
-        err, state, api);
-    if (api->is_error(err))
-      return ARGON_NULL;
-    int64_t start = api->argon_to_i64(indices->value.as_tuple.data[0],err);
-    if (api->is_error(err))
-      return ARGON_NULL;
-    int64_t stop = api->argon_to_i64(indices->value.as_tuple.data[1],err);
-    if (api->is_error(err))
-      return ARGON_NULL;
-    int64_t step = api->argon_to_i64(indices->value.as_tuple.data[2],err);
-    if (api->is_error(err))
+
+    SliceIndices indices;
+    if (slice_indices(argv[1], arr->size, &indices, err, api) != 0)
       return ARGON_NULL;
 
     ArgonObject *slice = new_instance(ARRAY_TYPE, sizeof(darray_armem));
@@ -333,17 +331,19 @@ ArgonObject *ARGON_ARRAY___getitem__(size_t argc, ArgonObject **argv,
     slice->value.as_array = darray_armem_create();
 
     int64_t size = 0;
-    if (step > 0 && stop > start)
-        size = (stop - start + step - 1) / step;
-    else if (step < 0 && stop < start)
-        size = (start - stop - step - 1) / (-step);
+    if (indices.step > 0 && indices.stop > indices.start)
+      size = (indices.stop - indices.start + indices.step - 1) / indices.step;
+    else if (indices.step < 0 && indices.stop < indices.start)
+      size =
+          (indices.start - indices.stop - indices.step - 1) / (-indices.step);
 
     darray_armem_init(slice->value.as_array, sizeof(ArgonObject *), size);
 
     for (int64_t i = 0; i < size; i++) {
-        int64_t src_index = start + i * step;  // source index follows step
-        ((ArgonObject**)slice->value.as_array->data)[i] =
-            *(ArgonObject **)darray_armem_get(arr, src_index);
+      int64_t src_index =
+          indices.start + i * indices.step; // source index follows step
+      ((ArgonObject **)slice->value.as_array->data)[i] =
+          *(ArgonObject **)darray_armem_get(arr, src_index);
     }
 
     return slice;
@@ -363,23 +363,134 @@ ArgonObject *ARGON_ARRAY___setitem__(size_t argc, ArgonObject **argv,
                                      ArErr *err, RuntimeState *state,
                                      ArgonNativeAPI *api) {
   (void)state;
+  darray_armem *arr = argv[0]->value.as_array;
   if (argc != 3) {
     *err = create_err(RuntimeError,
                       "__setitem__ expects 3 arguments, got %" PRIu64, argc);
     return ARGON_NULL;
   }
+  if (argv[1]->type == TYPE_SLICE) {
+    SliceIndices indices;
+    if (slice_indices(argv[1], arr->size, &indices, err, api) != 0)
+      return ARGON_NULL;
+
+    int64_t slice_len = 0;
+    if (indices.step > 0 && indices.stop > indices.start)
+      slice_len = (indices.stop - indices.start + indices.step - 1) / indices.step;
+    else if (indices.step < 0 && indices.stop < indices.start)
+      slice_len = (indices.start - indices.stop - indices.step - 1) / (-indices.step);
+
+    // Collect new values from the iterable (argv[2])
+    ArgonObject *iter_method = get_builtin_field_for_class(
+        get_builtin_field(argv[2], __class__), __iter__, argv[2]);
+    if (!iter_method)
+      return api->throw_argon_error(err, RuntimeError,
+                                    "Object doesn't have __iter__ method");
+    ArgonObject *iter_obj = argon_call(iter_method, 0, NULL, err, state);
+    if (api->is_error(err))
+      return ARGON_NULL;
+
+    ArgonObject *next_method = get_builtin_field_for_class(
+        get_builtin_field(iter_obj, __class__), __next__, iter_obj);
+    if (!next_method)
+      return api->throw_argon_error(err, RuntimeError,
+                                    "Iterator object doesn't have __next__ method");
+
+    // Collect all new items into a temporary buffer
+    darray_armem *new_items = darray_armem_create();
+    darray_armem_init(new_items, sizeof(ArgonObject *), 0);
+
+    while (true) {
+      ArgonObject *item = argon_call(next_method, 0, NULL, err, state);
+      if (err->ptr == StopIteration_instance) {
+        err->ptr = ARGON_NULL;
+        break;
+      } else if (api->is_error(err)) {
+        return ARGON_NULL;
+      }
+      darray_armem_insert(new_items, new_items->size, &item);
+    }
+
+    int64_t new_len = (int64_t)new_items->size;
+
+    if (indices.step != 1) {
+      // Extended slice: new iterable must match the slice length exactly
+      if (new_len != slice_len) {
+        return api->throw_argon_error(err, ValueError,
+                                      "attempt to assign sequence of size %" PRId64
+                                      " to extended slice of size %" PRId64,
+                                      new_len, slice_len);
+      }
+      for (int64_t i = 0; i < slice_len; i++) {
+        int64_t dst = indices.start + i * indices.step;
+        ArgonObject *val = *(ArgonObject **)darray_armem_get(new_items, i);
+        *(ArgonObject **)darray_armem_get(arr, dst) = val;
+      }
+    } else {
+      // Simple slice (step == 1 or step == -1):
+      // Normalize so we always work left-to-right with step == 1
+      int64_t start = indices.start;
+      if (indices.step == -1) {
+        // reverse the new_items to match assignment order
+        for (int64_t lo = 0, hi = new_len - 1; lo < hi; lo++, hi--) {
+          ArgonObject **a = (ArgonObject **)darray_armem_get(new_items, lo);
+          ArgonObject **b = (ArgonObject **)darray_armem_get(new_items, hi);
+          ArgonObject *tmp = *a;
+          *a = *b;
+          *b = tmp;
+        }
+        // recalculate start for step==-1 slices: the affected region is
+        // [stop+1 .. start] inclusive, left-to-right
+        start = indices.stop + 1;
+      }
+
+      int64_t del_count = slice_len; // elements being removed
+      int64_t old_size  = (int64_t)arr->size;
+      int64_t new_size  = old_size - del_count + new_len;
+
+      if (new_len < del_count) {
+        // Shrink: shift tail left
+        int64_t shift = del_count - new_len;
+        for (int64_t i = start + new_len; i < new_size; i++) {
+          *(ArgonObject **)darray_armem_get(arr, i) =
+              *(ArgonObject **)darray_armem_get(arr, i + shift);
+        }
+        // Trim the array
+        arr->size = (size_t)new_size;
+      } else if (new_len > del_count) {
+        // Grow: insert extra slots by shifting tail right
+        int64_t shift = new_len - del_count;
+        // Expand backing storage
+        for (int64_t i = 0; i < shift; i++)
+          darray_armem_insert(arr, arr->size, &ARGON_NULL);
+        // Shift existing tail to the right
+        for (int64_t i = new_size - 1; i >= start + new_len; i--) {
+          *(ArgonObject **)darray_armem_get(arr, i) =
+              *(ArgonObject **)darray_armem_get(arr, i - shift);
+        }
+      }
+
+      // Write new values into [start .. start+new_len)
+      for (int64_t i = 0; i < new_len; i++) {
+        ArgonObject *val = *(ArgonObject **)darray_armem_get(new_items, i);
+        *(ArgonObject **)darray_armem_get(arr, start + i) = val;
+      }
+    }
+
+    return argv[2];
+  }
+
+  // --- integer index ---
   int64_t index = api->argon_to_i64(argv[1], err);
   if (api->is_error(err))
     return ARGON_NULL;
-  darray_armem *arr = argv[0]->value.as_array;
   if (index < 0)
     index += arr->size;
-  if (index >= (int64_t)arr->size || index < 0) {
+  if (index >= (int64_t)arr->size || index < 0)
     return api->throw_argon_error(err, IndexError, "index out of range");
-  }
-  ArgonObject **ptr = darray_armem_get(arr, index);
-  *ptr = argv[2];
-  return *ptr;
+
+  *(ArgonObject **)darray_armem_get(arr, index) = argv[2];
+  return argv[2];
 }
 
 ArgonObject *ARGON_ARRAY___iter__(size_t argc, ArgonObject **argv, ArErr *err,
@@ -463,9 +574,6 @@ void init_array_type() {
   add_builtin_field(
       ARRAY_TYPE, of_size,
       create_argon_native_function("of_size", ARGON_ARRAY_of_size));
-  add_builtin_field(
-      ARRAY_TYPE, __array__,
-      create_argon_native_function("__array__", ARGON_ARRAY___array__));
 
   ARRAY_ITERATOR_TYPE = new_class();
   add_builtin_field(

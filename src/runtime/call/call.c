@@ -228,7 +228,6 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
     return;
   }
   case TYPE_NATIVE_FUNCTION: {
-    ArgonObject **single_arg = (ArgonObject *[1]){};
     if (binding_object) {
       if (argc > 0) {
         ArgonObject **new_call_args =
@@ -239,8 +238,7 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
         argv = new_call_args;
         argc++;
       } else {
-        single_arg[0] = binding_object;
-        argv = single_arg;
+        argv = &binding_object;
         argc = 1;
       }
     }

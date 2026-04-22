@@ -38,61 +38,17 @@ ArgonObject *BASE_CLASS = NULL;
 __thread struct hashmap *is_being_repr = NULL;
 
 const char *built_in_field_names[BUILT_IN_FIELDS_COUNT] = {
-    "__base__",
-    "__class__",
-    "__name__",
-    "", // above is anything that gets stored in built in slots
-    "__binding__",
-    "__function__",
-    "__add__",
-    "__string__",
-    "__subtract__",
-    "__multiply__",
-    "__exponent__",
-    "__division__",
-    "__floor_division__",
-    "__modulo__",
-    "__equal__",
-    "__not_equal__",
-    "__less_than__",
-    "__less_than_equal__",
-    "__greater_than__",
-    "__greater_than_equal__",
-    "__new__",
-    "__init__",
-    "__boolean__",
-    "__getattr__",
-    "address",
-    "__call__",
-    "__number__",
-    "get_length",
-    "set_length",
-    "of_size",
-    "from_string",
-    "to_string",
-    "__getattribute__",
-    "__negation__",
-    "__setattr__",
-    "__getitem__",
-    "__setitem__",
-    "__hash__",
-    "__repr__",
-    "append",
-    "insert",
-    "pop",
-    "__contains__",
-    "__iter__",
-    "__next__",
-    "__template__",
-    "__dictionary__",
-    "__array__",
-    "message",
-    "stack_trace",
-  "indices",
-  "start",
-  "step",
-  "stop",
+#define X(name) [name] = #name,
+    BUILT_IN_FIELDS(X)
+#undef X
+
+    [field__address] = "address",
 };
+
+_Static_assert(
+    sizeof(built_in_field_names) / sizeof(built_in_field_names[0]) == BUILT_IN_FIELDS_COUNT,
+    "built_in_field_names size mismatch"
+);
 
 uint64_t built_in_field_hashes[BUILT_IN_FIELDS_COUNT];
 

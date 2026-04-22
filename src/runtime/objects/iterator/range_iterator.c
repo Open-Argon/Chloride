@@ -115,7 +115,7 @@ ArgonObject *ARGON_RANGE_ITERATOR_TYPE___iter__(size_t argc, ArgonObject **argv,
       (struct as_range_iterator *)((char *)new_obj + sizeof(ArgonObject));
 
   *new_obj->value.as_range_iterator = *self->value.as_range_iterator;
-  return self;
+  return new_obj;
 }
 
 ArgonObject *ARGON_RANGE_ITERATOR_TYPE___next__(size_t argc, ArgonObject **argv,

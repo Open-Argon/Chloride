@@ -44,93 +44,94 @@ ArgonObject *ARGON_SLICE_TYPE___init__(size_t argc, ArgonObject **argv,
   return ARGON_NULL;
 }
 
+// Returns -1 on error, 0 on success
+int slice_indices(ArgonObject *self, int64_t length, SliceIndices *out,
+                         ArErr *err, ArgonNativeAPI *api) {
+  int64_t start_i64, stop_i64, step_i64;
+
+  ArgonObject *start_obj = get_builtin_field(self, start);
+  if (start_obj != ARGON_NULL) {
+    start_i64 = api->argon_to_i64(start_obj, err);
+    if (api->is_error(err)) return -1;
+  } else {
+    start_i64 = 0;
+  }
+
+  ArgonObject *stop_obj = get_builtin_field(self, stop);
+  if (stop_obj != ARGON_NULL) {
+    stop_i64 = api->argon_to_i64(stop_obj, err);
+    if (api->is_error(err)) return -1;
+  } else {
+    stop_i64 = INT64_MAX;
+  }
+
+  ArgonObject *step_obj = get_builtin_field(self, step);
+  if (step_obj != ARGON_NULL) {
+    step_i64 = api->argon_to_i64(step_obj, err);
+    if (api->is_error(err)) return -1;
+  } else {
+    step_i64 = 1;
+  }
+
+  if (step_i64 == 0) {
+    api->throw_argon_error(err, RuntimeError, "slice step cannot be zero");
+    return -1;
+  }
+
+  int64_t final_start_i64, final_stop_i64;
+
+  if (step_i64 > 0) {
+    if (start_obj == ARGON_NULL) {
+      final_start_i64 = 0;
+    } else {
+      if (start_i64 < 0) start_i64 += length;
+      final_start_i64 = start_i64 < 0 ? 0 : (start_i64 > length ? length : start_i64);
+    }
+    if (stop_obj == ARGON_NULL) {
+      final_stop_i64 = length;
+    } else {
+      if (stop_i64 < 0) stop_i64 += length;
+      final_stop_i64 = stop_i64 < 0 ? 0 : (stop_i64 > length ? length : stop_i64);
+    }
+  } else {
+    if (start_obj == ARGON_NULL) {
+      final_start_i64 = length - 1;
+    } else {
+      if (start_i64 < 0) start_i64 += length;
+      final_start_i64 = start_i64 < -1 ? -1 : (start_i64 >= length ? length - 1 : start_i64);
+    }
+    if (stop_obj == ARGON_NULL) {
+      final_stop_i64 = -1;
+    } else {
+      if (stop_i64 < 0) stop_i64 += length;
+      final_stop_i64 = stop_i64 < -1 ? -1 : (stop_i64 >= length ? length - 1 : stop_i64);
+    }
+  }
+
+  out->start = final_start_i64;
+  out->stop  = final_stop_i64;
+  out->step  = step_i64;
+  return 0;
+}
+
 ArgonObject *ARGON_SLICE_TYPE_indices(size_t argc, ArgonObject **argv,
                                       ArErr *err, RuntimeState *state,
                                       ArgonNativeAPI *api) {
   if (api->fix_to_arg_size(2, argc, err))
     return ARGON_NULL;
+
   ArgonObject *self = argv[0];
   int64_t length = api->argon_to_i64(argv[1], err);
   if (api->is_error(err))
     return ARGON_NULL;
-  int64_t start_i64, stop_i64, step_i64, final_start_i64, final_stop_i64;
-  ArgonObject *start_obj = get_builtin_field(self, start);
-  if (start_obj != ARGON_NULL) {
-    start_i64 = api->argon_to_i64(start_obj, err);
-    if (api->is_error(err))
-      return ARGON_NULL;
-  } else {
-    start_i64 = 0;
-  }
-  ArgonObject *stop_obj = get_builtin_field(self, stop);
-  if (stop_obj != ARGON_NULL) {
-    stop_i64 = api->argon_to_i64(stop_obj, err);
-    if (api->is_error(err))
-      return ARGON_NULL;
-  } else {
-    stop_i64 = INT64_MAX;
-  }
-  ArgonObject *step_obj = get_builtin_field(self, step);
-  if (step_obj != ARGON_NULL) {
-    step_i64 = api->argon_to_i64(step_obj, err);
-    if (api->is_error(err))
-      return ARGON_NULL;
-  } else {
-    step_i64 = 1;
-  }
 
-  // Validate step
-  if (step_i64 == 0) {
-    return api->throw_argon_error(err, RuntimeError,
-                                  "slice step cannot be zero");
-  }
+  SliceIndices indices;
+  if (slice_indices(self, length, &indices, err, api) < 0)
+    return ARGON_NULL;
 
-  if (step_i64 > 0) {
-    // Forward slice
-    // Clamp start
-    if (start_obj == ARGON_NULL) {
-      final_start_i64 = 0;
-    } else {
-      if (start_i64 < 0)
-        start_i64 += length;
-      final_start_i64 =
-          start_i64 < 0 ? 0 : (start_i64 > length ? length : start_i64);
-    }
-    // Clamp stop
-    if (stop_obj == ARGON_NULL) {
-      final_stop_i64 = length;
-    } else {
-      if (stop_i64 < 0)
-        stop_i64 += length;
-      final_stop_i64 =
-          stop_i64 < 0 ? 0 : (stop_i64 > length ? length : stop_i64);
-    }
-  } else {
-    // Backward slice (negative step)
-    // Clamp start
-    if (start_obj == ARGON_NULL) {
-      final_start_i64 = length - 1;
-    } else {
-      if (start_i64 < 0)
-        start_i64 += length;
-      final_start_i64 =
-          start_i64 < -1 ? -1 : (start_i64 >= length ? length - 1 : start_i64);
-    }
-    // Clamp stop
-    if (stop_obj == ARGON_NULL) {
-      final_stop_i64 = -1;
-    } else {
-      if (stop_i64 < 0)
-        stop_i64 += length;
-      final_stop_i64 =
-          stop_i64 < -1 ? -1 : (stop_i64 >= length ? length - 1 : stop_i64);
-    }
-  }
-
-  // Pack result into a tuple: (start, stop, step)
-  ArgonObject *result_start = api->i64_to_argon(final_start_i64);
-  ArgonObject *result_stop = api->i64_to_argon(final_stop_i64);
-  ArgonObject *result_step = api->i64_to_argon(step_i64);
+  ArgonObject *result_start = api->i64_to_argon(indices.start);
+  ArgonObject *result_stop  = api->i64_to_argon(indices.stop);
+  ArgonObject *result_step  = api->i64_to_argon(indices.step);
 
   return TUPLE_CREATE(3, (ArgonObject *[]){result_start, result_stop, result_step},
                       err, state, api);
