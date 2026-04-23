@@ -60,6 +60,7 @@
   X(pop)                                                                       \
   X(__contains__)                                                              \
   X(__iter__)                                                                  \
+  X(of)                                                                        \
   X(__next__)                                                                  \
   X(__template__)                                                              \
   X(__dictionary__)                                                            \
@@ -282,6 +283,11 @@ struct tuple_struct {
   ArgonObject *data[];
 };
 
+struct as_tuple_iterator {
+  size_t current;
+  struct tuple_struct *tuple;
+};
+
 // full definition of ArgonObject (no typedef again!)
 struct ArgonObject {
   struct hashmap_GC *dict;
@@ -296,6 +302,7 @@ struct ArgonObject {
     struct hashmap_GC *as_hashmap;
     struct as_range_iterator *as_range_iterator;
     struct as_array_iterator *as_array_iterator;
+    struct as_tuple_iterator *as_tuple_iterator;
     struct as_dictionary_iterator *as_dictionary_iterator;
     struct string_struct *as_str;
     struct tuple_struct as_tuple;

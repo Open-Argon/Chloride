@@ -17,6 +17,7 @@ ArgonObject *BaseException;
 
 ArgonObject *Exception;
 ArgonObject *RuntimeError;
+ArgonObject *AssignError;
 ArgonObject *ValueError;
 ArgonObject *SyntaxError;
 ArgonObject *ConversionError;
@@ -102,6 +103,11 @@ void init_exceptions() {
   add_builtin_field(RuntimeError, __base__, Exception);
   add_builtin_field(RuntimeError, __name__,
                     new_string_object_null_terminated("RuntimeError"));
+
+  AssignError = new_class();
+  add_builtin_field(AssignError, __base__, Exception);
+  add_builtin_field(AssignError, __name__,
+                    new_string_object_null_terminated("AssignError"));
 
   ValueError = new_class();
   add_builtin_field(ValueError, __base__, Exception);

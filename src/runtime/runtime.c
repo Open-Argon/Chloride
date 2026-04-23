@@ -1289,6 +1289,8 @@ void bootstrap_globals() {
   // standard exceptions
   add_to_scope(Global_Scope, "Exception", Exception);
   add_to_scope(Global_Scope, "RuntimeError", RuntimeError);
+  add_to_scope(Global_Scope, "AssignError", AssignError);
+  add_to_scope(Global_Scope, "ValueError", ValueError);
   add_to_scope(Global_Scope, "SyntaxError", SyntaxError);
   add_to_scope(Global_Scope, "ConversionError", ConversionError);
   add_to_scope(Global_Scope, "MathsError", MathsError);
