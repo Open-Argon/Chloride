@@ -493,6 +493,83 @@ ArgonObject *ARGON_ARRAY___setitem__(size_t argc, ArgonObject **argv,
   return argv[2];
 }
 
+ArgonObject *ARGON_ARRAY___delitem__(size_t argc, ArgonObject **argv,
+                                     ArErr *err, RuntimeState *state,
+                                     ArgonNativeAPI *api) {
+  (void)state;
+  if (argc != 2) {
+    *err = create_err(RuntimeError,
+                      "__delitem__ expects 2 arguments, got %" PRIu64, argc);
+    return ARGON_NULL;
+  }
+
+  darray_armem *arr = argv[0]->value.as_array;
+
+  if (argv[1]->type == TYPE_SLICE) {
+    SliceIndices indices;
+    if (slice_indices(argv[1], arr->size, &indices, err, api) != 0)
+      return ARGON_NULL;
+
+    int64_t slice_len = 0;
+    if (indices.step > 0 && indices.stop > indices.start)
+      slice_len = (indices.stop - indices.start + indices.step - 1) / indices.step;
+    else if (indices.step < 0 && indices.stop < indices.start)
+      slice_len = (indices.start - indices.stop - indices.step - 1) / (-indices.step);
+
+    if (slice_len == 0)
+      return ARGON_NULL;
+
+    if (indices.step == 1 || indices.step == -1) {
+      // Simple slice: contiguous region to remove
+      int64_t start = (indices.step == 1) ? indices.start : indices.stop + 1;
+      int64_t old_size = (int64_t)arr->size;
+      int64_t new_size = old_size - slice_len;
+
+      // Shift tail left over the deleted region
+      for (int64_t i = start; i < new_size; i++)
+        *(ArgonObject **)darray_armem_get(arr, i) =
+            *(ArgonObject **)darray_armem_get(arr, i + slice_len);
+
+      arr->size = (size_t)new_size;
+    } else {
+      // Extended slice: delete indices individually.
+      // Collect the indices to delete, then compact in one pass.
+      // Mark slots as NULL first, then squeeze them out.
+      for (int64_t i = 0; i < slice_len; i++) {
+        int64_t idx = indices.start + i * indices.step;
+        *(ArgonObject **)darray_armem_get(arr, idx) = NULL;
+      }
+
+      int64_t write = 0;
+      for (int64_t read = 0; read < (int64_t)arr->size; read++) {
+        ArgonObject *slot = *(ArgonObject **)darray_armem_get(arr, read);
+        if (slot != NULL)
+          *(ArgonObject **)darray_armem_get(arr, write++) = slot;
+      }
+      arr->size = (size_t)write;
+    }
+
+    return ARGON_NULL;
+  }
+
+  // --- integer index ---
+  int64_t index = api->argon_to_i64(argv[1], err);
+  if (api->is_error(err))
+    return ARGON_NULL;
+  if (index < 0)
+    index += arr->size;
+  if (index >= (int64_t)arr->size || index < 0)
+    return api->throw_argon_error(err, IndexError, "index out of range");
+
+  // Shift everything after the deleted index one slot left
+  for (int64_t i = index; i < (int64_t)arr->size - 1; i++)
+    *(ArgonObject **)darray_armem_get(arr, i) =
+        *(ArgonObject **)darray_armem_get(arr, i + 1);
+
+  arr->size--;
+  return ARGON_NULL;
+}
+
 ArgonObject *ARGON_ARRAY___iter__(size_t argc, ArgonObject **argv, ArErr *err,
                                   RuntimeState *state, ArgonNativeAPI *api) {
   (void)api;
@@ -565,6 +642,9 @@ void init_array_type() {
   add_builtin_field(
       ARRAY_TYPE, __setitem__,
       create_argon_native_function("__setitem__", ARGON_ARRAY___setitem__));
+  add_builtin_field(
+      ARRAY_TYPE, __delitem__,
+      create_argon_native_function("__delitem__", ARGON_ARRAY___delitem__));
   add_builtin_field(
       ARRAY_TYPE, __contains__,
       create_argon_native_function("__contains__", ARGON_ARRAY___contains__));

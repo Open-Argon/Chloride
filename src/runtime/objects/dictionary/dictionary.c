@@ -217,8 +217,6 @@ ArgonObject *create_ARGON_DICTIONARY_TYPE___getitem__(size_t argc,
     if (api->is_error(err))
       return ARGON_NULL;
 
-    printf("%s\n", object_str);
-
     *err = create_err(AttributeError, "Dictionary has no item %s", object_str);
     return ARGON_NULL;
   }
@@ -246,6 +244,36 @@ ArgonObject *create_ARGON_DICTIONARY_TYPE___setitem__(size_t argc,
   }
   hashmap_insert_GC(object->value.as_hashmap, hash, key, value, 0);
   return value;
+}
+
+ArgonObject *create_ARGON_DICTIONARY_TYPE___delitem__(size_t argc,
+                                                      ArgonObject **argv,
+                                                      ArErr *err,
+                                                      RuntimeState *state,
+                                                      ArgonNativeAPI *api) {
+  (void)api;
+  (void)state;
+  if (argc != 2) {
+    *err = create_err(RuntimeError,
+                      "__delitem__ expects 2 arguments, got %" PRIu64, argc);
+    return ARGON_NULL;
+  }
+  ArgonObject *object = argv[0];
+  ArgonObject *key = argv[1];
+  int64_t hash = hash_object(key, err, state);
+  if (is_error(err)) {
+    return ARGON_NULL;
+  }
+  if (!hashmap_remove_GC(object->value.as_hashmap, hash)) {
+    char *object_str =
+        argon_object_to_null_terminated_string(key, err, state);
+    if (api->is_error(err))
+      return ARGON_NULL;
+
+    *err = create_err(AttributeError, "Dictionary has no item %s", object_str);
+    return ARGON_NULL;
+  }
+  return ARGON_NULL;
 }
 
 ArgonObject *create_ARGON_DICTIONARY_TYPE___iter__(size_t argc,
@@ -315,11 +343,15 @@ void create_ARGON_DICTIONARY_TYPE() {
       "__setitem__", create_ARGON_DICTIONARY_TYPE___setitem__);
   ArgonObject *getter = create_argon_native_function(
       "__getitem__", create_ARGON_DICTIONARY_TYPE___getitem__);
+  ArgonObject *deleter = create_argon_native_function(
+      "__delitem__", create_ARGON_DICTIONARY_TYPE___delitem__);
 
   add_builtin_field(ARGON_DICTIONARY_TYPE, __setitem__, setter);
   add_builtin_field(ARGON_DICTIONARY_TYPE, __getitem__, getter);
+  add_builtin_field(ARGON_DICTIONARY_TYPE, __delitem__, deleter);
   add_builtin_field(ARGON_DICTIONARY_TYPE, __setattr__, setter);
   add_builtin_field(ARGON_DICTIONARY_TYPE, __getattr__, getter);
+  add_builtin_field(ARGON_DICTIONARY_TYPE, __delattr__, deleter);
   add_builtin_field(ARGON_DICTIONARY_TYPE, __string__,
                     create_argon_native_function(
                         "__string__", create_ARGON_DICTIONARY_TYPE___string__));

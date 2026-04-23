@@ -8,7 +8,7 @@ SPDX-License-Identifier: GFDL-1.3-or-later
 2.  iterator objects (done)
 3.  add for loops using iterator objects (done)
 4.  add item get (done)
-5.  add delete functionality
+5.  add delete functionality (done)
 6.  add is 
 6.  add is instance (done)
 7.  add path stdlib

@@ -71,7 +71,7 @@ size_t translate_parsed_delete(Translated *translated,
     push_instruction_code(translated, parsedDelete->column);
     push_instruction_code(translated, parsedDelete->length);
 
-    push_instruction_byte(translated, OP_LOAD_DELATTR_METHOD);
+    push_instruction_byte(translated, OP_LOAD_DELITEM_METHOD);
 
     push_instruction_byte(translated, OP_INIT_CALL);
     push_instruction_code(translated, 1);
