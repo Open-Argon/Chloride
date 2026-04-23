@@ -51,8 +51,10 @@
   X(__getattribute__)                                                          \
   X(__negation__)                                                              \
   X(__setattr__)                                                               \
+  X(__delattr__)                                                               \
   X(__getitem__)                                                               \
   X(__setitem__)                                                               \
+  X(__delitem__)                                                               \
   X(__hash__)                                                                  \
   X(__repr__)                                                                  \
   X(append)                                                                    \

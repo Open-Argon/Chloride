@@ -1425,6 +1425,22 @@ static inline void load_variable(int64_t length, int64_t offset, uint64_t hash,
   return;
 }
 
+static inline void delete_variable(int64_t length, int64_t offset,
+                                   uint64_t hash, Translated *translated,
+                                   struct Stack *stack, ArErr *err) {
+
+  struct Stack *current_stack = stack;
+  while (current_stack) {
+    if (hashmap_remove_GC(current_stack->scope, hash)) {
+      return;
+    }
+    current_stack = current_stack->prev;
+  }
+  *err = create_err(NameError, "Identifier '%.*s' is not defined", (int)length,
+                    arena_get(&translated->constants, offset));
+  return;
+}
+
 void init_runtime_state(RuntimeState *runtime, Translated translated,
                         char *path) {
   *runtime =
@@ -1537,7 +1553,10 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       [OP_LOAD_IS_INSTANCE_FUNCTION] = &&DO_LOAD_IS_INSTANCE_FUNCTION,
       [OP_LOAD_EXCEPTION_CLASS] = &&DO_LOAD_EXCEPTION_CLASS,
       [OP_LOAD_STOPITERATION_CLASS] = &&DO_LOAD_STOPITERATION_CLASS,
-      [OP_LOAD_SLICE_CLASS] = &&DO_LOAD_SLICE_CLASS};
+      [OP_LOAD_SLICE_CLASS] = &&DO_LOAD_SLICE_CLASS,
+      [OP_DELETE_IDENTIFIER] = &&DO_DELETE_IDENTIFIER,
+      [OP_LOAD_DELATTR_METHOD]= &&DO_LOAD_DELATTR_METHOD,
+      [OP_LOAD_DELITEM_METHOD]=&&DO_LOAD_DELITEM_METHOD};
   _state.head = 0;
 
   ArErr err = *err_ptr;
@@ -1755,6 +1774,17 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       POP_U64(hash);
       load_variable(length, offset, hash, translated, state,
                     currentStackFrame->stack, &err);
+      continue;
+    }
+    DO_DELETE_IDENTIFIER: {
+      int64_t length;
+      POP_U64(length);
+      int64_t offset;
+      POP_U64(offset);
+      uint64_t hash;
+      POP_U64(hash);
+      delete_variable(length, offset, hash, translated,
+                      currentStackFrame->stack, &err);
       continue;
     }
     DO_DECLARE: {
@@ -2794,6 +2824,16 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       }
       continue;
     }
+    DO_LOAD_DELATTR_METHOD: {
+      state->registers[0] = get_builtin_field_for_class(
+          get_builtin_field(state->registers[0], __class__), __delattr__,
+          state->registers[0]);
+      if (!state->registers[0]) {
+        err = create_err(RuntimeError,
+                         "unable to get __delattr__ from objects class");
+      }
+      continue;
+    }
     DO_CREATE_CLASS: {
       int64_t length;
       POP_U64(length);
@@ -2829,6 +2869,16 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       if (!state->registers[0]) {
         err = create_err(RuntimeError,
                          "unable to get __getitem__ from objects class");
+      }
+      continue;
+    }
+    DO_LOAD_DELITEM_METHOD: {
+      state->registers[0] = get_builtin_field_for_class(
+          get_builtin_field(state->registers[0], __class__), __delitem__,
+          state->registers[0]);
+      if (!state->registers[0]) {
+        err = create_err(RuntimeError,
+                         "unable to get __delitem__ from objects class");
       }
       continue;
     }
