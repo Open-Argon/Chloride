@@ -76,9 +76,7 @@ char *c_quote_string(const char *input, size_t len) {
   return out;
 }
 
-ArgonObject *ARGON_STRING_TYPE___equal__(size_t argc, ArgonObject **argv,
-                                         ArErr *err, RuntimeState *state,
-                                         ArgonNativeAPI *api) {
+ARGON_METHOD(ARGON_STRING_TYPE, __equal__, {
   (void)api;
   (void)argv;
   (void)state;
@@ -99,11 +97,9 @@ ArgonObject *ARGON_STRING_TYPE___equal__(size_t argc, ArgonObject **argv,
                          argv[0]->value.as_str->length) == 0)
              ? ARGON_TRUE
              : ARGON_FALSE;
-}
+})
 
-ArgonObject *ARGON_STRING_TYPE___not_equal__(size_t argc, ArgonObject **argv,
-                                             ArErr *err, RuntimeState *state,
-                                             ArgonNativeAPI *api) {
+ARGON_METHOD(ARGON_STRING_TYPE, __not_equal__, {
   (void)api;
   (void)argv;
   (void)state;
@@ -115,11 +111,9 @@ ArgonObject *ARGON_STRING_TYPE___not_equal__(size_t argc, ArgonObject **argv,
   return ARGON_STRING_TYPE___equal__(argc, argv, err, state, api) == ARGON_TRUE
              ? ARGON_FALSE
              : ARGON_TRUE;
-}
+})
 
-ArgonObject *ARGON_STRING_TYPE___less_than__(size_t argc, ArgonObject **argv,
-                                             ArErr *err, RuntimeState *state,
-                                             ArgonNativeAPI *api) {
+ARGON_METHOD(ARGON_STRING_TYPE, __less_than__, {
   (void)api;
   (void)argv;
   (void)state;
@@ -148,13 +142,9 @@ ArgonObject *ARGON_STRING_TYPE___less_than__(size_t argc, ArgonObject **argv,
     return ARGON_FALSE;
 
   return len1 < len2 ? ARGON_TRUE : ARGON_FALSE;
-}
+})
 
-ArgonObject *ARGON_STRING_TYPE___less_than_equal__(size_t argc,
-                                                   ArgonObject **argv,
-                                                   ArErr *err,
-                                                   RuntimeState *state,
-                                                   ArgonNativeAPI *api) {
+ARGON_METHOD(ARGON_STRING_TYPE, __less_than_equal__, {
   (void)api;
   (void)state;
 
@@ -184,11 +174,9 @@ ArgonObject *ARGON_STRING_TYPE___less_than_equal__(size_t argc,
     return ARGON_FALSE;
 
   return len1 <= len2 ? ARGON_TRUE : ARGON_FALSE;
-}
+})
 
-ArgonObject *ARGON_STRING_TYPE___greater_than__(size_t argc, ArgonObject **argv,
-                                                ArErr *err, RuntimeState *state,
-                                                ArgonNativeAPI *api) {
+ARGON_METHOD(ARGON_STRING_TYPE, __greater_than__, {
   (void)api;
   (void)state;
 
@@ -218,14 +206,9 @@ ArgonObject *ARGON_STRING_TYPE___greater_than__(size_t argc, ArgonObject **argv,
     return ARGON_FALSE;
 
   return len1 > len2 ? ARGON_TRUE : ARGON_FALSE;
-}
+})
 
-ArgonObject *ARGON_STRING_TYPE___greater_than_equal__(size_t argc,
-                                                      ArgonObject **argv,
-                                                      ArErr *err,
-                                                      RuntimeState *state,
-                                                      ArgonNativeAPI *api) {
-
+ARGON_METHOD(ARGON_STRING_TYPE, __greater_than_equal__, {
   (void)api;
   (void)state;
 
@@ -255,11 +238,9 @@ ArgonObject *ARGON_STRING_TYPE___greater_than_equal__(size_t argc,
     return ARGON_FALSE;
 
   return len1 >= len2 ? ARGON_TRUE : ARGON_FALSE;
-}
+})
 
-ArgonObject *ARGON_STRING_TYPE_get_length(size_t argc, ArgonObject **argv,
-                                          ArErr *err, RuntimeState *state,
-                                          ArgonNativeAPI *api) {
+ARGON_METHOD(ARGON_STRING_TYPE, get_length, {
   (void)api;
   (void)state;
   if (argc != 1) {
@@ -268,11 +249,9 @@ ArgonObject *ARGON_STRING_TYPE_get_length(size_t argc, ArgonObject **argv,
     return ARGON_NULL;
   }
   return new_number_object_from_int64(argv[0]->value.as_str->length);
-}
+})
 
-ArgonObject *ARGON_STRING_TYPE_set_length(size_t argc, ArgonObject **argv,
-                                          ArErr *err, RuntimeState *state,
-                                          ArgonNativeAPI *api) {
+ARGON_METHOD(ARGON_STRING_TYPE, set_length, {
   (void)api;
   (void)state;
   (void)argv;
@@ -284,11 +263,9 @@ ArgonObject *ARGON_STRING_TYPE_set_length(size_t argc, ArgonObject **argv,
 
   *err = create_err(RuntimeError, "attribute 'length' is immutable");
   return ARGON_NULL;
-}
+})
 
-ArgonObject *ARGON_STRING_TYPE___getitem__(size_t argc, ArgonObject **argv,
-                                           ArErr *err, RuntimeState *state,
-                                           ArgonNativeAPI *api) {
+ARGON_METHOD(ARGON_STRING_TYPE, __getitem__, {
   (void)api;
   (void)state;
   if (argc != 2) {
@@ -333,13 +310,9 @@ ArgonObject *ARGON_STRING_TYPE___getitem__(size_t argc, ArgonObject **argv,
     return api->throw_argon_error(err, IndexError, "index out of range");
   }
   return api->string_to_argon((struct string){&self.data[index], 1});
-}
+})
 
-ArgonObject *ARGON_STRING_TYPE_split(size_t argc, ArgonObject **argv,
-                                     ArErr *err, RuntimeState *state,
-                                     ArgonNativeAPI *api) {
-  (void)state;
-
+ARGON_METHOD(ARGON_STRING_TYPE, split, {
   if (argc != 2) {
     *err = create_err(RuntimeError, "split expects 2 arguments, got %" PRIu64,
                       argc);
@@ -394,7 +367,7 @@ ArgonObject *ARGON_STRING_TYPE_split(size_t argc, ArgonObject **argv,
                       &item);
 
   return object;
-}
+})
 
 char *char_chr(uint64_t codepoint, size_t *len_out) {
   char *out;
@@ -442,13 +415,13 @@ char *char_chr(uint64_t codepoint, size_t *len_out) {
 
 uint64_t char_ord(const char *s, size_t len, bool *valid) {
   *valid = false;
-  if (len == 0 || len>4)
+  if (len == 0 || len > 4)
     return 0;
 
   const unsigned char *u = (const unsigned char *)s;
   uint64_t codepoint = 0;
 
-  if (u[0] < 0x80 && len==1) {
+  if (u[0] < 0x80 && len == 1) {
     *valid = true;
     return u[0];
   }
@@ -478,9 +451,8 @@ uint64_t char_ord(const char *s, size_t len, bool *valid) {
   return 0; // invalid UTF-8
 }
 
-ArgonObject *ARGON_STRING_TYPE_chr(size_t argc, ArgonObject **argv, ArErr *err,
-                                   RuntimeState *state, ArgonNativeAPI *api) {
-                                    (void)state;
+ARGON_METHOD(ARGON_STRING_TYPE, chr, {
+  (void)state;
   if (argc != 1) {
     *err =
         create_err(RuntimeError, "chr expects 1 argument, got %" PRIu64, argc);
@@ -495,14 +467,13 @@ ArgonObject *ARGON_STRING_TYPE_chr(size_t argc, ArgonObject **argv, ArErr *err,
     return api->throw_argon_error(err, ValueError,
                                   "codepoint %" PRIu64
                                   " is not a valid unicode codepoint");
-  ArgonObject*result = api->string_to_argon((struct string){data, length});
+  ArgonObject *result = api->string_to_argon((struct string){data, length});
   free(data);
   return result;
-}
+})
 
-ArgonObject *ARGON_STRING_TYPE_ord(size_t argc, ArgonObject **argv, ArErr *err,
-                                   RuntimeState *state, ArgonNativeAPI *api) {
-                                    (void)state;
+ARGON_METHOD(ARGON_STRING_TYPE, ord, {
+  (void)state;
   if (argc != 1) {
     *err =
         create_err(RuntimeError, "chr expects 1 argument, got %" PRIu64, argc);
@@ -512,12 +483,11 @@ ArgonObject *ARGON_STRING_TYPE_ord(size_t argc, ArgonObject **argv, ArErr *err,
   if (api->is_error(err))
     return ARGON_NULL;
   bool valid;
-  int64_t codepoint = char_ord(str.data, str.length,&valid);
+  int64_t codepoint = char_ord(str.data, str.length, &valid);
   if (!valid)
-    return api->throw_argon_error(err, ValueError,
-                                  "invalid unicode character");
+    return api->throw_argon_error(err, ValueError, "invalid unicode character");
   return api->i64_to_argon(codepoint);
-}
+})
 
 struct {
   struct string_struct as_str;
@@ -644,9 +614,7 @@ ArgonObject *new_string_object_null_terminated(char *data) {
   return new_string_object(data, strlen(data), 0);
 }
 
-ArgonObject *ARGON_STRING_TYPE___iter__(size_t argc, ArgonObject **argv,
-                                        ArErr *err, RuntimeState *state,
-                                        ArgonNativeAPI *api) {
+ARGON_METHOD(ARGON_STRING_TYPE, __iter__, {
   (void)state;
   if (argc != 1) {
     *err = create_err(RuntimeError, "__iter__ expects 1 argument, got %" PRIu64,
@@ -667,12 +635,10 @@ ArgonObject *ARGON_STRING_TYPE___iter__(size_t argc, ArgonObject **argv,
   iterator->value.as_string_iterator->data = self.data;
   iterator->value.as_string_iterator->length = self.length;
   return iterator;
-}
+})
 
-ArgonObject *ARGON_STRING_ITERATOR_TYPE___next__(size_t argc,
-                                                 ArgonObject **argv, ArErr *err,
-                                                 RuntimeState *state,
-                                                 ArgonNativeAPI *api) {
+ARGON_METHOD(ARGON_STRING_ITERATOR_TYPE, __next__, {
+
   (void)state;
   if (argc != 1) {
     *err = create_err(RuntimeError, "__next__ expects 1 argument, got %" PRIu64,
@@ -691,7 +657,7 @@ ArgonObject *ARGON_STRING_ITERATOR_TYPE___next__(size_t argc,
 
   return api->string_to_argon(
       (struct string){&string_iterator->data[string_iterator->current++], 1});
-}
+})
 
 ArgonObject *ARGON_RENDER_TEMPLATE;
 
