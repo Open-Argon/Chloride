@@ -922,9 +922,12 @@ ArgonObject *ARGON_STRING_TYPE___repr__(size_t argc, ArgonObject **argv,
   if (argc != 1) {
     *err = create_err(RuntimeError, "__repr__ expects 1 argument, got %" PRIu64,
                       argc);
+    return ARGON_NULL;
   }
-  char *quoted = c_quote_string(argv[0]->value.as_str->data,
-                                argv[0]->value.as_str->length);
+  struct string self = api->argon_to_string(argv[0], err);
+  if (api->is_error(err))
+    return ARGON_NULL;
+  char *quoted = c_quote_string(self.data, self.length);
   ArgonObject *result = new_string_object_null_terminated(quoted);
   free(quoted);
   return result;

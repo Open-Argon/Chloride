@@ -1,0 +1,24 @@
+let stringify(value) = do
+    if (is_instance(value, string) || is_instance(value, number) || value==null || value==true || value==false) do
+        return value.__repr__()
+    else if (is_instance(value, dictionary)) do
+        output = ["{"]
+        let is_first = true
+        for (keyval in value) do
+            if (!is_first) output.append(",")
+            output.append(stringify(string(keyval[0])))
+            output.append(":")
+            output.append(stringify(keyval[1]))
+            is_first=false
+        output.append("}")
+        return output.join("")
+    else if (is_instance(value, array)) do
+        output = ["["]
+        let is_first = true
+        for (item in value) do
+            if (!is_first) output.append(",")
+            output.append(stringify(item))
+            is_first = false
+        output.append("]")
+        return output.join("")
+    throw TypeError("Object of type "+type(value).__name__+" is not JSON serialisable")
