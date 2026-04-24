@@ -1240,6 +1240,7 @@ void bootstrap_types() {
   init_tuple_type();
   init_range_iterator();
   init_slice_type();
+  init_small_chars();
 
   native_api.ARGON_NULL = ARGON_NULL;
   native_api.ARGON_TRUE = ARGON_TRUE;

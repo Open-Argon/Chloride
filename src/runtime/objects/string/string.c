@@ -340,6 +340,39 @@ ArgonObject *ARGON_STRING_TYPE_split(size_t argc, ArgonObject **argv,
   return object;
 }
 
+struct {
+  struct string_struct as_str;
+  char chr;
+  ArgonObject obj;
+} small_chars[CHAR_MAX - CHAR_MIN + 1];
+
+struct {
+  struct string_struct as_str;
+  ArgonObject obj;
+} empty_str;
+
+void init_small_chars() {
+  empty_str.obj.type = TYPE_STRING;
+  empty_str.obj.dict = NULL;
+  empty_str.obj.value.as_str = &empty_str.as_str;
+  add_builtin_field(&empty_str.obj, __class__, ARGON_STRING_TYPE);
+  empty_str.obj.value.as_str->data = NULL;
+  empty_str.obj.value.as_str->length = 0;
+  empty_str.obj.as_bool = false;
+
+  for (int64_t i = 0; i <= CHAR_MAX - CHAR_MIN; i++) {
+    int64_t n = i + CHAR_MIN;
+    small_chars[i].obj.type = TYPE_STRING;
+    small_chars[i].obj.dict = NULL;
+    small_chars[i].obj.value.as_str = &small_chars[i].as_str;
+    add_builtin_field(&small_chars[i].obj, __class__, ARGON_STRING_TYPE);
+    small_chars[i].chr = n;
+    small_chars[i].obj.value.as_str->data = &small_chars[i].chr;
+    small_chars[i].obj.value.as_str->length = 1;
+    small_chars[i].obj.as_bool = true;
+  }
+}
+
 void init_string(ArgonObject *object, char *data, size_t length,
                  uint64_t hash) {
   object->type = TYPE_STRING;
@@ -360,6 +393,8 @@ ArgonObject *new_string_object_without_memcpy(char *data, size_t length,
 }
 
 ArgonObject *new_string_object(char *data, size_t length, uint64_t hash) {
+  if (length==0) return &empty_str.obj;
+  if (length==1) return &small_chars[data[0]-CHAR_MIN].obj;
   char *data_copy = ar_alloc_atomic(length);
   memcpy(data_copy, data, length);
   return new_string_object_without_memcpy(data_copy, length, hash);

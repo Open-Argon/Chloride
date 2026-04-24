@@ -61,9 +61,9 @@ ArgonObject *ARGON_RANGE_ITERATOR_TYPE___init__(size_t argc, ArgonObject **argv,
     } else {
       self->value.as_range_iterator->is_int64 = false;
       self->value.as_range_iterator->stop.obj = argv[1];
-      self->value.as_range_iterator->current.obj = &small_ints[-small_ints_min];
+      self->value.as_range_iterator->current.obj = &small_ints[-small_ints_min].obj;
       self->value.as_range_iterator->step.obj =
-          &small_ints[-small_ints_min + 1];
+          &small_ints[-small_ints_min + 1].obj;
     }
   } else {
     if ((argv[1]->type == TYPE_NUMBER && argv[1]->value.as_number->is_int64) &&
@@ -88,7 +88,7 @@ ArgonObject *ARGON_RANGE_ITERATOR_TYPE___init__(size_t argc, ArgonObject **argv,
       self->value.as_range_iterator->current.obj = argv[1];
       self->value.as_range_iterator->stop.obj = argv[2];
       self->value.as_range_iterator->step.obj =
-          &small_ints[-small_ints_min + 1];
+          &small_ints[-small_ints_min + 1].obj;
       if (argc == 4) {
         self->value.as_range_iterator->step.obj = argv[3];
       }
@@ -151,13 +151,13 @@ ArgonObject *ARGON_RANGE_ITERATOR_TYPE___next__(size_t argc, ArgonObject **argv,
     ArgonObject *step_val = range_iterator->step.obj;
 
     if ((ARGON_NUMBER_TYPE___greater_than__(
-             2, (ArgonObject *[]){step_val, &small_ints[-small_ints_min]}, err,
+             2, (ArgonObject *[]){step_val, &small_ints[-small_ints_min].obj}, err,
              state, api) == ARGON_TRUE &&
          ARGON_NUMBER_TYPE___greater_than_equal__(
              2, (ArgonObject *[]){current_val, stop_val}, err, state, api) ==
              ARGON_TRUE) ||
         ((ARGON_NUMBER_TYPE___less_than__(
-              2, (ArgonObject *[]){step_val, &small_ints[-small_ints_min]}, err,
+              2, (ArgonObject *[]){step_val, &small_ints[-small_ints_min].obj}, err,
               state, api) == ARGON_TRUE &&
           ARGON_NUMBER_TYPE___less_than_equal__(
               2, (ArgonObject *[]){current_val, stop_val}, err, state, api) ==

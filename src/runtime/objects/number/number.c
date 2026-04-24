@@ -1221,19 +1221,18 @@ ArgonObject *ARGON_NUMBER_TYPE___string__(size_t argc, ArgonObject **argv,
   return result;
 }
 
-ArgonObject small_ints[small_ints_max - small_ints_min + 1];
-struct as_number small_ints_as_number[small_ints_max - small_ints_min + 1];
+struct small_ints_struct small_ints[small_ints_max - small_ints_min + 1];
 
 void init_small_ints() {
   for (int64_t i = 0; i <= small_ints_max - small_ints_min; i++) {
     int64_t n = i + small_ints_min;
-    small_ints[i].type = TYPE_NUMBER;
-    small_ints[i].dict = NULL;
-    small_ints[i].value.as_number = &small_ints_as_number[i];
-    add_builtin_field(&small_ints[i], __class__, ARGON_NUMBER_TYPE);
-    small_ints[i].value.as_number->is_int64 = true;
-    small_ints[i].value.as_number->n.i64 = n;
-    small_ints[i].as_bool = n;
+    small_ints[i].obj.type = TYPE_NUMBER;
+    small_ints[i].obj.dict = NULL;
+    small_ints[i].obj.value.as_number = &small_ints[i].as_number;
+    add_builtin_field(&small_ints[i].obj, __class__, ARGON_NUMBER_TYPE);
+    small_ints[i].obj.value.as_number->is_int64 = true;
+    small_ints[i].obj.value.as_number->n.i64 = n;
+    small_ints[i].obj.as_bool = n;
   }
 }
 
@@ -1497,7 +1496,7 @@ ArgonObject *new_number_object(mpq_t number) {
   int64_t i64 = 0;
   bool is_int64 = mpq_to_int64(number, &i64);
   if (is_int64 && i64 >= small_ints_min && i64 <= small_ints_max) {
-    return &small_ints[i64 - small_ints_min];
+    return &small_ints[i64 - small_ints_min].obj;
   }
   ArgonObject *object =
       new_small_instance(ARGON_NUMBER_TYPE, sizeof(struct as_number));
@@ -1562,7 +1561,7 @@ void mpq_set_si64(mpq_t q, int64_t n, int64_t d) {
 
 ArgonObject *new_number_object_from_num_and_den(int64_t n, int64_t d) {
   if (d == 1 && n >= small_ints_min && n <= small_ints_max) {
-    return &small_ints[n - small_ints_min];
+    return &small_ints[n - small_ints_min].obj;
   }
   ArgonObject *object =
       new_small_instance(ARGON_NUMBER_TYPE, sizeof(struct as_number));
@@ -1591,7 +1590,7 @@ ArgonObject *new_number_object_from_num_and_den(int64_t n, int64_t d) {
 
 ArgonObject *new_number_object_from_int64(int64_t i64) {
   if (i64 >= small_ints_min && i64 <= small_ints_max) {
-    return &small_ints[i64 - small_ints_min];
+    return &small_ints[i64 - small_ints_min].obj;
   }
   ArgonObject *object =
       new_small_instance(ARGON_NUMBER_TYPE, sizeof(struct as_number));
@@ -1608,7 +1607,7 @@ ArgonObject *new_number_object_from_double(double d) {
   int64_t i64 = 0;
   bool is_int64 = double_to_int64(d, &i64);
   if (is_int64 && i64 >= small_ints_min && i64 <= small_ints_max) {
-    return &small_ints[i64 - small_ints_min];
+    return &small_ints[i64 - small_ints_min].obj;
   }
   ArgonObject *object =
       new_small_instance(ARGON_NUMBER_TYPE, sizeof(struct as_number));

@@ -67,4 +67,6 @@ ArgonObject *ARGON_STRING_TYPE___greater_than_equal__(size_t argc,
 ArgonObject *ARGON_STRING_TYPE_split(size_t argc, ArgonObject **argv,
                                      ArErr *err, RuntimeState *state,
                                      ArgonNativeAPI *api);
+
+void init_small_chars();
 #endif // STRING_OBJ_H
