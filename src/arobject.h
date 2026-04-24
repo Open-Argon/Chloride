@@ -73,7 +73,9 @@
   X(step)                                                                      \
   X(stop)                                                                      \
   X(split)                                                                     \
-  X(join)
+  X(join)                                                                      \
+  X(chr)                                                                       \
+  X(ord)
 
 typedef enum {
 #define X(name) name,

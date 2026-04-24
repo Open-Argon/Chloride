@@ -386,6 +386,7 @@ Translated load_argon_file(char *path, ArErr *err) {
 #endif
     *err = lexer(state);
     if (is_error(err)) {
+      free(buffer);
       darray_free(&tokens, free_token);
       return (Translated){};
     }

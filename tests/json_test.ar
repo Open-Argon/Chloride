@@ -1,0 +1,127 @@
+import "../stdlib/json" as json
+
+class TestError(Exception) null
+
+let assert_equal(actual, expected) = do
+    if (actual != expected) do
+        throw TestError("Assertion failed:\nExpected: " + expected + "\nActual: " + actual)
+    else do
+        term.log("passed:", actual)
+
+
+# --------------------
+# PRIMITIVES
+# --------------------
+assert_equal(json.stringify(null), "null")
+assert_equal(json.stringify(true), "true")
+assert_equal(json.stringify(false), "false")
+
+
+# --------------------
+# STRINGS
+# --------------------
+assert_equal(json.stringify("hello"), "\"hello\"")
+assert_equal(json.stringify(""), "\"\"")
+
+assert_equal(json.stringify("\""), "\"\\\"\"")
+assert_equal(json.stringify("\n"), "\"\\n\"")
+assert_equal(json.stringify("\t"), "\"\\t\"")
+
+assert_equal(json.stringify("he said \"hi\""), "\"he said \\\"hi\\\"\"")
+assert_equal(json.stringify("line1\nline2"), "\"line1\\nline2\"")
+
+
+# --------------------
+# NUMBERS
+# --------------------
+assert_equal(json.stringify(0), "0")
+assert_equal(json.stringify(1), "1")
+assert_equal(json.stringify(-1), "-1")
+assert_equal(json.stringify(1.5), "1.5")
+assert_equal(json.stringify(123456), "123456")
+assert_equal(json.stringify(1e-10), "1e-10")
+
+
+# --------------------
+# ARRAYS
+# --------------------
+assert_equal(json.stringify([]), "[]")
+assert_equal(json.stringify([1]), "[1]")
+assert_equal(json.stringify([1,2,3]), "[1,2,3]")
+
+assert_equal(json.stringify([null, true, false]), "[null,true,false]")
+assert_equal(json.stringify([[]]), "[[]]")
+
+
+# --------------------
+# OBJECTS
+# --------------------
+assert_equal(json.stringify({}), "{}")
+assert_equal(json.stringify({"a": 1}), "{\"a\":1}")
+assert_equal(json.stringify({"a": 1, "b": 2}), "{\"a\":1,\"b\":2}")
+
+
+# --------------------
+# NESTED STRUCTURES
+# --------------------
+assert_equal(
+    json.stringify({"a": [1,2,3]}),
+    "{\"a\":[1,2,3]}"
+)
+
+assert_equal(
+    json.stringify([{"a": 1}, {"b": 2}]),
+    "[{\"a\":1},{\"b\":2}]"
+)
+
+assert_equal(
+    json.stringify({"a": {"b": {"c": 1}}}),
+    "{\"a\":{\"b\":{\"c\":1}}}"
+)
+
+
+# --------------------
+# TYPE COERCION (keys)
+# --------------------
+assert_equal(json.stringify({1: "a"}), "{\"1\":\"a\"}")
+assert_equal(json.stringify({true: "a"}), "{\"true\":\"a\"}")
+assert_equal(json.stringify({false: "a"}), "{\"false\":\"a\"}")
+
+
+# --------------------
+# MIXED EDGE STRUCTURES
+# --------------------
+assert_equal(
+    json.stringify([null, true, false, {"hello": 1.2}]),
+    "[null,true,false,{\"hello\":1.2}]"
+)
+
+assert_equal(
+    json.stringify({"a": [ {"b": [1,2,3]} ]}),
+    "{\"a\":[{\"b\":[1,2,3]}]}"
+)
+
+
+# --------------------
+# STRESS CASES
+# --------------------
+assert_equal(
+    json.stringify([[[[[[]]]]]]),
+    "[[[[[[]]]]]]"
+)
+
+assert_equal(
+    json.stringify({"a":{"b":{"c":{"d":{"e":1}}}}}),
+    "{\"a\":{\"b\":{\"c\":{\"d\":{\"e\":1}}}}}"
+)
+
+
+# --------------------
+# EMPTY MIXED
+# --------------------
+assert_equal(
+    json.stringify([{}, [], {"a": []}, []]),
+    "[{},[],{\"a\":[]},[]]"
+)
+
+term.log("ALL TESTS PASSED")

@@ -16,6 +16,7 @@
 #include "../slice/slice.h"
 #include <ctype.h>
 #include <inttypes.h>
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -86,8 +87,11 @@ ArgonObject *ARGON_STRING_TYPE___equal__(size_t argc, ArgonObject **argv,
                       "__equal__ expects 2 arguments, got %" PRIu64, argc);
     return ARGON_NULL;
   }
+
   return (argv[0]->type == TYPE_STRING && argv[1]->type == TYPE_STRING) &&
-                 (argv[0]->value.as_str->hash == argv[1]->value.as_str->hash) &&
+                 (!argv[0]->value.as_str->hash ||
+                  !argv[1]->value.as_str->hash ||
+                  argv[0]->value.as_str->hash == argv[1]->value.as_str->hash) &&
                  (argv[0]->value.as_str->length ==
                   argv[1]->value.as_str->length) &&
                  (memcmp(argv[0]->value.as_str->data,
@@ -390,6 +394,129 @@ ArgonObject *ARGON_STRING_TYPE_split(size_t argc, ArgonObject **argv,
                       &item);
 
   return object;
+}
+
+char *char_chr(uint64_t codepoint, size_t *len_out) {
+  char *out;
+
+  // Unicode only allows up to 0x10FFFF
+  if (codepoint > 0x10FFFF) {
+    if (len_out)
+      *len_out = 0;
+    return NULL;
+  }
+
+  out = malloc(4);
+  if (!out) {
+    if (len_out)
+      *len_out = 0;
+    return NULL;
+  }
+
+  if (codepoint <= 0x7F) {
+    out[0] = (char)codepoint;
+    if (len_out)
+      *len_out = 1;
+  } else if (codepoint <= 0x7FF) {
+    out[0] = 0xC0 | (codepoint >> 6);
+    out[1] = 0x80 | (codepoint & 0x3F);
+    if (len_out)
+      *len_out = 2;
+  } else if (codepoint <= 0xFFFF) {
+    out[0] = 0xE0 | (codepoint >> 12);
+    out[1] = 0x80 | ((codepoint >> 6) & 0x3F);
+    out[2] = 0x80 | (codepoint & 0x3F);
+    if (len_out)
+      *len_out = 3;
+  } else {
+    out[0] = 0xF0 | (codepoint >> 18);
+    out[1] = 0x80 | ((codepoint >> 12) & 0x3F);
+    out[2] = 0x80 | ((codepoint >> 6) & 0x3F);
+    out[3] = 0x80 | (codepoint & 0x3F);
+    if (len_out)
+      *len_out = 4;
+  }
+
+  return out;
+}
+
+uint64_t char_ord(const char *s, size_t len, bool *valid) {
+  *valid = false;
+  if (len == 0 || len>4)
+    return 0;
+
+  const unsigned char *u = (const unsigned char *)s;
+  uint64_t codepoint = 0;
+
+  if (u[0] < 0x80 && len==1) {
+    *valid = true;
+    return u[0];
+  }
+
+  // 2-byte sequence
+  if ((u[0] >> 5) == 0x6 && len == 2) {
+    codepoint = ((u[0] & 0x1F) << 6) | (u[1] & 0x3F);
+    *valid = true;
+    return codepoint;
+  }
+
+  // 3-byte sequence
+  if ((u[0] >> 4) == 0xE && len == 3) {
+    codepoint = ((u[0] & 0x0F) << 12) | ((u[1] & 0x3F) << 6) | (u[2] & 0x3F);
+    *valid = true;
+    return codepoint;
+  }
+
+  // 4-byte sequence
+  if ((u[0] >> 3) == 0x1E && len == 4) {
+    codepoint = ((u[0] & 0x07) << 18) | ((u[1] & 0x3F) << 12) |
+                ((u[2] & 0x3F) << 6) | (u[3] & 0x3F);
+    *valid = true;
+    return codepoint;
+  }
+
+  return 0; // invalid UTF-8
+}
+
+ArgonObject *ARGON_STRING_TYPE_chr(size_t argc, ArgonObject **argv, ArErr *err,
+                                   RuntimeState *state, ArgonNativeAPI *api) {
+                                    (void)state;
+  if (argc != 1) {
+    *err =
+        create_err(RuntimeError, "chr expects 1 argument, got %" PRIu64, argc);
+    return ARGON_NULL;
+  }
+  int64_t codepoint = api->argon_to_i64(argv[0], err);
+  if (api->is_error(err))
+    return ARGON_NULL;
+  size_t length;
+  char *data = char_chr(codepoint, &length);
+  if (!data)
+    return api->throw_argon_error(err, ValueError,
+                                  "codepoint %" PRIu64
+                                  " is not a valid unicode codepoint");
+  ArgonObject*result = api->string_to_argon((struct string){data, length});
+  free(data);
+  return result;
+}
+
+ArgonObject *ARGON_STRING_TYPE_ord(size_t argc, ArgonObject **argv, ArErr *err,
+                                   RuntimeState *state, ArgonNativeAPI *api) {
+                                    (void)state;
+  if (argc != 1) {
+    *err =
+        create_err(RuntimeError, "chr expects 1 argument, got %" PRIu64, argc);
+    return ARGON_NULL;
+  }
+  struct string str = api->argon_to_string(argv[0], err);
+  if (api->is_error(err))
+    return ARGON_NULL;
+  bool valid;
+  int64_t codepoint = char_ord(str.data, str.length,&valid);
+  if (!valid)
+    return api->throw_argon_error(err, ValueError,
+                                  "invalid unicode character");
+  return api->i64_to_argon(codepoint);
 }
 
 struct {

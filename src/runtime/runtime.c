@@ -1128,9 +1128,11 @@ void bootstrap_types() {
   add_builtin_field(
       ARGON_STRING_TYPE, get_length,
       create_argon_native_function("get_length", ARGON_STRING_TYPE_get_length));
-  add_builtin_field(
-      ARGON_STRING_TYPE, set_length,
-      create_argon_native_function("set_length", ARGON_STRING_TYPE_set_length));
+  MOUNT_ARGON_METHOD(ARGON_STRING_TYPE, set_length)
+  add_builtin_field(ARGON_STRING_TYPE, chr,
+                    create_argon_native_function("chr", ARGON_STRING_TYPE_chr));
+  add_builtin_field(ARGON_STRING_TYPE, ord,
+                    create_argon_native_function("ord", ARGON_STRING_TYPE_ord));
   add_builtin_field(
       ARGON_STRING_TYPE, __iter__,
       create_argon_native_function("__iter__", ARGON_STRING_TYPE___iter__));
