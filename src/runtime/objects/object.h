@@ -63,14 +63,13 @@ ArgonObject *new_object(size_t endSize);
 
 #define ARGON_FUNCTION(NAME, BODY)                                             \
   ArgonObject *NAME(size_t argc, ArgonObject **argv, ArErr *err,               \
-                    RuntimeState *state, ArgonNativeAPI *api) {                \
-    (void)argc;                                                                \
-    (void)argv;                                                                \
-    (void)err;                                                                 \
-    (void)state;                                                               \
-    (void)api;                                                                 \
-    BODY                                                                       \
-  }
+                    RuntimeState *state, ArgonNativeAPI *api) BODY
+#define IGNORE_ARGS                                                            \
+  (void)argc;                                                                  \
+  (void)argv;                                                                  \
+  (void)err;                                                                   \
+  (void)state;                                                                 \
+  (void)api;
 #define EXPOSE_ARGON_FUNCTION(NAME)                                            \
   ArgonObject *NAME(size_t argc, ArgonObject **argv, ArErr *err,               \
                     RuntimeState *state, ArgonNativeAPI *api);

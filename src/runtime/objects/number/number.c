@@ -4,12 +4,12 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include "number.h"
 #include "../../../err.h"
 #include "../../../memory.h"
+#include "../exceptions/exceptions.h"
 #include "../functions/functions.h"
 #include "../string/string.h"
-#include "../exceptions/exceptions.h"
+#include "number.h"
 #include <gmp.h>
 #include <inttypes.h>
 #include <mpfr.h>
@@ -137,13 +137,11 @@ void mpq_ceil_prec(mpq_t result, const mpq_t n, const mpq_t precision) {
   mpz_clear(q);
 }
 
-ArgonObject *ARGON_NUMBER_TYPE___new__(size_t argc, ArgonObject **argv,
-                                       ArErr *err, RuntimeState *state,
-                                       ArgonNativeAPI *api) {
+ARGON_METHOD(ARGON_NUMBER_TYPE, __new__, {
   (void)api;
   if (argc != 2) {
-    *err = create_err( RuntimeError,
-                      "__new__ expects 2 arguments, got %" PRIu64, argc);
+    *err = create_err(RuntimeError, "__new__ expects 2 arguments, got %" PRIu64,
+                      argc);
     return ARGON_NULL;
   }
   ArgonObject *self = argv[0];
@@ -161,45 +159,39 @@ ArgonObject *ARGON_NUMBER_TYPE___new__(size_t argc, ArgonObject **argv,
   }
   ArgonObject *type_name = get_builtin_field_for_class(
       get_builtin_field(object, __class__), __name__, object);
-  *err = create_err(
-       RuntimeError, "cannot convert type '%.*s' to number",
-      type_name->value.as_str->length, type_name->value.as_str->data);
+  *err = create_err(RuntimeError, "cannot convert type '%.*s' to number",
+                    type_name->value.as_str->length,
+                    type_name->value.as_str->data);
   return ARGON_NULL;
-}
+})
 
-ArgonObject *ARGON_NUMBER_TYPE___number__(size_t argc, ArgonObject **argv,
-                                          ArErr *err, RuntimeState *state,
-                                          ArgonNativeAPI *api) {
+ARGON_METHOD(ARGON_NUMBER_TYPE, __number__, {
   (void)api;
   (void)state;
   if (argc != 1) {
-    *err = create_err( RuntimeError,
+    *err = create_err(RuntimeError,
                       "__number__ expects 1 argument, got %" PRIu64, argc);
     return ARGON_NULL;
   }
   return argv[0];
-}
+})
 
-ArgonObject *ARGON_NUMBER_TYPE___boolean__(size_t argc, ArgonObject **argv,
-                                           ArErr *err, RuntimeState *state,
-                                           ArgonNativeAPI *api) {
+ARGON_METHOD(ARGON_NUMBER_TYPE, __boolean__, {
   (void)api;
   (void)state;
   if (argc != 1) {
-    *err = create_err( RuntimeError,
+    *err = create_err(RuntimeError,
                       "__boolean__ expects 1 argument, got %" PRIu64, argc);
     return ARGON_NULL;
   }
   return argv[0]->as_bool ? ARGON_TRUE : ARGON_FALSE;
-}
+})
 
-ArgonObject *ARGON_NUMBER_TYPE___negation__(size_t argc, ArgonObject **argv,
-                                            ArErr *err, RuntimeState *state,
-                                            ArgonNativeAPI *api) {
+ARGON_METHOD(ARGON_NUMBER_TYPE, __negation__, {
   (void)api;
   (void)state;
   if (argc != 1) {
-    *err = create_err( RuntimeError,
+    *err = create_err(RuntimeError,
                       "__negation__ expects 1 argument, got %" PRIu64, argc);
     return ARGON_NULL;
   }
@@ -212,23 +204,21 @@ ArgonObject *ARGON_NUMBER_TYPE___negation__(size_t argc, ArgonObject **argv,
   ArgonObject *output = new_number_object(result);
   mpq_clear(result);
   return output;
-}
+})
 
-ArgonObject *ARGON_NUMBER_TYPE___add__(size_t argc, ArgonObject **argv,
-                                       ArErr *err, RuntimeState *state,
-                                       ArgonNativeAPI *api) {
+ARGON_METHOD(ARGON_NUMBER_TYPE, __add__, {
   (void)api;
   (void)state;
   if (argc != 2) {
-    *err = create_err( RuntimeError,
-                      "__add__ expects 2 arguments, got %" PRIu64, argc);
+    *err = create_err(RuntimeError, "__add__ expects 2 arguments, got %" PRIu64,
+                      argc);
     return ARGON_NULL;
   }
   if (argv[1]->type != TYPE_NUMBER) {
     ArgonObject *type_name = get_builtin_field_for_class(
         get_builtin_field(argv[1], __class__), __name__, argv[1]);
     *err = create_err(
-         RuntimeError,
+        RuntimeError,
         "__add__ cannot perform addition between a number and %.*s",
         type_name->value.as_str->length, type_name->value.as_str->data);
     return ARGON_NULL;
@@ -242,7 +232,8 @@ ArgonObject *ARGON_NUMBER_TYPE___add__(size_t argc, ArgonObject **argv,
     if (!gonna_overflow) {
       return new_number_object_from_int64(a + b);
     }
-    mpq_t a_GMP, b_GMP;
+    mpq_t a_GMP;
+    mpq_t b_GMP;
     mpq_init(a_GMP);
     mpq_init(b_GMP);
     mpq_set_si64(a_GMP, a, 1);
@@ -262,7 +253,8 @@ ArgonObject *ARGON_NUMBER_TYPE___add__(size_t argc, ArgonObject **argv,
     mpq_clear(r);
     return result;
   } else {
-    mpq_t a_GMP, b_GMP;
+    mpq_t a_GMP;
+    mpq_t b_GMP;
     mpq_init(a_GMP);
     mpq_init(b_GMP);
     if (argv[0]->value.as_number->is_int64) {
@@ -278,15 +270,13 @@ ArgonObject *ARGON_NUMBER_TYPE___add__(size_t argc, ArgonObject **argv,
     mpq_clear(b_GMP);
     return result;
   }
-}
+})
 
-ArgonObject *ARGON_NUMBER_TYPE___subtract__(size_t argc, ArgonObject **argv,
-                                            ArErr *err, RuntimeState *state,
-                                            ArgonNativeAPI *api) {
+ARGON_METHOD(ARGON_NUMBER_TYPE, __subtract__, {
   (void)api;
   (void)state;
   if (argc != 2) {
-    *err = create_err( RuntimeError,
+    *err = create_err(RuntimeError,
                       "__subtract__ expects 2 arguments, got %" PRIu64, argc);
     return ARGON_NULL;
   }
@@ -294,7 +284,7 @@ ArgonObject *ARGON_NUMBER_TYPE___subtract__(size_t argc, ArgonObject **argv,
     ArgonObject *type_name = get_builtin_field_for_class(
         get_builtin_field(argv[1], __class__), __name__, argv[1]);
     *err = create_err(
-         RuntimeError,
+        RuntimeError,
         "__subtract__ cannot perform subtraction between number and %.*s",
         type_name->value.as_str->length, type_name->value.as_str->data);
     return ARGON_NULL;
@@ -310,7 +300,8 @@ ArgonObject *ARGON_NUMBER_TYPE___subtract__(size_t argc, ArgonObject **argv,
     if (!gonna_overflow) {
       return new_number_object_from_int64(a - b);
     }
-    mpq_t a_GMP, b_GMP;
+    mpq_t a_GMP;
+    mpq_t b_GMP;
     mpq_init(a_GMP);
     mpq_init(b_GMP);
     mpq_set_si64(a_GMP, a, 1);
@@ -330,7 +321,8 @@ ArgonObject *ARGON_NUMBER_TYPE___subtract__(size_t argc, ArgonObject **argv,
     mpq_clear(r);
     return result;
   } else {
-    mpq_t a_GMP, b_GMP;
+    mpq_t a_GMP;
+    mpq_t b_GMP;
     mpq_init(a_GMP);
     mpq_init(b_GMP);
     if (argv[0]->value.as_number->is_int64) {
@@ -346,15 +338,13 @@ ArgonObject *ARGON_NUMBER_TYPE___subtract__(size_t argc, ArgonObject **argv,
     mpq_clear(b_GMP);
     return result;
   }
-}
+})
 
-ArgonObject *ARGON_NUMBER_TYPE___multiply__(size_t argc, ArgonObject **argv,
-                                            ArErr *err, RuntimeState *state,
-                                            ArgonNativeAPI *api) {
+ARGON_METHOD(ARGON_NUMBER_TYPE, __multiply__, {
   (void)api;
   (void)state;
   if (argc != 2) {
-    *err = create_err( RuntimeError,
+    *err = create_err(RuntimeError,
                       "__multiply__ expects 2 arguments, got %" PRIu64, argc);
     return ARGON_NULL;
   }
@@ -362,7 +352,7 @@ ArgonObject *ARGON_NUMBER_TYPE___multiply__(size_t argc, ArgonObject **argv,
     ArgonObject *type_name = get_builtin_field_for_class(
         get_builtin_field(argv[1], __class__), __name__, argv[1]);
     *err = create_err(
-         RuntimeError,
+        RuntimeError,
         "__multiply__ cannot perform multiplication between number and %.*s",
         type_name->value.as_str->length, type_name->value.as_str->data);
     return ARGON_NULL;
@@ -378,7 +368,8 @@ ArgonObject *ARGON_NUMBER_TYPE___multiply__(size_t argc, ArgonObject **argv,
     if (!gonna_overflow) {
       return new_number_object_from_int64(a * b);
     }
-    mpq_t a_GMP, b_GMP;
+    mpq_t a_GMP;
+    mpq_t b_GMP;
     mpq_init(a_GMP);
     mpq_init(b_GMP);
     mpq_set_si64(a_GMP, a, 1);
@@ -398,7 +389,8 @@ ArgonObject *ARGON_NUMBER_TYPE___multiply__(size_t argc, ArgonObject **argv,
     mpq_clear(r);
     return result;
   } else {
-    mpq_t a_GMP, b_GMP;
+    mpq_t a_GMP;
+    mpq_t b_GMP;
     mpq_init(a_GMP);
     mpq_init(b_GMP);
     if (argv[0]->value.as_number->is_int64) {
@@ -414,15 +406,13 @@ ArgonObject *ARGON_NUMBER_TYPE___multiply__(size_t argc, ArgonObject **argv,
     mpq_clear(b_GMP);
     return result;
   }
-}
+})
 
-ArgonObject *ARGON_NUMBER_TYPE___exponent__(size_t argc, ArgonObject **argv,
-                                            ArErr *err, RuntimeState *state,
-                                            ArgonNativeAPI *api) {
+ARGON_METHOD(ARGON_NUMBER_TYPE, __exponent__, {
   (void)api;
   (void)state;
   if (argc != 2) {
-    *err = create_err( RuntimeError,
+    *err = create_err(RuntimeError,
                       "__exponent__ expects 2 arguments, got %" PRIu64, argc);
     return ARGON_NULL;
   }
@@ -430,7 +420,7 @@ ArgonObject *ARGON_NUMBER_TYPE___exponent__(size_t argc, ArgonObject **argv,
     ArgonObject *type_name = get_builtin_field_for_class(
         get_builtin_field(argv[1], __class__), __name__, argv[1]);
     *err = create_err(
-         RuntimeError,
+        RuntimeError,
         "__exponent__ cannot perform multiplication between number and %.*s",
         type_name->value.as_str->length, type_name->value.as_str->data);
     return ARGON_NULL;
@@ -445,7 +435,9 @@ ArgonObject *ARGON_NUMBER_TYPE___exponent__(size_t argc, ArgonObject **argv,
 
     /* negative exponent → rational */
     if (exp < 0) {
-      mpq_t a, b, r;
+      mpq_t a;
+      mpq_t b;
+      mpq_t r;
       mpq_init(a);
       mpq_init(b);
       mpq_init(r);
@@ -492,7 +484,9 @@ ArgonObject *ARGON_NUMBER_TYPE___exponent__(size_t argc, ArgonObject **argv,
 
   /* ---------- GMP / rational path ---------- */
   {
-    mpq_t a_GMP, b_GMP, r;
+    mpq_t a_GMP;
+    mpq_t b_GMP;
+    mpq_t r;
     mpq_init(a_GMP);
     mpq_init(b_GMP);
     mpq_init(r);
@@ -513,9 +507,8 @@ ArgonObject *ARGON_NUMBER_TYPE___exponent__(size_t argc, ArgonObject **argv,
 
     /* 0^0 or 0^negative */
     if (mpq_sgn(a_GMP) == 0 && mpq_sgn(b_GMP) <= 0) {
-      *err =
-          create_err(MathsError,
-                     "0 cannot be raised to zero or a negative power");
+      *err = create_err(MathsError,
+                        "0 cannot be raised to zero or a negative power");
 
       mpq_clear(a_GMP);
       mpq_clear(b_GMP);
@@ -526,7 +519,7 @@ ArgonObject *ARGON_NUMBER_TYPE___exponent__(size_t argc, ArgonObject **argv,
     /* negative base with non-integer exponent → complex */
     if (mpq_sgn(a_GMP) < 0 && mpz_cmp_ui(mpq_denref(b_GMP), 1) != 0) {
       *err = create_err(
-           MathsError,
+          MathsError,
           "Negative base with fractional exponent is not a real number");
 
       mpq_clear(a_GMP);
@@ -545,7 +538,7 @@ ArgonObject *ARGON_NUMBER_TYPE___exponent__(size_t argc, ArgonObject **argv,
     mpq_clear(r);
     return result;
   }
-}
+})
 
 static inline uint64_t mix64(uint64_t x) {
   x ^= x >> 33;
@@ -588,14 +581,12 @@ uint64_t hash_mpq(mpq_t q) {
   return mix64(h);
 }
 
-ArgonObject *ARGON_NUMBER_TYPE___hash__(size_t argc, ArgonObject **argv,
-                                        ArErr *err, RuntimeState *state,
-                                        ArgonNativeAPI *api) {
+ARGON_METHOD(ARGON_NUMBER_TYPE, __hash__, {
   (void)api;
   (void)state;
   if (argc != 1) {
-    *err = create_err( RuntimeError,
-                      "__hash__ expects 1 argument, got %" PRIu64, argc);
+    *err = create_err(RuntimeError, "__hash__ expects 1 argument, got %" PRIu64,
+                      argc);
   }
   uint64_t hash;
   if (argv[0]->value.as_number->is_int64) {
@@ -604,15 +595,13 @@ ArgonObject *ARGON_NUMBER_TYPE___hash__(size_t argc, ArgonObject **argv,
     hash = hash_mpq(*argv[0]->value.as_number->n.mpq);
   }
   return new_number_object_from_int64(hash);
-}
+})
 
-ArgonObject *ARGON_NUMBER_TYPE___division__(size_t argc, ArgonObject **argv,
-                                            ArErr *err, RuntimeState *state,
-                                            ArgonNativeAPI *api) {
+ARGON_METHOD(ARGON_NUMBER_TYPE, __division__, {
   (void)api;
   (void)state;
   if (argc != 2) {
-    *err = create_err( RuntimeError,
+    *err = create_err(RuntimeError,
                       "__division__ expects 2 arguments, got %" PRIu64, argc);
     return ARGON_NULL;
   }
@@ -620,7 +609,7 @@ ArgonObject *ARGON_NUMBER_TYPE___division__(size_t argc, ArgonObject **argv,
     ArgonObject *type_name = get_builtin_field_for_class(
         get_builtin_field(argv[1], __class__), __name__, argv[1]);
     *err = create_err(
-         RuntimeError,
+        RuntimeError,
         "__division__ cannot perform division between number and %.*s",
         type_name->value.as_str->length, type_name->value.as_str->data);
     return ARGON_NULL;
@@ -630,9 +619,7 @@ ArgonObject *ARGON_NUMBER_TYPE___division__(size_t argc, ArgonObject **argv,
     int64_t a = argv[0]->value.as_number->n.i64;
     int64_t b = argv[1]->value.as_number->n.i64;
     if (!b) {
-      *err =
-          create_err(
-                     ZeroDivisionError, "division by zero");
+      *err = create_err(ZeroDivisionError, "division by zero");
       return NULL;
     }
     if (b < 0) {
@@ -650,7 +637,8 @@ ArgonObject *ARGON_NUMBER_TYPE___division__(size_t argc, ArgonObject **argv,
     mpq_clear(r);
     return result;
   } else {
-    mpq_t a_GMP, b_GMP;
+    mpq_t a_GMP;
+    mpq_t b_GMP;
     mpq_init(a_GMP);
     mpq_init(b_GMP);
     if (argv[0]->value.as_number->is_int64) {
@@ -659,8 +647,7 @@ ArgonObject *ARGON_NUMBER_TYPE___division__(size_t argc, ArgonObject **argv,
     } else {
       mpq_set(a_GMP, *argv[0]->value.as_number->n.mpq);
       if (!argv[1]->value.as_number->n.i64) {
-        *err = create_err(
-                          ZeroDivisionError, "division by zero");
+        *err = create_err(ZeroDivisionError, "division by zero");
         return NULL;
       }
       mpq_set_si64(b_GMP, argv[1]->value.as_number->n.i64, 1);
@@ -671,17 +658,13 @@ ArgonObject *ARGON_NUMBER_TYPE___division__(size_t argc, ArgonObject **argv,
     mpq_clear(b_GMP);
     return result;
   }
-}
+})
 
-ArgonObject *ARGON_NUMBER_TYPE___floor_division__(size_t argc,
-                                                  ArgonObject **argv,
-                                                  ArErr *err,
-                                                  RuntimeState *state,
-                                                  ArgonNativeAPI *api) {
+ARGON_METHOD(ARGON_NUMBER_TYPE, __floor_division__, {
   (void)api;
   (void)state;
   if (argc != 2) {
-    *err = create_err( RuntimeError,
+    *err = create_err(RuntimeError,
                       "__floor_division__ expects 2 arguments, got %" PRIu64,
                       argc);
     return ARGON_NULL;
@@ -689,7 +672,7 @@ ArgonObject *ARGON_NUMBER_TYPE___floor_division__(size_t argc,
   if (argv[1]->type != TYPE_NUMBER) {
     ArgonObject *type_name = get_builtin_field_for_class(
         get_builtin_field(argv[1], __class__), __name__, argv[1]);
-    *err = create_err( RuntimeError,
+    *err = create_err(RuntimeError,
                       "__floor_division__ cannot perform floor division "
                       "between number and %.*s",
                       type_name->value.as_str->length,
@@ -701,9 +684,7 @@ ArgonObject *ARGON_NUMBER_TYPE___floor_division__(size_t argc,
     int64_t a = argv[0]->value.as_number->n.i64;
     int64_t b = argv[1]->value.as_number->n.i64;
     if (!b) {
-      *err =
-          create_err(
-                     ZeroDivisionError, "floor division by zero");
+      *err = create_err(ZeroDivisionError, "floor division by zero");
       return NULL;
     }
     return new_number_object_from_int64(a / b);
@@ -717,7 +698,8 @@ ArgonObject *ARGON_NUMBER_TYPE___floor_division__(size_t argc,
     mpq_clear(r);
     return result;
   } else {
-    mpq_t a_GMP, b_GMP;
+    mpq_t a_GMP;
+    mpq_t b_GMP;
     mpq_init(a_GMP);
     mpq_init(b_GMP);
     if (argv[0]->value.as_number->is_int64) {
@@ -726,8 +708,7 @@ ArgonObject *ARGON_NUMBER_TYPE___floor_division__(size_t argc,
     } else {
       mpq_set(a_GMP, *argv[0]->value.as_number->n.mpq);
       if (!argv[1]->value.as_number->n.i64) {
-        *err = create_err(
-                          ZeroDivisionError, "floor division by zero");
+        *err = create_err(ZeroDivisionError, "floor division by zero");
         return NULL;
       }
       mpq_set_si64(b_GMP, argv[1]->value.as_number->n.i64, 1);
@@ -738,15 +719,13 @@ ArgonObject *ARGON_NUMBER_TYPE___floor_division__(size_t argc,
     mpq_clear(b_GMP);
     return result;
   }
-}
+})
 
-ArgonObject *ARGON_NUMBER_TYPE___modulo__(size_t argc, ArgonObject **argv,
-                                          ArErr *err, RuntimeState *state,
-                                          ArgonNativeAPI *api) {
+ARGON_METHOD(ARGON_NUMBER_TYPE, __modulo__, {
   (void)api;
   (void)state;
   if (argc != 2) {
-    *err = create_err( RuntimeError,
+    *err = create_err(RuntimeError,
                       "__modulo__ expects 2 arguments, got %" PRIu64, argc);
     return ARGON_NULL;
   }
@@ -754,7 +733,7 @@ ArgonObject *ARGON_NUMBER_TYPE___modulo__(size_t argc, ArgonObject **argv,
     ArgonObject *type_name = get_builtin_field_for_class(
         get_builtin_field(argv[1], __class__), __name__, argv[1]);
     *err = create_err(
-         RuntimeError,
+        RuntimeError,
         "__modulo__ cannot perform modulo between number and %.*s",
         type_name->value.as_str->length, type_name->value.as_str->data);
     return ARGON_NULL;
@@ -764,9 +743,7 @@ ArgonObject *ARGON_NUMBER_TYPE___modulo__(size_t argc, ArgonObject **argv,
     int64_t a = argv[0]->value.as_number->n.i64;
     int64_t b = argv[1]->value.as_number->n.i64;
     if (!b) {
-      *err =
-          create_err(
-                     ZeroDivisionError, "modulo by zero");
+      *err = create_err(ZeroDivisionError, "modulo by zero");
       return NULL;
     }
     return new_number_object_from_int64(a % b);
@@ -780,7 +757,8 @@ ArgonObject *ARGON_NUMBER_TYPE___modulo__(size_t argc, ArgonObject **argv,
     mpq_clear(r);
     return result;
   } else {
-    mpq_t a_GMP, b_GMP;
+    mpq_t a_GMP;
+    mpq_t b_GMP;
     mpq_init(a_GMP);
     mpq_init(b_GMP);
     if (argv[0]->value.as_number->is_int64) {
@@ -789,8 +767,7 @@ ArgonObject *ARGON_NUMBER_TYPE___modulo__(size_t argc, ArgonObject **argv,
     } else {
       mpq_set(a_GMP, *argv[0]->value.as_number->n.mpq);
       if (!argv[1]->value.as_number->n.i64) {
-        *err = create_err(
-                          ZeroDivisionError, "modulo by zero");
+        *err = create_err(ZeroDivisionError, "modulo by zero");
         return NULL;
       }
       mpq_set_si64(b_GMP, argv[1]->value.as_number->n.i64, 1);
@@ -801,15 +778,13 @@ ArgonObject *ARGON_NUMBER_TYPE___modulo__(size_t argc, ArgonObject **argv,
     mpq_clear(b_GMP);
     return result;
   }
-}
+})
 
-ArgonObject *ARGON_NUMBER_TYPE___equal__(size_t argc, ArgonObject **argv,
-                                         ArErr *err, RuntimeState *state,
-                                         ArgonNativeAPI *api) {
+ARGON_METHOD(ARGON_NUMBER_TYPE, __equal__, {
   (void)api;
   (void)state;
   if (argc != 2) {
-    *err = create_err( RuntimeError,
+    *err = create_err(RuntimeError,
                       "__equal__ expects 2 arguments, got %" PRIu64, argc);
     return ARGON_NULL;
   }
@@ -839,15 +814,13 @@ ArgonObject *ARGON_NUMBER_TYPE___equal__(size_t argc, ArgonObject **argv,
                ? ARGON_TRUE
                : ARGON_FALSE;
   }
-}
+})
 
-ArgonObject *ARGON_NUMBER_TYPE___not_equal__(size_t argc, ArgonObject **argv,
-                                             ArErr *err, RuntimeState *state,
-                                             ArgonNativeAPI *api) {
+ARGON_METHOD(ARGON_NUMBER_TYPE, __not_equal__, {
   (void)api;
   (void)state;
   if (argc != 2) {
-    *err = create_err( RuntimeError,
+    *err = create_err(RuntimeError,
                       "__not_equal__ expects 2 arguments, got %" PRIu64, argc);
     return ARGON_NULL;
   }
@@ -877,23 +850,20 @@ ArgonObject *ARGON_NUMBER_TYPE___not_equal__(size_t argc, ArgonObject **argv,
                ? ARGON_TRUE
                : ARGON_FALSE;
   }
-}
+})
 
-ArgonObject *ARGON_NUMBER_TYPE___less_than__(size_t argc, ArgonObject **argv,
-                                             ArErr *err, RuntimeState *state,
-                                             ArgonNativeAPI *api) {
+ARGON_METHOD(ARGON_NUMBER_TYPE, __less_than__, {
   (void)api;
   (void)state;
   if (argc != 2) {
-    *err = create_err( RuntimeError,
+    *err = create_err(RuntimeError,
                       "__less_than__ expects 2 arguments, got %" PRIu64, argc);
     return ARGON_NULL;
   }
   if (argv[1]->type != TYPE_NUMBER) {
     ArgonObject *type_name = get_builtin_field_for_class(
         get_builtin_field(argv[1], __class__), __name__, argv[1]);
-    *err = create_err( RuntimeError,
-                      "cannot perform < between number and %.*s",
+    *err = create_err(RuntimeError, "cannot perform < between number and %.*s",
                       type_name->value.as_str->length,
                       type_name->value.as_str->data);
     return ARGON_NULL;
@@ -921,17 +891,13 @@ ArgonObject *ARGON_NUMBER_TYPE___less_than__(size_t argc, ArgonObject **argv,
                ? ARGON_TRUE
                : ARGON_FALSE;
   }
-}
+})
 
-ArgonObject *ARGON_NUMBER_TYPE___less_than_equal__(size_t argc,
-                                                   ArgonObject **argv,
-                                                   ArErr *err,
-                                                   RuntimeState *state,
-                                                   ArgonNativeAPI *api) {
+ARGON_METHOD(ARGON_NUMBER_TYPE, __less_than_equal__, {
   (void)api;
   (void)state;
   if (argc != 2) {
-    *err = create_err( RuntimeError,
+    *err = create_err(RuntimeError,
                       "__less_than_equal__ expects 2 arguments, got %" PRIu64,
                       argc);
     return ARGON_NULL;
@@ -939,8 +905,7 @@ ArgonObject *ARGON_NUMBER_TYPE___less_than_equal__(size_t argc,
   if (argv[1]->type != TYPE_NUMBER) {
     ArgonObject *type_name = get_builtin_field_for_class(
         get_builtin_field(argv[1], __class__), __name__, argv[1]);
-    *err = create_err( RuntimeError,
-                      "cannot perform <= between number and %.*s",
+    *err = create_err(RuntimeError, "cannot perform <= between number and %.*s",
                       type_name->value.as_str->length,
                       type_name->value.as_str->data);
     return ARGON_NULL;
@@ -968,24 +933,21 @@ ArgonObject *ARGON_NUMBER_TYPE___less_than_equal__(size_t argc,
                ? ARGON_TRUE
                : ARGON_FALSE;
   }
-}
+})
 
-ArgonObject *ARGON_NUMBER_TYPE___greater_than__(size_t argc, ArgonObject **argv,
-                                                ArErr *err, RuntimeState *state,
-                                                ArgonNativeAPI *api) {
+ARGON_METHOD(ARGON_NUMBER_TYPE, __greater_than__, {
   (void)api;
   (void)state;
   if (argc != 2) {
     *err =
-        create_err( RuntimeError,
+        create_err(RuntimeError,
                    "__greater_than__ expects 2 arguments, got %" PRIu64, argc);
     return ARGON_NULL;
   }
   if (argv[1]->type != TYPE_NUMBER) {
     ArgonObject *type_name = get_builtin_field_for_class(
         get_builtin_field(argv[1], __class__), __name__, argv[1]);
-    *err = create_err( RuntimeError,
-                      "cannot perform > between number and %.*s",
+    *err = create_err(RuntimeError, "cannot perform > between number and %.*s",
                       type_name->value.as_str->length,
                       type_name->value.as_str->data);
     return ARGON_NULL;
@@ -1013,26 +975,21 @@ ArgonObject *ARGON_NUMBER_TYPE___greater_than__(size_t argc, ArgonObject **argv,
                ? ARGON_TRUE
                : ARGON_FALSE;
   }
-}
+})
 
-ArgonObject *ARGON_NUMBER_TYPE___greater_than_equal__(size_t argc,
-                                                      ArgonObject **argv,
-                                                      ArErr *err,
-                                                      RuntimeState *state,
-                                                      ArgonNativeAPI *api) {
+ARGON_METHOD(ARGON_NUMBER_TYPE, __greater_than_equal__, {
   (void)api;
   (void)state;
   if (argc != 2) {
     *err = create_err(
-         RuntimeError,
+        RuntimeError,
         "__greater_than_equal__ expects 2 arguments, got %" PRIu64, argc);
     return ARGON_NULL;
   }
   if (argv[1]->type != TYPE_NUMBER) {
     ArgonObject *type_name = get_builtin_field_for_class(
         get_builtin_field(argv[1], __class__), __name__, argv[1]);
-    *err = create_err( RuntimeError,
-                      "cannot perform >= between number and %.*s",
+    *err = create_err(RuntimeError, "cannot perform >= between number and %.*s",
                       type_name->value.as_str->length,
                       type_name->value.as_str->data);
     return ARGON_NULL;
@@ -1060,15 +1017,13 @@ ArgonObject *ARGON_NUMBER_TYPE___greater_than_equal__(size_t argc,
                ? ARGON_TRUE
                : ARGON_FALSE;
   }
-}
+})
 
-ArgonObject *ARGON_NUMBER_TYPE___string__(size_t argc, ArgonObject **argv,
-                                          ArErr *err, RuntimeState *state,
-                                          ArgonNativeAPI *api) {
+ARGON_METHOD(ARGON_NUMBER_TYPE, __string__, {
   (void)api;
   (void)state;
   if (argc != 1) {
-    *err = create_err( RuntimeError,
+    *err = create_err(RuntimeError,
                       "__string__ expects 1 argument, got %" PRIu64, argc);
     return NULL;
   }
@@ -1148,7 +1103,7 @@ ArgonObject *ARGON_NUMBER_TYPE___string__(size_t argc, ArgonObject **argv,
   if (!out) {
     free(mant);
     mpf_clear(f);
-    *err = create_err( RuntimeError, "out of memory");
+    *err = create_err(RuntimeError, "out of memory");
     return NULL;
   }
 
@@ -1219,7 +1174,7 @@ ArgonObject *ARGON_NUMBER_TYPE___string__(size_t argc, ArgonObject **argv,
   ArgonObject *result = new_string_object_null_terminated(out);
   free(out);
   return result;
-}
+})
 
 struct small_ints_struct small_ints[small_ints_max - small_ints_min + 1];
 

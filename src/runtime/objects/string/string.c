@@ -313,6 +313,7 @@ ARGON_METHOD(ARGON_STRING_TYPE, __getitem__, {
 })
 
 ARGON_METHOD(ARGON_STRING_TYPE, split, {
+  IGNORE_ARGS
   if (argc != 2) {
     *err = create_err(RuntimeError, "split expects 2 arguments, got %" PRIu64,
                       argc);
