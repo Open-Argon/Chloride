@@ -59,19 +59,20 @@ get_builtin_field_with_recursion_support(ArgonObject *target,
                                          built_in_fields field, bool recursive,
                                          bool disable_method_wrapper);
 
-ArgonObject *create_argon_native_function(char*name, native_fn native_fn);
+ArgonObject *create_argon_native_function(char *name, native_fn native_fn);
 
 ArgonObject *new_object(size_t endSize);
 
-#define ARGON_FUNCTION(NAME, ...)                                             \
+#define ARGON_FUNCTION(NAME, ...)                                              \
   ArgonObject *NAME(size_t argc, ArgonObject **argv, ArErr *err,               \
-                    RuntimeState *state, ArgonNativeAPI *api) { __VA_ARGS__ }
-#define IGNORE_ARGS                                                            \
-  (void)argc;                                                                  \
-  (void)argv;                                                                  \
-  (void)err;                                                                   \
-  (void)state;                                                                 \
-  (void)api;
+                    RuntimeState *state, ArgonNativeAPI *api) {                \
+    (void)argc;                                                                \
+    (void)argv;                                                                \
+    (void)err;                                                                 \
+    (void)state;                                                               \
+    (void)api;                                                                 \
+    __VA_ARGS__                                                                \
+  }
 #define EXPOSE_ARGON_FUNCTION(NAME)                                            \
   ArgonObject *NAME(size_t argc, ArgonObject **argv, ArErr *err,               \
                     RuntimeState *state, ArgonNativeAPI *api);

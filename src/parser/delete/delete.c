@@ -33,8 +33,8 @@ ParsedValueReturn parse_delete(char *file, DArray *tokens, size_t *index) {
     free(value.value);
     return (ParsedValueReturn){
         path_specific_create_err(
-            token->line, token->column, token->length, file, SyntaxError,
-            "deleting to something which can't be deleted"),
+            token->line, token->column, token->length, file, TypeError,
+            "deleting something which can't be deleted"),
         NULL};
   }
   ParsedValue *parsedValue = checked_malloc(sizeof(ParsedValue));

@@ -29,6 +29,7 @@ assert_equal(json.stringify("\t"), "\"\\t\"")
 
 assert_equal(json.stringify("he said \"hi\""), "\"he said \\\"hi\\\"\"")
 assert_equal(json.stringify("line1\nline2"), "\"line1\\nline2\"")
+assert_equal(json.stringify("🇬🇧"), "\"\\uD83C\\uDDEC\\uD83C\\uDDE7\"")
 
 
 # --------------------

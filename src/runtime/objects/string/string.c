@@ -26,10 +26,33 @@
 ArgonObject *ARGON_STRING_TYPE = NULL;
 
 ArgonObject *ARGON_STRING_ITERATOR_TYPE = NULL;
+/* Returns the number of bytes consumed, or 0 on invalid UTF-8.
+   Writes the decoded codepoint to *cp. */
+static int decode_utf8(const unsigned char *s, size_t len, uint32_t *cp) {
+  if (len == 0)
+    return 0;
+  if (s[0] < 0x80) {
+    *cp = s[0];
+    return 1;
+  } else if ((s[0] & 0xE0) == 0xC0 && len >= 2) {
+    *cp = ((s[0] & 0x1F) << 6) | (s[1] & 0x3F);
+    return 2;
+  } else if ((s[0] & 0xF0) == 0xE0 && len >= 3) {
+    *cp = ((s[0] & 0x0F) << 12) | ((s[1] & 0x3F) << 6) | (s[2] & 0x3F);
+    return 3;
+  } else if ((s[0] & 0xF8) == 0xF0 && len >= 4) {
+    *cp = ((s[0] & 0x07) << 18) | ((s[1] & 0x3F) << 12) | ((s[2] & 0x3F) << 6) |
+          (s[3] & 0x3F);
+    return 4;
+  }
+  return 0; /* invalid */
+}
 
 char *c_quote_string(const char *input, size_t len) {
-  // Worst case: every byte becomes "\uXXXX" (6 chars) + quotes + NUL
-  size_t max_out = 2 + (len * 6) + 1;
+  // Worst case: every byte is a 4-byte UTF-8 sequence needing a surrogate pair
+  // Each surrogate is "\uXXXX" (6 chars), so 12 chars per 4 bytes, plus quotes
+  // + NUL
+  size_t max_out = 2 + (len * 12) + 1;
   char *out = malloc(max_out);
   if (!out)
     return NULL;
@@ -37,37 +60,60 @@ char *c_quote_string(const char *input, size_t len) {
   size_t j = 0;
   out[j++] = '"';
 
-  for (size_t i = 0; i < len; i++) {
+  for (size_t i = 0; i < len;) {
     unsigned char c = (unsigned char)input[i];
 
     switch (c) {
     case '\n':
       out[j++] = '\\';
       out[j++] = 'n';
+      i++;
       break;
     case '\t':
       out[j++] = '\\';
       out[j++] = 't';
+      i++;
       break;
     case '\r':
       out[j++] = '\\';
       out[j++] = 'r';
+      i++;
       break;
     case '\\':
       out[j++] = '\\';
       out[j++] = '\\';
+      i++;
       break;
     case '\"':
       out[j++] = '\\';
-      out[j++] = '\"';
+      out[j++] = '"';
+      i++;
       break;
     default:
-      if (isprint(c)) {
+      if (isprint(c) && c < 0x80) {
         out[j++] = c;
+        i++;
       } else {
-        // write \uXXXX
-        j += sprintf(&out[j], "\\u%04X", c);
+        uint32_t cp;
+        int consumed =
+            decode_utf8((const unsigned char *)input + i, len - i, &cp);
+        if (consumed <= 0) {
+          // Invalid UTF-8 byte: escape it raw and skip
+          j += sprintf(&out[j], "\\u%04X", c);
+          i++;
+        } else if (cp <= 0xFFFF) {
+          j += sprintf(&out[j], "\\u%04X", cp);
+          i += consumed;
+        } else {
+          // Encode as a UTF-16 surrogate pair
+          cp -= 0x10000;
+          uint32_t hi = 0xD800 + (cp >> 10);
+          uint32_t lo = 0xDC00 + (cp & 0x3FF);
+          j += sprintf(&out[j], "\\u%04X\\u%04X", hi, lo);
+          i += consumed;
+        }
       }
+      break;
     }
   }
 
@@ -313,7 +359,6 @@ ARGON_METHOD(ARGON_STRING_TYPE, __getitem__, {
 })
 
 ARGON_METHOD(ARGON_STRING_TYPE, split, {
-  IGNORE_ARGS
   if (argc != 2) {
     *err = create_err(RuntimeError, "split expects 2 arguments, got %" PRIu64,
                       argc);
@@ -639,7 +684,6 @@ ARGON_METHOD(ARGON_STRING_TYPE, __iter__, {
 })
 
 ARGON_METHOD(ARGON_STRING_ITERATOR_TYPE, __next__, {
-
   (void)state;
   if (argc != 1) {
     *err = create_err(RuntimeError, "__next__ expects 1 argument, got %" PRIu64,
