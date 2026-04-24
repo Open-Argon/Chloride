@@ -314,7 +314,9 @@ ArgonObject *ARGON_ARRAY_join(size_t argc, ArgonObject **argv, ArErr *err,
     }
   }
 
-  return api->string_to_argon((struct string){data, length});
+  ArgonObject *result = api->string_to_argon((struct string){data, length});
+  free(data);
+  return result;
 }
 
 ArgonObject *ARGON_ARRAY_insert(size_t argc, ArgonObject **argv, ArErr *err,
@@ -684,9 +686,8 @@ void init_array_type() {
   add_builtin_field(
       ARRAY_TYPE, set_length,
       create_argon_native_function("set_length", ARGON_ARRAY_set_length));
-  add_builtin_field(
-      ARRAY_TYPE, join,
-      create_argon_native_function("join", ARGON_ARRAY_join));
+  add_builtin_field(ARRAY_TYPE, join,
+                    create_argon_native_function("join", ARGON_ARRAY_join));
   add_builtin_field(
       ARRAY_TYPE, __getitem__,
       create_argon_native_function("__getitem__", ARGON_ARRAY___getitem__));

@@ -13,6 +13,7 @@
 #include "../literals/literals.h"
 #include "../number/number.h"
 #include "../object.h"
+#include "../slice/slice.h"
 #include <ctype.h>
 #include <inttypes.h>
 #include <stddef.h>
@@ -22,6 +23,8 @@
 #include <string.h>
 
 ArgonObject *ARGON_STRING_TYPE = NULL;
+
+ArgonObject *ARGON_STRING_ITERATOR_TYPE = NULL;
 
 char *c_quote_string(const char *input, size_t len) {
   // Worst case: every byte becomes "\uXXXX" (6 chars) + quotes + NUL
@@ -279,6 +282,55 @@ ArgonObject *ARGON_STRING_TYPE_set_length(size_t argc, ArgonObject **argv,
   return ARGON_NULL;
 }
 
+ArgonObject *ARGON_STRING_TYPE___getitem__(size_t argc, ArgonObject **argv,
+                                           ArErr *err, RuntimeState *state,
+                                           ArgonNativeAPI *api) {
+  (void)api;
+  (void)state;
+  if (argc != 2) {
+    *err = create_err(RuntimeError,
+                      "__getitem__ expects 2 arguments, got %" PRIu64, argc);
+    return ARGON_NULL;
+  }
+  struct string self = api->argon_to_string(argv[0], err);
+  if (api->is_error(err))
+    return ARGON_NULL;
+
+  if (argv[1]->type == TYPE_SLICE) { // slice
+
+    SliceIndices indices;
+    if (slice_indices(argv[1], self.length, &indices, err, api) != 0)
+      return ARGON_NULL;
+
+    int64_t size = 0;
+    if (indices.step > 0 && indices.stop > indices.start)
+      size = (indices.stop - indices.start + indices.step - 1) / indices.step;
+    else if (indices.step < 0 && indices.stop < indices.start)
+      size =
+          (indices.start - indices.stop - indices.step - 1) / (-indices.step);
+
+    char *slice = checked_malloc(size);
+
+    for (int64_t i = 0; i < size; i++) {
+      int64_t src_index =
+          indices.start + i * indices.step; // source index follows step
+      slice[i] = self.data[src_index];
+    }
+    ArgonObject *result = api->string_to_argon((struct string){slice, size});
+    free(slice);
+    return result;
+  }
+  int64_t index = api->argon_to_i64(argv[1], err);
+  if (api->is_error(err))
+    return ARGON_NULL;
+  if (index < 0)
+    index += self.length;
+  if (index >= (int64_t)self.length || index < 0) {
+    return api->throw_argon_error(err, IndexError, "index out of range");
+  }
+  return api->string_to_argon((struct string){&self.data[index], 1});
+}
+
 ArgonObject *ARGON_STRING_TYPE_split(size_t argc, ArgonObject **argv,
                                      ArErr *err, RuntimeState *state,
                                      ArgonNativeAPI *api) {
@@ -393,8 +445,10 @@ ArgonObject *new_string_object_without_memcpy(char *data, size_t length,
 }
 
 ArgonObject *new_string_object(char *data, size_t length, uint64_t hash) {
-  if (length==0) return &empty_str.obj;
-  if (length==1) return &small_chars[data[0]-CHAR_MIN].obj;
+  if (length == 0)
+    return &empty_str.obj;
+  if (length == 1)
+    return &small_chars[data[0] - CHAR_MIN].obj;
   char *data_copy = ar_alloc_atomic(length);
   memcpy(data_copy, data, length);
   return new_string_object_without_memcpy(data_copy, length, hash);
@@ -461,6 +515,55 @@ char *argon_string_to_c_string_malloc(ArgonObject *object) {
 
 ArgonObject *new_string_object_null_terminated(char *data) {
   return new_string_object(data, strlen(data), 0);
+}
+
+ArgonObject *ARGON_STRING_TYPE___iter__(size_t argc, ArgonObject **argv,
+                                        ArErr *err, RuntimeState *state,
+                                        ArgonNativeAPI *api) {
+  (void)state;
+  if (argc != 1) {
+    *err = create_err(RuntimeError, "__iter__ expects 1 argument, got %" PRIu64,
+                      argc);
+    return ARGON_NULL;
+  }
+
+  struct string self = api->argon_to_string(argv[0], err);
+  if (api->is_error(err))
+    return ARGON_NULL;
+
+  ArgonObject *iterator = new_instance(ARGON_STRING_ITERATOR_TYPE,
+                                       sizeof(struct as_string_iterator));
+  iterator->type = TYPE_STRING_ITERATOR;
+  iterator->value.as_string_iterator =
+      (struct as_string_iterator *)((char *)iterator + sizeof(ArgonObject));
+  iterator->value.as_string_iterator->current = 0;
+  iterator->value.as_string_iterator->data = self.data;
+  iterator->value.as_string_iterator->length = self.length;
+  return iterator;
+}
+
+ArgonObject *ARGON_STRING_ITERATOR_TYPE___next__(size_t argc,
+                                                 ArgonObject **argv, ArErr *err,
+                                                 RuntimeState *state,
+                                                 ArgonNativeAPI *api) {
+  (void)state;
+  if (argc != 1) {
+    *err = create_err(RuntimeError, "__next__ expects 1 argument, got %" PRIu64,
+                      argc);
+    return ARGON_NULL;
+  }
+  ArgonObject *self = argv[0];
+  if (self->type != TYPE_STRING_ITERATOR)
+    return api->throw_argon_error(err, TypeError, "expected string iterator");
+  struct as_string_iterator *string_iterator = self->value.as_string_iterator;
+
+  if (string_iterator->current >= string_iterator->length) {
+    err->ptr = StopIteration_instance;
+    return ARGON_NULL;
+  }
+
+  return api->string_to_argon(
+      (struct string){&string_iterator->data[string_iterator->current++], 1});
 }
 
 ArgonObject *ARGON_RENDER_TEMPLATE;

@@ -276,6 +276,12 @@ struct as_array_iterator {
   darray_armem *array;
 };
 
+struct as_string_iterator {
+  size_t current;
+  char *data;
+  size_t length;
+};
+
 struct as_dictionary_iterator {
   size_t current;
   size_t size;
@@ -306,6 +312,7 @@ struct ArgonObject {
     struct hashmap_GC *as_hashmap;
     struct as_range_iterator *as_range_iterator;
     struct as_array_iterator *as_array_iterator;
+    struct as_string_iterator *as_string_iterator;
     struct as_tuple_iterator *as_tuple_iterator;
     struct as_dictionary_iterator *as_dictionary_iterator;
     struct string_struct *as_str;

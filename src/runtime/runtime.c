@@ -1129,8 +1129,14 @@ void bootstrap_types() {
       ARGON_STRING_TYPE, set_length,
       create_argon_native_function("set_length", ARGON_STRING_TYPE_set_length));
   add_builtin_field(
+      ARGON_STRING_TYPE, __iter__,
+      create_argon_native_function("__iter__", ARGON_STRING_TYPE___iter__));
+  add_builtin_field(
       ARGON_STRING_TYPE, split,
       create_argon_native_function("split", ARGON_STRING_TYPE_split));
+  add_builtin_field(ARGON_STRING_TYPE, __getitem__,
+                    create_argon_native_function(
+                        "__getitem__", ARGON_STRING_TYPE___getitem__));
   add_builtin_field(
       ARGON_STRING_TYPE, __add__,
       create_argon_native_function("__add__", ARGON_STRING_TYPE___add__));
@@ -1230,6 +1236,15 @@ void bootstrap_types() {
   add_builtin_field(
       BASE_CLASS, __setattr__,
       create_argon_native_function("__setattr__", BASE_CLASS___setattr__));
+
+  ARGON_STRING_ITERATOR_TYPE = new_class();
+
+  add_builtin_field(ARGON_STRING_ITERATOR_TYPE, __name__,
+                    new_string_object_null_terminated("string_iterator"));
+  add_builtin_field(ARGON_STRING_ITERATOR_TYPE, __next__,
+                    create_argon_native_function(
+                        "__next__", ARGON_STRING_ITERATOR_TYPE___next__));
+
   create_ARGON_DICTIONARY_TYPE();
   create_ARGON_NUMBER_TYPE();
   create_ARGON_BUFFER_TYPE();
@@ -1559,8 +1574,8 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       [OP_LOAD_STOPITERATION_CLASS] = &&DO_LOAD_STOPITERATION_CLASS,
       [OP_LOAD_SLICE_CLASS] = &&DO_LOAD_SLICE_CLASS,
       [OP_DELETE_IDENTIFIER] = &&DO_DELETE_IDENTIFIER,
-      [OP_LOAD_DELATTR_METHOD]= &&DO_LOAD_DELATTR_METHOD,
-      [OP_LOAD_DELITEM_METHOD]=&&DO_LOAD_DELITEM_METHOD};
+      [OP_LOAD_DELATTR_METHOD] = &&DO_LOAD_DELATTR_METHOD,
+      [OP_LOAD_DELITEM_METHOD] = &&DO_LOAD_DELITEM_METHOD};
   _state.head = 0;
 
   ArErr err = *err_ptr;

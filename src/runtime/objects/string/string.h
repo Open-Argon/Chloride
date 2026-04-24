@@ -12,6 +12,8 @@ extern ArgonObject *ARGON_STRING_TYPE;
 
 extern ArgonObject *ARGON_RENDER_TEMPLATE;
 
+extern ArgonObject *ARGON_STRING_ITERATOR_TYPE;
+
 ArgonObject *RENDER_TEMPLATE(size_t argc, ArgonObject **argv, ArErr *err,
                              RuntimeState *state, ArgonNativeAPI *api);
 
@@ -41,6 +43,9 @@ ArgonObject *ARGON_STRING_TYPE_get_length(size_t argc, ArgonObject **argv,
 ArgonObject *ARGON_STRING_TYPE_set_length(size_t argc, ArgonObject **argv,
                                           ArErr *err, RuntimeState *state,
                                           ArgonNativeAPI *api);
+ArgonObject *ARGON_STRING_TYPE___getitem__(size_t argc, ArgonObject **argv,
+                                           ArErr *err, RuntimeState *state,
+                                           ArgonNativeAPI *api);
 ArgonObject *ARGON_STRING_TYPE___equal__(size_t argc, ArgonObject **argv,
                                          ArErr *err, RuntimeState *state,
                                          ArgonNativeAPI *api);
@@ -67,6 +72,14 @@ ArgonObject *ARGON_STRING_TYPE___greater_than_equal__(size_t argc,
 ArgonObject *ARGON_STRING_TYPE_split(size_t argc, ArgonObject **argv,
                                      ArErr *err, RuntimeState *state,
                                      ArgonNativeAPI *api);
+
+ArgonObject *ARGON_STRING_TYPE___iter__(size_t argc, ArgonObject **argv,
+                                        ArErr *err, RuntimeState *state,
+                                        ArgonNativeAPI *api);
+ArgonObject *ARGON_STRING_ITERATOR_TYPE___next__(size_t argc,
+                                                 ArgonObject **argv, ArErr *err,
+                                                 RuntimeState *state,
+                                                 ArgonNativeAPI *api);
 
 void init_small_chars();
 #endif // STRING_OBJ_H

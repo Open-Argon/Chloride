@@ -274,16 +274,6 @@ ArgonObject *ARGON_TUPLE___getitem__(size_t argc, ArgonObject **argv,
   return tuple->data[index];
 }
 
-ArgonObject *ARGON_TUPLE___setitem__(size_t argc, ArgonObject **argv,
-                                     ArErr *err, RuntimeState *state,
-                                     ArgonNativeAPI *api) {
-  (void)argc;
-  (void)argv;
-  (void)state;
-  return api->throw_argon_error(
-      err, AssignError, "tuple object does not support item assignment");
-}
-
 ArgonObject *ARGON_TUPLE___iter__(size_t argc, ArgonObject **argv, ArErr *err,
                                   RuntimeState *state, ArgonNativeAPI *api) {
   (void)api;
@@ -346,9 +336,6 @@ void init_tuple_type() {
   add_builtin_field(
       ARGON_TUPLE_TYPE, __getitem__,
       create_argon_native_function("__getitem__", ARGON_TUPLE___getitem__));
-  add_builtin_field(
-      ARGON_TUPLE_TYPE, __setitem__,
-      create_argon_native_function("__setitem__", ARGON_TUPLE___setitem__));
   add_builtin_field(
       ARGON_TUPLE_TYPE, __iter__,
       create_argon_native_function("__iter__", ARGON_TUPLE___iter__));
