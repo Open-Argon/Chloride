@@ -71,7 +71,9 @@
   X(indices)                                                                   \
   X(start)                                                                     \
   X(step)                                                                      \
-  X(stop)
+  X(stop)                                                                      \
+  X(split)                                                                     \
+  X(join)
 
 typedef enum {
 #define X(name) name,

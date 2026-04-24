@@ -10,7 +10,7 @@
 
 extern ArgonObject *ARGON_STRING_TYPE;
 
-extern ArgonObject*ARGON_RENDER_TEMPLATE;
+extern ArgonObject *ARGON_RENDER_TEMPLATE;
 
 ArgonObject *RENDER_TEMPLATE(size_t argc, ArgonObject **argv, ArErr *err,
                              RuntimeState *state, ArgonNativeAPI *api);
@@ -63,4 +63,8 @@ ArgonObject *ARGON_STRING_TYPE___greater_than_equal__(size_t argc,
                                                       ArErr *err,
                                                       RuntimeState *state,
                                                       ArgonNativeAPI *api);
+
+ArgonObject *ARGON_STRING_TYPE_split(size_t argc, ArgonObject **argv,
+                                     ArErr *err, RuntimeState *state,
+                                     ArgonNativeAPI *api);
 #endif // STRING_OBJ_H

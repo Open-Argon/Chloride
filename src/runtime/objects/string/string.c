@@ -8,6 +8,7 @@
 #include "../../../err.h"
 #include "../../../memory.h"
 #include "../../call/call.h"
+#include "../array/array.h"
 #include "../exceptions/exceptions.h"
 #include "../literals/literals.h"
 #include "../number/number.h"
@@ -278,6 +279,67 @@ ArgonObject *ARGON_STRING_TYPE_set_length(size_t argc, ArgonObject **argv,
   return ARGON_NULL;
 }
 
+ArgonObject *ARGON_STRING_TYPE_split(size_t argc, ArgonObject **argv,
+                                     ArErr *err, RuntimeState *state,
+                                     ArgonNativeAPI *api) {
+  (void)state;
+
+  if (argc != 2) {
+    *err = create_err(RuntimeError, "split expects 2 arguments, got %" PRIu64,
+                      argc);
+    return ARGON_NULL;
+  }
+
+  struct string s = api->argon_to_string(argv[0], err);
+  if (api->is_error(err))
+    return ARGON_NULL;
+
+  struct string delim = api->argon_to_string(argv[1], err);
+  if (api->is_error(err))
+    return ARGON_NULL;
+
+  char *start = s.data;
+  char *end = s.data + s.length;
+  size_t dlen = delim.length;
+
+  if (dlen == 0) {
+    return api->throw_argon_error(err, ValueError, "empty seperator");
+  }
+
+  ArgonObject *object = new_instance(ARRAY_TYPE, sizeof(darray_armem));
+  object->type = TYPE_ARRAY;
+
+  object->value.as_array = darray_armem_create();
+
+  darray_armem_init(object->value.as_array, sizeof(ArgonObject *), 0);
+
+  char *p = start;
+
+  while (p <= end - dlen) {
+    if (memcmp(p, delim.data, dlen) == 0) {
+
+      ArgonObject *item =
+          api->string_to_argon((struct string){start, p - start});
+
+      // print segment [start, p)
+      darray_armem_insert(object->value.as_array, object->value.as_array->size,
+                          &item);
+
+      p += dlen;
+      start = p;
+      continue;
+    }
+    p++;
+  }
+
+  // final segment
+  ArgonObject *item = api->string_to_argon((struct string){start, end - start});
+  darray_armem_insert(object->value.as_array, object->value.as_array->size,
+                      &item);
+
+  return object;
+}
+
 void init_string(ArgonObject *object, char *data, size_t length,
                  uint64_t hash) {
   object->type = TYPE_STRING;
@@ -315,15 +377,16 @@ char *argon_object_to_length_terminated_string_from___string__(
 
   ArgonObject *string_object =
       argon_call(string_convert_method, 0, NULL, err, state);
-  if (is_error(err)){
+  if (is_error(err)) {
     *length = 0;
-    return "";}
+    return "";
+  }
 
-  if (string_object->type != TYPE_STRING){
+  if (string_object->type != TYPE_STRING) {
     *length = sizeof("<object>") - 1;
     return "<object>";
   }
-  
+
   *length = string_object->value.as_str->length;
   return string_object->value.as_str->data;
 }

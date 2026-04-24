@@ -274,6 +274,49 @@ ArgonObject *ARGON_ARRAY_set_length(size_t argc, ArgonObject **argv, ArErr *err,
   return ARGON_NULL;
 }
 
+ArgonObject *ARGON_ARRAY_join(size_t argc, ArgonObject **argv, ArErr *err,
+                              RuntimeState *state, ArgonNativeAPI *api) {
+  (void)api;
+  (void)state;
+  (void)argv;
+  if (argc != 2) {
+    *err = create_err(RuntimeError, "join expects 2 arguments, got %" PRIu64,
+                      argc);
+    return ARGON_NULL;
+  }
+  struct string join = api->argon_to_string(argv[1], err);
+
+  size_t length = 0;
+
+  for (size_t i = 0; i < argv[0]->value.as_array->size; i++) {
+    ArgonObject *item =
+        *(ArgonObject **)darray_armem_get(argv[0]->value.as_array, i);
+    if (item->type != TYPE_STRING) {
+      return api->throw_argon_error(err, ValueError,
+                                    "index %" PRId64 " contains non string", i);
+    }
+    length += item->value.as_str->length;
+    if (i != argv[0]->value.as_array->size - 1)
+      length += join.length;
+  }
+
+  char *data = checked_malloc(length);
+  char *p = data;
+
+  for (size_t i = 0; i < argv[0]->value.as_array->size; i++) {
+    ArgonObject *item =
+        *(ArgonObject **)darray_armem_get(argv[0]->value.as_array, i);
+    memcpy(p, item->value.as_str->data, item->value.as_str->length);
+    p += item->value.as_str->length;
+    if (i != argv[0]->value.as_array->size - 1) {
+      memcpy(p, join.data, join.length);
+      p += join.length;
+    }
+  }
+
+  return api->string_to_argon((struct string){data, length});
+}
+
 ArgonObject *ARGON_ARRAY_insert(size_t argc, ArgonObject **argv, ArErr *err,
                                 RuntimeState *state, ArgonNativeAPI *api) {
   (void)state;
@@ -376,9 +419,11 @@ ArgonObject *ARGON_ARRAY___setitem__(size_t argc, ArgonObject **argv,
 
     int64_t slice_len = 0;
     if (indices.step > 0 && indices.stop > indices.start)
-      slice_len = (indices.stop - indices.start + indices.step - 1) / indices.step;
+      slice_len =
+          (indices.stop - indices.start + indices.step - 1) / indices.step;
     else if (indices.step < 0 && indices.stop < indices.start)
-      slice_len = (indices.start - indices.stop - indices.step - 1) / (-indices.step);
+      slice_len =
+          (indices.start - indices.stop - indices.step - 1) / (-indices.step);
 
     // Collect new values from the iterable (argv[2])
     ArgonObject *iter_method = get_builtin_field_for_class(
@@ -393,8 +438,8 @@ ArgonObject *ARGON_ARRAY___setitem__(size_t argc, ArgonObject **argv,
     ArgonObject *next_method = get_builtin_field_for_class(
         get_builtin_field(iter_obj, __class__), __next__, iter_obj);
     if (!next_method)
-      return api->throw_argon_error(err, RuntimeError,
-                                    "Iterator object doesn't have __next__ method");
+      return api->throw_argon_error(
+          err, RuntimeError, "Iterator object doesn't have __next__ method");
 
     // Collect all new items into a temporary buffer
     darray_armem *new_items = darray_armem_create();
@@ -416,10 +461,11 @@ ArgonObject *ARGON_ARRAY___setitem__(size_t argc, ArgonObject **argv,
     if (indices.step != 1) {
       // Extended slice: new iterable must match the slice length exactly
       if (new_len != slice_len) {
-        return api->throw_argon_error(err, ValueError,
-                                      "attempt to assign sequence of size %" PRId64
-                                      " to extended slice of size %" PRId64,
-                                      new_len, slice_len);
+        return api->throw_argon_error(
+            err, ValueError,
+            "attempt to assign sequence of size %" PRId64
+            " to extended slice of size %" PRId64,
+            new_len, slice_len);
       }
       for (int64_t i = 0; i < slice_len; i++) {
         int64_t dst = indices.start + i * indices.step;
@@ -445,8 +491,8 @@ ArgonObject *ARGON_ARRAY___setitem__(size_t argc, ArgonObject **argv,
       }
 
       int64_t del_count = slice_len; // elements being removed
-      int64_t old_size  = (int64_t)arr->size;
-      int64_t new_size  = old_size - del_count + new_len;
+      int64_t old_size = (int64_t)arr->size;
+      int64_t new_size = old_size - del_count + new_len;
 
       if (new_len < del_count) {
         // Shrink: shift tail left
@@ -512,9 +558,11 @@ ArgonObject *ARGON_ARRAY___delitem__(size_t argc, ArgonObject **argv,
 
     int64_t slice_len = 0;
     if (indices.step > 0 && indices.stop > indices.start)
-      slice_len = (indices.stop - indices.start + indices.step - 1) / indices.step;
+      slice_len =
+          (indices.stop - indices.start + indices.step - 1) / indices.step;
     else if (indices.step < 0 && indices.stop < indices.start)
-      slice_len = (indices.start - indices.stop - indices.step - 1) / (-indices.step);
+      slice_len =
+          (indices.start - indices.stop - indices.step - 1) / (-indices.step);
 
     if (slice_len == 0)
       return ARGON_NULL;
@@ -636,6 +684,9 @@ void init_array_type() {
   add_builtin_field(
       ARRAY_TYPE, set_length,
       create_argon_native_function("set_length", ARGON_ARRAY_set_length));
+  add_builtin_field(
+      ARRAY_TYPE, join,
+      create_argon_native_function("join", ARGON_ARRAY_join));
   add_builtin_field(
       ARRAY_TYPE, __getitem__,
       create_argon_native_function("__getitem__", ARGON_ARRAY___getitem__));
