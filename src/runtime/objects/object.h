@@ -59,11 +59,13 @@ get_builtin_field_with_recursion_support(ArgonObject *target,
                                          built_in_fields field, bool recursive,
                                          bool disable_method_wrapper);
 
+ArgonObject *create_argon_native_function(char*name, native_fn native_fn);
+
 ArgonObject *new_object(size_t endSize);
 
-#define ARGON_FUNCTION(NAME, BODY)                                             \
+#define ARGON_FUNCTION(NAME, ...)                                             \
   ArgonObject *NAME(size_t argc, ArgonObject **argv, ArErr *err,               \
-                    RuntimeState *state, ArgonNativeAPI *api) BODY
+                    RuntimeState *state, ArgonNativeAPI *api) { __VA_ARGS__ }
 #define IGNORE_ARGS                                                            \
   (void)argc;                                                                  \
   (void)argv;                                                                  \
@@ -79,7 +81,7 @@ ArgonObject *new_object(size_t endSize);
 //
 // method
 
-#define ARGON_METHOD(TYPE, NAME, BODY) ARGON_FUNCTION(TYPE##_##NAME, BODY)
+#define ARGON_METHOD(TYPE, NAME, ...) ARGON_FUNCTION(TYPE##_##NAME, __VA_ARGS__)
 
 #define EXPOSE_ARGON_METHOD(TYPE, NAME) EXPOSE_ARGON_FUNCTION(TYPE##_##NAME)
 
@@ -90,6 +92,6 @@ ArgonObject *new_object(size_t endSize);
   add_builtin_field(TYPE, NAME, OBJECT);
 
 #define MOUNT_ARGON_METHOD(TYPE, NAME)                                         \
-  MOUNT_ARGON_METHOD_OBJECT(TYPE, NAME, ARGON_METHOD_OBJECT(TYPE, NAME));
+  MOUNT_ARGON_METHOD_OBJECT(TYPE, NAME, ARGON_METHOD_OBJECT(TYPE, NAME))
 
 #endif // OBJECT_H

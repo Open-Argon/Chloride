@@ -6,7 +6,7 @@
 #include "slice.h"
 #include "../../../err.h"
 #include "../exceptions/exceptions.h"
-#include "../functions/functions.h"
+
 #include "../literals/literals.h"
 #include "../object.h"
 #include "../string/string.h"
@@ -16,9 +16,8 @@
 
 ArgonObject *ARGON_SLICE_TYPE;
 
-ArgonObject *ARGON_SLICE_TYPE___init__(size_t argc, ArgonObject **argv,
-                                       ArErr *err, RuntimeState *state,
-                                       ArgonNativeAPI *api) {
+ARGON_METHOD(ARGON_SLICE_TYPE, __init__, {
+
   (void)api;
   (void)state;
   if (argc < 2 || argc > 4) {
@@ -42,7 +41,7 @@ ArgonObject *ARGON_SLICE_TYPE___init__(size_t argc, ArgonObject **argv,
     }
   }
   return ARGON_NULL;
-}
+})
 
 // Returns -1 on error, 0 on success
 int slice_indices(ArgonObject *self, int64_t length, SliceIndices *out,
@@ -114,9 +113,8 @@ int slice_indices(ArgonObject *self, int64_t length, SliceIndices *out,
   return 0;
 }
 
-ArgonObject *ARGON_SLICE_TYPE_indices(size_t argc, ArgonObject **argv,
-                                      ArErr *err, RuntimeState *state,
-                                      ArgonNativeAPI *api) {
+ARGON_METHOD(ARGON_SLICE_TYPE, indices, {
+
   if (api->fix_to_arg_size(2, argc, err))
     return ARGON_NULL;
 
@@ -135,16 +133,12 @@ ArgonObject *ARGON_SLICE_TYPE_indices(size_t argc, ArgonObject **argv,
 
   return TUPLE_CREATE(3, (ArgonObject *[]){result_start, result_stop, result_step},
                       err, state, api);
-}
+})
 
 void init_slice_type() {
   ARGON_SLICE_TYPE = new_class();
   add_builtin_field(ARGON_SLICE_TYPE, __name__,
                     new_string_object_null_terminated("slice"));
-  add_builtin_field(
-      ARGON_SLICE_TYPE, __init__,
-      create_argon_native_function("__init__", ARGON_SLICE_TYPE___init__));
-  add_builtin_field(
-      ARGON_SLICE_TYPE, indices,
-      create_argon_native_function("indices", ARGON_SLICE_TYPE_indices));
+  MOUNT_ARGON_METHOD(ARGON_SLICE_TYPE, __init__)
+  MOUNT_ARGON_METHOD(ARGON_SLICE_TYPE, indices)
 }

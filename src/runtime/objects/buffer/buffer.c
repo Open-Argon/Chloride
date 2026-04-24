@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 #include "buffer.h"
-#include "../functions/functions.h"
+
 #include "../string/string.h"
 #include "../../../err.h"
 #include "../../../memory.h"
@@ -24,9 +24,8 @@ ArgonObject *create_ARGON_BUFFER_object(size_t size) {
   return object;
 }
 
-ArgonObject *ARGON_BUFFER_from_string(size_t argc, ArgonObject **argv,
-                                      ArErr *err, RuntimeState *state,
-                                      ArgonNativeAPI *api) {
+ARGON_METHOD(ARGON_BUFFER, from_string, {
+
   (void)state;
   if (api->fix_to_arg_size(1, argc, err))
     return api->ARGON_NULL;
@@ -39,10 +38,10 @@ ArgonObject *ARGON_BUFFER_from_string(size_t argc, ArgonObject **argv,
     return api->ARGON_NULL;
   memcpy(buffer.data, str.data, buffer.size);
   return buffer_object;
-}
+})
 
-ArgonObject *ARGON_BUFFER_to_string(size_t argc, ArgonObject **argv, ArErr *err,
-                                    RuntimeState *state, ArgonNativeAPI *api) {
+ARGON_METHOD(ARGON_BUFFER, to_string, {
+
   (void)state;
   if (api->fix_to_arg_size(1, argc, err))
     return api->ARGON_NULL;
@@ -50,10 +49,10 @@ ArgonObject *ARGON_BUFFER_to_string(size_t argc, ArgonObject **argv, ArErr *err,
   if (api->is_error(err))
     return api->ARGON_NULL;
   return api->string_to_argon((struct string){buffer.data, buffer.size});
-}
+})
 
-ArgonObject *ARGON_BUFFER_of_size(size_t argc, ArgonObject **argv, ArErr *err,
-                                  RuntimeState *state, ArgonNativeAPI *api) {
+ARGON_METHOD(ARGON_BUFFER, of_size, {
+
   (void)state;
   if (api->fix_to_arg_size(1, argc, err))
     return api->ARGON_NULL;
@@ -61,7 +60,7 @@ ArgonObject *ARGON_BUFFER_of_size(size_t argc, ArgonObject **argv, ArErr *err,
   if (api->is_error(err))
     return api->ARGON_NULL;
   return create_ARGON_BUFFER_object(n);
-}
+})
 
 void resize_ARGON_BUFFER_object(ArgonObject *obj, ArErr *err, size_t new_size) {
   if (obj->type != TYPE_BUFFER) {

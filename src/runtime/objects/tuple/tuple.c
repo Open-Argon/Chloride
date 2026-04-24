@@ -9,7 +9,7 @@
 #include "../../../memory.h"
 #include "../../call/call.h"
 #include "../exceptions/exceptions.h"
-#include "../functions/functions.h"
+
 #include "../literals/literals.h"
 #include "../number/number.h"
 #include "../slice/slice.h"
@@ -38,8 +38,7 @@ ArgonObject *TUPLE_CREATE(size_t argc, ArgonObject **argv, ArErr *err,
   return object;
 }
 
-ArgonObject *ARGON_TUPLE___new__(size_t argc, ArgonObject **argv, ArErr *err,
-                                 RuntimeState *state, ArgonNativeAPI *api) {
+ARGON_METHOD(ARGON_TUPLE_TYPE, __new__, {
   (void)api;
   (void)state;
   if (argc < 1) {
@@ -55,11 +54,9 @@ ArgonObject *ARGON_TUPLE___new__(size_t argc, ArgonObject **argv, ArErr *err,
   memcpy(new_obj->value.as_tuple.data, argv + 1,
          (argc - 1) * sizeof(ArgonObject *));
   return new_obj;
-}
+})
 
-ArgonObject *ARGON_TUPLE_of(size_t argc, ArgonObject **argv, ArErr *err,
-                            RuntimeState *state, ArgonNativeAPI *api) {
-
+ARGON_METHOD(ARGON_TUPLE_TYPE, of, {
   (void)api;
   (void)state;
   if (argc != 1) {
@@ -107,10 +104,9 @@ ArgonObject *ARGON_TUPLE_of(size_t argc, ArgonObject **argv, ArErr *err,
   memcpy(object->value.as_tuple.data, items,
          items_index * sizeof(ArgonObject *));
   return object;
-}
+})
 
-ArgonObject *ARGON_TUPLE___string__(size_t argc, ArgonObject **argv, ArErr *err,
-                                    RuntimeState *state, ArgonNativeAPI *api) {
+ARGON_METHOD(ARGON_TUPLE_TYPE, __string__, {
   (void)api;
 
   if (argc != 1) {
@@ -196,10 +192,9 @@ ArgonObject *ARGON_TUPLE___string__(size_t argc, ArgonObject **argv, ArErr *err,
   if (!is_being_repr->count)
     hashmap_free(is_being_repr, NULL);
   return result;
-}
+})
 
-ArgonObject *ARGON_TUPLE_get_length(size_t argc, ArgonObject **argv, ArErr *err,
-                                    RuntimeState *state, ArgonNativeAPI *api) {
+ARGON_METHOD(ARGON_TUPLE_TYPE, get_length, {
   (void)api;
   (void)state;
   if (argc != 1) {
@@ -208,10 +203,9 @@ ArgonObject *ARGON_TUPLE_get_length(size_t argc, ArgonObject **argv, ArErr *err,
     return ARGON_NULL;
   }
   return new_number_object_from_int64(argv[0]->value.as_tuple.size);
-}
+})
 
-ArgonObject *ARGON_TUPLE_set_length(size_t argc, ArgonObject **argv, ArErr *err,
-                                    RuntimeState *state, ArgonNativeAPI *api) {
+ARGON_METHOD(ARGON_TUPLE_TYPE, set_length, {
   (void)api;
   (void)state;
   (void)argv;
@@ -223,11 +217,9 @@ ArgonObject *ARGON_TUPLE_set_length(size_t argc, ArgonObject **argv, ArErr *err,
 
   *err = create_err(RuntimeError, "attribute 'length' is immutable");
   return ARGON_NULL;
-}
+})
 
-ArgonObject *ARGON_TUPLE___getitem__(size_t argc, ArgonObject **argv,
-                                     ArErr *err, RuntimeState *state,
-                                     ArgonNativeAPI *api) {
+ARGON_METHOD(ARGON_TUPLE_TYPE, __getitem__, {
   (void)state;
   if (argc != 2) {
     *err = create_err(RuntimeError,
@@ -272,10 +264,9 @@ ArgonObject *ARGON_TUPLE___getitem__(size_t argc, ArgonObject **argv,
     return api->throw_argon_error(err, IndexError, "index out of range");
   }
   return tuple->data[index];
-}
+})
 
-ArgonObject *ARGON_TUPLE___iter__(size_t argc, ArgonObject **argv, ArErr *err,
-                                  RuntimeState *state, ArgonNativeAPI *api) {
+ARGON_METHOD(ARGON_TUPLE_TYPE, __iter__, {
   (void)api;
   (void)state;
   if (argc != 1) {
@@ -292,11 +283,9 @@ ArgonObject *ARGON_TUPLE___iter__(size_t argc, ArgonObject **argv, ArErr *err,
   iterator->value.as_tuple_iterator->current = 0;
   iterator->value.as_tuple_iterator->tuple = &self->value.as_tuple;
   return iterator;
-}
+})
 
-ArgonObject *ARGON_TUPLE_ITERATOR___next__(size_t argc, ArgonObject **argv,
-                                           ArErr *err, RuntimeState *state,
-                                           ArgonNativeAPI *api) {
+ARGON_METHOD(ARGON_TUPLE_ITERATOR_TYPE, __next__, {
   (void)api;
   (void)state;
   if (argc != 1) {
@@ -315,37 +304,22 @@ ArgonObject *ARGON_TUPLE_ITERATOR___next__(size_t argc, ArgonObject **argv,
   ArgonObject *value = tuple_iterator->tuple->data[tuple_iterator->current++];
 
   return value;
-}
+})
 
 void init_tuple_type() {
   ARGON_TUPLE_TYPE = new_class();
   add_builtin_field(ARGON_TUPLE_TYPE, __name__,
                     new_string_object_null_terminated("tuple"));
-  add_builtin_field(
-      ARGON_TUPLE_TYPE, __new__,
-      create_argon_native_function("__new__", ARGON_TUPLE___new__));
-  add_builtin_field(
-      ARGON_TUPLE_TYPE, __string__,
-      create_argon_native_function("__string__", ARGON_TUPLE___string__));
-  add_builtin_field(
-      ARGON_TUPLE_TYPE, get_length,
-      create_argon_native_function("get_length", ARGON_TUPLE_get_length));
-  add_builtin_field(
-      ARGON_TUPLE_TYPE, set_length,
-      create_argon_native_function("set_length", ARGON_TUPLE_set_length));
-  add_builtin_field(
-      ARGON_TUPLE_TYPE, __getitem__,
-      create_argon_native_function("__getitem__", ARGON_TUPLE___getitem__));
-  add_builtin_field(
-      ARGON_TUPLE_TYPE, __iter__,
-      create_argon_native_function("__iter__", ARGON_TUPLE___iter__));
-  add_builtin_field(ARGON_TUPLE_TYPE, of,
-                    create_argon_native_function("of", ARGON_TUPLE_of));
+  MOUNT_ARGON_METHOD(ARGON_TUPLE_TYPE, __new__)
+  MOUNT_ARGON_METHOD(ARGON_TUPLE_TYPE, __string__)
+  MOUNT_ARGON_METHOD(ARGON_TUPLE_TYPE, get_length)
+  MOUNT_ARGON_METHOD(ARGON_TUPLE_TYPE, set_length)
+  MOUNT_ARGON_METHOD(ARGON_TUPLE_TYPE, __getitem__)
+  MOUNT_ARGON_METHOD(ARGON_TUPLE_TYPE, __iter__)
+  MOUNT_ARGON_METHOD(ARGON_TUPLE_TYPE, of)
 
   ARGON_TUPLE_ITERATOR_TYPE = new_class();
-  add_builtin_field(
-      ARGON_TUPLE_ITERATOR_TYPE, __next__,
-      create_argon_native_function("__next__", ARGON_TUPLE_ITERATOR___next__));
+  MOUNT_ARGON_METHOD(ARGON_TUPLE_ITERATOR_TYPE, __next__);
 
   ARGON_TUPLE_CREATE =
       create_argon_native_function("TUPLE_CREATE", TUPLE_CREATE);

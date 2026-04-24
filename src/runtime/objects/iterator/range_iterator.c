@@ -6,7 +6,7 @@
 #include "range_iterator.h"
 #include "../../../err.h"
 #include "../exceptions/exceptions.h"
-#include "../functions/functions.h"
+
 #include "../literals/literals.h"
 #include "../number/number.h"
 #include "../string/string.h"
@@ -15,9 +15,8 @@
 
 ArgonObject *ARGON_RANGE_ITERATOR_TYPE;
 
-ArgonObject *ARGON_RANGE_ITERATOR_TYPE___new__(size_t argc, ArgonObject **argv,
-                                               ArErr *err, RuntimeState *state,
-                                               ArgonNativeAPI *api) {
+ARGON_METHOD(ARGON_RANGE_ITERATOR_TYPE, __new__, {
+
   (void)api;
   (void)state;
   if (argc < 1) {
@@ -32,11 +31,10 @@ ArgonObject *ARGON_RANGE_ITERATOR_TYPE___new__(size_t argc, ArgonObject **argv,
   new_obj->value.as_range_iterator =
       (struct as_range_iterator *)((char *)new_obj + sizeof(ArgonObject));
   return new_obj;
-}
+})
 
-ArgonObject *ARGON_RANGE_ITERATOR_TYPE___init__(size_t argc, ArgonObject **argv,
-                                                ArErr *err, RuntimeState *state,
-                                                ArgonNativeAPI *api) {
+ARGON_METHOD(ARGON_RANGE_ITERATOR_TYPE, __init__, {
+
   (void)api;
   (void)state;
   if (argc < 2 || argc > 4) {
@@ -95,11 +93,10 @@ ArgonObject *ARGON_RANGE_ITERATOR_TYPE___init__(size_t argc, ArgonObject **argv,
     }
   }
   return ARGON_NULL;
-}
+})
 
-ArgonObject *ARGON_RANGE_ITERATOR_TYPE___iter__(size_t argc, ArgonObject **argv,
-                                                ArErr *err, RuntimeState *state,
-                                                ArgonNativeAPI *api) {
+ARGON_METHOD(ARGON_RANGE_ITERATOR_TYPE, __iter__, {
+
   (void)api;
   (void)state;
   if (argc != 1) {
@@ -116,11 +113,10 @@ ArgonObject *ARGON_RANGE_ITERATOR_TYPE___iter__(size_t argc, ArgonObject **argv,
 
   *new_obj->value.as_range_iterator = *self->value.as_range_iterator;
   return new_obj;
-}
+})
 
-ArgonObject *ARGON_RANGE_ITERATOR_TYPE___next__(size_t argc, ArgonObject **argv,
-                                                ArErr *err, RuntimeState *state,
-                                                ArgonNativeAPI *api) {
+ARGON_METHOD(ARGON_RANGE_ITERATOR_TYPE, __next__, {
+
   (void)api;
   (void)state;
   if (argc != 1) {
@@ -171,22 +167,14 @@ ArgonObject *ARGON_RANGE_ITERATOR_TYPE___next__(size_t argc, ArgonObject **argv,
 
     return current_val;
   }
-}
+})
 
 void init_range_iterator() {
   ARGON_RANGE_ITERATOR_TYPE = new_class();
   add_builtin_field(ARGON_RANGE_ITERATOR_TYPE, __name__,
                     new_string_object_null_terminated("Range"));
-  add_builtin_field(ARGON_RANGE_ITERATOR_TYPE, __new__,
-                    create_argon_native_function(
-                        "__new__", ARGON_RANGE_ITERATOR_TYPE___new__));
-  add_builtin_field(ARGON_RANGE_ITERATOR_TYPE, __init__,
-                    create_argon_native_function(
-                        "__init__", ARGON_RANGE_ITERATOR_TYPE___init__));
-  add_builtin_field(ARGON_RANGE_ITERATOR_TYPE, __iter__,
-                    create_argon_native_function(
-                        "__iter__", ARGON_RANGE_ITERATOR_TYPE___iter__));
-  add_builtin_field(ARGON_RANGE_ITERATOR_TYPE, __next__,
-                    create_argon_native_function(
-                        "__next__", ARGON_RANGE_ITERATOR_TYPE___next__));
+  MOUNT_ARGON_METHOD(ARGON_RANGE_ITERATOR_TYPE, __new__)
+  MOUNT_ARGON_METHOD(ARGON_RANGE_ITERATOR_TYPE, __init__)
+  MOUNT_ARGON_METHOD(ARGON_RANGE_ITERATOR_TYPE, __iter__)
+  MOUNT_ARGON_METHOD(ARGON_RANGE_ITERATOR_TYPE, __next__)
 }

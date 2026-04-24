@@ -7,6 +7,7 @@
 #ifndef RUNTIME_SLICE_H
 #define RUNTIME_SLICE_H
 #include "../../../arobject.h"
+#include "../object.h"
 
 typedef struct {
   int64_t start;
@@ -21,8 +22,6 @@ void init_slice_type();
 int slice_indices(ArgonObject *self, int64_t length, SliceIndices *out,
                          ArErr *err, ArgonNativeAPI *api);
 
-ArgonObject *ARGON_SLICE_TYPE_indices(size_t argc, ArgonObject **argv,
-                                      ArErr *err, RuntimeState *state,
-                                      ArgonNativeAPI *api);
+EXPOSE_ARGON_METHOD(ARGON_SLICE_TYPE, indices)
 
 #endif // RUNTIME_SLICE_H

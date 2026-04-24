@@ -4,12 +4,11 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+#include "number.h"
 #include "../../../err.h"
 #include "../../../memory.h"
 #include "../exceptions/exceptions.h"
-#include "../functions/functions.h"
 #include "../string/string.h"
-#include "number.h"
 #include <gmp.h>
 #include <inttypes.h>
 #include <mpfr.h>
@@ -1195,67 +1194,25 @@ void create_ARGON_NUMBER_TYPE() {
   ARGON_NUMBER_TYPE = new_class();
   add_builtin_field(ARGON_NUMBER_TYPE, __name__,
                     new_string_object_null_terminated("number"));
-  add_builtin_field(
-      ARGON_NUMBER_TYPE, __string__,
-      create_argon_native_function("__string__", ARGON_NUMBER_TYPE___string__));
-  add_builtin_field(
-      ARGON_NUMBER_TYPE, __new__,
-      create_argon_native_function("__new__", ARGON_NUMBER_TYPE___new__));
-  add_builtin_field(
-      ARGON_NUMBER_TYPE, __number__,
-      create_argon_native_function("__number__", ARGON_NUMBER_TYPE___number__));
-  add_builtin_field(
-      ARGON_NUMBER_TYPE, __hash__,
-      create_argon_native_function("__hash__", ARGON_NUMBER_TYPE___hash__));
-  add_builtin_field(ARGON_NUMBER_TYPE, __boolean__,
-                    create_argon_native_function(
-                        "__boolean__", ARGON_NUMBER_TYPE___boolean__));
-  add_builtin_field(ARGON_NUMBER_TYPE, __negation__,
-                    create_argon_native_function(
-                        "__negation__", ARGON_NUMBER_TYPE___negation__));
-  add_builtin_field(
-      ARGON_NUMBER_TYPE, __add__,
-      create_argon_native_function("__add__", ARGON_NUMBER_TYPE___add__));
-  add_builtin_field(ARGON_NUMBER_TYPE, __subtract__,
-                    create_argon_native_function(
-                        "__subtract__", ARGON_NUMBER_TYPE___subtract__));
-  add_builtin_field(ARGON_NUMBER_TYPE, __multiply__,
-                    create_argon_native_function(
-                        "__multiply__", ARGON_NUMBER_TYPE___multiply__));
-  add_builtin_field(ARGON_NUMBER_TYPE, __exponent__,
-                    create_argon_native_function(
-                        "__exponent__", ARGON_NUMBER_TYPE___exponent__));
-  add_builtin_field(ARGON_NUMBER_TYPE, __division__,
-                    create_argon_native_function(
-                        "__division__", ARGON_NUMBER_TYPE___division__));
-  add_builtin_field(
-      ARGON_NUMBER_TYPE, __floor_division__,
-      create_argon_native_function("__floor_division__",
-                                   ARGON_NUMBER_TYPE___floor_division__));
-  add_builtin_field(
-      ARGON_NUMBER_TYPE, __modulo__,
-      create_argon_native_function("__modulo__", ARGON_NUMBER_TYPE___modulo__));
-  add_builtin_field(
-      ARGON_NUMBER_TYPE, __equal__,
-      create_argon_native_function("__equal__", ARGON_NUMBER_TYPE___equal__));
-  add_builtin_field(ARGON_NUMBER_TYPE, __not_equal__,
-                    create_argon_native_function(
-                        "__not_equal__", ARGON_NUMBER_TYPE___not_equal__));
-  add_builtin_field(ARGON_NUMBER_TYPE, __less_than__,
-                    create_argon_native_function(
-                        "__less_than__", ARGON_NUMBER_TYPE___less_than__));
-  add_builtin_field(
-      ARGON_NUMBER_TYPE, __less_than_equal__,
-      create_argon_native_function("__less_than_equal__",
-                                   ARGON_NUMBER_TYPE___less_than_equal__));
-  add_builtin_field(
-      ARGON_NUMBER_TYPE, __greater_than__,
-      create_argon_native_function("__greater_than__",
-                                   ARGON_NUMBER_TYPE___greater_than__));
-  add_builtin_field(
-      ARGON_NUMBER_TYPE, __greater_than_equal__,
-      create_argon_native_function("__greater_than_equal__",
-                                   ARGON_NUMBER_TYPE___greater_than_equal__));
+  MOUNT_ARGON_METHOD(ARGON_NUMBER_TYPE, __string__)
+  MOUNT_ARGON_METHOD(ARGON_NUMBER_TYPE, __new__)
+  MOUNT_ARGON_METHOD(ARGON_NUMBER_TYPE, __number__)
+  MOUNT_ARGON_METHOD(ARGON_NUMBER_TYPE, __hash__)
+  MOUNT_ARGON_METHOD(ARGON_NUMBER_TYPE, __boolean__)
+  MOUNT_ARGON_METHOD(ARGON_NUMBER_TYPE, __negation__)
+  MOUNT_ARGON_METHOD(ARGON_NUMBER_TYPE, __add__)
+  MOUNT_ARGON_METHOD(ARGON_NUMBER_TYPE, __subtract__)
+  MOUNT_ARGON_METHOD(ARGON_NUMBER_TYPE, __multiply__)
+  MOUNT_ARGON_METHOD(ARGON_NUMBER_TYPE, __exponent__)
+  MOUNT_ARGON_METHOD(ARGON_NUMBER_TYPE, __division__)
+  MOUNT_ARGON_METHOD(ARGON_NUMBER_TYPE, __floor_division__)
+  MOUNT_ARGON_METHOD(ARGON_NUMBER_TYPE, __modulo__)
+  MOUNT_ARGON_METHOD(ARGON_NUMBER_TYPE, __equal__)
+  MOUNT_ARGON_METHOD(ARGON_NUMBER_TYPE, __not_equal__)
+  MOUNT_ARGON_METHOD(ARGON_NUMBER_TYPE, __less_than__)
+  MOUNT_ARGON_METHOD(ARGON_NUMBER_TYPE, __less_than_equal__)
+  MOUNT_ARGON_METHOD(ARGON_NUMBER_TYPE, __greater_than__)
+  MOUNT_ARGON_METHOD(ARGON_NUMBER_TYPE, __greater_than_equal__)
   init_small_ints();
 }
 

@@ -10,6 +10,4 @@
 
 extern ArgonObject *ARGON_FUNCTION_TYPE;
 
-ArgonObject *create_argon_native_function(char*name, native_fn native_fn);
-
 #endif // FUNCTION_H
