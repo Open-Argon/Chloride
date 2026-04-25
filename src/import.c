@@ -345,16 +345,16 @@ Translated load_argon_file(char *path, ArErr *err) {
 
     // Seek to end to get file size
     if (fseek(file, 0, SEEK_END) != 0) {
-      *err = create_err(FileError, "Unable determine the files size: fseek",
-                        path);
+      *err =
+          create_err(FileError, "Unable determine the files size: fseek", path);
       fclose(file);
       return (Translated){};
     }
 
     long size = ftell(file);
     if (size < 0) {
-      *err = create_err(FileError, "Unable determine the files size: ftell",
-                        path);
+      *err =
+          create_err(FileError, "Unable determine the files size: ftell", path);
       fclose(file);
       return (Translated){};
     }
@@ -362,8 +362,8 @@ Translated load_argon_file(char *path, ArErr *err) {
                   // Allocate buffer (+1 for NUL terminator)
     char *buffer = malloc(size + 1);
     if (!buffer) {
-      *err = create_err(FileError,
-                        "Unable determine the files content: malloc", path);
+      *err = create_err(FileError, "Unable determine the files content: malloc",
+                        path);
       fclose(file);
       return (Translated){};
     }
@@ -371,8 +371,8 @@ Translated load_argon_file(char *path, ArErr *err) {
     // Read the file
     size_t read = fread(buffer, 1, size, file);
     if (read != (size_t)size) {
-      *err = create_err(FileError,
-                        "Unable determine the files content: fread", path);
+      *err = create_err(FileError, "Unable determine the files content: fread",
+                        path);
       free(buffer);
       fclose(file);
       return (Translated){};
@@ -481,7 +481,8 @@ Translated load_argon_file(char *path, ArErr *err) {
   hashmap_free(translated.constants.hashmap, NULL);
   Translated gc_translated = {translated.registerCount,
                               translated.registerAssignment,
-                              0, 0,
+                              0,
+                              0,
                               {-1, 0, 0},
                               {NULL, 0, 0},
                               {NULL, 0, 0},
@@ -577,6 +578,10 @@ Stack *ar_import(char *current_directory, char *path_relative, ArErr *err,
     return NULL;
   }
   uint64_t hash = siphash64_bytes(path_c, strlen(path_c), siphash_key_fixed);
+  Stack *scope;
+  if ((scope = hashmap_lookup_GC(imported_hash_table, hash)) != NULL) {
+    return scope;
+  }
 
   if (hashmap_lookup_GC(importing_hash_table, hash)) {
     *err = create_err(ImportError, "Circular import detected: %s", path_c,
@@ -598,7 +603,7 @@ Stack *ar_import(char *current_directory, char *path_relative, ArErr *err,
 #ifdef ARGON_DEBUG
   clock_t start = clock(), end;
 #endif
-RuntimeState state;
+  RuntimeState state;
   init_runtime_state(&state, translated, path);
   Stack *program_scope = create_scope(Global_Scope, true);
   hashmap_GC *program = createHashmap_GC();
@@ -611,8 +616,7 @@ RuntimeState state;
   cwk_path_get_dirname(path, &dirname_length);
   add_to_hashmap(file, "name",
                  new_string_object((char *)basename, basename_length, 0));
-  add_to_hashmap(file, "directory",
-                 new_string_object(path, dirname_length, 0));
+  add_to_hashmap(file, "directory", new_string_object(path, dirname_length, 0));
   add_to_hashmap(program, "file", create_dictionary(file));
   add_to_hashmap(program, "main", is_main ? ARGON_TRUE : ARGON_FALSE);
   add_to_hashmap(program, "origin",
