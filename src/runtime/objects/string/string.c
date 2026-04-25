@@ -415,6 +415,55 @@ ARGON_METHOD(ARGON_STRING_TYPE, split, {
   return object;
 })
 
+ARGON_METHOD(ARGON_STRING_TYPE, __contains__, {
+  if (argc != 2) {
+    *err = create_err(RuntimeError,
+                      "__contains__ expects 2 arguments, got %" PRIu64, argc);
+    return ARGON_NULL;
+  }
+
+  struct string self = api->argon_to_string(argv[0], err);
+  if (api->is_error(err))
+    return ARGON_NULL;
+  if (argv[1]->type != TYPE_STRING)
+    return ARGON_FALSE;
+  struct string slice = api->argon_to_string(argv[1], err);
+  if (api->is_error(err))
+    return ARGON_NULL;
+
+  if (self.length < slice.length)
+    return ARGON_FALSE;
+
+  // Empty needle is always contained
+  if (slice.length == 0)
+    return ARGON_TRUE;
+
+  // Boyer-Moore-Horspool: build bad character skip table
+  size_t skip[256];
+  for (size_t i = 0; i < 256; i++)
+    skip[i] = slice.length;
+  for (size_t i = 0; i < slice.length - 1; i++)
+    skip[(unsigned char)slice.data[i]] = slice.length - 1 - i;
+
+  // Search
+  size_t i = slice.length - 1;
+  while (i < self.length) {
+    size_t j = slice.length - 1;
+    size_t k = i;
+    while (j < slice.length && self.data[k] == slice.data[j]) {
+      if (j == 0)
+        return ARGON_TRUE;
+      k--;
+      j--;
+    }
+    i += skip[(unsigned char)self.data[i]];
+  }
+
+  return ARGON_FALSE;
+})
+
+
+
 char *char_chr(uint64_t codepoint, size_t *len_out) {
   char *out;
 

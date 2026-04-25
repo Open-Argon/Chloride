@@ -2,9 +2,24 @@ import "../stdlib/json" as json
 
 class TestError(Exception) null
 
+let deep_equal(a, b) = do
+    if (is_instance(a, array) && is_instance(b, array)) do
+        if (a.length != b.length) return false
+        for (i in 0 until a.length) do
+            if (!deep_equal(a[i], b[i])) return false
+        return true
+    else if (is_instance(a, dictionary) && is_instance(b, dictionary)) do
+        if (array(a).length != array(b).length) return false
+        for (keyval in a) do
+            if (keyval[0] not in b) return false
+            if (!deep_equal(a[keyval[0]], b[keyval[0]])) return false
+        return true
+    else do
+        return a == b
+
 let assert_equal(actual, expected) = do
-    if (actual != expected) do
-        throw TestError("Assertion failed:\nExpected: " + expected + "\nActual: " + actual)
+    if (!deep_equal(actual, expected)) do
+        throw TestError(`Assertion failed:\nExpected: $(expected)\nActual: $(actual)`)
     else do
         term.log("passed:", actual)
 
@@ -124,5 +139,164 @@ assert_equal(
     json.stringify([{}, [], {"a": []}, []]),
     "[{},[],{\"a\":[]},[]]"
 )
+
+# --------------------
+# PARSE: PRIMITIVES
+# --------------------
+assert_equal(json.parse("null"), null)
+assert_equal(json.parse("true"), true)
+assert_equal(json.parse("false"), false)
+
+
+# --------------------
+# PARSE: STRINGS
+# --------------------
+assert_equal(json.parse("\"hello\""), "hello")
+assert_equal(json.parse("\"\""), "")
+assert_equal(json.parse("\"\\\"\""), "\"")
+assert_equal(json.parse("\"\\n\""), "\n")
+assert_equal(json.parse("\"\\t\""), "\t")
+assert_equal(json.parse("\"\\\\\""), "\\")
+assert_equal(json.parse("\"he said \\\"hi\\\"\""), "he said \"hi\"")
+assert_equal(json.parse("\"line1\\nline2\""), "line1\nline2")
+assert_equal(json.parse("\"\\uD83C\\uDDEC\\uD83C\\uDDE7\""), "🇬🇧")
+assert_equal(json.parse("\"\\u0041\""), "A")
+assert_equal(json.parse("\"\\u0000\""), "\u0000")
+assert_equal(json.parse("\"\\/\""), "/")
+assert_equal(json.parse("\"\\b\""), "\b")
+assert_equal(json.parse("\"\\f\""), "\f")
+assert_equal(json.parse("\"\\r\""), "\r")
+
+
+# --------------------
+# PARSE: NUMBERS
+# --------------------
+assert_equal(json.parse("0"), 0)
+assert_equal(json.parse("1"), 1)
+assert_equal(json.parse("-1"), -1)
+assert_equal(json.parse("1.5"), 1.5)
+assert_equal(json.parse("123456"), 123456)
+assert_equal(json.parse("1e-10"), 1e-10)
+assert_equal(json.parse("1E+10"), 1e10)
+assert_equal(json.parse("-0.5"), -0.5)
+
+
+# --------------------
+# PARSE: ARRAYS
+# --------------------
+assert_equal(json.parse("[]"), [])
+assert_equal(json.parse("[1]"), [1])
+assert_equal(json.parse("[1,2,3]"), [1,2,3])
+assert_equal(json.parse("[null,true,false]"), [null,true,false])
+assert_equal(json.parse("[[]]"), [[]])
+
+
+# --------------------
+# PARSE: OBJECTS
+# --------------------
+assert_equal(json.parse("{}"), {})
+assert_equal(json.parse("{\"a\":1}"), {"a": 1})
+assert_equal(json.parse("{\"a\":1,\"b\":2}"), {"a": 1, "b": 2})
+
+
+# --------------------
+# PARSE: WHITESPACE TOLERANCE
+# --------------------
+assert_equal(json.parse("  null  "), null)
+assert_equal(json.parse("  true  "), true)
+assert_equal(json.parse(" [ 1 , 2 , 3 ] "), [1,2,3])
+assert_equal(json.parse(" { \"a\" : 1 } "), {"a": 1})
+assert_equal(json.parse("[\n  1,\n  2,\n  3\n]"), [1,2,3])
+assert_equal(json.parse("{\n  \"a\": 1,\n  \"b\": 2\n}"), {"a": 1, "b": 2})
+
+
+# --------------------
+# PARSE: NESTED STRUCTURES
+# --------------------
+assert_equal(json.parse("{\"a\":[1,2,3]}"), {"a": [1,2,3]})
+assert_equal(json.parse("[{\"a\":1},{\"b\":2}]"), [{"a": 1}, {"b": 2}])
+assert_equal(json.parse("{\"a\":{\"b\":{\"c\":1}}}"), {"a": {"b": {"c": 1}}})
+
+
+# --------------------
+# PARSE: MIXED EDGE STRUCTURES
+# --------------------
+assert_equal(
+    json.parse("[null,true,false,{\"hello\":1.2}]"),
+    [null, true, false, {"hello": 1.2}]
+)
+assert_equal(
+    json.parse("{\"a\":[{\"b\":[1,2,3]}]}"),
+    {"a": [{"b": [1,2,3]}]}
+)
+
+
+# --------------------
+# PARSE: STRESS CASES
+# --------------------
+assert_equal(json.parse("[[[[[[]]]]]]"), [[[[[[]]]]]])
+assert_equal(
+    json.parse("{\"a\":{\"b\":{\"c\":{\"d\":{\"e\":1}}}}}"),
+    {"a":{"b":{"c":{"d":{"e":1}}}}}
+)
+
+
+# --------------------
+# PARSE: EMPTY MIXED
+# --------------------
+assert_equal(
+    json.parse("[{},[],{\"a\":[]},[] ]"),
+    [{}, [], {"a": []}, []]
+)
+
+
+# --------------------
+# PARSE: ROUNDTRIP (stringify -> parse -> stringify)
+# --------------------
+let roundtrip(value) = do
+    assert_equal(json.parse(json.stringify(value)), value)
+
+roundtrip(null)
+roundtrip(true)
+roundtrip(false)
+roundtrip(0)
+roundtrip(1.5)
+roundtrip("hello")
+roundtrip("he said \"hi\"")
+roundtrip("line1\nline2")
+roundtrip([1,2,3])
+roundtrip({"a": 1, "b": [1,2,3]})
+roundtrip([null, true, false, {"hello": 1.2}])
+roundtrip([[[[[[]]]]]])
+roundtrip("🇬🇧")
+
+
+# --------------------
+# PARSE: ERROR CASES
+# --------------------
+let assert_throws(callback, error_type) = do
+    let threw = false
+    try do
+        callback()
+    catch (error_type as err) do
+        threw = true
+        term.log("passed (threw):", err)
+    if (!threw) do
+        throw TestError("Expected exception but none was thrown")
+
+assert_throws(() = json.parse(""), ValueError)
+assert_throws(() = json.parse("{"), ValueError)
+assert_throws(() = json.parse("["), ValueError)
+assert_throws(() = json.parse("\"unterminated"), ValueError)
+assert_throws(() = json.parse("{\"a\":1,}"), ValueError)      # trailing comma
+assert_throws(() = json.parse("[1,2,]"), ValueError)           # trailing comma
+assert_throws(() = json.parse("{\"a\"}"), ValueError)          # missing colon/value
+assert_throws(() = json.parse("tru"), ValueError)              # truncated keyword
+assert_throws(() = json.parse("nul"), ValueError)              # truncated keyword
+assert_throws(() = json.parse("1 2"), ValueError)              # trailing content
+assert_throws(() = json.parse("\"\\uD800\""), ValueError)      # lone high surrogate
+assert_throws(() = json.parse("\"\\uDC00\""), ValueError)      # lone low surrogate
+assert_throws(() = json.parse("\"\\q\""), ValueError)          # bad escape
+
 
 term.log("ALL TESTS PASSED")
