@@ -514,11 +514,12 @@ Translated load_argon_file(char *path, ArErr *err) {
   return gc_translated;
 }
 
-const char *PRE_PATHS_TO_TEST[] = {"", "", "argon_modules", "argon_modules"};
+const char *PRE_PATHS_TO_TEST[] = {
+    "", "", "", "argon_modules", "argon_modules", "argon_modules"};
 const char *POST_PATHS_TO_TEST[sizeof(PRE_PATHS_TO_TEST) / sizeof(char *)] = {
-    "", "init.ar", "", "init.ar"};
+    "", "", "init", "", "", "init"};
 const char *EXTENTIONS_TO_TEST[sizeof(PRE_PATHS_TO_TEST) / sizeof(char *)] = {
-    "", "init.ar", "", "init.ar"};
+    "", ".ar", ".ar", "", ".ar", ".ar"};
 
 struct hashmap_GC *importing_hash_table;
 struct hashmap_GC *imported_hash_table;
@@ -568,6 +569,10 @@ Stack *ar_import(char *current_directory, char *path_relative, ArErr *err,
     cwk_path_get_absolute(path_c, path_relative, path_c, sizeof(path_c));
     cwk_path_get_absolute(path_c, POST_PATHS_TO_TEST[i], path_c,
                           sizeof(path_c));
+    char temp[PATH_MAX];
+    snprintf(temp, sizeof(temp), "%s%s", path_c, EXTENTIONS_TO_TEST[i]);
+    strncpy(path_c, temp, sizeof(path_c));
+    path_c[sizeof(path_c) - 1] = '\0';
     if (file_exists(path_c)) {
       found = true;
       break;
