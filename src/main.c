@@ -51,6 +51,10 @@ volatile sig_atomic_t KeyboardInterrupted = 0;
 void sigint_handler(int signum) { KeyboardInterrupted = signum; }
 
 int main(int argc, char *argv[]) {
+  if (argc >= 2 && strcmp(argv[1], "--version") == 0) {
+    printf("%s\n", version_string);
+    return 0;
+  }
   setlocale(LC_ALL, "");
   ar_memory_init();
   // generate_siphash_key(siphash_key);
