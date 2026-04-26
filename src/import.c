@@ -22,6 +22,7 @@
 #include "runtime/runtime.h"
 #include "translator/translator.h"
 #include <limits.h>
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
@@ -514,27 +515,32 @@ Translated load_argon_file(char *path, ArErr *err) {
 #endif
   return gc_translated;
 }
+typedef struct {
+  const char *pre;
+  const char *post;
+  const char *ext;
+} PathPattern;
 
-const bool in_Exc_DIR[] = {
-    false, false, false, false, false, false,
-    true,  true,  true,  true,  true,  true,
+// Patterns relative to a base directory
+static const PathPattern LOCAL_PATTERNS[] = {
+    {"", "", ""},
+    {"", "", ".ar"},
+    {"", "init", ".ar"},
 };
-const char *PRE_PATHS_TO_TEST[] = {"",
-                                   "",
-                                   "",
-                                   "argon_modules",
-                                   "argon_modules",
-                                   "argon_modules",
-                                   "stdlib",
-                                   "stdlib",
-                                   "stdlib",
-                                   "argon_modules",
-                                   "argon_modules",
-                                   "argon_modules"};
-const char *POST_PATHS_TO_TEST[sizeof(PRE_PATHS_TO_TEST) / sizeof(char *)] = {
-    "", "", "init", "", "", "init", "", "", "init", "", "", "init"};
-const char *EXTENTIONS_TO_TEST[sizeof(PRE_PATHS_TO_TEST) / sizeof(char *)] = {
-    "", ".ar", ".ar", "", ".ar", ".ar", "", ".ar", ".ar", "", ".ar", ".ar"};
+
+// Patterns for argon_modules within a base directory
+static const PathPattern MODULE_PATTERNS[] = {
+    {"argon_modules", "", ""},
+    {"argon_modules", "", ".ar"},
+    {"argon_modules", "init", ".ar"},
+};
+
+// Patterns relative to exe directory
+static const PathPattern EXE_PATTERNS[] = {
+    {"stdlib", "", ""},           {"stdlib", "", ".ar"},
+    {"stdlib", "init", ".ar"},    {"argon_modules", "", ""},
+    {"argon_modules", "", ".ar"}, {"argon_modules", "init", ".ar"},
+};
 
 struct hashmap_GC *importing_hash_table;
 struct hashmap_GC *imported_hash_table;
@@ -572,25 +578,72 @@ int get_executable_path(char *path, size_t size) {
   return 0;
 }
 
+static bool try_patterns(const char *base, const char *path_relative,
+                         const PathPattern *patterns, size_t count,
+                         char *out_path) {
+  for (size_t i = 0; i < count; i++) {
+    char path_c[PATH_MAX];
+    cwk_path_get_absolute(base, patterns[i].pre, path_c, sizeof(path_c));
+    cwk_path_get_absolute(path_c, path_relative, path_c, sizeof(path_c));
+    cwk_path_get_absolute(path_c, patterns[i].post, path_c, sizeof(path_c));
+
+    char temp[PATH_MAX];
+    snprintf(temp, sizeof(temp), "%s%s", path_c, patterns[i].ext);
+    temp[sizeof(temp) - 1] = '\0';
+
+    if (file_exists(temp)) {
+      strncpy(out_path, temp, PATH_MAX);
+      out_path[PATH_MAX - 1] = '\0';
+      return true;
+    }
+  }
+  return false;
+}
+
 Stack *ar_import(char *current_directory, char *path_relative, ArErr *err,
                  bool is_main) {
   char path_c[PATH_MAX];
   bool found = false;
-  for (size_t i = 0; i < sizeof(PRE_PATHS_TO_TEST) / sizeof(char *); i++) {
-    cwk_path_get_absolute(in_Exc_DIR[i] ? EXC_DIR : current_directory,
-                          PRE_PATHS_TO_TEST[i], path_c, sizeof(path_c));
-    cwk_path_get_absolute(path_c, path_relative, path_c, sizeof(path_c));
-    cwk_path_get_absolute(path_c, POST_PATHS_TO_TEST[i], path_c,
-                          sizeof(path_c));
-    char temp[PATH_MAX];
-    snprintf(temp, sizeof(temp), "%s%s", path_c, EXTENTIONS_TO_TEST[i]);
-    strncpy(path_c, temp, sizeof(path_c));
-    path_c[sizeof(path_c) - 1] = '\0';
-    if (file_exists(path_c)) {
-      found = true;
-      break;
+
+  // 1. Check relative to importing file
+  if (try_patterns(current_directory, path_relative, LOCAL_PATTERNS,
+                   sizeof(LOCAL_PATTERNS) / sizeof(PathPattern), path_c)) {
+    found = true;
+  }
+
+  // 2. Walk up the directory tree checking argon_modules at each level
+  if (!found) {
+    char walk_dir[PATH_MAX];
+    strncpy(walk_dir, current_directory, PATH_MAX);
+    walk_dir[PATH_MAX - 1] = '\0';
+
+    while (!found) {
+      if (try_patterns(walk_dir, path_relative, MODULE_PATTERNS,
+                       sizeof(MODULE_PATTERNS) / sizeof(PathPattern), path_c)) {
+        found = true;
+        break;
+      }
+
+      // Move to parent directory
+      char parent[PATH_MAX];
+      cwk_path_get_absolute(walk_dir, "..", parent, sizeof(parent));
+
+      // Stop if we've hit the root (parent == current)
+      if (strcmp(parent, walk_dir) == 0)
+        break;
+
+      strncpy(walk_dir, parent, PATH_MAX);
+      walk_dir[PATH_MAX - 1] = '\0';
     }
   }
+
+  // 3. Fall back to exe-relative paths
+  if (!found &&
+      try_patterns(EXC_DIR, path_relative, EXE_PATTERNS,
+                   sizeof(EXE_PATTERNS) / sizeof(PathPattern), path_c)) {
+    found = true;
+  }
+
   if (!found) {
     *err = create_err(FileError, "Unable to find file '%s'", path_relative);
     return NULL;
