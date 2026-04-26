@@ -49,6 +49,7 @@
   X(extend)                                                                    \
   X(from_string)                                                               \
   X(to_string)                                                                 \
+  X(partition)                                                                 \
   X(__getattribute__)                                                          \
   X(__negation__)                                                              \
   X(__setattr__)                                                               \

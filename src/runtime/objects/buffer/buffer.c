@@ -8,8 +8,10 @@
 #include "../../../err.h"
 #include "../../../memory.h"
 #include "../exceptions/exceptions.h"
+#include "../array/array.h"
 #include "../slice/slice.h"
 #include "../string/string.h"
+#include "../tuple/tuple.h"
 #include <inttypes.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -18,12 +20,11 @@
 ArgonObject *ARGON_BUFFER_TYPE = NULL;
 
 ArgonObject *create_ARGON_BUFFER_object(size_t size) {
-  ArgonObject *object =
-      new_instance(ARGON_BUFFER_TYPE, sizeof(struct buffer));
+  ArgonObject *object = new_instance(ARGON_BUFFER_TYPE, sizeof(struct buffer));
   object->type = TYPE_BUFFER;
   object->value.as_buffer =
       (struct buffer *)((char *)object + sizeof(ArgonObject));
-  object->value.as_buffer->data = ar_alloc(size);  // separate allocation
+  object->value.as_buffer->data = ar_alloc(size); // separate allocation
   object->value.as_buffer->size = size;
   return object;
 }
@@ -72,15 +73,13 @@ ARGON_METHOD(ARGON_BUFFER_TYPE, extend, {
   if (api->is_error(err))
     return api->ARGON_NULL;
 
-
   size_t self_size = self->value.as_buffer->size;
-    
-  resize_ARGON_BUFFER_object(self, err,
-                            self_size + other_buffer.size);
+
+  resize_ARGON_BUFFER_object(self, err, self_size + other_buffer.size);
   if (api->is_error(err))
     return api->ARGON_NULL;
-  memcpy(self->value.as_buffer->data + self_size,
-         other_buffer.data, other_buffer.size);
+  memcpy(self->value.as_buffer->data + self_size, other_buffer.data,
+         other_buffer.size);
   return self;
 })
 
@@ -144,6 +143,112 @@ ARGON_METHOD(ARGON_BUFFER_TYPE, __getitem__, {
   return api->i64_to_argon(((char *)self.data)[index]);
 })
 
+ARGON_METHOD(ARGON_BUFFER_TYPE, partition, {
+  if (api->fix_to_arg_size(2, argc, err))
+    return api->ARGON_NULL;
+  struct buffer self = api->argon_buffer_to_buffer(argv[0], err);
+  if (api->is_error(err))
+    return api->ARGON_NULL;
+  struct buffer part = api->argon_buffer_to_buffer(argv[1], err);
+  if (api->is_error(err))
+    return api->ARGON_NULL;
+
+  // Search for `part` in `self`
+  size_t found_at = SIZE_MAX; // sentinel for "not found"
+  if (part.size <= self.size) {
+    for (size_t i = 0; i <= self.size - part.size; i++) {
+      if (memcmp((char *)self.data + i, part.data, part.size) == 0) {
+        found_at = i;
+        break;
+      }
+    }
+  }
+
+  // Create the three result buffers
+  ArgonObject *before_obj, *sep_obj, *after_obj;
+
+  if (found_at == SIZE_MAX) {
+    // Separator not found: return (self, b"", b"")
+    before_obj = api->create_argon_buffer(self.size);
+    struct buffer before = api->argon_buffer_to_buffer(before_obj, err);
+    memcpy(before.data, self.data, self.size);
+
+    sep_obj = api->create_argon_buffer(0);
+    after_obj = api->create_argon_buffer(0);
+  } else {
+    // before: everything up to the separator
+    before_obj = api->create_argon_buffer(found_at);
+    struct buffer before = api->argon_buffer_to_buffer(before_obj, err);
+    memcpy(before.data, self.data, found_at);
+
+    // sep: a copy of the separator itself
+    sep_obj = api->create_argon_buffer(part.size);
+    struct buffer sep = api->argon_buffer_to_buffer(sep_obj, err);
+    memcpy(sep.data, part.data, part.size);
+
+    // after: everything following the separator
+    size_t after_offset = found_at + part.size;
+    size_t after_size = self.size - after_offset;
+    after_obj = api->create_argon_buffer(after_size);
+    struct buffer after = api->argon_buffer_to_buffer(after_obj, err);
+    memcpy(after.data, (char *)self.data + after_offset, after_size);
+  }
+
+  return TUPLE_CREATE(3, (ArgonObject *[]){before_obj, sep_obj, after_obj},
+                      NULL, NULL, NULL);
+})
+
+ARGON_METHOD(ARGON_BUFFER_TYPE, split, {
+  if (api->fix_to_arg_size(2, argc, err))
+    return api->ARGON_NULL;
+
+  struct buffer self = api->argon_buffer_to_buffer(argv[0], err);
+  if (api->is_error(err))
+    return api->ARGON_NULL;
+
+  struct buffer delim = api->argon_buffer_to_buffer(argv[1], err);
+  if (api->is_error(err))
+    return api->ARGON_NULL;
+
+  if (delim.size == 0)
+    return api->throw_argon_error(err, ValueError, "empty separator");
+
+  ArgonObject *object = new_instance(ARRAY_TYPE, sizeof(darray_armem));
+  object->type = TYPE_ARRAY;
+  object->value.as_array = darray_armem_create();
+  darray_armem_init(object->value.as_array, sizeof(ArgonObject *), 0);
+
+  char *start = (char *)self.data;
+  char *end   = (char *)self.data + self.size;
+  size_t dlen = delim.size;
+  char *p     = start;
+
+  while (p <= end - dlen) {
+    if (memcmp(p, delim.data, dlen) == 0) {
+      // Create a buffer for the segment [start, p)
+      size_t seg_size = p - start;
+      ArgonObject *item = api->create_argon_buffer(seg_size);
+      struct buffer slice = api->argon_buffer_to_buffer(item, err);
+      memcpy(slice.data, start, seg_size);
+      darray_armem_insert(object->value.as_array, object->value.as_array->size, &item);
+
+      p += dlen;
+      start = p;
+      continue;
+    }
+    p++;
+  }
+
+  // Final segment [start, end)
+  size_t seg_size = end - start;
+  ArgonObject *item = api->create_argon_buffer(seg_size);
+  struct buffer slice = api->argon_buffer_to_buffer(item, err);
+  memcpy(slice.data, start, seg_size);
+  darray_armem_insert(object->value.as_array, object->value.as_array->size, &item);
+
+  return object;
+})
+
 void resize_ARGON_BUFFER_object(ArgonObject *obj, ArErr *err, size_t new_size) {
   if (obj->type != TYPE_BUFFER) {
     *err = create_err(RuntimeError, "expected buffer object");
@@ -180,4 +285,6 @@ void create_ARGON_BUFFER_TYPE() {
   MOUNT_ARGON_METHOD(ARGON_BUFFER_TYPE, get_length)
   MOUNT_ARGON_METHOD(ARGON_BUFFER_TYPE, set_length)
   MOUNT_ARGON_METHOD(ARGON_BUFFER_TYPE, __getitem__)
+  MOUNT_ARGON_METHOD(ARGON_BUFFER_TYPE, partition)
+  MOUNT_ARGON_METHOD(ARGON_BUFFER_TYPE, split)
 }
