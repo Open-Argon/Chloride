@@ -1,7 +1,6 @@
 # SPDX-FileCopyrightText: 2025 William Bell
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
-
 cmake_minimum_required(VERSION 3.16)
 project(argon C)
 
@@ -42,9 +41,9 @@ if(NOT WIN32)
 endif()
 
 # Step 3: Add executable
-add_executable(argon  ${SOURCES})
+add_executable(argon ${SOURCES})
 
-if (MINGW)
+if(MINGW)
     target_link_options(argon PRIVATE
         -static
         -static-libgcc
@@ -53,8 +52,13 @@ if (MINGW)
 endif()
 
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
-target_include_directories(argon PRIVATE ${CMAKE_SOURCE_DIR}/external/cwalk/include)
-target_include_directories(argon PRIVATE ${CMAKE_SOURCE_DIR}/external/libdye/include)
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+
+target_include_directories(argon PRIVATE
+    ${CMAKE_SOURCE_DIR}/external/cwalk/include
+    ${CMAKE_SOURCE_DIR}/external/libdye/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/lexer
+)
 
 # Step 4: Build order
 add_dependencies(argon GenerateLexer)
@@ -64,28 +68,47 @@ set_target_properties(argon PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/build/bin
 )
 
-set(THREADS_PREFER_PTHREAD_FLAG ON)
-set(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
-
-# Step 6: Conan libraries
-find_package(BDWgc REQUIRED)
-find_package(gmp REQUIRED)
-find_package(mpfr REQUIRED)
+# Step 6: Find libraries — support both Conan and pkg-config (e.g. Homebrew)
 find_package(Threads REQUIRED)
 
+if(NOT EXISTS "${CMAKE_BINARY_DIR}/conan_toolchain.cmake" AND NOT CONAN_EXPORTED)
+    # Non-Conan build (Homebrew, manual CMake, Linux distros, etc.)
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(GMP REQUIRED gmp)
+    pkg_check_modules(MPFR REQUIRED mpfr)
+    pkg_check_modules(BDWGC REQUIRED bdw-gc)
+
+    target_include_directories(argon PRIVATE
+        ${GMP_INCLUDE_DIRS}
+        ${MPFR_INCLUDE_DIRS}
+        ${BDWGC_INCLUDE_DIRS}
+    )
+
+    target_link_libraries(argon PRIVATE
+        ${GMP_LIBRARIES}
+        ${MPFR_LIBRARIES}
+        ${BDWGC_LIBRARIES}
+        Threads::Threads
+        m
+        $<$<PLATFORM_ID:Windows>:bcrypt>
+    )
+else()
+    # Conan build
+    set(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
+    find_package(BDWgc REQUIRED)
+    find_package(gmp REQUIRED)
+    find_package(mpfr REQUIRED)
+
+    target_link_libraries(argon PRIVATE
+        BDWgc::BDWgc
+        gmp::gmp
+        mpfr::mpfr
+        Threads::Threads
+        m
+        $<$<PLATFORM_ID:Windows>:bcrypt>
+    )
+endif()
+
 target_compile_options(argon PRIVATE -O3 -Wall -Wextra -Wno-unused-function -s)
-
-target_link_libraries(argon PRIVATE
-    BDWgc::BDWgc
-    gmp::gmp
-    mpfr::mpfr
-    Threads::Threads
-    m
-    $<$<PLATFORM_ID:Windows>:bcrypt>
-)
-
-target_include_directories(argon PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/lexer
-)
 
 add_custom_command(TARGET argon POST_BUILD COMMAND ${CMAKE_STRIP} $<TARGET_FILE:argon>)
