@@ -34,6 +34,7 @@ if(NOT WIN32)
 endif()
 # Step 3: Add executable
 add_executable(argon ${SOURCES})
+install(TARGETS argon DESTINATION bin)
 if(MINGW)
     target_link_options(argon PRIVATE
         -static
