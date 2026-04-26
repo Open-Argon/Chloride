@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include "../../err.h"
 #include "../../memory.h"
+#include "../../runtime/objects/exceptions/exceptions.h"
 
 size_t translate_operation(Translated *translated, ParsedOperation *operation,
                            ArErr *err) {
@@ -24,7 +25,7 @@ size_t translate_operation(Translated *translated, ParsedOperation *operation,
           translated, darray_get(&operation->to_operate_on, i), err);
       if (i == 0)
         first = position;
-      if (err->exists) {
+      if (is_error(err)) {
         free(jump_to_if_false);
         return first;
       }
@@ -57,14 +58,14 @@ size_t translate_operation(Translated *translated, ParsedOperation *operation,
   set_registers(translated, translated->registerAssignment);
   uint64_t first = translate_parsed(
       translated, darray_get(&operation->to_operate_on, 0), err);
-  if (err->exists)
+  if (is_error(err))
     return first;
   push_instruction_byte(translated, OP_COPY_TO_REGISTER);
   push_instruction_byte(translated, 0);
   push_instruction_byte(translated, registerA);
   for (size_t i = 1; i < operation->to_operate_on.size; i++) {
     translate_parsed(translated, darray_get(&operation->to_operate_on, i), err);
-    if (err->exists)
+    if (is_error(err))
       return first;
     push_instruction_byte(translated, OP_COPY_TO_REGISTER);
     push_instruction_byte(translated, 0);
@@ -121,7 +122,7 @@ size_t translate_operation(Translated *translated, ParsedOperation *operation,
       break;
     default:
       *err = path_specific_create_err(operation->line, operation->column, operation->length,
-                        translated->path, "Syntax Error", "unknown operation");
+                        translated->path, SyntaxError, "unknown operation");
       return 0;
     }
     push_instruction_byte(translated, registerA);

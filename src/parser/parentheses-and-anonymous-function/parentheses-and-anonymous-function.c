@@ -7,6 +7,7 @@
 #include "parentheses-and-anonymous-function.h"
 #include "../../memory.h"
 #include "../assignable/identifier/identifier.h"
+#include "../../runtime/objects/exceptions/exceptions.h"
 #include "../../err.h"
 #include "../function/function.h"
 #include <stddef.h>
@@ -16,7 +17,7 @@ ParsedValueReturn parse_parentheses(char *file, DArray *tokens, size_t *index) {
   (*index)++;
   skip_newlines_and_indents(tokens, index);
   ArErr err = error_if_finished(file, tokens, index);
-  if (err.exists) {
+  if (is_error(&err)) {
     // darray_free(&list, free_parsed);
     return (ParsedValueReturn){err, NULL};
   }
@@ -26,7 +27,7 @@ ParsedValueReturn parse_parentheses(char *file, DArray *tokens, size_t *index) {
   if (token->type != TOKEN_RPAREN) {
     while (*index < tokens->size) {
       ParsedValueReturn parsedItem = parse_token(file, tokens, index, true);
-      if (parsedItem.err.exists) {
+      if (is_error(&parsedItem.err)) {
         darray_free(&list, (void (*)(void *))free_parsed);
         return parsedItem;
       }
@@ -34,7 +35,7 @@ ParsedValueReturn parse_parentheses(char *file, DArray *tokens, size_t *index) {
       free(parsedItem.value);
       skip_newlines_and_indents(tokens, index);
       ArErr err = error_if_finished(file, tokens, index);
-      if (err.exists) {
+      if (is_error(&err)) {
         darray_free(&list, (void (*)(void *))free_parsed);
         return (ParsedValueReturn){err, NULL};
       }
@@ -45,13 +46,13 @@ ParsedValueReturn parse_parentheses(char *file, DArray *tokens, size_t *index) {
         darray_free(&list, (void (*)(void *))free_parsed);
         return (ParsedValueReturn){path_specific_create_err(token->line, token->column,
                                               token->length, file,
-                                              "Syntax Error", "expected comma"),
+                                              SyntaxError, "expected comma"),
                                    NULL};
       }
       (*index)++;
       skip_newlines_and_indents(tokens, index);
       err = error_if_finished(file, tokens, index);
-      if (err.exists) {
+      if (is_error(&err)) {
         darray_free(&list, (void (*)(void *))free_parsed);
         return (ParsedValueReturn){err, NULL};
       }
@@ -63,7 +64,7 @@ ParsedValueReturn parse_parentheses(char *file, DArray *tokens, size_t *index) {
     if (token->type == TOKEN_ASSIGN) {
       (*index)++;
       ArErr err = error_if_finished(file, tokens, index);
-      if (err.exists) {
+      if (is_error(&err)) {
         darray_free(&list, (void (*)(void *))free_parsed);
         return (ParsedValueReturn){err, NULL};
       }
@@ -76,7 +77,7 @@ ParsedValueReturn parse_parentheses(char *file, DArray *tokens, size_t *index) {
           darray_free(&parameters, free_parameter);
           return (ParsedValueReturn){
               path_specific_create_err(token->line, token->column, token->length, file,
-                         "Syntax Error", "expected identifier"),
+                         SyntaxError, "expected identifier"),
               NULL};
         }
         char *param = strdup(((ParsedIdentifier *)item->data)->name);
@@ -84,7 +85,7 @@ ParsedValueReturn parse_parentheses(char *file, DArray *tokens, size_t *index) {
       }
       darray_free(&list, (void (*)(void *))free_parsed);
       ParsedValueReturn parsedBody = parse_token(file, tokens, index, true);
-      if (parsedBody.err.exists) {
+      if (is_error(&parsedBody.err)) {
         darray_free(&parameters, free_parameter);
         return parsedBody;
       }
@@ -95,7 +96,7 @@ ParsedValueReturn parse_parentheses(char *file, DArray *tokens, size_t *index) {
   }
   if (list.size != 1) {
     return (ParsedValueReturn){path_specific_create_err(token->line, token->column,
-                                          token->length, file, "Syntax Error",
+                                          token->length, file, SyntaxError,
                                           "expected 1 body"),
                                NULL};
   }

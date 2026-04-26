@@ -1,0 +1,8 @@
+let f(x) = do
+    x["hello"] = 1
+
+try do
+    f(10)
+catch (Exception as e) do
+    term.log(type(e).__name__+":",e.message)
+    term.log("trace:",e.stack_trace)

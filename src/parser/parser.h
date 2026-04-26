@@ -53,6 +53,7 @@ typedef enum {
   AST_DICTIONARY,
   AST_FUNCTION,
   AST_RETURN,
+  AST_THROW,
   AST_CONTINUE,
   AST_BREAK,
   AST_WHILE,
@@ -61,7 +62,8 @@ typedef enum {
   AST_TO_BOOL,
   AST_NEGATION,
   AST_IMPORT,
-  AST_RANGE
+  AST_RANGE,
+  AST_TRY
 } ValueType;
 
 extern const char *ValueTypeNames[];

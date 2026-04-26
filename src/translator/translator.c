@@ -10,6 +10,7 @@
 #include "../hashmap/hashmap.h"
 #include "../parser/assignable/item/item.h"
 #include "../parser/dictionary/dictionary.h"
+#include "../parser/throw/throw.h"
 #include "../parser/not/not.h"
 #include "../parser/range/range.h"
 #include "access/access.h"
@@ -30,6 +31,7 @@
 #include "operation/operation.h"
 #include "return/return.h"
 #include "string/string.h"
+#include "try/try.h"
 #include "while/while.h"
 #include <stddef.h>
 #include <stdint.h>
@@ -95,6 +97,7 @@ Translated init_translator(char *path) {
   translated.path = path;
   translated.registerCount = 1;
   translated.registerAssignment = 1;
+  translated.exception_handler_depth = 0;
   translated.scope_depth = 0;
   translated.continue_jump.pos = -1;
   translated.return_jump.positions = NULL;
@@ -170,6 +173,9 @@ size_t translate_parsed(Translated *translated, ParsedValue *parsedValue,
   case AST_FOR:
     return translate_parsed_for(translated, (ParsedFor *)parsedValue->data,
                                 err);
+  case AST_TRY:
+    return translate_parsed_try(translated, (ParsedTry *)parsedValue->data,
+                                  err);
   case AST_WHILE:
     return translate_parsed_while(translated, (ParsedWhile *)parsedValue->data,
                                   err);
@@ -178,6 +184,19 @@ size_t translate_parsed(Translated *translated, ParsedValue *parsedValue,
   case AST_DOWRAP:
     return translate_parsed_dowrap(translated, (DArray *)parsedValue->data,
                                    err);
+  case AST_THROW:{
+    ParsedThrow* throw = (ParsedThrow *)parsedValue->data;
+    size_t first = translate_parsed(
+        translated, throw->value, err);
+
+    push_instruction_byte(translated, OP_SOURCE_LOCATION);
+    push_instruction_code(translated, throw->line);
+    push_instruction_code(translated, throw->column);
+    push_instruction_code(translated, throw->length);
+    
+    push_instruction_byte(translated, OP_THROW);
+    return first;
+  }
   case AST_RETURN:
     return translate_parsed_return(translated,
                                    (ParsedReturn *)parsedValue->data, err);
@@ -221,12 +240,12 @@ size_t translate_parsed(Translated *translated, ParsedValue *parsedValue,
     push_instruction_byte(translated, OP_INIT_CALL);
     push_instruction_code(translated, 2);
     translate_parsed(translated, range->start, err);
-    if (err->exists)
+    if (is_error(err))
       return first;
     push_instruction_byte(translated, OP_INSERT_ARG);
     push_instruction_code(translated, 0);
     translate_parsed(translated, range->stop, err);
-    if (err->exists)
+    if (is_error(err))
       return first;
     push_instruction_byte(translated, OP_INSERT_ARG);
     push_instruction_code(translated, 1);
@@ -247,7 +266,7 @@ size_t translate_parsed(Translated *translated, ParsedValue *parsedValue,
     push_instruction_code(translated, arrayDarray->size);
     for (size_t i = 0; i < arrayDarray->size; i++) {
       translate_parsed(translated, darray_get(arrayDarray, i), err);
-      if (err->exists)
+      if (is_error(err))
         return first;
 
       push_instruction_byte(translated, OP_INSERT_ARG);
@@ -285,14 +304,14 @@ size_t translate_parsed(Translated *translated, ParsedValue *parsedValue,
       push_instruction_code(translated, 2);
 
       translate_parsed(translated, entry->key, err);
-      if (err->exists)
+      if (is_error(err))
         return first;
 
       push_instruction_byte(translated, OP_INSERT_ARG);
       push_instruction_code(translated, 0);
 
       translate_parsed(translated, entry->value, err);
-      if (err->exists)
+      if (is_error(err))
         return first;
 
       push_instruction_byte(translated, OP_INSERT_ARG);
@@ -325,7 +344,7 @@ ArErr translate(Translated *translated, DArray *ast) {
   for (size_t i = 0; i < ast->size; i++) {
     ParsedValue *parsedValue = darray_get(ast, i);
     translate_parsed(translated, parsedValue, &err);
-    if (err.exists) {
+    if (is_error(&err)) {
       break;
     }
   }

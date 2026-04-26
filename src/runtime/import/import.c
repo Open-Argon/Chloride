@@ -7,6 +7,7 @@
 #include "import.h"
 #include "../../import.h"
 #include "../../../external/cwalk/include/cwalk.h"
+#include "../../runtime/objects/exceptions/exceptions.h"
 #include "../api/api.h"
 #include "../objects/dictionary/dictionary.h"
 #include <inttypes.h>
@@ -20,7 +21,7 @@ void runtime_import(RuntimeState *state, ArErr *err) {
     return;
   char path_c[PATH_MAX];
   if (path.length >= sizeof(path_c)) {
-    native_api.throw_argon_error(err, "Import Error", "path is too big");
+    native_api.throw_argon_error(err, ImportError, "path is too big");
     return;
   }
   memcpy(path_c, path.data, path.length);
@@ -31,12 +32,11 @@ void runtime_import(RuntimeState *state, ArErr *err) {
   cwk_path_get_dirname(state->path, &current_directory_length);
   char current_directory[PATH_MAX];
   if (current_directory_length >= sizeof(current_directory)) {
-    native_api.throw_argon_error(err, "Import Error", "current directory is too big");
+    native_api.throw_argon_error(err, ImportError, "current directory is too big");
     return;
   }
   memcpy(current_directory, state->path, current_directory_length);
   current_directory[current_directory_length]='\0';
-  
   Stack *result = ar_import(current_directory, path_c, err, false);
   if (!result)
     return;

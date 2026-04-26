@@ -19,7 +19,6 @@
 #include "runtime/objects/literals/literals.h"
 #include "runtime/objects/string/string.h"
 #include <limits.h>
-#include <signal.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -34,7 +33,6 @@
 #include "../external/linenoise/linenoise.h"
 #endif
 
-// Ctrl+C handler
 void handle_sigint(int sig) {
   printf("\nBye :)\n");
   exit(sig);
@@ -42,17 +40,17 @@ void handle_sigint(int sig) {
 
 int execute_code(char *context, char *path, Stack *scope,
                  RuntimeState *runtime_state) {
-
+  signal(SIGINT, sigint_handler);
   ArErr err = no_err;
 
   DArray tokens;
   darray_init(&tokens, sizeof(Token));
   LexerState state = {path, context, 0, 0, {}, -1, &tokens};
   err = lexer(state);
-  if (err.exists) {
+  if (is_error(&err)) {
     darray_free(&tokens, free_token);
     output_err(&err);
-    return 1;
+    goto cleanup;
   }
 
   DArray ast;
@@ -61,10 +59,10 @@ int execute_code(char *context, char *path, Stack *scope,
 
   err = parser(path, &ast, &tokens, false);
   darray_free(&tokens, free_token);
-  if (err.exists) {
+  if (is_error(&err)) {
     darray_free(&ast, (void (*)(void *))free_parsed);
     output_err(&err);
-    return 1;
+    goto cleanup;
   }
 
   char path_length = strlen(path) + 1;
@@ -74,21 +72,22 @@ int execute_code(char *context, char *path, Stack *scope,
   Translated __translated = init_translator(path_alloc);
   err = translate(&__translated, &ast);
   darray_free(&ast, (void (*)(void *))free_parsed);
-  if (err.exists) {
+  if (is_error(&err)) {
     darray_free(&__translated.bytecode, NULL);
     free(__translated.constants.data);
     hashmap_free(__translated.constants.hashmap, NULL);
     output_err(&err);
-    return 1;
+    goto cleanup;
   }
 
   hashmap_free(__translated.constants.hashmap, NULL);
   Translated translated = {__translated.registerCount,
                            __translated.registerAssignment,
                            0,
-                           {-1, 0},
-                           {NULL, 0},
-                           {NULL, 0},
+                           0,
+                           {-1, 0, 0},
+                           {NULL, 0, 0},
+                           {NULL, 0, 0},
                            {},
                            {},
                            __translated.path};
@@ -109,11 +108,15 @@ int execute_code(char *context, char *path, Stack *scope,
   free(__translated.constants.data);
   init_runtime_state(runtime_state, translated, path_alloc);
   runtime(translated, *runtime_state, scope, &err);
-  if (err.exists) {
+  if (is_error(&err)) {
     output_err(&err);
-    return 1;
+    goto cleanup;
   }
+  signal(SIGINT, handle_sigint);
   return 0;
+cleanup:
+  signal(SIGINT, handle_sigint);
+  return 1;
 }
 
 // Simple input function
@@ -166,6 +169,7 @@ char *read_all_stdin(size_t *out_len) {
 }
 
 int shell() {
+  signal(SIGINT, handle_sigint);
   Stack *main_scope = create_scope(Global_Scope, true);
 
   char path[PATH_MAX];
@@ -187,8 +191,6 @@ int shell() {
   add_to_scope(main_scope, "license",
                new_string_object_without_memcpy((char *)LICENSE_txt,
                                                 LICENSE_txt_len, 0));
-
-  signal(SIGINT, handle_sigint);
 
   printf("Chloride %s Copyright (C) 2026 William Bell\n"
          "This program comes with ABSOLUTELY NO WARRANTY; for details type "

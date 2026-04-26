@@ -6,13 +6,12 @@
 
 #include "err.h"
 #include "../external/libdye/include/dye.h"
-#include "ArgonTypes.h"
 #include "arobject.h"
 #include "memory.h"
 #include "runtime/api/api.h"
 #include "runtime/internals/dynamic_array_armem/darray_armem.h"
-#include "runtime/internals/hashmap/hashmap.h"
 #include "runtime/objects/array/array.h"
+#include "runtime/objects/literals/literals.h"
 #include "runtime/objects/number/number.h"
 #include "runtime/objects/object.h"
 #include "runtime/objects/string/string.h"
@@ -31,6 +30,10 @@
 #if defined(_WIN32) || defined(_WIN64)
 #include "getline.h"
 #endif
+
+ArErr no_err = {NULL};
+
+bool is_error(ArErr *err) { return err->ptr != ARGON_NULL; }
 
 char *vfmt_alloc(const char *fmt, va_list args) {
   va_list args_copy;
@@ -146,7 +149,12 @@ bool convert_to_stackTraceFrame(ArgonObject *frame_obj,
 }
 
 void output_err(ArErr *err) {
-  if (!native_api.is_error(err))
+  Translated gc_translated = {
+      UINT8_MAX,    0,  0,  0,        {-1, 0, 0}, {NULL, 0, 0},
+      {NULL, 0, 0}, {}, {}, "<error>"};
+  RuntimeState state;
+  init_runtime_state(&state, gc_translated, "<error>");
+  if (!is_error(err))
     return;
   ArgonObject *stack_trace_obj = get_builtin_field(err->ptr, stack_trace);
   darray_armem *stack_trace = NULL;
@@ -160,9 +168,9 @@ void output_err(ArErr *err) {
     dyefg(stderr, DYE_RESET);
     fprintf(stderr, "\n");
     for (int64_t i = stack_trace->size - 1; i >= 0; i--) {
-      ArgonObject *frame_obj = darray_armem_get(stack_trace, i);
+      ArgonObject **frame_obj = darray_armem_get(stack_trace, i);
       struct StackTraceFrame frame;
-      if (!convert_to_stackTraceFrame(frame_obj, &frame))
+      if (!convert_to_stackTraceFrame(*frame_obj, &frame))
         continue;
       fprintf(stderr, " at ");
       dyefg(stderr, DYE_CYAN);
@@ -191,31 +199,35 @@ void output_err(ArErr *err) {
   dye_style(stderr, DYE_STYLE_BOLD);
   ArgonObject *type_name_obj = get_builtin_field_for_class(
       get_builtin_field(err->ptr, __class__), __name__, err->ptr);
-  if (type_name_obj && type_name_obj->type == TYPE_STRING) {
-    char *type_name = argon_string_to_c_string_malloc(type_name_obj);
-    fprintf(stderr, "%s", type_name);
-    free(type_name);
+  if (type_name_obj) {
+    ArErr err = {ARGON_NULL};
+    size_t length;
+    char *msg = argon_object_to_length_terminated_string_from___string__(
+        type_name_obj, &err, &state, &length);
+    fwrite(msg, sizeof(char), length, stderr);
   } else {
     fprintf(stderr, "UnknownException");
   }
-  dye_style(stderr, DYE_STYLE_RESET);
-  dyefg(stderr, DYE_RESET);
-  fprintf(stderr, ": ");
-  dyefg(stderr, DYE_RED);
   ArgonObject *message_obj = get_builtin_field(err->ptr, message);
-  if (type_name_obj && type_name_obj->type == TYPE_STRING) {
-    char *msg = argon_string_to_c_string_malloc(type_name_obj);
-    fprintf(stderr, "%s", msg);
-    free(msg);
+  if (message_obj) {
+    dye_style(stderr, DYE_STYLE_RESET);
+    dyefg(stderr, DYE_RESET);
+    fprintf(stderr, ": ");
+    dyefg(stderr, DYE_RED);
+    ArErr err = {ARGON_NULL};
+    size_t length;
+    char *msg = argon_object_to_length_terminated_string_from___string__(
+        message_obj, &err, &state, &length);
+    fwrite(msg, sizeof(char), length, stderr);
   }
   dye_style(stderr, DYE_STYLE_RESET);
   dyefg(stderr, DYE_RESET);
   fprintf(stderr, "\n");
 
-  if (stack_trace->size > 0) {
-    ArgonObject *frame_obj = darray_armem_get(stack_trace, 0);
+  if (stack_trace && stack_trace->size > 0) {
+    ArgonObject **frame_obj = darray_armem_get(stack_trace, 0);
     struct StackTraceFrame frame;
-    if (convert_to_stackTraceFrame(frame_obj, &frame)) {
+    if (convert_to_stackTraceFrame(*frame_obj, &frame)) {
       dyefg(stderr, DYE_GRAY);
       fprintf(stderr, "  --> ");
       dyefg(stderr, DYE_CYAN);
@@ -235,10 +247,10 @@ void output_err(ArErr *err) {
       if (file) {
         dye_style(stderr, DYE_STYLE_RESET);
         dyefg(stderr, DYE_RESET);
-        uint64_t line_number_width = snprintf(NULL, 0, "%" PRIu64, frame.line);
+        int64_t line_number_width = snprintf(NULL, 0, "%" PRIu64, frame.line);
         char *buffer = NULL;
         size_t size = 0;
-        uint64_t current_line = 1;
+        int64_t current_line = 1;
         ssize_t len;
 
         while ((len = getline(&buffer, &size, file)) != -1) {
@@ -248,7 +260,7 @@ void output_err(ArErr *err) {
           current_line++;
         }
         fprintf(stderr, "  ");
-        for (uint64_t i = 0; i < line_number_width; i++) {
+        for (int64_t i = 0; i < line_number_width; i++) {
           fprintf(stderr, " ");
         }
         fprintf(stderr, "|\n");
@@ -279,7 +291,7 @@ void output_err(ArErr *err) {
                   (int)len - (int)skipped_chars - (int)frame.column -
                       (int)frame.length + 1,
                   line_starts + (int)frame.column + frame.length - 1);
-          for (uint64_t i = 0; i < frame.column - 1; i++) {
+          for (int64_t i = 0; i < frame.column - 1; i++) {
             fprintf(stderr, " ");
           }
         } else {
@@ -287,17 +299,17 @@ void output_err(ArErr *err) {
         }
         free(buffer);
         fprintf(stderr, "\n  ");
-        for (uint64_t i = 0; i < line_number_width; i++) {
+        for (int64_t i = 0; i < line_number_width; i++) {
           fprintf(stderr, " ");
         }
         fprintf(stderr, "| ");
 
-        for (uint64_t i = 1; i < frame.column; i++) {
+        for (int64_t i = 1; i < frame.column; i++) {
           fprintf(stderr, " ");
         }
         dyefg(stderr, DYE_RED);
         dye_style(stderr, DYE_STYLE_BOLD);
-        for (uint64_t i = 0; i < frame.length; i++) {
+        for (int64_t i = 0; i < frame.length; i++) {
           fprintf(stderr, "^");
         }
         dye_style(stderr, DYE_STYLE_RESET);

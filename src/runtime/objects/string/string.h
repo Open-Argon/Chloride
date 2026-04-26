@@ -19,6 +19,9 @@ char *c_quote_string(const char *input, size_t len);
 
 void init_string(ArgonObject *object, char *data, size_t length, uint64_t hash);
 
+char *argon_object_to_length_terminated_string_from___string__(
+    ArgonObject *object, ArErr *err, RuntimeState *state, size_t *length);
+
 char *argon_object_to_null_terminated_string(ArgonObject *object, ArErr *err,
                                              RuntimeState *state);
 

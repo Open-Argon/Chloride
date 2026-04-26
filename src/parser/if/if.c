@@ -7,6 +7,7 @@
 #include "if.h"
 #include "../../lexer/token.h"
 #include "../../memory.h"
+#include "../../runtime/objects/exceptions/exceptions.h"
 #include "../../err.h"
 #include "../parser.h"
 #include <stdbool.h>
@@ -27,7 +28,7 @@ void free_conditional(void *ptr) {
 ParsedValueReturn parse_if(char *file, DArray *tokens, size_t *index) {
   (*index)++;
   ArErr err = error_if_finished(file, tokens, index);
-  if (err.exists) {
+  if (is_error(&err)) {
     return (ParsedValueReturn){err, NULL};
   }
 
@@ -52,7 +53,7 @@ ParsedValueReturn parse_if(char *file, DArray *tokens, size_t *index) {
       if (token->type == TOKEN_ELSE || token->type == TOKEN_ELSE_IF) {
         (*index)++;
         ArErr err = error_if_finished(file, tokens, index);
-        if (err.exists) {
+        if (is_error(&err)) {
           darray_free(parsed_if, free_conditional);
           free(parsed_if);
           return (ParsedValueReturn){err, NULL};
@@ -73,20 +74,20 @@ ParsedValueReturn parse_if(char *file, DArray *tokens, size_t *index) {
         free(parsed_if);
         return (ParsedValueReturn){
             path_specific_create_err(token->line, token->column, token->length, file,
-                       "Syntax Error", "expected '(' after if"),
+                       SyntaxError, "expected '(' after if"),
             NULL};
       }
 
       (*index)++;
       ArErr err = error_if_finished(file, tokens, index);
-      if (err.exists) {
+      if (is_error(&err)) {
         darray_free(parsed_if, free_conditional);
         free(parsed_if);
         return (ParsedValueReturn){err, NULL};
       }
       skip_newlines_and_indents(tokens, index);
       condition = parse_token(file, tokens, index, true);
-      if (condition.err.exists) {
+      if (is_error(&condition.err)) {
         darray_free(parsed_if, free_conditional);
         free(parsed_if);
         return condition;
@@ -95,7 +96,7 @@ ParsedValueReturn parse_if(char *file, DArray *tokens, size_t *index) {
         free(parsed_if);
         return (ParsedValueReturn){
             path_specific_create_err(token->line, token->column, token->length, file,
-                       "Syntax Error", "expected condition"),
+                       SyntaxError, "expected condition"),
             NULL};
       }
       skip_newlines_and_indents(tokens, index);
@@ -110,13 +111,13 @@ ParsedValueReturn parse_if(char *file, DArray *tokens, size_t *index) {
         free(parsed_if);
         return (ParsedValueReturn){
             path_specific_create_err(token->line, token->column, token->length, file,
-                       "Syntax Error", "missing closing ')' in condition"),
+                       SyntaxError, "missing closing ')' in condition"),
             NULL};
       }
 
       (*index)++;
       err = error_if_finished(file, tokens, index);
-      if (err.exists) {
+      if (is_error(&err)) {
         if (condition.value) {
           free_parsed(condition.value);
           free(condition.value);
@@ -130,7 +131,7 @@ ParsedValueReturn parse_if(char *file, DArray *tokens, size_t *index) {
     // Parse the body
     ParsedValueReturn parsed_content = parse_token(file, tokens, index, false);
 
-    if (parsed_content.err.exists) {
+    if (is_error(&parsed_content.err)) {
       if (condition.value) {
         free_parsed(condition.value);
         free(condition.value);
@@ -148,7 +149,7 @@ ParsedValueReturn parse_if(char *file, DArray *tokens, size_t *index) {
       darray_free(parsed_if, free_conditional);
       free(parsed_if);
       return (ParsedValueReturn){path_specific_create_err(token->line, token->column,
-                                            token->length, file, "Syntax Error",
+                                            token->length, file, SyntaxError,
                                             "expected body"),
                                  NULL};
     }

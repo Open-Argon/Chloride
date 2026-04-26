@@ -10,7 +10,7 @@ size_t translate_item_access(Translated *translated, ParsedItemAccess *access,
                              ArErr *err) {
   set_registers(translated, 1);
   uint64_t first = translate_parsed(translated, access->to_access, err);
-  if (err->exists)
+  if (is_error(err))
     return 0;
   push_instruction_byte(translated, OP_LOAD_GETITEM_METHOD);
   push_instruction_byte(translated, OP_INIT_CALL);
@@ -20,7 +20,7 @@ size_t translate_item_access(Translated *translated, ParsedItemAccess *access,
     if (subscript->size == 1) {
       ParsedValue *item = *(ParsedValue **)darray_get(subscript, 0);
       translate_parsed(translated, item, err);
-      if (err->exists)
+      if (is_error(err))
         return 0;
     } else {
       // TODO: add subscript

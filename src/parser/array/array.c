@@ -9,6 +9,7 @@
 #include "../../memory.h"
 #include "../parser.h"
 #include "../../err.h"
+#include "../../runtime/objects/exceptions/exceptions.h"
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -22,7 +23,7 @@ ParsedValueReturn parse_array(char *file, DArray *tokens, size_t *index) {
   (*index)++;
   skip_newlines_and_indents(tokens, index);
   ArErr err = error_if_finished(file, tokens, index);
-  if (err.exists) {
+  if (is_error(&err)) {
     free_parsed(parsedValue);
     free(parsedValue);
     return (ParsedValueReturn){err, NULL};
@@ -31,14 +32,14 @@ ParsedValueReturn parse_array(char *file, DArray *tokens, size_t *index) {
   if (token->type != TOKEN_RBRACKET) {
     while (true) {
       err = error_if_finished(file, tokens, index);
-      if (err.exists) {
+      if (is_error(&err)) {
         free_parsed(parsedValue);
         free(parsedValue);
         return (ParsedValueReturn){err, NULL};
       }
       skip_newlines_and_indents(tokens, index);
       ParsedValueReturn parsedItem = parse_token(file, tokens, index, true);
-      if (parsedItem.err.exists) {
+      if (is_error(&parsedItem.err)) {
         free_parsed(parsedValue);
         free(parsedValue);
         return parsedItem;
@@ -47,7 +48,7 @@ ParsedValueReturn parse_array(char *file, DArray *tokens, size_t *index) {
       free(parsedItem.value);
       skip_newlines_and_indents(tokens, index);
       err = error_if_finished(file, tokens, index);
-      if (err.exists) {
+      if (is_error(&err)) {
         free_parsed(parsedValue);
         free(parsedValue);
         return (ParsedValueReturn){err, NULL};
@@ -58,12 +59,12 @@ ParsedValueReturn parse_array(char *file, DArray *tokens, size_t *index) {
       } else if (token->type != TOKEN_COMMA) {
         free_parsed(parsedValue);
         free(parsedValue);
-        return (ParsedValueReturn){path_specific_create_err(token->line, token->column, token->length, file, "Syntax Error", "expected comma"), NULL};
+        return (ParsedValueReturn){path_specific_create_err(token->line, token->column, token->length, file, SyntaxError, "expected comma"), NULL};
       }
       (*index)++;
       skip_newlines_and_indents(tokens, index);
       err = error_if_finished(file, tokens, index);
-      if (err.exists) {
+      if (is_error(&err)) {
         free_parsed(parsedValue);
         free(parsedValue);
         return (ParsedValueReturn){err, NULL};

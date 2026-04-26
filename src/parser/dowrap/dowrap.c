@@ -9,6 +9,7 @@
 #include "../../memory.h"
 #include "../parser.h"
 #include "../../err.h"
+#include "../../runtime/objects/exceptions/exceptions.h"
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -45,7 +46,7 @@ ParsedValueReturn parse_dowrap(char *file, DArray *tokens, size_t *index) {
     free_parsed(parsedValue);
     free(parsedValue);
     return (ParsedValueReturn){path_specific_create_err(token->line, token->column,
-                                          token->length, file, "Syntax Error",
+                                          token->length, file, SyntaxError,
                                           "expected body"),
                                NULL};
   }
@@ -107,7 +108,7 @@ ParsedValueReturn parse_dowrap(char *file, DArray *tokens, size_t *index) {
 
   darray_free(&to_free, free_string_dowrap);
 
-  if (err.exists) {
+  if (is_error(&err)) {
     free_parsed(parsedValue);
     free(parsedValue);
     return (ParsedValueReturn){err, NULL};

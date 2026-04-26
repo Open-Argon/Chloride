@@ -20,6 +20,7 @@ char* get_executable_path();
 extern struct hashmap_GC *importing_hash_table;
 extern struct hashmap_GC *imported_hash_table;
 
-Stack *ar_import(char *current_directory, char *path_relative, ArErr *err, bool main);
+Stack *ar_import(char *current_directory, char *path_relative, ArErr *err,
+                 bool is_main);
 
 #endif // IMPORT_H

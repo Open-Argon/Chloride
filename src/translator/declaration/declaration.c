@@ -24,7 +24,7 @@ size_t translate_parsed_declaration(Translated *translated, DArray delcarations,
     translated->return_jump.positions = NULL;
     ParsedSingleDeclaration *singleDeclaration = darray_get(&delcarations, i);
     size_t temp = translate_parsed(translated, singleDeclaration->from, err);
-    if (err->exists)
+    if (is_error(err))
       return first;
     if (i == 0)
       first = temp;

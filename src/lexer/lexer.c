@@ -7,6 +7,7 @@
 #include "lexer.h"
 #include "../err.h"
 #include "../string/string.h"
+#include "../runtime/objects/exceptions/exceptions.h"
 #include "lex.yy.h"
 #include "token.h"
 #include <stddef.h>
@@ -46,7 +47,7 @@ ArErr lexer(LexerState state) {
     if (token == TOKEN_INVALID) {
       ArErr err = path_specific_create_err(
           state.current_line + 1, state.current_column + 1,
-          yyget_leng(yyscanner), state.path, "Syntax Error",
+          yyget_leng(yyscanner), state.path, SyntaxError,
           "Invalid Token '%s'", yyget_text(yyscanner));
       yylex_destroy(yyscanner);
       return err;

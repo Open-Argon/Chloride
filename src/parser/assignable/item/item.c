@@ -8,6 +8,7 @@
 #include "../../../err.h"
 #include "../../../lexer/token.h"
 #include "../../../memory.h"
+#include "../../../runtime/objects/exceptions/exceptions.h"
 #include "../../parser.h"
 #include <stddef.h>
 #include <stdio.h>
@@ -20,7 +21,7 @@ ArErr parse_subscript(char *file, DArray *tokens, size_t *index,
   while (true) {
     skip_newlines_and_indents(tokens, index);
     ArErr err = error_if_finished(file, tokens, index);
-    if (err.exists) {
+    if (is_error(&err)) {
       return err;
     }
     Token *token = darray_get(tokens, *index);
@@ -31,13 +32,13 @@ ArErr parse_subscript(char *file, DArray *tokens, size_t *index,
       continue;
     }
     ParsedValueReturn parsedKey = parse_token(file, tokens, index, true);
-    if (parsedKey.err.exists) {
+    if (is_error(&parsedKey.err)) {
       return parsedKey.err;
     }
     darray_push(subscript, &parsedKey.value);
     skip_newlines_and_indents(tokens, index);
     err = error_if_finished(file, tokens, index);
-    if (err.exists) {
+    if (is_error(&err)) {
       return err;
     }
     token = darray_get(tokens, *index);
@@ -66,14 +67,14 @@ ParsedValueReturn parse_item_access(char *file, DArray *tokens, size_t *index,
   while (true) {
     skip_newlines_and_indents(tokens, index);
     ArErr err = error_if_finished(file, tokens, index);
-    if (err.exists) {
+    if (is_error(&err)) {
       free_parsed(parsedValue);
       free(parsedValue);
       return (ParsedValueReturn){err, NULL};
     }
     DArray subscript;
     err = parse_subscript(file, tokens, index, &subscript);
-    if (err.exists) {
+    if (is_error(&err)) {
       free_parsed(parsedValue);
       free(parsedValue);
       return (ParsedValueReturn){err, NULL};
@@ -81,7 +82,7 @@ ParsedValueReturn parse_item_access(char *file, DArray *tokens, size_t *index,
     darray_push(&parsedItemAccess->subscripts, &subscript);
     skip_newlines_and_indents(tokens, index);
     err = error_if_finished(file, tokens, index);
-    if (err.exists) {
+    if (is_error(&err)) {
       free_parsed(parsedValue);
       free(parsedValue);
       return (ParsedValueReturn){err, NULL};
@@ -99,7 +100,7 @@ ParsedValueReturn parse_item_access(char *file, DArray *tokens, size_t *index,
 
       return (ParsedValueReturn){
           path_specific_create_err(token->line, token->column, token->length, file,
-                     "Syntax Error", "expected comma, colon, or left bracket"),
+                     SyntaxError, "expected comma, colon, or left bracket"),
           NULL};
     }
   }

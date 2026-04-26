@@ -7,13 +7,14 @@
 #include "break.h"
 #include "../../err.h"
 #include "../translator.h"
+#include "../../runtime/objects/exceptions/exceptions.h"
 
 size_t translate_parsed_break(Translated *translated,
                               ParsedContinueOrBreak *parsedBreak, ArErr *err) {
   if (!translated->break_jump.positions) {
     *err =
         path_specific_create_err(parsedBreak->line, parsedBreak->column, parsedBreak->length,
-                   translated->path, "Syntax Error", "nowhere to break to");
+                   translated->path, SyntaxError, "nowhere to break to");
     return 0;
   }
   size_t first;
@@ -25,8 +26,16 @@ size_t translate_parsed_break(Translated *translated,
     if (i == 0)
       first = pos;
   }
+  uint64_t x;
+  for (x = 0;
+       x < (translated->exception_handler_depth - translated->break_jump.exception_handler_depth);
+       x++) {
+    size_t pos = push_instruction_byte(translated, OP_EXCEPTION_CATCHER_POP);
+    if (i == 0 && x == 0)
+      first = pos;
+  }
   size_t pos = push_instruction_byte(translated, OP_JUMP);
-  if (i == 0)
+  if (i == 0 && x==0)
     first = pos;
   size_t break_up = push_instruction_code(translated, 0);
   darray_push(translated->break_jump.positions, &break_up);

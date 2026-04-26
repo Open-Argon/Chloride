@@ -9,6 +9,7 @@
 #include "../../memory.h"
 #include "../parser.h"
 #include "../string/string.h"
+#include "../../runtime/objects/exceptions/exceptions.h"
 #include "../../err.h"
 #include <stddef.h>
 #include <stdio.h>
@@ -23,7 +24,7 @@ ParsedValueReturn parse_dictionary(char *file, DArray *tokens, size_t *index) {
   (*index)++;
   skip_newlines_and_indents(tokens, index);
   ArErr err = error_if_finished(file, tokens, index);
-  if (err.exists) {
+  if (is_error(&err)) {
     free_parsed(parsedValue);
     free(parsedValue);
     return (ParsedValueReturn){err, NULL};
@@ -33,7 +34,7 @@ ParsedValueReturn parse_dictionary(char *file, DArray *tokens, size_t *index) {
     while (true) {
       skip_newlines_and_indents(tokens, index);
       ArErr err = error_if_finished(file, tokens, index);
-      if (err.exists) {
+      if (is_error(&err)) {
         free_parsed(parsedValue);
         free(parsedValue);
         return (ParsedValueReturn){err, NULL};
@@ -47,7 +48,7 @@ ParsedValueReturn parse_dictionary(char *file, DArray *tokens, size_t *index) {
       } else {
         key = parse_token(file, tokens, index, true);
       }
-      if (key.err.exists) {
+      if (is_error(&key.err)) {
         free_parsed(parsedValue);
         free(parsedValue);
         return key;
@@ -56,12 +57,12 @@ ParsedValueReturn parse_dictionary(char *file, DArray *tokens, size_t *index) {
         free(parsedValue);
         return (ParsedValueReturn){path_specific_create_err(token->line, token->column,
                                               token->length, file,
-                                              "Syntax Error", "expected key"),
+                                              SyntaxError, "expected key"),
                                    NULL};
       }
       skip_newlines_and_indents(tokens, index);
       err = error_if_finished(file, tokens, index);
-      if (err.exists) {
+      if (is_error(&err)) {
         free_parsed(parsedValue);
         free(parsedValue);
         return (ParsedValueReturn){err, NULL};
@@ -74,13 +75,13 @@ ParsedValueReturn parse_dictionary(char *file, DArray *tokens, size_t *index) {
         (*index)++;
         skip_newlines_and_indents(tokens, index);
         ArErr err = error_if_finished(file, tokens, index);
-        if (err.exists) {
+        if (is_error(&err)) {
           free_parsed(parsedValue);
           free(parsedValue);
           return (ParsedValueReturn){err, NULL};
         }
         value = parse_token(file, tokens, index, true);
-        if (value.err.exists) {
+        if (is_error(&value.err)) {
           free_parsed(parsedValue);
           free(parsedValue);
           free_parsed(key.value);
@@ -93,12 +94,12 @@ ParsedValueReturn parse_dictionary(char *file, DArray *tokens, size_t *index) {
           free(key.value);
           return (ParsedValueReturn){
               path_specific_create_err(token->line, token->column, token->length, file,
-                         "Syntax Error", "expected value"),
+                         SyntaxError, "expected value"),
               NULL};
         }
         skip_newlines_and_indents(tokens, index);
         err = error_if_finished(file, tokens, index);
-        if (err.exists) {
+        if (is_error(&err)) {
           free_parsed(parsedValue);
           free(parsedValue);
           free_parsed(key.value);
@@ -119,7 +120,7 @@ ParsedValueReturn parse_dictionary(char *file, DArray *tokens, size_t *index) {
           free(value.value);
           return (ParsedValueReturn){
               path_specific_create_err(token->line, token->column, token->length, file,
-                         "Syntax Error", "expected comma"),
+                         SyntaxError, "expected comma"),
               NULL};
         }
         break;
@@ -136,7 +137,7 @@ ParsedValueReturn parse_dictionary(char *file, DArray *tokens, size_t *index) {
         free(key.value);
         return (ParsedValueReturn){path_specific_create_err(token->line, token->column,
                                               token->length, file,
-                                              "Syntax Error", "unexpected token"),
+                                              SyntaxError, "unexpected token"),
                                    NULL};
       }
       ParsedDictionaryEntry entry = {key.value, value.value};
@@ -146,7 +147,7 @@ ParsedValueReturn parse_dictionary(char *file, DArray *tokens, size_t *index) {
       }
       (*index)++;
       err = error_if_finished(file, tokens, index);
-      if (err.exists) {
+      if (is_error(&err)) {
         free_parsed(parsedValue);
         free(parsedValue);
         return (ParsedValueReturn){err, NULL};

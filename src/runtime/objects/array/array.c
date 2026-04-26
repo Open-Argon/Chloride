@@ -12,8 +12,8 @@
 #include "../functions/functions.h"
 #include "../literals/literals.h"
 #include "../number/number.h"
-#include "../signals/signals.h"
 #include "../string/string.h"
+#include "../exceptions/exceptions.h"
 #include "../../../../include/ArgonTypes.h"
 #include <inttypes.h>
 #include <stddef.h>
@@ -50,19 +50,19 @@ ArgonObject *ARGON_ARRAY___new__(size_t argc,
   (void)api;
   (void)state;
   if (argc != 2) {
-    *err = create_err("Runtime Error",
+    *err = create_err(RuntimeError,
                       "__new__ expects 2 arguments, got %" PRIu64, argc);
     return ARGON_NULL;
   }
   ArgonObject *get_dictionary = get_builtin_field_for_class(
       get_builtin_field(argv[1], __class__), __array__, argv[1]);
   if (!get_dictionary)
-    return api->throw_argon_error(err, "Runtime Error",
+    return api->throw_argon_error(err, RuntimeError,
                                   "Object doesn't have __array__ method");
   ArgonObject *object = argon_call(get_dictionary, 0, NULL, err, state);
   if (object->type != TYPE_ARRAY)
     return api->throw_argon_error(
-        err, "Runtime Error",
+        err, RuntimeError,
         "Objects __array__ method didn't return an array");
   return object;
 }
@@ -72,7 +72,7 @@ ArgonObject *ARGON_ARRAY___string__(size_t argc, ArgonObject **argv, ArErr *err,
   (void)api;
 
   if (argc != 1) {
-    *err = create_err("Runtime Error",
+    *err = create_err(RuntimeError,
                       "__string__ expects 1 argument, got %" PRIu64, argc);
     return ARGON_NULL;
   }
@@ -156,7 +156,7 @@ ArgonObject *ARGON_ARRAY_append(size_t argc, ArgonObject **argv, ArErr *err,
   (void)state;
   (void)api;
   if (argc != 2) {
-    *err = create_err("Runtime Error",
+    *err = create_err(RuntimeError,
                       "append expects 2 arguments, got %" PRIu64, argc);
     return ARGON_NULL;
   }
@@ -169,7 +169,7 @@ ArgonObject *ARGON_ARRAY_of_size(size_t argc, ArgonObject **argv, ArErr *err,
   (void)state;
   (void)api;
   if (argc != 1) {
-    *err = create_err("Runtime Error",
+    *err = create_err(RuntimeError,
                       "of_size expects 1 argument, got %" PRIu64, argc);
     return ARGON_NULL;
   }
@@ -199,7 +199,7 @@ ArgonObject *ARGON_ARRAY___array__(size_t argc,
   (void)api;
   (void)state;
   if (argc != 1) {
-    *err = create_err("Runtime Error",
+    *err = create_err(RuntimeError,
                       "__array__ expects 1 argument, got %" PRIu64, argc);
     return ARGON_NULL;
   }
@@ -212,7 +212,7 @@ ArgonObject *ARGON_ARRAY___contains__(size_t argc, ArgonObject **argv,
   (void)state;
   (void)api;
   if (argc != 2) {
-    *err = create_err("Runtime Error",
+    *err = create_err(RuntimeError,
                       "__contains__ expects 2 arguments, got %" PRIu64, argc);
     return ARGON_NULL;
   }
@@ -221,7 +221,7 @@ ArgonObject *ARGON_ARRAY___contains__(size_t argc, ArgonObject **argv,
       get_builtin_field_for_class(object_class, __equal__, argv[1]);
   if (!object__equal__) {
     ArgonObject *cls___name__ = get_builtin_field(object_class, __name__);
-    *err = create_err("Runtime Error",
+    *err = create_err(RuntimeError,
                       "Object of type '%.*s' is missing __equal__ method",
                       (int)cls___name__->value.as_str->length,
                       cls___name__->value.as_str->data);
@@ -246,7 +246,7 @@ ArgonObject *ARGON_ARRAY_get_length(size_t argc, ArgonObject **argv, ArErr *err,
   (void)api;
   (void)state;
   if (argc != 1) {
-    *err = create_err("Runtime Error",
+    *err = create_err(RuntimeError,
                       "get_length expects 1 argument, got %" PRIu64, argc);
     return ARGON_NULL;
   }
@@ -259,12 +259,12 @@ ArgonObject *ARGON_ARRAY_set_length(size_t argc, ArgonObject **argv, ArErr *err,
   (void)state;
   (void)argv;
   if (argc != 2) {
-    *err = create_err("Runtime Error",
+    *err = create_err(RuntimeError,
                       "set_length expects 2 arguments, got %" PRIu64, argc);
     return ARGON_NULL;
   }
 
-  *err = create_err("Runtime Error", "attribute 'length' is immutable");
+  *err = create_err(RuntimeError, "attribute 'length' is immutable");
   return ARGON_NULL;
 }
 
@@ -272,7 +272,7 @@ ArgonObject *ARGON_ARRAY_insert(size_t argc, ArgonObject **argv, ArErr *err,
                                 RuntimeState *state, ArgonNativeAPI *api) {
   (void)state;
   if (argc != 3) {
-    *err = create_err("Runtime Error",
+    *err = create_err(RuntimeError,
                       "insert expects 3 arguments, got %" PRIu64, argc);
     return ARGON_NULL;
   }
@@ -287,7 +287,7 @@ ArgonObject *ARGON_ARRAY_pop(size_t argc, ArgonObject **argv, ArErr *err,
                              RuntimeState *state, ArgonNativeAPI *api) {
   (void)state;
   if (argc > 2 || argc < 1) {
-    *err = create_err("Runtime Error",
+    *err = create_err(RuntimeError,
                       "pop expects 1 or 2 arguments, got %" PRIu64, argc);
     return ARGON_NULL;
   }
@@ -299,7 +299,7 @@ ArgonObject *ARGON_ARRAY_pop(size_t argc, ArgonObject **argv, ArErr *err,
     return ARGON_NULL;
   ArgonObject *out;
   if (!darray_armem_pop(arr, pos, &out))
-    return api->throw_argon_error(err, "Index Error", "pop from empty array");
+    return api->throw_argon_error(err, IndexError, "pop from empty array");
   return out;
 }
 
@@ -308,7 +308,7 @@ ArgonObject *ARGON_ARRAY___getitem__(size_t argc, ArgonObject **argv,
                                      ArgonNativeAPI *api) {
   (void)state;
   if (argc != 2) {
-    *err = create_err("Runtime Error",
+    *err = create_err(RuntimeError,
                       "__getitem__ expects 2 arguments, got %" PRIu64, argc);
     return ARGON_NULL;
   }
@@ -319,7 +319,7 @@ ArgonObject *ARGON_ARRAY___getitem__(size_t argc, ArgonObject **argv,
   if (index < 0)
     index += arr->size;
   if (index >= (int64_t)arr->size || index < 0) {
-    return api->throw_argon_error(err, "Index Error", "index out of range");
+    return api->throw_argon_error(err, IndexError, "index out of range");
   }
   return *(ArgonObject **)darray_armem_get(arr, index);
 }
@@ -329,7 +329,7 @@ ArgonObject *ARGON_ARRAY___setitem__(size_t argc, ArgonObject **argv,
                                      ArgonNativeAPI *api) {
   (void)state;
   if (argc != 3) {
-    *err = create_err("Runtime Error",
+    *err = create_err(RuntimeError,
                       "__setitem__ expects 3 arguments, got %" PRIu64, argc);
     return ARGON_NULL;
   }
@@ -340,7 +340,7 @@ ArgonObject *ARGON_ARRAY___setitem__(size_t argc, ArgonObject **argv,
   if (index < 0)
     index += arr->size;
   if (index >= (int64_t)arr->size || index < 0) {
-    return api->throw_argon_error(err, "Index Error", "index out of range");
+    return api->throw_argon_error(err, IndexError, "index out of range");
   }
   ArgonObject **ptr = darray_armem_get(arr, index);
   *ptr = argv[2];
@@ -352,7 +352,7 @@ ArgonObject *ARGON_ARRAY___iter__(size_t argc, ArgonObject **argv, ArErr *err,
   (void)api;
   (void)state;
   if (argc != 1) {
-    *err = create_err("Runtime Error",
+    *err = create_err(RuntimeError,
                       "__iter__ expects 1 argument, got %" PRIu64, argc);
     return ARGON_NULL;
   }
@@ -373,7 +373,7 @@ ArgonObject *ARGON_ARRAY_ITERATOR___next__(size_t argc, ArgonObject **argv,
   (void)api;
   (void)state;
   if (argc != 1) {
-    *err = create_err("Runtime Error",
+    *err = create_err(RuntimeError,
                       "__next__ expects 1 argument, got %" PRIu64, argc);
     return ARGON_NULL;
   }
@@ -381,7 +381,8 @@ ArgonObject *ARGON_ARRAY_ITERATOR___next__(size_t argc, ArgonObject **argv,
   struct as_array_iterator *array_iterator = self->value.as_array_iterator;
 
   if (array_iterator->current >= array_iterator->array->size) {
-    return END_ITERATION;
+      err->ptr = StopIteration_instance;
+      return ARGON_NULL;
   }
 
   ArgonObject *value = *(ArgonObject **)darray_armem_get(

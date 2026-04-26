@@ -8,22 +8,28 @@
 #include "../../hash_data/hash_data.h"
 #include "../translator.h"
 #include <stddef.h>
+#include <stdio.h>
 #include <string.h>
 
 size_t translate_parsed_for(Translated *translated, ParsedFor *parsedFor,
                             ArErr *err) {
-  uint8_t iterator_register = translated->registerAssignment++;
+  uint8_t iterator_and_err_register = translated->registerAssignment++;
   uint8_t iterator_next_register = translated->registerAssignment++;
   set_registers(translated, translated->registerAssignment);
   struct break_or_return_jump old_break_jump = translated->break_jump;
   DArray break_jumps;
   darray_init(&break_jumps, sizeof(size_t));
   translated->break_jump.positions = &break_jumps;
+  translated->break_jump.exception_handler_depth =
+      translated->exception_handler_depth;
   translated->break_jump.scope_depth = translated->scope_depth;
-  size_t first = push_instruction_byte(translated, OP_NEW_SCOPE);
+  size_t first = push_instruction_byte(translated, OP_EXCEPTION_CATCHER_PUSH);
+  uint64_t jump_index = push_instruction_code(translated, 0);
+
+  push_instruction_byte(translated, OP_NEW_SCOPE);
   translated->scope_depth++;
   translate_parsed(translated, parsedFor->iterator, err);
-  if (err->exists) {
+  if (is_error(err)) {
     return 0;
   }
   push_instruction_byte(translated, OP_LOAD_ITER_METHOD);
@@ -35,7 +41,7 @@ size_t translate_parsed_for(Translated *translated, ParsedFor *parsedFor,
 
   push_instruction_byte(translated, OP_COPY_TO_REGISTER);
   push_instruction_byte(translated, 0);
-  push_instruction_byte(translated, iterator_register);
+  push_instruction_byte(translated, iterator_and_err_register);
 
   push_instruction_byte(translated, OP_LOAD_NEXT_METHOD);
 
@@ -45,13 +51,13 @@ size_t translate_parsed_for(Translated *translated, ParsedFor *parsedFor,
 
   size_t start_of_loop = push_instruction_byte(translated, OP_EMPTY_SCOPE);
   push_instruction_byte(translated, OP_FOR_LOOP_JUMP);
-  push_instruction_byte(translated, iterator_register);
+  push_instruction_byte(translated, iterator_and_err_register);
   push_instruction_byte(translated, iterator_next_register);
-  uint64_t jump_index = push_instruction_code(translated, 0);
 
   struct continue_jump old_continue_jump = translated->continue_jump;
   translated->continue_jump =
-      (struct continue_jump){start_of_loop, translated->scope_depth};
+      (struct continue_jump){start_of_loop, translated->exception_handler_depth,
+                             translated->scope_depth};
 
   size_t length = strlen(parsedFor->key);
   size_t identifier_pos =
@@ -59,16 +65,14 @@ size_t translate_parsed_for(Translated *translated, ParsedFor *parsedFor,
   push_instruction_byte(translated, OP_DECLARE);
   push_instruction_code(translated, length);
   push_instruction_code(translated, identifier_pos);
-  push_instruction_code(translated,
-                        siphash64_bytes(parsedFor->key, length,
-                                        siphash_key_fixed));
+  push_instruction_code(
+      translated, siphash64_bytes(parsedFor->key, length, siphash_key_fixed));
   push_instruction_byte(translated, 0);
 
   translate_parsed(translated, parsedFor->content, err);
 
   push_instruction_byte(translated, OP_JUMP);
   push_instruction_code(translated, start_of_loop);
-  set_instruction_code(translated, jump_index, push_instruction_byte(translated, OP_POP_SCOPE));
 
   for (size_t i = 0; i < break_jumps.size; i++) {
     size_t *index = darray_get(&break_jumps, i);
@@ -77,11 +81,48 @@ size_t translate_parsed_for(Translated *translated, ParsedFor *parsedFor,
   darray_free(&break_jumps, NULL);
   translated->break_jump = old_break_jump;
 
-  push_instruction_byte(translated, OP_LOAD_NULL);
+  push_instruction_byte(translated, OP_JUMP);
+  size_t break_skip = push_instruction_code(translated, 0);
+
+  set_instruction_code(translated, jump_index,
+                       push_instruction_byte(translated, OP_COPY_TO_REGISTER));
+  push_instruction_byte(translated, 0);
+  push_instruction_byte(translated, iterator_and_err_register);
+
+  push_instruction_byte(translated, OP_LOAD_IS_INSTANCE_FUNCTION);
+  push_instruction_byte(translated, OP_INIT_CALL);
+  push_instruction_code(translated, 2);
+
+  push_instruction_byte(translated, OP_COPY_TO_REGISTER);
+  push_instruction_byte(translated, iterator_and_err_register);
+  push_instruction_byte(translated, 0);
+  push_instruction_byte(translated, OP_INSERT_ARG);
+  push_instruction_code(translated, 0);
+
+  push_instruction_byte(translated, OP_LOAD_STOPITERATION_CLASS);
+  push_instruction_byte(translated, OP_INSERT_ARG);
+  push_instruction_code(translated, 1);
+
+  push_instruction_byte(translated, OP_CALL);
+  push_instruction_byte(translated, OP_NOT);
+
+  push_instruction_byte(translated, OP_JUMP_IF_FALSE);
+  push_instruction_byte(translated, 0);
+  size_t is_exception_type = push_instruction_code(translated, 0);
+
+  push_instruction_byte(translated, OP_COPY_TO_REGISTER);
+  push_instruction_byte(translated, iterator_and_err_register);
+  push_instruction_byte(translated, 0);
+  push_instruction_byte(translated, OP_THROW);
+  set_instruction_code(translated, is_exception_type,
+                       translated->bytecode.size);
+
+  set_instruction_code(translated, break_skip,
+                       push_instruction_byte(translated, OP_LOAD_NULL));
   push_instruction_byte(translated, 0);
 
   translated->continue_jump = old_continue_jump;
   translated->scope_depth--;
-  translated->registerAssignment-=2;
+  translated->registerAssignment -= 2;
   return first;
 }

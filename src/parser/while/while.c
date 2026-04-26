@@ -8,35 +8,36 @@
 #include "../../memory.h"
 #include "../../err.h"
 #include "../parser.h"
+#include "../../runtime/objects/exceptions/exceptions.h"
 #include <stddef.h>
 
 ParsedValueReturn parse_while(char *file, DArray *tokens, size_t *index) {
   (*index)++;
   ArErr err = error_if_finished(file, tokens, index);
-  if (err.exists) {
+  if (is_error(&err)) {
     return (ParsedValueReturn){err, NULL};
   }
   // Parse ( condition )
   Token *token = darray_get(tokens, *index);
   if (token->type != TOKEN_LPAREN) {
     return (ParsedValueReturn){path_specific_create_err(token->line, token->column,
-                                          token->length, file, "Syntax Error",
+                                          token->length, file, SyntaxError,
                                           "expected '(' after while"),
                                NULL};
   }
 
   (*index)++;
   err = error_if_finished(file, tokens, index);
-  if (err.exists) {
+  if (is_error(&err)) {
     return (ParsedValueReturn){err, NULL};
   }
   skip_newlines_and_indents(tokens, index);
   ParsedValueReturn condition = parse_token(file, tokens, index, true);
-  if (condition.err.exists) {
+  if (is_error(&condition.err)) {
     return condition;
   } else if (!condition.value) {
     return (ParsedValueReturn){path_specific_create_err(token->line, token->column,
-                                          token->length, file, "Syntax Error",
+                                          token->length, file, SyntaxError,
                                           "expected condition"),
                                NULL};
   }
@@ -49,14 +50,14 @@ ParsedValueReturn parse_while(char *file, DArray *tokens, size_t *index) {
       free(condition.value);
     }
     return (ParsedValueReturn){path_specific_create_err(token->line, token->column,
-                                          token->length, file, "Syntax Error",
+                                          token->length, file, SyntaxError,
                                           "missing closing ')' in condition"),
                                NULL};
   }
 
   (*index)++;
   err = error_if_finished(file, tokens, index);
-  if (err.exists) {
+  if (is_error(&err)) {
     if (condition.value) {
       free_parsed(condition.value);
       free(condition.value);
@@ -66,7 +67,7 @@ ParsedValueReturn parse_while(char *file, DArray *tokens, size_t *index) {
   // Parse the body
   ParsedValueReturn parsed_content = parse_token(file, tokens, index, false);
 
-  if (parsed_content.err.exists) {
+  if (is_error(&parsed_content.err)) {
     if (condition.value) {
       free_parsed(condition.value);
       free(condition.value);
@@ -80,7 +81,7 @@ ParsedValueReturn parse_while(char *file, DArray *tokens, size_t *index) {
       free(condition.value);
     }
     return (ParsedValueReturn){path_specific_create_err(token->line, token->column,
-                                          token->length, file, "Syntax Error",
+                                          token->length, file, SyntaxError,
                                           "expected body"),
                                NULL};
   }

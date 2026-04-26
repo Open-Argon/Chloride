@@ -65,7 +65,7 @@ size_t translate_parsed_assignment(Translated *translated,
   translated->return_jump.positions = NULL;
 
   size_t first = translate_parsed(translated, assignment->from, err);
-  if (err->exists)
+  if (is_error(err))
     return 0;
   switch (assignment->to->type) {
   case AST_IDENTIFIER:;
@@ -114,7 +114,7 @@ size_t translate_parsed_assignment(Translated *translated,
     push_instruction_byte(translated, 0);
     push_instruction_byte(translated, registerA);
     translate_parsed(translated, access->to_access, err);
-    if (err->exists)
+    if (is_error(err))
       return 0;
     uint8_t to_access_register = 0;
     if (assignment->type != TOKEN_ASSIGN) {
@@ -133,7 +133,7 @@ size_t translate_parsed_assignment(Translated *translated,
     push_instruction_byte(translated, OP_INIT_CALL);
     push_instruction_code(translated, 2);
     translate_parsed(translated, access->access, err);
-    if (err->exists)
+    if (is_error(err))
       return 0;
     push_instruction_byte(translated, OP_INSERT_ARG);
     push_instruction_code(translated, 0);
@@ -186,7 +186,7 @@ size_t translate_parsed_assignment(Translated *translated,
     push_instruction_byte(translated, 0);
     push_instruction_byte(translated, registerA);
     translate_parsed(translated, access->to_access, err);
-    if (err->exists)
+    if (is_error(err))
       return 0;
     uint8_t to_access_register = 0;
     if (assignment->type != TOKEN_ASSIGN) {
@@ -208,7 +208,7 @@ size_t translate_parsed_assignment(Translated *translated,
       if (subscript->size == 1) {
         ParsedValue *item = *(ParsedValue **)darray_get(subscript, 0);
         translate_parsed(translated, item, err);
-        if (err->exists)
+        if (is_error(err))
           return 0;
       } else {
         // TODO: add subscript

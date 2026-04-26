@@ -8,6 +8,7 @@
 #include "../../err.h"
 #include "../../memory.h"
 #include "../api/api.h"
+#include "../objects/exceptions/exceptions.h"
 #include "../objects/string/string.h"
 #include <inttypes.h>
 #include <math.h>
@@ -113,7 +114,7 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
           get_builtin_field(object, __class__), __name__, original_object);
       ArgonObject *object_name =
           get_builtin_field_for_class(object, __name__, original_object);
-      *err = create_err("Type Error",
+      *err = create_err(TypeError,
                         "%.*s %.*s takes %" PRIu64 " argument(s) but %" PRIu64
                         " was given",
                         (int)type_object_name->value.as_str->length,
@@ -128,21 +129,21 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
       struct string_struct key = object->value.argon_fn->parameters[0];
       ArgonObject *value = binding_object;
       hashmap_insert_GC(scope->scope, key.hash,
-                        new_string_object(key.data, key.length, key.hash), value,
-                        0);
+                        new_string_object(key.data, key.length, key.hash),
+                        value, 0);
     }
     for (size_t i = 0; i < argc; i++) {
       struct string_struct key =
           object->value.argon_fn->parameters[i + binding_object_exists];
       ArgonObject *value = argv[i];
       hashmap_insert_GC(scope->scope, key.hash,
-                        new_string_object(key.data, key.length, key.hash), value,
-                        0);
+                        new_string_object(key.data, key.length, key.hash),
+                        value, 0);
     }
     if (CStackFrame) {
       if (state->c_depth >= MAX_C_STACK_LIMIT) {
         *err = create_err(
-            "Internal Error",
+            InternalError,
             "C stack limit exceeded (this usually indicates a builtin calling "
             "itself indirectly)",
             argc);
@@ -155,9 +156,10 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
           (Translated){object->value.argon_fn->translated.registerCount,
                        object->value.argon_fn->translated.registerAssignment,
                        0,
-                       {-1, 0},
-                       {NULL, 0},
-                       {NULL, 0},
+                       0,
+                       {-1, 0, 0},
+                       {NULL, 0, 0},
+                       {NULL, 0, 0},
                        {object->value.argon_fn->bytecode, sizeof(uint8_t),
                         object->value.argon_fn->bytecode_length,
                         object->value.argon_fn->bytecode_length, false},
@@ -183,9 +185,10 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
         {object->value.argon_fn->translated.registerCount,
          object->value.argon_fn->translated.registerAssignment,
          0,
-         {-1, 0},
-         {NULL, 0},
-         {NULL, 0},
+         0,
+         {-1, 0, 0},
+         {NULL, 0, 0},
+         {NULL, 0, 0},
          {object->value.argon_fn->bytecode, sizeof(uint8_t),
           object->value.argon_fn->bytecode_length,
           object->value.argon_fn->bytecode_length, false},
@@ -249,7 +252,7 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
     ArgonObject *type_object_name = get_builtin_field_for_class(
         get_builtin_field(original_object, __class__), __name__,
         original_object);
-    *err = create_err("Type Error", "'%.*s' object is not callable",
+    *err = create_err(TypeError, "'%.*s' object is not callable",
                       (int)type_object_name->value.as_str->length,
                       type_object_name->value.as_str->data);
     return;

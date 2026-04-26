@@ -81,11 +81,10 @@ converts a value in register 0 into true or false depending on the result from \
 
 ## OP_FOR_LOOP_JUMP
 
-calls the \_\_next\_\_ method stored in the register passed in, jumping if it is not END_ITERATION, storing the result of \_\_next\_\_ in register 0.
+calls the \_\_next\_\_ method stored in the register passed in, storing the result of \_\_next\_\_ in register 0.
 
 1. the register storing the iterator object. (*)
 1. the register storing the \_\_next\_\_ method. (*)
-1. the index to jump to.
 
 ## OP_JUMP_IF_FALSE
 
@@ -120,7 +119,7 @@ initialises a call instance struct and arguments buffer.
 
 ## OP_INSERT_ARG
 
-1. index of the argument in the arguments buffer to write the object from the register into.
+1. index of the argument in the arguments buffer to write the object from register 0 into.
 
 ## OP_CALL
 
@@ -352,3 +351,29 @@ exposes the value in the dictionary stored in register 0 to the current scope, a
 1. the length of the variable name.
 1. the offset in the constant buffer of the variable name.
 1. the fixed hash of the variable name.
+
+## OP_THROW
+
+throws the error stored in register 0
+
+## OP_EXCEPTION_CATCHER_PUSH
+
+pushes an exception catcher onto the exception catcher stack. when an exception occurs the error object is extracted, placed in register 0, it jumps to the position set to jump to, and pops the exception catcher off the exception catcher stack.
+
+1. the position to jump to when an exception is thrown.
+
+## OP_EXCEPTION_CATCHER_POP
+
+pops an exception catcher off the exception catcher stack.
+
+## OP_LOAD_IS_INSTANCE_FUNCTION
+
+loads the is_instance function into register 0
+
+## OP_LOAD_EXCEPTION_CLASS
+
+loads the Exception class into register 0
+
+## OP_LOAD_STOPITERATION_CLASS
+
+loads the StopIteration class into register 0

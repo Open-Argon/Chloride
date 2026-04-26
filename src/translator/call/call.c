@@ -9,7 +9,7 @@ size_t translate_parsed_call(Translated *translated, ParsedCall *call,
                              ArErr *err) {
   set_registers(translated, 1);
   size_t first = translate_parsed(translated, call->to_call, err);
-  if (err->exists) {
+  if (is_error(err)) {
     return first;
   }
   push_instruction_byte(translated, OP_INIT_CALL);
@@ -24,7 +24,7 @@ size_t translate_parsed_call(Translated *translated, ParsedCall *call,
   translated->return_jump.positions = NULL;
   for (size_t i = 0; i < call->args.size; i++) {
     translate_parsed(translated, darray_get(&call->args, i), err);
-    if (err->exists) {
+    if (is_error(err)) {
       translated->return_jump = old_return_jump;
       return first;
     }

@@ -7,7 +7,10 @@
 #ifndef RUNTIME_H
 #define RUNTIME_H
 #include "../arobject.h"
+#include "internals/dynamic_array_armem/darray_armem.h"
 #include "internals/hashmap/hashmap.h"
+#include <signal.h>
+#include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 
@@ -39,6 +42,7 @@ typedef struct ErrorCatch {
   size_t jump_to;
   Stack *stack;
   StackFrame *stackFrame;
+  call_instance*callInstance;
 } ErrorCatch;
 
 typedef struct RuntimeState {
@@ -47,7 +51,7 @@ typedef struct RuntimeState {
   call_instance *call_instance;
   StackFrame **currentStackFramePointer;
   SourceLocation source_location;
-  DArray catch_errors; // ErrorCatch[]
+  darray_armem catch_errors; // ErrorCatch[]
   hashmap_GC *load_number_cache;
   char *path;
   uint16_t c_depth;
@@ -62,6 +66,10 @@ typedef struct StackFrame {
   SourceLocation source_location;
 } StackFrame;
 
+extern volatile sig_atomic_t KeyboardInterrupted;
+
+void sigint_handler(int signum);
+
 void bootstrap_types();
 
 // extern struct hashmap_GC *runtime_hash_table;
@@ -69,6 +77,8 @@ void bootstrap_types();
 // uint64_t runtime_hash(const void *data, size_t len, uint64_t prehash);
 
 void bootstrap_globals();
+
+bool is_instance(ArgonObject*object, ArgonObject*type);
 
 static inline void *arena_get(ConstantArena *arena, size_t offset) {
   return (uint8_t *)arena->data + offset;

@@ -9,6 +9,7 @@
 #include "../../hash_data/hash_data.h"
 #include "../../memory.h"
 #include "../call/call.h"
+#include "exceptions/exceptions.h"
 #include "type/type.h"
 #include <gc/gc.h>
 #include <pthread.h>
@@ -200,7 +201,7 @@ int64_t hash_object(ArgonObject *object, ArErr *err, RuntimeState *state) {
   if (hash_result->type != TYPE_NUMBER ||
       !hash_result->value.as_number->is_int64) {
     *err =
-        create_err("Hash Error", "hash result needs to be a 64 bit integer.");
+        create_err(RuntimeError, "hash result needs to be a 64 bit integer.");
     return 0;
   }
   return hash_result->value.as_number->n.i64;

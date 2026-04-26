@@ -8,20 +8,21 @@
 #include "../../memory.h"
 #include "../../err.h"
 #include "../parser.h"
+#include "../../runtime/objects/exceptions/exceptions.h"
 
 ParsedValueReturn parse_negation(char *file, DArray *tokens, size_t *index) {
   (*index)++;
   Token *token = darray_get(tokens, *index);
   ArErr err = error_if_finished(file, tokens, index);
-  if (err.exists) {
+  if (is_error(&err)) {
     return (ParsedValueReturn){err, NULL};
   }
   ParsedValueReturn value = parse_token_full(file, tokens, index, true, false);
-  if (value.err.exists) {
+  if (is_error(&value.err)) {
     return value;
   } else if (!value.value) {
     return (ParsedValueReturn){path_specific_create_err(token->line, token->column,
-                                          token->length, file, "Syntax Error",
+                                          token->length, file, SyntaxError,
                                           "expected value"),
                                NULL};
   }

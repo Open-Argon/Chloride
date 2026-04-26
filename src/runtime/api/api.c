@@ -9,6 +9,7 @@
 #include "../../memory.h"
 #include "../call/call.h"
 #include "../objects/buffer/buffer.h"
+#include "../objects/exceptions/exceptions.h"
 #include "../objects/functions/functions.h"
 #include "../objects/literals/literals.h"
 #include "../objects/number/number.h"
@@ -22,7 +23,7 @@
 #include <stdio.h>
 #include <string.h>
 
-ArgonObject *throw_argon_error(ArErr *err, const char *type, const char *fmt,
+ArgonObject *throw_argon_error(ArErr *err, ArgonObject *type, const char *fmt,
                                ...) {
   va_list args;
   va_start(args, fmt);
@@ -33,7 +34,7 @@ ArgonObject *throw_argon_error(ArErr *err, const char *type, const char *fmt,
 
 bool fix_to_arg_size(size_t fix, size_t argc, ArErr *err) {
   if (fix != argc) {
-    throw_argon_error(err, "Runtime Error",
+    throw_argon_error(err, RuntimeError,
                       "expects %" PRIu64 " argument(s), got %" PRIu64, fix,
                       argc);
     return true;
@@ -43,10 +44,10 @@ bool fix_to_arg_size(size_t fix, size_t argc, ArErr *err) {
 
 int64_t argon_to_i64(ArgonObject *obj, ArErr *err) {
   if (obj->type != TYPE_NUMBER) {
-    throw_argon_error(err, "Runtime Error", "expected number");
+    throw_argon_error(err, RuntimeError, "expected number");
     return 0;
   } else if (!obj->value.as_number->is_int64) {
-    throw_argon_error(err, "Runtime Error", "number has to be i64");
+    throw_argon_error(err, RuntimeError, "number has to be i64");
     return 0;
   }
   return obj->value.as_number->n.i64;
@@ -54,7 +55,7 @@ int64_t argon_to_i64(ArgonObject *obj, ArErr *err) {
 
 struct rational argon_to_num_and_den(ArgonObject *obj, ArErr *err) {
   if (obj->type != TYPE_NUMBER) {
-    throw_argon_error(err, "Runtime Error", "expected number");
+    throw_argon_error(err, RuntimeError, "expected number");
     return (struct rational){0, 0};
   }
 
@@ -68,12 +69,12 @@ struct rational argon_to_num_and_den(ArgonObject *obj, ArErr *err) {
   mpz_srcptr den = mpq_denref(*q);
 
   if (!mpz_fits_slong_p(num)) {
-    throw_argon_error(err, "Runtime Error", "numerator does not fit int64");
+    throw_argon_error(err, RuntimeError, "numerator does not fit int64");
     return (struct rational){0, 0};
   }
 
   if (!mpz_fits_ulong_p(den)) {
-    throw_argon_error(err, "Runtime Error", "denominator does not fit uint64");
+    throw_argon_error(err, RuntimeError, "denominator does not fit uint64");
     return (struct rational){0, 0};
   }
 
@@ -85,7 +86,7 @@ struct rational argon_to_num_and_den(ArgonObject *obj, ArErr *err) {
 
 double argon_to_double(ArgonObject *obj, ArErr *err) {
   if (obj->type != TYPE_NUMBER) {
-    throw_argon_error(err, "Runtime Error", "expected number");
+    throw_argon_error(err, RuntimeError, "expected number");
     return 0.0;
   }
 
@@ -98,15 +99,13 @@ double argon_to_double(ArgonObject *obj, ArErr *err) {
   double d = mpq_get_d(*q);
 
   if (!isfinite(d)) {
-    throw_argon_error(err, "Runtime Error",
+    throw_argon_error(err, RuntimeError,
                       "number cannot be represented as double");
     return 0.0;
   }
 
   return d;
 }
-
-bool is_error(ArErr *err) { return err->exists; }
 
 ArgonObject *rational_to_argon(struct rational r) {
   return new_number_object_from_num_and_den(r.n, r.d);
@@ -118,7 +117,7 @@ ArgonObject *string_to_argon(struct string str) {
 
 struct string argon_to_string(ArgonObject *obj, ArErr *err) {
   if (obj->type != TYPE_STRING) {
-    throw_argon_error(err, "Runtime Error", "expected string");
+    throw_argon_error(err, RuntimeError, "expected string");
     return (struct string){NULL, 0};
   }
 
@@ -131,7 +130,7 @@ struct array argon_to_array(ArgonObject *obj, ArErr *err) {
   } else if (obj->type == TYPE_TUPLE) {
     return (struct array){obj->value.as_tuple.data, obj->value.as_tuple.size};
   }
-  throw_argon_error(err, "Runtime Error", "expected array or tuple");
+  throw_argon_error(err, RuntimeError, "expected array or tuple");
   return (struct array){NULL, 0};
 }
 
@@ -151,23 +150,22 @@ int unregister_thread() {
 ArgonObject *create_err_object() {
   ArgonObject *obj = new_object(0);
   obj->type = TYPE_ERROR;
-  obj->value.err = ar_alloc(sizeof(ArErr));
-  *obj->value.err = no_err;
+  obj->value.err = no_err;
   return obj;
 }
 
 ArErr *err_object_to_err(ArgonObject *object, ArErr *err) {
   if (object->type != TYPE_ERROR)
-    *err = create_err("Runtime Error", "Expected error object");
-  return object->value.err;
+    *err = create_err(RuntimeError, "Expected error object");
+  return &object->value.err;
 }
 
 void set_err(ArgonObject *object, ArErr *err) {
   if (object->type != TYPE_ERROR) {
-    *err = create_err("Runtime Error", "Expected error object");
+    *err = create_err(RuntimeError, "Expected error object");
     return;
   }
-  *err = *object->value.err;
+  *err = object->value.err;
   return;
 }
 
@@ -219,4 +217,5 @@ ArgonNativeAPI native_api = {
     .free = GC_free,
     .argon_to_array = argon_to_array,
     .argon_get_ArgonType = argon_to_argonType,
-    .argon_is_i64 = argon_is_i64};
+    .argon_is_i64 = argon_is_i64,
+};

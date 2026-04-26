@@ -113,7 +113,7 @@ struct ArgonNativeAPI {
   ArgonObject *(*create_argon_native_function)(char *name, native_fn);
   ArgonObject *(*call)(ArgonObject *original_object, size_t argc,
                        ArgonObject **argv, ArErr *err, RuntimeState *state);
-  ArgonObject *(*throw_argon_error)(ArErr *err, const char *type,
+  ArgonObject *(*throw_argon_error)(ArErr *err, ArgonObject *type,
                                     const char *fmt, ...);
   bool (*is_error)(ArErr *err);
   bool (*fix_to_arg_size)(size_t limit, size_t argc, ArErr *err);
@@ -150,10 +150,28 @@ struct ArgonNativeAPI {
   void *(*malloc)(size_t);
   void (*free)(void *);
 
-  ArgonObject *END_ITERATION;
   struct array (*argon_to_array)(ArgonObject *, ArErr *);
   int (*argon_get_ArgonType)(ArgonObject *);
   bool (*argon_is_i64)(ArgonObject *);
+
+  ArgonObject *BaseException;
+  ArgonObject *Exception;
+  ArgonObject *RuntimeError;
+  ArgonObject *SyntaxError;
+  ArgonObject *ConversionError;
+  ArgonObject *MathsError;
+  ArgonObject *ZeroDivisionError;
+  ArgonObject *NameError;
+  ArgonObject *TypeError;
+  ArgonObject *InternalError;
+  ArgonObject *IndexError;
+  ArgonObject *AttributeError;
+  ArgonObject *PathError;
+  ArgonObject *FileError;
+  ArgonObject *ImportError;
+  ArgonObject *SignalException;
+  ArgonObject *KeyboardInterrupt;
+  ArgonObject *StopIteration;
 };
 
 typedef struct {
@@ -165,11 +183,13 @@ typedef struct {
 
 struct continue_jump {
   int64_t pos;
+  uint64_t exception_handler_depth;
   uint64_t scope_depth;
 };
 
 struct break_or_return_jump {
   DArray *positions;
+  uint64_t exception_handler_depth;
   uint64_t scope_depth;
 };
 
@@ -177,6 +197,7 @@ typedef struct {
   uint8_t registerCount;
   uint8_t registerAssignment;
   uint64_t scope_depth;
+  uint64_t exception_handler_depth;
   struct continue_jump continue_jump;
   struct break_or_return_jump return_jump;
   struct break_or_return_jump break_jump;
@@ -263,6 +284,7 @@ struct ArgonObject {
   bool as_bool;
   // pthread_rwlock_t lock;
   union {
+    ArErr err;
     struct as_number *as_number;
     struct hashmap_GC *as_hashmap;
     struct as_range_iterator *as_range_iterator;
@@ -276,5 +298,7 @@ struct ArgonObject {
     struct argon_function_struct *argon_fn;
   } value;
 };
+
+bool is_error(ArErr *err);
 
 #endif // AROBJECT_H
