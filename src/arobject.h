@@ -16,61 +16,79 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#define BUILT_IN_FIELDS(X)                                                     \
+  X(__base__)                                                                  \
+  X(__class__)                                                                 \
+  X(__name__)                                                                  \
+  X(BUILT_IN_ARRAY_COUNT)                                                      \
+  X(__binding__)                                                               \
+  X(__function__)                                                              \
+  X(__add__)                                                                   \
+  X(__string__)                                                                \
+  X(__subtract__)                                                              \
+  X(__multiply__)                                                              \
+  X(__exponent__)                                                              \
+  X(__division__)                                                              \
+  X(__floor_division__)                                                        \
+  X(__modulo__)                                                                \
+  X(__equal__)                                                                 \
+  X(__not_equal__)                                                             \
+  X(__less_than__)                                                             \
+  X(__less_than_equal__)                                                       \
+  X(__greater_than__)                                                          \
+  X(__greater_than_equal__)                                                    \
+  X(__new__)                                                                   \
+  X(__init__)                                                                  \
+  X(__boolean__)                                                               \
+  X(__getattr__)                                                               \
+  X(__call__)                                                                  \
+  X(__number__)                                                                \
+  X(get_length)                                                                \
+  X(set_length)                                                                \
+  X(of_size)                                                                   \
+  X(extend)                                                                    \
+  X(from_string)                                                               \
+  X(to_string)                                                                 \
+  X(partition)                                                                 \
+  X(__getattribute__)                                                          \
+  X(__negation__)                                                              \
+  X(__setattr__)                                                               \
+  X(__delattr__)                                                               \
+  X(__getitem__)                                                               \
+  X(__setitem__)                                                               \
+  X(__delitem__)                                                               \
+  X(__hash__)                                                                  \
+  X(__repr__)                                                                  \
+  X(append)                                                                    \
+  X(insert)                                                                    \
+  X(pop)                                                                       \
+  X(__contains__)                                                              \
+  X(__iter__)                                                                  \
+  X(of)                                                                        \
+  X(__next__)                                                                  \
+  X(__template__)                                                              \
+  X(__dictionary__)                                                            \
+  X(message)                                                                   \
+  X(stack_trace)                                                               \
+  X(indices)                                                                   \
+  X(start)                                                                     \
+  X(step)                                                                      \
+  X(stop)                                                                      \
+  X(split)                                                                     \
+  X(join)                                                                      \
+  X(chr)                                                                       \
+  X(ord)                                                                       \
+  X(upper)                                                                     \
+  X(lower)                                                                     \
+  X(title)                                                                     \
+  X(replace)
+
 typedef enum {
-  __base__,
-  __class__,
-  __name__,
-
-  BUILT_IN_ARRAY_COUNT,
-
-  __binding__,
-  __function__,
-  __add__,
-  __string__,
-  __subtract__,
-  __multiply__,
-  __exponent__,
-  __division__,
-  __floor_division__,
-  __modulo__,
-  __equal__,
-  __not_equal__,
-  __less_than__,
-  __less_than_equal__,
-  __greater_than__,
-  __greater_than_equal__,
-  __new__,
-  __init__,
-  __boolean__,
-  __getattr__,
-  field__address,
-  __call__,
-  __number__,
-  get_length,
-  set_length,
-  of_size,
-  from_string,
-  to_string,
-  __getattribute__,
-  __negation__,
-  __setattr__,
-  __getitem__,
-  __setitem__,
-  __hash__,
-  __repr__,
-  append,
-  insert,
-  pop,
-  __contains__,
-  __iter__,
-  __next__,
-  __template__,
-  __dictionary__,
-  __array__,
-  message,
-  stack_trace,
-
-  BUILT_IN_FIELDS_COUNT,
+#define X(name) name,
+  BUILT_IN_FIELDS(X)
+#undef X
+      field__address,
+  BUILT_IN_FIELDS_COUNT
 } built_in_fields;
 
 typedef struct RuntimeState RuntimeState;
@@ -170,8 +188,10 @@ struct ArgonNativeAPI {
   ArgonObject *FileError;
   ArgonObject *ImportError;
   ArgonObject *SignalException;
-  ArgonObject *KeyboardInterrupt;
-  ArgonObject *StopIteration;
+  ArgonObject *SignalKeyboardInterrupt;
+  ArgonObject *SignalStopIteration;
+
+  ArgonObject *(*throw_argon_signal)(ArErr *, ArgonObject *);
 };
 
 typedef struct {
@@ -264,6 +284,12 @@ struct as_array_iterator {
   darray_armem *array;
 };
 
+struct as_string_iterator {
+  size_t current;
+  char *data;
+  size_t length;
+};
+
 struct as_dictionary_iterator {
   size_t current;
   size_t size;
@@ -273,6 +299,11 @@ struct as_dictionary_iterator {
 struct tuple_struct {
   size_t size;
   ArgonObject *data[];
+};
+
+struct as_tuple_iterator {
+  size_t current;
+  struct tuple_struct *tuple;
 };
 
 // full definition of ArgonObject (no typedef again!)
@@ -289,6 +320,8 @@ struct ArgonObject {
     struct hashmap_GC *as_hashmap;
     struct as_range_iterator *as_range_iterator;
     struct as_array_iterator *as_array_iterator;
+    struct as_string_iterator *as_string_iterator;
+    struct as_tuple_iterator *as_tuple_iterator;
     struct as_dictionary_iterator *as_dictionary_iterator;
     struct string_struct *as_str;
     struct tuple_struct as_tuple;

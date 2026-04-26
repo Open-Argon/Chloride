@@ -5,6 +5,7 @@
  */
 #include "item_access.h"
 #include <stddef.h>
+#include <stdio.h>
 
 size_t translate_item_access(Translated *translated, ParsedItemAccess *access,
                              ArErr *err) {
@@ -15,18 +16,43 @@ size_t translate_item_access(Translated *translated, ParsedItemAccess *access,
   push_instruction_byte(translated, OP_LOAD_GETITEM_METHOD);
   push_instruction_byte(translated, OP_INIT_CALL);
   push_instruction_code(translated, 1);
-  if (access->subscripts.size == 1) {
-    DArray *subscript = darray_get(&access->subscripts, 0);
-    if (subscript->size == 1) {
-      ParsedValue *item = *(ParsedValue **)darray_get(subscript, 0);
-      translate_parsed(translated, item, err);
-      if (is_error(err))
-        return 0;
-    } else {
-      // TODO: add subscript
+  if (access->subscripts.size != 1) {
+    push_instruction_byte(translated, OP_LOAD_CREATE_TUPLE);
+    push_instruction_byte(translated, OP_INIT_CALL);
+    push_instruction_code(translated, access->subscripts.size);
+  }
+  for (size_t i = 0; i < access->subscripts.size; i++) {
+    DArray *subscript = darray_get(&access->subscripts, i);
+    if (subscript->size != 1) {
+      push_instruction_byte(translated, OP_LOAD_SLICE_CLASS);
+      push_instruction_byte(translated, OP_INIT_CALL);
+      push_instruction_code(translated, subscript->size);
     }
-  } else {
-    // TODO: add tuple
+    for (size_t j = 0; j < subscript->size; j++) {
+      ParsedValue *item = *(ParsedValue **)darray_get(subscript, j);
+      if (item) {
+        translate_parsed(translated, item, err);
+        if (is_error(err))
+          return 0;
+      } else {
+        push_instruction_byte(translated, OP_LOAD_NULL);
+        push_instruction_byte(translated, 0);
+      }
+      if (subscript->size != 1) {
+        push_instruction_byte(translated, OP_INSERT_ARG);
+        push_instruction_code(translated, j);
+      }
+    }
+    if (subscript->size != 1) {
+      push_instruction_byte(translated, OP_CALL);
+    }
+    if (access->subscripts.size != 1) {
+      push_instruction_byte(translated, OP_INSERT_ARG);
+      push_instruction_code(translated, i);
+    }
+  }
+  if (access->subscripts.size != 1) {
+    push_instruction_byte(translated, OP_CALL);
   }
   push_instruction_byte(translated, OP_INSERT_ARG);
   push_instruction_code(translated, 0);

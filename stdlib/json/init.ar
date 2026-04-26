@@ -1,0 +1,209 @@
+let stringify(value) = do
+    if (is_instance(value, string) || is_instance(value, number) || value==null || value==true || value==false) do
+        return value.__repr__()
+    else if (is_instance(value, dictionary)) do
+        output = ["{"]
+        let is_first = true
+        for (keyval in value) do
+            if (!is_first) output.append(",")
+            output.append(stringify(string(keyval[0])))
+            output.append(":")
+            output.append(stringify(keyval[1]))
+            is_first=false
+        output.append("}")
+        return output.join("")
+    else if (is_instance(value, array)) do
+        output = ["["]
+        let is_first = true
+        for (item in value) do
+            if (!is_first) output.append(",")
+            output.append(stringify(item))
+            is_first = false
+        output.append("]")
+        return output.join("")
+    throw TypeError(`Object of type $(type(value).__name__) is not JSON serialisable`)
+
+let parse_string(s) = do
+    let all(callback, iterable) = do
+        for (item in iterable) do
+            if (!callback(item)) do
+                return false
+        return true
+    if (s.length < 2 || s[0] != "\"" || s[-1] !="\"") do
+        throw ValueError("Input must be a quoted JSON string")
+    s = s[1:-1]
+    let result = []
+    let i = 0
+    
+    while (i<s.length) do
+        let c = s[i]
+        
+        if (c!="\\") do
+            result.append(c)
+            i+=1
+            continue
+        
+        i+=1
+        if (i>=s.length) do
+            throw ValueError("Unexpected end of string after backslash")
+        
+        esc = s[i]
+
+        if (esc == "\"") result.append("\"")
+        else if (esc == '\\') result.append('\\')
+        else if (esc == '/') result.append('/')
+        else if (esc == 'b') result.append('\b')
+        else if (esc == 'f') result.append('\f')
+        else if (esc == 'n') result.append('\n')
+        else if (esc == 'r') result.append('\r')
+        else if (esc == 't') result.append('\t')
+        else if (esc == 'u') do
+            let hex_str = s[i+1:i+5]
+            if (hex_str.length < 4 || !all((c) = c in '0123456789abcdefABCDEF', hex_str)) do
+                throw ValueError(`Invalid \\u escape at position $(i)`)
+            let code_unit = number("0x"+hex_str)
+            i += 4 
+            if (0xD800 <= code_unit && code_unit <= 0xDBFF) do
+                # High surrogate — expect \uXXXX low surrogate next
+                if (s[i+1:i+3] != '\\u') do
+                    throw ValueError(`High surrogate at $(i) not followed by low surrogate`)
+                let low_hex = s[i+3:i+7]
+                if (low_hex.length < 4 || !all((c) = c in '0123456789abcdefABCDEF', low_hex)) do
+                    throw ValueError(`Invalid low surrogate hex at position $(i+3)`)
+                let low = number("0x"+low_hex)
+                if (!(0xDC00 <= low && low <= 0xDFFF)) do
+                    throw ValueError("Expected low surrogate")
+                let codepoint = 0x10000 + ((code_unit - 0xD800) * 1024) + (low - 0xDC00)
+                result.append(string.chr(codepoint))
+                i += 6  # skip \uXXXX
+            else if (0xDC00 <= code_unit && code_unit <= 0xDFFF) do
+                throw ValueError(`Unexpected low surrogate at position $(i)`)
+            else do
+                result.append(string.chr(code_unit))
+        else do
+            throw ValueError(`Unknown escape sequence: \\$(esc)`)
+        i+=1
+    return result.join("")
+
+let parse(s) = do
+    let i = 0
+
+    let skip_whitespace() = do
+        while (i < s.length && s[i] in " \t\n\r") do
+            i += 1
+    let error_if_invalid_json() = do
+        if (s.length <= i) throw ValueError("Invalid JSON")
+
+    let parse_value() = do
+        skip_whitespace()
+        error_if_invalid_json()
+        let c = s[i]
+
+        if (c == "\"") do
+            return parse_json_string()
+        else if (c == "{") do
+            return parse_object()
+        else if (c == "[") do
+            return parse_array()
+        else if (c == "t") do
+            expect("true")
+            return true
+        else if (c == "f") do
+            expect("false")
+            return false
+        else if (c == "n") do
+            expect("null")
+            return null
+        else do
+            return parse_number()
+
+    let expect(word) = do
+        for (ch in word) do
+            if (i >= s.length || s[i] != ch) do
+                throw ValueError(`Expected '$(word)' at position $(i)`)
+            i += 1
+
+    let parse_json_string() = do
+        if (s[i] != "\"") do
+            throw ValueError(`Expected '"' at position $(i)`)
+        let start = i
+        i += 1  # skip opening quote
+        while (i < s.length) do
+            if (s[i] == "\\") do
+                i += 2  # skip escape sequence (crude but enough to find closing quote)
+            else if (s[i] == "\"") do
+                i += 1  # skip closing quote
+                return parse_string(s[start:i])
+            else do
+                i += 1
+        throw ValueError("Unterminated string")
+
+    let parse_array() = do
+        i += 1  # skip '['
+        let result = []
+        skip_whitespace()
+        error_if_invalid_json()
+        if (s[i] == "]") do
+            i += 1
+            return result
+        while (true) do
+            result.append(parse_value())
+            skip_whitespace()
+            if (s[i] == "]") do
+                i += 1
+                return result
+            if (s[i] != ",") do
+                throw ValueError(`Expected ',' or ']' at position $(i)`)
+            i += 1
+
+    let parse_object() = do
+        i += 1  # skip '{'
+        let result = {}
+        skip_whitespace()
+        error_if_invalid_json()
+        if (s[i] == "}") do
+            i += 1
+            return result
+        while (true) do
+            skip_whitespace()
+            error_if_invalid_json()
+            let key = parse_json_string()
+            skip_whitespace()
+            error_if_invalid_json()
+            if (s[i] != ":") do
+                throw ValueError(`Expected ':' at position $(i)`)
+            i += 1
+            let value = parse_value()
+            result[key] = value
+            skip_whitespace()
+            error_if_invalid_json()
+            if (s[i] == "}") do
+                i += 1
+                return result
+            if (s[i] != ",") do
+                throw ValueError(`Expected ',' or '}' at position $(i)`)
+            i += 1
+
+    let parse_number() = do
+        let start = i
+        if (s[i] == "-") i += 1
+        while (i < s.length && s[i] in "0123456789") do
+            i += 1
+        if (i < s.length && s[i] == ".") do
+            i += 1
+            while (i < s.length && s[i] in "0123456789") do
+                i += 1
+        if (i < s.length && s[i] in "eE") do
+            i += 1
+            if (s[i] in "+-") i += 1
+            while (i < s.length && s[i] in "0123456789") do
+                i += 1
+        if (i == start) do
+            throw ValueError(`Unexpected character '$(s[i])' at position $(i)`)
+        return number(s[start:i])
+
+    let result = parse_value()
+    skip_whitespace()
+    if (i != s.length) do
+        throw ValueError(`Unexpected trailing content at position $(i)`)
+    return result

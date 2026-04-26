@@ -7,7 +7,6 @@
 #include "../../../err.h"
 #include "../../api/api.h"
 #include "../array/array.h"
-#include "../functions/functions.h"
 #include "../literals/literals.h"
 #include "../object.h"
 #include "../string/string.h"
@@ -17,6 +16,8 @@ ArgonObject *BaseException;
 
 ArgonObject *Exception;
 ArgonObject *RuntimeError;
+ArgonObject *AssignError;
+ArgonObject *ValueError;
 ArgonObject *SyntaxError;
 ArgonObject *ConversionError;
 ArgonObject *MathsError;
@@ -86,9 +87,7 @@ void init_exceptions() {
   BaseException = new_class();
   add_builtin_field(BaseException, __name__,
                     new_string_object_null_terminated("BaseException"));
-  add_builtin_field(
-      BaseException, __new__,
-      create_argon_native_function("__new__", BaseException___new__));
+  MOUNT_ARGON_METHOD(BaseException, __new__)
   native_api.BaseException = BaseException;
 
   // normal errors
@@ -101,6 +100,16 @@ void init_exceptions() {
   add_builtin_field(RuntimeError, __base__, Exception);
   add_builtin_field(RuntimeError, __name__,
                     new_string_object_null_terminated("RuntimeError"));
+
+  AssignError = new_class();
+  add_builtin_field(AssignError, __base__, Exception);
+  add_builtin_field(AssignError, __name__,
+                    new_string_object_null_terminated("AssignError"));
+
+  ValueError = new_class();
+  add_builtin_field(ValueError, __base__, Exception);
+  add_builtin_field(ValueError, __name__,
+                    new_string_object_null_terminated("ValueError"));
 
   SyntaxError = new_class();
   add_builtin_field(SyntaxError, __base__, Exception);
@@ -187,22 +196,18 @@ void init_exceptions() {
   add_builtin_field(KeyboardInterrupt, __base__, SignalException);
   add_builtin_field(KeyboardInterrupt, __name__,
                     new_string_object_null_terminated("KeyboardInterrupt"));
-  add_builtin_field(
-      KeyboardInterrupt, __new__,
-      create_argon_native_function("__new__", KeyboardInterrupt___new__));
+  MOUNT_ARGON_METHOD(KeyboardInterrupt, __new__)
 
   StopIteration = new_class();
   add_builtin_field(StopIteration, __base__, SignalException);
   add_builtin_field(StopIteration, __name__,
                     new_string_object_null_terminated("StopIteration"));
-  add_builtin_field(
-      StopIteration, __new__,
-      create_argon_native_function("__new__", StopIteration___new__));
+  MOUNT_ARGON_METHOD(StopIteration, __new__)
 
   KeyboardInterrupt_instance = new_instance(KeyboardInterrupt, 0);
   StopIteration_instance = new_instance(StopIteration, 0);
 
   native_api.SignalException = SignalException;
-  native_api.KeyboardInterrupt = KeyboardInterrupt;
-  native_api.StopIteration = StopIteration;
+  native_api.SignalKeyboardInterrupt = KeyboardInterrupt_instance;
+  native_api.SignalStopIteration = StopIteration_instance;
 }

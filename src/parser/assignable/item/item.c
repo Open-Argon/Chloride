@@ -22,6 +22,7 @@ ArErr parse_subscript(char *file, DArray *tokens, size_t *index,
     skip_newlines_and_indents(tokens, index);
     ArErr err = error_if_finished(file, tokens, index);
     if (is_error(&err)) {
+      darray_free(subscript, free_subscript_item);
       return err;
     }
     Token *token = darray_get(tokens, *index);
@@ -31,14 +32,21 @@ ArErr parse_subscript(char *file, DArray *tokens, size_t *index,
       darray_push(subscript, &null);
       continue;
     }
+    else if (token->type == TOKEN_RBRACKET) {
+      void *null = NULL;
+      darray_push(subscript, &null);
+      break;
+    }
     ParsedValueReturn parsedKey = parse_token(file, tokens, index, true);
     if (is_error(&parsedKey.err)) {
+      darray_free(subscript, free_subscript_item);
       return parsedKey.err;
     }
     darray_push(subscript, &parsedKey.value);
     skip_newlines_and_indents(tokens, index);
     err = error_if_finished(file, tokens, index);
     if (is_error(&err)) {
+      darray_free(subscript, free_subscript_item);
       return err;
     }
     token = darray_get(tokens, *index);
@@ -99,22 +107,24 @@ ParsedValueReturn parse_item_access(char *file, DArray *tokens, size_t *index,
       free(parsedValue);
 
       return (ParsedValueReturn){
-          path_specific_create_err(token->line, token->column, token->length, file,
-                     SyntaxError, "expected comma, colon, or left bracket"),
+          path_specific_create_err(token->line, token->column, token->length,
+                                   file, SyntaxError,
+                                   "expected comma, colon, or left bracket"),
           NULL};
     }
   }
   return (ParsedValueReturn){no_err, parsedValue};
 }
 
-void free_subscript_item(void*ptr) {
-  ParsedValue* value = *(ParsedValue**)ptr;
-  if (value) {free_parsed(value);free(value);};
+void free_subscript_item(void *ptr) {
+  ParsedValue *value = *(ParsedValue **)ptr;
+  if (value) {
+    free_parsed(value);
+    free(value);
+  };
 }
 
-void free_subscript(void *ptr) {
-  darray_free(ptr, free_subscript_item);
-}
+void free_subscript(void *ptr) { darray_free(ptr, free_subscript_item); }
 
 void free_parse_item_access(void *ptr) {
   ParsedValue *parsedValue = ptr;

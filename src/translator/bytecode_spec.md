@@ -69,7 +69,15 @@ initilises a function to a given register.
 
 ## OP_IDENTIFIER
 
-initilises a function to a given register.
+loads a variable into register 0.
+
+1. the length of the identifer.
+1. the offset of the identifier.
+1. the fixed hash of the variable name.
+
+## OP_DELETE_IDENTIFIER
+
+deletes a given variable.
 
 1. the length of the identifer.
 1. the offset of the identifier.
@@ -324,6 +332,10 @@ calls the \_\_negation\_\_ method on the value in register 0 and storing it in r
 
 loads the \_\_setattr\_\_ method from the objects class in register 0 and put it into register 0
 
+## OP_LOAD_DELATTR_METHOD
+
+loads the \_\_delattr\_\_ method from the objects class in register 0 and put it into register 0
+
 ## OP_CREATE_DICTIONARY
 
 create a dictionary object into register 0.
@@ -335,6 +347,10 @@ loads the \_\_getitem\_\_ method from the objects class in register 0 and put it
 ## OP_LOAD_SETITEM_METHOD
 
 loads the \_\_setitem\_\_ method from the objects class in register 0 and put it into register 0
+
+## OP_LOAD_DELITEM_METHOD
+
+loads the \_\_delitem\_\_ method from the objects class in register 0 and put it into register 0
 
 ## OP_IMPORT
 
@@ -377,3 +393,7 @@ loads the Exception class into register 0
 ## OP_LOAD_STOPITERATION_CLASS
 
 loads the StopIteration class into register 0
+
+## OP_LOAD_SLICE_CLASS
+
+loads the slice class into register 0

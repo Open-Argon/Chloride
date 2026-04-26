@@ -1,0 +1,6 @@
+class x do
+  this.__getitem__(self, key)=key
+  this.__setitem__(self, key,value) = key
+
+term.log(x()[1:2,2])
+term.log(x()[1:2,2]=1)

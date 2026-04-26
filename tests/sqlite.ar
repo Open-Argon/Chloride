@@ -22,7 +22,7 @@ let some_phone = "573403287534893278537592387958723"
 
 # Insert rows
 db.execute(sql`BEGIN TRANSACTION;`)
-for (i in 0 until 1e4) do
+for (i in 0 until 1e2) do
     db.execute(sql`
         INSERT INTO contacts (first_name, last_name, email, phone)
         VALUES ($(some_first_name), $(some_last_name), $(some_email), $(i))

@@ -14,6 +14,10 @@ extern ArgonObject *Exception;
 
 extern ArgonObject *RuntimeError;
 
+extern ArgonObject *AssignError;
+
+extern ArgonObject *ValueError;
+
 extern ArgonObject *SyntaxError;
 
 extern ArgonObject *ConversionError;

@@ -5,16 +5,16 @@
  */
 
 #include "array.h"
+#include "../../../../include/ArgonTypes.h"
 #include "../../../err.h"
 #include "../../../memory.h"
 #include "../../call/call.h"
 #include "../../internals/dynamic_array_armem/darray_armem.h"
-#include "../functions/functions.h"
+#include "../exceptions/exceptions.h"
 #include "../literals/literals.h"
 #include "../number/number.h"
+#include "../slice/slice.h"
 #include "../string/string.h"
-#include "../exceptions/exceptions.h"
-#include "../../../../include/ArgonTypes.h"
 #include <inttypes.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -42,33 +42,49 @@ ArgonObject *ARRAY_CREATE(size_t argc, ArgonObject **argv, ArErr *err,
   return object;
 }
 
-ArgonObject *ARGON_ARRAY___new__(size_t argc,
-                                                  ArgonObject **argv,
-                                                  ArErr *err,
-                                                  RuntimeState *state,
-                                                  ArgonNativeAPI *api) {
+ARGON_METHOD(ARRAY_TYPE, __new__, {
   (void)api;
   (void)state;
   if (argc != 2) {
-    *err = create_err(RuntimeError,
-                      "__new__ expects 2 arguments, got %" PRIu64, argc);
+    *err = create_err(RuntimeError, "__new__ expects 2 arguments, got %" PRIu64,
+                      argc);
     return ARGON_NULL;
   }
-  ArgonObject *get_dictionary = get_builtin_field_for_class(
-      get_builtin_field(argv[1], __class__), __array__, argv[1]);
-  if (!get_dictionary)
-    return api->throw_argon_error(err, RuntimeError,
-                                  "Object doesn't have __array__ method");
-  ArgonObject *object = argon_call(get_dictionary, 0, NULL, err, state);
-  if (object->type != TYPE_ARRAY)
-    return api->throw_argon_error(
-        err, RuntimeError,
-        "Objects __array__ method didn't return an array");
-  return object;
-}
 
-ArgonObject *ARGON_ARRAY___string__(size_t argc, ArgonObject **argv, ArErr *err,
-                                    RuntimeState *state, ArgonNativeAPI *api) {
+  ArgonObject *iter_method = get_builtin_field_for_class(
+      get_builtin_field(argv[1], __class__), __iter__, argv[1]);
+  if (!iter_method)
+    return api->throw_argon_error(err, RuntimeError,
+                                  "Object doesn't have __iter__ method");
+  ArgonObject *iter_obj = argon_call(iter_method, 0, NULL, err, state);
+
+  ArgonObject *next_method = get_builtin_field_for_class(
+      get_builtin_field(iter_obj, __class__), __next__, iter_obj);
+  if (!next_method)
+    return api->throw_argon_error(
+        err, RuntimeError, "Iterator object doesn't have __next__ method");
+
+  ArgonObject *object = new_instance(ARRAY_TYPE, sizeof(darray_armem));
+  object->type = TYPE_ARRAY;
+  object->value.as_array = darray_armem_create();
+  darray_armem_init(object->value.as_array, sizeof(ArgonObject *), 0);
+
+  while (true) {
+    ArgonObject *item = argon_call(next_method, 0, NULL, err, state);
+    if (err->ptr == StopIteration_instance) {
+      err->ptr = ARGON_NULL;
+      break;
+    } else if (api->is_error(err)) {
+      return ARGON_NULL;
+    }
+    darray_armem_insert(object->value.as_array, object->value.as_array->size,
+                        &item);
+  }
+
+  return object;
+})
+
+ARGON_METHOD(ARRAY_TYPE, __string__, {
   (void)api;
 
   if (argc != 1) {
@@ -77,11 +93,13 @@ ArgonObject *ARGON_ARRAY___string__(size_t argc, ArgonObject **argv, ArErr *err,
     return ARGON_NULL;
   }
 
-  if (!is_being_repr) is_being_repr = createHashmap();
+  if (!is_being_repr)
+    is_being_repr = createHashmap();
 
-  if (hashmap_lookup(is_being_repr, (uint64_t)argv[0])) return new_string_object_null_terminated("[...]");
+  if (hashmap_lookup(is_being_repr, (uint64_t)argv[0]))
+    return new_string_object_null_terminated("[...]");
 
-  hashmap_insert(is_being_repr, (uint64_t)argv[0], NULL, (void*)true, 0);
+  hashmap_insert(is_being_repr, (uint64_t)argv[0], NULL, (void *)true, 0);
 
   darray_armem *array = argv[0]->value.as_array;
 
@@ -147,30 +165,29 @@ ArgonObject *ARGON_ARRAY___string__(size_t argc, ArgonObject **argv, ArErr *err,
 
   free(string);
   hashmap_remove(is_being_repr, (uint64_t)argv[0]);
-  if (!is_being_repr->count) hashmap_free(is_being_repr, NULL);
+  if (!is_being_repr->count)
+    hashmap_free(is_being_repr, NULL);
   return result;
-}
+})
 
-ArgonObject *ARGON_ARRAY_append(size_t argc, ArgonObject **argv, ArErr *err,
-                                RuntimeState *state, ArgonNativeAPI *api) {
+ARGON_METHOD(ARRAY_TYPE, append, {
   (void)state;
   (void)api;
   if (argc != 2) {
-    *err = create_err(RuntimeError,
-                      "append expects 2 arguments, got %" PRIu64, argc);
+    *err = create_err(RuntimeError, "append expects 2 arguments, got %" PRIu64,
+                      argc);
     return ARGON_NULL;
   }
   darray_armem_insert(argv[0]->value.as_array, UINT64_MAX, &argv[1]);
   return ARGON_NULL;
-}
+})
 
-ArgonObject *ARGON_ARRAY_of_size(size_t argc, ArgonObject **argv, ArErr *err,
-                                 RuntimeState *state, ArgonNativeAPI *api) {
+ARGON_METHOD(ARRAY_TYPE, of_size, {
   (void)state;
   (void)api;
   if (argc != 1) {
-    *err = create_err(RuntimeError,
-                      "of_size expects 1 argument, got %" PRIu64, argc);
+    *err = create_err(RuntimeError, "of_size expects 1 argument, got %" PRIu64,
+                      argc);
     return ARGON_NULL;
   }
   int64_t size = api->argon_to_i64(argv[0], err);
@@ -182,33 +199,15 @@ ArgonObject *ARGON_ARRAY_of_size(size_t argc, ArgonObject **argv, ArErr *err,
   object->value.as_array = darray_armem_create();
 
   darray_armem_init(object->value.as_array, sizeof(ArgonObject *), size);
-  
 
   for (int64_t i = 0; i < size; i++) {
     ((ArgonObject **)object->value.as_array->data)[i] = ARGON_NULL;
   }
 
   return object;
-}
+})
 
-ArgonObject *ARGON_ARRAY___array__(size_t argc,
-                                                         ArgonObject **argv,
-                                                         ArErr *err,
-                                                         RuntimeState *state,
-                                                         ArgonNativeAPI *api) {
-  (void)api;
-  (void)state;
-  if (argc != 1) {
-    *err = create_err(RuntimeError,
-                      "__array__ expects 1 argument, got %" PRIu64, argc);
-    return ARGON_NULL;
-  }
-  return argv[0];
-}
-
-ArgonObject *ARGON_ARRAY___contains__(size_t argc, ArgonObject **argv,
-                                      ArErr *err, RuntimeState *state,
-                                      ArgonNativeAPI *api) {
+ARGON_METHOD(ARRAY_TYPE, __contains__, {
   (void)state;
   (void)api;
   if (argc != 2) {
@@ -239,10 +238,9 @@ ArgonObject *ARGON_ARRAY___contains__(size_t argc, ArgonObject **argv,
       return result;
   }
   return ARGON_FALSE;
-}
+})
 
-ArgonObject *ARGON_ARRAY_get_length(size_t argc, ArgonObject **argv, ArErr *err,
-                                    RuntimeState *state, ArgonNativeAPI *api) {
+ARGON_METHOD(ARRAY_TYPE, get_length, {
   (void)api;
   (void)state;
   if (argc != 1) {
@@ -251,10 +249,9 @@ ArgonObject *ARGON_ARRAY_get_length(size_t argc, ArgonObject **argv, ArErr *err,
     return ARGON_NULL;
   }
   return new_number_object_from_int64(argv[0]->value.as_array->size);
-}
+})
 
-ArgonObject *ARGON_ARRAY_set_length(size_t argc, ArgonObject **argv, ArErr *err,
-                                    RuntimeState *state, ArgonNativeAPI *api) {
+ARGON_METHOD(ARRAY_TYPE, set_length, {
   (void)api;
   (void)state;
   (void)argv;
@@ -266,14 +263,57 @@ ArgonObject *ARGON_ARRAY_set_length(size_t argc, ArgonObject **argv, ArErr *err,
 
   *err = create_err(RuntimeError, "attribute 'length' is immutable");
   return ARGON_NULL;
-}
+})
 
-ArgonObject *ARGON_ARRAY_insert(size_t argc, ArgonObject **argv, ArErr *err,
-                                RuntimeState *state, ArgonNativeAPI *api) {
+ARGON_METHOD(ARRAY_TYPE, join, {
+  (void)api;
+  (void)state;
+  (void)argv;
+  if (argc != 2) {
+    *err = create_err(RuntimeError, "join expects 2 arguments, got %" PRIu64,
+                      argc);
+    return ARGON_NULL;
+  }
+  struct string join = api->argon_to_string(argv[1], err);
+
+  size_t length = 0;
+
+  for (size_t i = 0; i < argv[0]->value.as_array->size; i++) {
+    ArgonObject *item =
+        *(ArgonObject **)darray_armem_get(argv[0]->value.as_array, i);
+    if (item->type != TYPE_STRING) {
+      return api->throw_argon_error(err, ValueError,
+                                    "index %" PRId64 " contains non string", i);
+    }
+    length += item->value.as_str->length;
+    if (i != argv[0]->value.as_array->size - 1)
+      length += join.length;
+  }
+
+  char *data = checked_malloc(length);
+  char *p = data;
+
+  for (size_t i = 0; i < argv[0]->value.as_array->size; i++) {
+    ArgonObject *item =
+        *(ArgonObject **)darray_armem_get(argv[0]->value.as_array, i);
+    memcpy(p, item->value.as_str->data, item->value.as_str->length);
+    p += item->value.as_str->length;
+    if (i != argv[0]->value.as_array->size - 1) {
+      memcpy(p, join.data, join.length);
+      p += join.length;
+    }
+  }
+
+  ArgonObject *result = api->string_to_argon((struct string){data, length});
+  free(data);
+  return result;
+})
+
+ARGON_METHOD(ARRAY_TYPE, insert, {
   (void)state;
   if (argc != 3) {
-    *err = create_err(RuntimeError,
-                      "insert expects 3 arguments, got %" PRIu64, argc);
+    *err = create_err(RuntimeError, "insert expects 3 arguments, got %" PRIu64,
+                      argc);
     return ARGON_NULL;
   }
   size_t pos = api->argon_to_i64(argv[1], err);
@@ -281,10 +321,9 @@ ArgonObject *ARGON_ARRAY_insert(size_t argc, ArgonObject **argv, ArErr *err,
     return ARGON_NULL;
   darray_armem_insert(argv[0]->value.as_array, pos, &argv[2]);
   return ARGON_NULL;
-}
+})
 
-ArgonObject *ARGON_ARRAY_pop(size_t argc, ArgonObject **argv, ArErr *err,
-                             RuntimeState *state, ArgonNativeAPI *api) {
+ARGON_METHOD(ARRAY_TYPE, pop, {
   (void)state;
   if (argc > 2 || argc < 1) {
     *err = create_err(RuntimeError,
@@ -301,59 +340,274 @@ ArgonObject *ARGON_ARRAY_pop(size_t argc, ArgonObject **argv, ArErr *err,
   if (!darray_armem_pop(arr, pos, &out))
     return api->throw_argon_error(err, IndexError, "pop from empty array");
   return out;
-}
+})
 
-ArgonObject *ARGON_ARRAY___getitem__(size_t argc, ArgonObject **argv,
-                                     ArErr *err, RuntimeState *state,
-                                     ArgonNativeAPI *api) {
+ARGON_METHOD(ARRAY_TYPE, __getitem__, {
   (void)state;
   if (argc != 2) {
     *err = create_err(RuntimeError,
                       "__getitem__ expects 2 arguments, got %" PRIu64, argc);
     return ARGON_NULL;
   }
+  darray_armem *arr = argv[0]->value.as_array;
+  if (argv[1]->type == TYPE_SLICE) { // slice
+
+    SliceIndices indices;
+    if (slice_indices(argv[1], arr->size, &indices, err, api) != 0)
+      return ARGON_NULL;
+
+    ArgonObject *slice = new_instance(ARRAY_TYPE, sizeof(darray_armem));
+    slice->type = TYPE_ARRAY;
+
+    slice->value.as_array = darray_armem_create();
+
+    int64_t size = 0;
+    if (indices.step > 0 && indices.stop > indices.start)
+      size = (indices.stop - indices.start + indices.step - 1) / indices.step;
+    else if (indices.step < 0 && indices.stop < indices.start)
+      size =
+          (indices.start - indices.stop - indices.step - 1) / (-indices.step);
+
+    darray_armem_init(slice->value.as_array, sizeof(ArgonObject *), size);
+
+    for (int64_t i = 0; i < size; i++) {
+      int64_t src_index =
+          indices.start + i * indices.step; // source index follows step
+      ((ArgonObject **)slice->value.as_array->data)[i] =
+          *(ArgonObject **)darray_armem_get(arr, src_index);
+    }
+
+    return slice;
+  }
   int64_t index = api->argon_to_i64(argv[1], err);
   if (api->is_error(err))
     return ARGON_NULL;
-  darray_armem *arr = argv[0]->value.as_array;
   if (index < 0)
     index += arr->size;
   if (index >= (int64_t)arr->size || index < 0) {
     return api->throw_argon_error(err, IndexError, "index out of range");
   }
   return *(ArgonObject **)darray_armem_get(arr, index);
-}
+})
 
-ArgonObject *ARGON_ARRAY___setitem__(size_t argc, ArgonObject **argv,
-                                     ArErr *err, RuntimeState *state,
-                                     ArgonNativeAPI *api) {
+ARGON_METHOD(ARRAY_TYPE, __setitem__, {
   (void)state;
+  darray_armem *arr = argv[0]->value.as_array;
   if (argc != 3) {
     *err = create_err(RuntimeError,
                       "__setitem__ expects 3 arguments, got %" PRIu64, argc);
     return ARGON_NULL;
   }
+  if (argv[1]->type == TYPE_SLICE) {
+    SliceIndices indices;
+    if (slice_indices(argv[1], arr->size, &indices, err, api) != 0)
+      return ARGON_NULL;
+
+    int64_t slice_len = 0;
+    if (indices.step > 0 && indices.stop > indices.start)
+      slice_len =
+          (indices.stop - indices.start + indices.step - 1) / indices.step;
+    else if (indices.step < 0 && indices.stop < indices.start)
+      slice_len =
+          (indices.start - indices.stop - indices.step - 1) / (-indices.step);
+
+    // Collect new values from the iterable (argv[2])
+    ArgonObject *iter_method = get_builtin_field_for_class(
+        get_builtin_field(argv[2], __class__), __iter__, argv[2]);
+    if (!iter_method)
+      return api->throw_argon_error(err, RuntimeError,
+                                    "Object doesn't have __iter__ method");
+    ArgonObject *iter_obj = argon_call(iter_method, 0, NULL, err, state);
+    if (api->is_error(err))
+      return ARGON_NULL;
+
+    ArgonObject *next_method = get_builtin_field_for_class(
+        get_builtin_field(iter_obj, __class__), __next__, iter_obj);
+    if (!next_method)
+      return api->throw_argon_error(
+          err, RuntimeError, "Iterator object doesn't have __next__ method");
+
+    // Collect all new items into a temporary buffer
+    darray_armem *new_items = darray_armem_create();
+    darray_armem_init(new_items, sizeof(ArgonObject *), 0);
+
+    while (true) {
+      ArgonObject *item = argon_call(next_method, 0, NULL, err, state);
+      if (err->ptr == StopIteration_instance) {
+        err->ptr = ARGON_NULL;
+        break;
+      } else if (api->is_error(err)) {
+        return ARGON_NULL;
+      }
+      darray_armem_insert(new_items, new_items->size, &item);
+    }
+
+    int64_t new_len = (int64_t)new_items->size;
+
+    if (indices.step != 1) {
+      // Extended slice: new iterable must match the slice length exactly
+      if (new_len != slice_len) {
+        return api->throw_argon_error(
+            err, ValueError,
+            "attempt to assign sequence of size %" PRId64
+            " to extended slice of size %" PRId64,
+            new_len, slice_len);
+      }
+      for (int64_t i = 0; i < slice_len; i++) {
+        int64_t dst = indices.start + i * indices.step;
+        ArgonObject *val = *(ArgonObject **)darray_armem_get(new_items, i);
+        *(ArgonObject **)darray_armem_get(arr, dst) = val;
+      }
+    } else {
+      // Simple slice (step == 1 or step == -1):
+      // Normalize so we always work left-to-right with step == 1
+      int64_t start = indices.start;
+      if (indices.step == -1) {
+        // reverse the new_items to match assignment order
+        for (int64_t lo = 0, hi = new_len - 1; lo < hi; lo++, hi--) {
+          ArgonObject **a = (ArgonObject **)darray_armem_get(new_items, lo);
+          ArgonObject **b = (ArgonObject **)darray_armem_get(new_items, hi);
+          ArgonObject *tmp = *a;
+          *a = *b;
+          *b = tmp;
+        }
+        // recalculate start for step==-1 slices: the affected region is
+        // [stop+1 .. start] inclusive, left-to-right
+        start = indices.stop + 1;
+      }
+
+      int64_t del_count = slice_len; // elements being removed
+      int64_t old_size = (int64_t)arr->size;
+      int64_t new_size = old_size - del_count + new_len;
+
+      if (new_len < del_count) {
+        // Shrink: shift tail left
+        int64_t shift = del_count - new_len;
+        for (int64_t i = start + new_len; i < new_size; i++) {
+          *(ArgonObject **)darray_armem_get(arr, i) =
+              *(ArgonObject **)darray_armem_get(arr, i + shift);
+        }
+        // Trim the array
+        arr->size = (size_t)new_size;
+      } else if (new_len > del_count) {
+        // Grow: insert extra slots by shifting tail right
+        int64_t shift = new_len - del_count;
+        // Expand backing storage
+        for (int64_t i = 0; i < shift; i++)
+          darray_armem_insert(arr, arr->size, &ARGON_NULL);
+        // Shift existing tail to the right
+        for (int64_t i = new_size - 1; i >= start + new_len; i--) {
+          *(ArgonObject **)darray_armem_get(arr, i) =
+              *(ArgonObject **)darray_armem_get(arr, i - shift);
+        }
+      }
+
+      // Write new values into [start .. start+new_len)
+      for (int64_t i = 0; i < new_len; i++) {
+        ArgonObject *val = *(ArgonObject **)darray_armem_get(new_items, i);
+        *(ArgonObject **)darray_armem_get(arr, start + i) = val;
+      }
+    }
+
+    return argv[2];
+  }
+
+  // --- integer index ---
   int64_t index = api->argon_to_i64(argv[1], err);
   if (api->is_error(err))
     return ARGON_NULL;
-  darray_armem *arr = argv[0]->value.as_array;
   if (index < 0)
     index += arr->size;
-  if (index >= (int64_t)arr->size || index < 0) {
+  if (index >= (int64_t)arr->size || index < 0)
     return api->throw_argon_error(err, IndexError, "index out of range");
-  }
-  ArgonObject **ptr = darray_armem_get(arr, index);
-  *ptr = argv[2];
-  return *ptr;
-}
 
-ArgonObject *ARGON_ARRAY___iter__(size_t argc, ArgonObject **argv, ArErr *err,
-                                  RuntimeState *state, ArgonNativeAPI *api) {
+  *(ArgonObject **)darray_armem_get(arr, index) = argv[2];
+  return argv[2];
+})
+
+ARGON_METHOD(ARRAY_TYPE, __delitem__, {
+  (void)state;
+  if (argc != 2) {
+    *err = create_err(RuntimeError,
+                      "__delitem__ expects 2 arguments, got %" PRIu64, argc);
+    return ARGON_NULL;
+  }
+
+  darray_armem *arr = argv[0]->value.as_array;
+
+  if (argv[1]->type == TYPE_SLICE) {
+    SliceIndices indices;
+    if (slice_indices(argv[1], arr->size, &indices, err, api) != 0)
+      return ARGON_NULL;
+
+    int64_t slice_len = 0;
+    if (indices.step > 0 && indices.stop > indices.start)
+      slice_len =
+          (indices.stop - indices.start + indices.step - 1) / indices.step;
+    else if (indices.step < 0 && indices.stop < indices.start)
+      slice_len =
+          (indices.start - indices.stop - indices.step - 1) / (-indices.step);
+
+    if (slice_len == 0)
+      return ARGON_NULL;
+
+    if (indices.step == 1 || indices.step == -1) {
+      // Simple slice: contiguous region to remove
+      int64_t start = (indices.step == 1) ? indices.start : indices.stop + 1;
+      int64_t old_size = (int64_t)arr->size;
+      int64_t new_size = old_size - slice_len;
+
+      // Shift tail left over the deleted region
+      for (int64_t i = start; i < new_size; i++)
+        *(ArgonObject **)darray_armem_get(arr, i) =
+            *(ArgonObject **)darray_armem_get(arr, i + slice_len);
+
+      arr->size = (size_t)new_size;
+    } else {
+      // Extended slice: delete indices individually.
+      // Collect the indices to delete, then compact in one pass.
+      // Mark slots as NULL first, then squeeze them out.
+      for (int64_t i = 0; i < slice_len; i++) {
+        int64_t idx = indices.start + i * indices.step;
+        *(ArgonObject **)darray_armem_get(arr, idx) = NULL;
+      }
+
+      int64_t write = 0;
+      for (int64_t read = 0; read < (int64_t)arr->size; read++) {
+        ArgonObject *slot = *(ArgonObject **)darray_armem_get(arr, read);
+        if (slot != NULL)
+          *(ArgonObject **)darray_armem_get(arr, write++) = slot;
+      }
+      arr->size = (size_t)write;
+    }
+
+    return ARGON_NULL;
+  }
+
+  // --- integer index ---
+  int64_t index = api->argon_to_i64(argv[1], err);
+  if (api->is_error(err))
+    return ARGON_NULL;
+  if (index < 0)
+    index += arr->size;
+  if (index >= (int64_t)arr->size || index < 0)
+    return api->throw_argon_error(err, IndexError, "index out of range");
+
+  // Shift everything after the deleted index one slot left
+  for (int64_t i = index; i < (int64_t)arr->size - 1; i++)
+    *(ArgonObject **)darray_armem_get(arr, i) =
+        *(ArgonObject **)darray_armem_get(arr, i + 1);
+
+  arr->size--;
+  return ARGON_NULL;
+})
+
+ARGON_METHOD(ARRAY_TYPE, __iter__, {
   (void)api;
   (void)state;
   if (argc != 1) {
-    *err = create_err(RuntimeError,
-                      "__iter__ expects 1 argument, got %" PRIu64, argc);
+    *err = create_err(RuntimeError, "__iter__ expects 1 argument, got %" PRIu64,
+                      argc);
     return ARGON_NULL;
   }
   ArgonObject *self = argv[0];
@@ -365,77 +619,53 @@ ArgonObject *ARGON_ARRAY___iter__(size_t argc, ArgonObject **argv, ArErr *err,
   iterator->value.as_array_iterator->current = 0;
   iterator->value.as_array_iterator->array = self->value.as_array;
   return iterator;
-}
+})
 
-ArgonObject *ARGON_ARRAY_ITERATOR___next__(size_t argc, ArgonObject **argv,
-                                           ArErr *err, RuntimeState *state,
-                                           ArgonNativeAPI *api) {
+ARGON_METHOD(ARRAY_ITERATOR_TYPE, __next__, {
   (void)api;
   (void)state;
   if (argc != 1) {
-    *err = create_err(RuntimeError,
-                      "__next__ expects 1 argument, got %" PRIu64, argc);
+    *err = create_err(RuntimeError, "__next__ expects 1 argument, got %" PRIu64,
+                      argc);
     return ARGON_NULL;
   }
   ArgonObject *self = argv[0];
   struct as_array_iterator *array_iterator = self->value.as_array_iterator;
 
   if (array_iterator->current >= array_iterator->array->size) {
-      err->ptr = StopIteration_instance;
-      return ARGON_NULL;
+    err->ptr = StopIteration_instance;
+    return ARGON_NULL;
   }
 
   ArgonObject *value = *(ArgonObject **)darray_armem_get(
       array_iterator->array, array_iterator->current++);
 
   return value;
-}
+})
 
 void init_array_type() {
   ARRAY_TYPE = new_class();
   add_builtin_field(ARRAY_TYPE, __name__,
                     new_string_object_null_terminated("array"));
-  add_builtin_field(
-      ARRAY_TYPE, __new__,
-      create_argon_native_function("__new__", ARGON_ARRAY___new__));
-  add_builtin_field(
-      ARRAY_TYPE, __string__,
-      create_argon_native_function("__string__", ARGON_ARRAY___string__));
-  add_builtin_field(ARRAY_TYPE, append,
-                    create_argon_native_function("append", ARGON_ARRAY_append));
-  add_builtin_field(ARRAY_TYPE, insert,
-                    create_argon_native_function("insert", ARGON_ARRAY_insert));
-  add_builtin_field(ARRAY_TYPE, pop,
-                    create_argon_native_function("pop", ARGON_ARRAY_pop));
-  add_builtin_field(
-      ARRAY_TYPE, get_length,
-      create_argon_native_function("get_length", ARGON_ARRAY_get_length));
-  add_builtin_field(
-      ARRAY_TYPE, set_length,
-      create_argon_native_function("set_length", ARGON_ARRAY_set_length));
-  add_builtin_field(
-      ARRAY_TYPE, __getitem__,
-      create_argon_native_function("__getitem__", ARGON_ARRAY___getitem__));
-  add_builtin_field(
-      ARRAY_TYPE, __setitem__,
-      create_argon_native_function("__setitem__", ARGON_ARRAY___setitem__));
-  add_builtin_field(
-      ARRAY_TYPE, __contains__,
-      create_argon_native_function("__contains__", ARGON_ARRAY___contains__));
-  add_builtin_field(
-      ARRAY_TYPE, __iter__,
-      create_argon_native_function("__iter__", ARGON_ARRAY___iter__));
-  add_builtin_field(
-      ARRAY_TYPE, of_size,
-      create_argon_native_function("of_size", ARGON_ARRAY_of_size));
-  add_builtin_field(
-      ARRAY_TYPE, __array__,
-      create_argon_native_function("__array__", ARGON_ARRAY___array__));
+  MOUNT_ARGON_METHOD(ARRAY_TYPE, __new__)
+  MOUNT_ARGON_METHOD(ARRAY_TYPE, __string__)
+  MOUNT_ARGON_METHOD(ARRAY_TYPE, append)
+  MOUNT_ARGON_METHOD(ARRAY_TYPE, insert)
+  MOUNT_ARGON_METHOD(ARRAY_TYPE, pop)
+  MOUNT_ARGON_METHOD(ARRAY_TYPE, get_length)
+  MOUNT_ARGON_METHOD(ARRAY_TYPE, set_length)
+  MOUNT_ARGON_METHOD(ARRAY_TYPE, join)
+  MOUNT_ARGON_METHOD(ARRAY_TYPE, __getitem__)
+  MOUNT_ARGON_METHOD(ARRAY_TYPE, __setitem__)
+  MOUNT_ARGON_METHOD(ARRAY_TYPE, __delitem__)
+  MOUNT_ARGON_METHOD(ARRAY_TYPE, __contains__)
+  MOUNT_ARGON_METHOD(ARRAY_TYPE, __iter__)
+  MOUNT_ARGON_METHOD(ARRAY_TYPE, of_size)
 
   ARRAY_ITERATOR_TYPE = new_class();
-  add_builtin_field(
-      ARRAY_ITERATOR_TYPE, __next__,
-      create_argon_native_function("__next__", ARGON_ARRAY_ITERATOR___next__));
+  add_builtin_field(ARRAY_ITERATOR_TYPE, __next__,
+                    create_argon_native_function(
+                        "__next__", ARRAY_ITERATOR_TYPE___next__));
 
   ARGON_ARRAY_CREATE =
       create_argon_native_function("ARRAY_CREATE", ARRAY_CREATE);

@@ -10,7 +10,9 @@
 
 extern ArgonObject *ARGON_STRING_TYPE;
 
-extern ArgonObject*ARGON_RENDER_TEMPLATE;
+extern ArgonObject *ARGON_RENDER_TEMPLATE;
+
+extern ArgonObject *ARGON_STRING_ITERATOR_TYPE;
 
 ArgonObject *RENDER_TEMPLATE(size_t argc, ArgonObject **argv, ArErr *err,
                              RuntimeState *state, ArgonNativeAPI *api);
@@ -34,33 +36,33 @@ ArgonObject *new_string_object_null_terminated(char *data);
 
 char *argon_string_to_c_string_malloc(ArgonObject *object);
 
-ArgonObject *ARGON_STRING_TYPE_get_length(size_t argc, ArgonObject **argv,
-                                          ArErr *err, RuntimeState *state,
-                                          ArgonNativeAPI *api);
+EXPOSE_ARGON_METHOD(ARGON_STRING_TYPE, get_length)
 
-ArgonObject *ARGON_STRING_TYPE_set_length(size_t argc, ArgonObject **argv,
-                                          ArErr *err, RuntimeState *state,
-                                          ArgonNativeAPI *api);
-ArgonObject *ARGON_STRING_TYPE___equal__(size_t argc, ArgonObject **argv,
-                                         ArErr *err, RuntimeState *state,
-                                         ArgonNativeAPI *api);
-ArgonObject *ARGON_STRING_TYPE___not_equal__(size_t argc, ArgonObject **argv,
-                                             ArErr *err, RuntimeState *state,
-                                             ArgonNativeAPI *api);
-ArgonObject *ARGON_STRING_TYPE___less_than__(size_t argc, ArgonObject **argv,
-                                             ArErr *err, RuntimeState *state,
-                                             ArgonNativeAPI *api);
-ArgonObject *ARGON_STRING_TYPE___less_than_equal__(size_t argc,
-                                                   ArgonObject **argv,
-                                                   ArErr *err,
-                                                   RuntimeState *state,
-                                                   ArgonNativeAPI *api);
-ArgonObject *ARGON_STRING_TYPE___greater_than__(size_t argc, ArgonObject **argv,
-                                                ArErr *err, RuntimeState *state,
-                                                ArgonNativeAPI *api);
-ArgonObject *ARGON_STRING_TYPE___greater_than_equal__(size_t argc,
-                                                      ArgonObject **argv,
-                                                      ArErr *err,
-                                                      RuntimeState *state,
-                                                      ArgonNativeAPI *api);
+EXPOSE_ARGON_METHOD(ARGON_STRING_TYPE, set_length)
+EXPOSE_ARGON_METHOD(ARGON_STRING_TYPE, __getitem__)
+EXPOSE_ARGON_METHOD(ARGON_STRING_TYPE, __equal__)
+
+EXPOSE_ARGON_METHOD(ARGON_STRING_TYPE, __not_equal__)
+
+EXPOSE_ARGON_METHOD(ARGON_STRING_TYPE, __less_than__)
+
+EXPOSE_ARGON_METHOD(ARGON_STRING_TYPE, __less_than_equal__)
+
+EXPOSE_ARGON_METHOD(ARGON_STRING_TYPE, __greater_than__)
+
+EXPOSE_ARGON_METHOD(ARGON_STRING_TYPE, __greater_than_equal__)
+
+EXPOSE_ARGON_METHOD(ARGON_STRING_TYPE, split)
+
+EXPOSE_ARGON_METHOD(ARGON_STRING_TYPE, __iter__)
+EXPOSE_ARGON_METHOD(ARGON_STRING_ITERATOR_TYPE, __next__)
+EXPOSE_ARGON_METHOD(ARGON_STRING_TYPE, chr)
+EXPOSE_ARGON_METHOD(ARGON_STRING_TYPE, ord)
+EXPOSE_ARGON_METHOD(ARGON_STRING_TYPE, __contains__)
+EXPOSE_ARGON_METHOD(ARGON_STRING_TYPE, upper)
+EXPOSE_ARGON_METHOD(ARGON_STRING_TYPE, lower)
+EXPOSE_ARGON_METHOD(ARGON_STRING_TYPE, title)
+EXPOSE_ARGON_METHOD(ARGON_STRING_TYPE, replace)
+
+void init_small_chars();
 #endif // STRING_OBJ_H
