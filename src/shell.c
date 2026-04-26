@@ -7,7 +7,6 @@
 #include "./lexer/lexer.h"
 #include "./lexer/token.h"
 #include "./runtime/call/call.h"
-#include "./runtime/objects/functions/functions.h"
 #include "./runtime/objects/term/term.h"
 #include "./runtime/runtime.h"
 #include "./translator/translator.h"
@@ -40,7 +39,15 @@ void handle_sigint(int sig) {
 
 int execute_code(char *context, char *path, Stack *scope,
                  RuntimeState *runtime_state) {
+#ifdef _WIN32
   signal(SIGINT, sigint_handler);
+#else
+  struct sigaction sa = {0};
+  sa.sa_handler = sigint_handler;
+  sigemptyset(&sa.sa_mask);
+  sa.sa_flags = 0;
+  sigaction(SIGINT, &sa, NULL);
+#endif
   ArErr err = no_err;
 
   DArray tokens;
@@ -195,10 +202,12 @@ int shell() {
   printf("Chloride %s Copyright (C) 2026 William Bell\n"
          "This program comes with ABSOLUTELY NO WARRANTY; for details type "
          "\"license\".\n"
-         "This is libre (freedom-respecting) software released under the GNU "
+         "This is free software released under the GNU "
          "GPL Version 3 or later,\n"
          "and you are welcome to redistribute it under certain conditions; "
-         "type \"license\" for details.\n\n",
+         "type \"license\" for details.\n"
+         "You can learn more about what the term \"free software\" means at "
+         "https://www.gnu.org/philosophy/free-sw.html\n\n",
          version_string);
 
   ArgonObject *output_object = create_argon_native_function("log", term_log);

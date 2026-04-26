@@ -20,6 +20,7 @@
 #include "class/class.h"
 #include "continue/continue.h"
 #include "declaration/declaration.h"
+#include "delete/delete.h"
 #include "dowrap/dowrap.h"
 #include "for/for.h"
 #include "function/function.h"
@@ -200,6 +201,9 @@ size_t translate_parsed(Translated *translated, ParsedValue *parsedValue,
   case AST_RETURN:
     return translate_parsed_return(translated,
                                    (ParsedReturn *)parsedValue->data, err);
+  case AST_DELETE:
+    return translate_parsed_delete(translated,
+                                   (ParsedDelete *)parsedValue->data, err);
   case AST_BREAK:
     return translate_parsed_break(
         translated, (ParsedContinueOrBreak *)parsedValue->data, err);

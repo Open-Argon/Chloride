@@ -53,6 +53,7 @@ typedef enum {
   AST_DICTIONARY,
   AST_FUNCTION,
   AST_RETURN,
+  AST_DELETE,
   AST_THROW,
   AST_CONTINUE,
   AST_BREAK,
@@ -65,8 +66,6 @@ typedef enum {
   AST_RANGE,
   AST_TRY
 } ValueType;
-
-extern const char *ValueTypeNames[];
 
 typedef struct {
   ValueType type;

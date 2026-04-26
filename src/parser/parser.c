@@ -18,6 +18,7 @@
 #include "class/class.h"
 #include "continue/continue.h"
 #include "declaration/declaration.h"
+#include "delete/delete.h"
 #include "dictionary/dictionary.h"
 #include "dowrap/dowrap.h"
 #include "for/for.h"
@@ -43,12 +44,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-const char *ValueTypeNames[] = {
-    "string",  "assign",     "identifier",  "number",     "if statement",
-    "access",  "call",       "declaration", "null",       "boolean",
-    "do wrap", "operations", "list",        "dictionary", "function",
-    "return",  "while loop", "not"};
 
 ArErr error_if_finished(char *file, DArray *tokens, size_t *index) {
   if ((*index) >= tokens->size) {
@@ -102,6 +97,8 @@ ParsedValueReturn parse_token_full(char *file, DArray *tokens, size_t *index,
       return parse_continue(tokens, index);
     case TOKEN_BREAK:
       return parse_break(tokens, index);
+    case TOKEN_DELETE:
+      return parse_delete(file, tokens, index);
     case TOKEN_LET:
       return parse_declaration(file, tokens, index);
     case TOKEN_CLASS:
@@ -340,6 +337,9 @@ void free_parsed(ParsedValue *ptr) {
     break;
   case AST_BREAK:
     free_parsed_break(parsed);
+    break;
+  case AST_DELETE:
+    free_parsed_delete(parsed);
     break;
   case AST_TO_BOOL:
     free_not(parsed);

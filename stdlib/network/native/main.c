@@ -35,7 +35,7 @@ ArgonObject *argon_net_cleanup(size_t argc, ArgonObject **argv, ArgonError *err,
 ArgonObject *argon_net_listen(size_t argc, ArgonObject **argv, ArgonError *err,
                               ArgonState *state, ArgonNativeAPI *api) {
   (void)state;
-  if (api->fix_to_arg_size(1, argc, err))
+  if (api->fix_to_arg_size(2, argc, err))
     return api->ARGON_NULL;
 
   int64_t port = api->argon_to_i64(argv[0], err);
@@ -49,7 +49,7 @@ ArgonObject *argon_net_listen(size_t argc, ArgonObject **argv, ArgonError *err,
   if (server_socket < 0)
 #endif
     return api->throw_argon_error(
-        err, "Socket Error", "failed to open a tcp socket on port %" PRIu64,
+        err, argv[1], "failed to open a tcp socket on port %" PRIu64,
         port);
 
   ArgonObject *server_socket_buffer_object =
@@ -65,7 +65,7 @@ ArgonObject *argon_net_listen(size_t argc, ArgonObject **argv, ArgonError *err,
 ArgonObject *argon_net_accept(size_t argc, ArgonObject **argv, ArgonError *err,
                               ArgonState *state, ArgonNativeAPI *api) {
   (void)state;
-  if (api->fix_to_arg_size(1, argc, err))
+  if (api->fix_to_arg_size(2, argc, err))
     return api->ARGON_NULL;
 
   struct buffer server_socket_buffer =
@@ -81,7 +81,7 @@ ArgonObject *argon_net_accept(size_t argc, ArgonObject **argv, ArgonError *err,
 #else
   if (connection_socket < 0)
 #endif
-    return api->throw_argon_error(err, "Socket Error",
+    return api->throw_argon_error(err, argv[1],
                                   "failed to accept a socket connection");
 
   ArgonObject *connection_socket_buffer_object =

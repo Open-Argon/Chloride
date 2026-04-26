@@ -5,16 +5,16 @@
  */
 
 #include "assign.h"
+#include "../../../err.h"
 #include "../../../lexer/token.h"
 #include "../../../memory.h"
+#include "../../../runtime/objects/exceptions/exceptions.h"
 #include "../../function/function.h"
 #include "../../parser.h"
 #include "../../string/string.h"
 #include "../access/access.h"
 #include "../call/call.h"
 #include "../identifier/identifier.h"
-#include "../../../runtime/objects/exceptions/exceptions.h"
-#include "../../../err.h"
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -80,12 +80,13 @@ ParsedValueReturn parse_assign(char *file, DArray *tokens,
     }
     break;
   default:;
-    ArErr err = path_specific_create_err(token->line, token->column, token->length, file,
-                           SyntaxError, "can't assign to %s",
-                           ValueTypeNames[assign_to->type]);
     free_parsed(assign_to);
     free(assign_to);
-    return (ParsedValueReturn){err, NULL};
+    return (ParsedValueReturn){
+        path_specific_create_err(
+            token->line, token->column, token->length, file, SyntaxError,
+            "assigning to something which can't be assigned to"),
+        NULL};
   }
   (*index)++;
   ArErr err = error_if_finished(file, tokens, index);
@@ -104,15 +105,16 @@ ParsedValueReturn parse_assign(char *file, DArray *tokens,
   if (!from.value) {
     free_parsed(assign_to);
     free(assign_to);
-    return (ParsedValueReturn){path_specific_create_err(token->line, token->column,
-                                          token->length, file, SyntaxError,
-                                          "expected body"),
-                               NULL};
+    return (ParsedValueReturn){
+        path_specific_create_err(token->line, token->column, token->length,
+                                 file, SyntaxError, "expected body"),
+        NULL};
   }
   if (is_function) {
     from.value =
         create_parsed_function(function_name, function_args, from.value);
-    if (to_free_function_name) free(function_name);
+    if (to_free_function_name)
+      free(function_name);
     free(assign_to->data);
     free(assign_to);
     assign_to = function_assign_to;

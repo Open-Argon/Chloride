@@ -1,0 +1,5 @@
+let holiday=[{country:"japan", colour:"red"}, {country:"new zealand", colour:"blue"}, {country:"australia", colour:"yellow"}]
+
+delete holiday
+
+term.log(holiday)

@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+#include "../external/cwalk/include/cwalk.h"
+#include "arobject.h"
 #include "err.h"
 #include "import.h"
 #include "memory.h"
@@ -21,6 +23,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 #ifdef _WIN32
 #include <windows.h>
@@ -28,41 +31,30 @@
 
 atomic_int thread_count = 0;
 
-char *get_current_directory() {
-  char *buffer = NULL;
+int get_current_directory(char *buffer, size_t size) {
 
 #ifdef _WIN32
-  DWORD size = GetCurrentDirectoryA(0, NULL);
-  buffer = malloc(size);
-  if (buffer == NULL)
-    return NULL;
   if (GetCurrentDirectoryA(size, buffer) == 0) {
-    free(buffer);
-    return NULL;
+    return -1;
   }
 #else
-  long size = pathconf(".", _PC_PATH_MAX);
-  if (size == -1)
-    size = 4096; // fallback
-  buffer = malloc(size);
-  if (buffer == NULL)
-    return NULL;
   if (getcwd(buffer, size) == NULL) {
-    free(buffer);
-    return NULL;
+    return -1;
   }
 #endif
 
-  return buffer;
+  return 0;
 }
 
 volatile sig_atomic_t KeyboardInterrupted = 0;
 
-void sigint_handler(int signum) {
-  KeyboardInterrupted = signum;
-}
+void sigint_handler(int signum) { KeyboardInterrupted = signum; }
 
 int main(int argc, char *argv[]) {
+  if (argc >= 2 && strcmp(argv[1], "--version") == 0) {
+    printf("%s\n", version_string);
+    return 0;
+  }
   setlocale(LC_ALL, "");
   ar_memory_init();
   // generate_siphash_key(siphash_key);
@@ -73,13 +65,25 @@ int main(int argc, char *argv[]) {
   imported_hash_table = createHashmap_GC();
   importing_hash_table = createHashmap_GC();
   // runtime_hash_table = createHashmap_GC();
-  CWD = get_current_directory();
-  EXC = get_executable_path();
-  CWD_ARGON = CWD ? new_string_object_null_terminated(CWD) : ARGON_NULL;
-  EXC_ARGON = EXC ? new_string_object_null_terminated(EXC) : ARGON_NULL;
+  get_current_directory(CWD, sizeof(CWD));
+  get_executable_path(EXC, sizeof(EXC));
+  size_t dir_length;
+  cwk_path_get_dirname(EXC, &dir_length);
+  memcpy(EXC_DIR, EXC, dir_length);
+  EXC[dir_length] = '\0';
+  CWD_ARGON = new_string_object_null_terminated(CWD);
+  EXC_ARGON = new_string_object_null_terminated(EXC);
   if (argc <= 1)
     return shell();
+#ifdef _WIN32
   signal(SIGINT, sigint_handler);
+#else
+  struct sigaction sa = {0};
+  sa.sa_handler = sigint_handler;
+  sigemptyset(&sa.sa_mask);
+  sa.sa_flags = 0;
+  sigaction(SIGINT, &sa, NULL);
+#endif
   char *path_non_absolute = argv[1];
   ArErr err = {.ptr = ARGON_NULL};
 
@@ -88,7 +92,6 @@ int main(int argc, char *argv[]) {
     output_err(&err);
     return 1;
   }
-  free(CWD);
   ar_memory_shutdown();
   // Your main thread code
   return 0;

@@ -110,12 +110,14 @@ ArErr path_specific_create_err(int64_t line, int64_t column, int64_t length,
 ArErr vcreate_err(ArgonObject *type, const char *fmt, va_list args) {
   ArgonObject *err_instance = new_instance(type, 0);
 
-  char *msg = vfmt_alloc(fmt, args);
+  if (fmt) {
+    char *msg = vfmt_alloc(fmt, args);
 
-  add_builtin_field(err_instance, message,
-                    new_string_object_null_terminated(msg));
+    add_builtin_field(err_instance, message,
+                      new_string_object_null_terminated(msg));
 
-  free(msg);
+    free(msg);
+  }
 
   add_builtin_field(err_instance, stack_trace,
                     ARRAY_CREATE(0, NULL, NULL, NULL, NULL));

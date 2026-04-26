@@ -14,7 +14,7 @@
 ArgonObject *Argon_connect_database(size_t argc, ArgonObject **argv,
                                     ArgonError *err, ArgonState *state,
                                     ArgonNativeAPI *api) {
-  if (api->fix_to_arg_size(1, argc, err)) {
+  if (api->fix_to_arg_size(2, argc, err)) {
     return api->ARGON_NULL;
   }
 
@@ -36,7 +36,7 @@ ArgonObject *Argon_connect_database(size_t argc, ArgonObject **argv,
   free(path);
 
   if (rc) {
-    return api->throw_argon_error(err, "sqlite error", "%s",
+    return api->throw_argon_error(err, argv[1], "%s",
                                   sqlite3_errmsg(*(sqlite3 **)db.data));
   }
 
@@ -46,7 +46,7 @@ ArgonObject *Argon_connect_database(size_t argc, ArgonObject **argv,
 ArgonObject *Argon_close_database(size_t argc, ArgonObject **argv,
                                   ArgonError *err, ArgonState *state,
                                   ArgonNativeAPI *api) {
-  if (api->fix_to_arg_size(1, argc, err)) {
+  if (api->fix_to_arg_size(2, argc, err)) {
     return api->ARGON_NULL;
   }
 
@@ -57,7 +57,7 @@ ArgonObject *Argon_close_database(size_t argc, ArgonObject **argv,
   int rc = sqlite3_close(*(sqlite3 **)db.data);
 
   if (rc) {
-    return api->throw_argon_error(err, "sqlite error", "%s",
+    return api->throw_argon_error(err, argv[1], "%s",
                                   sqlite3_errmsg(*(sqlite3 **)db.data));
   }
 
@@ -67,7 +67,7 @@ ArgonObject *Argon_close_database(size_t argc, ArgonObject **argv,
 ArgonObject *Argon_new_statement(size_t argc, ArgonObject **argv,
                                  ArgonError *err, ArgonState *state,
                                  ArgonNativeAPI *api) {
-  if (api->fix_to_arg_size(2, argc, err)) {
+  if (api->fix_to_arg_size(3, argc, err)) {
     return api->ARGON_NULL;
   }
 
@@ -93,7 +93,7 @@ ArgonObject *Argon_new_statement(size_t argc, ArgonObject **argv,
                               (const char **)&query.data);
 
   if (rc) {
-    return api->throw_argon_error(err, "sqlite error", "%s",
+    return api->throw_argon_error(err, argv[2], "%s",
                                   sqlite3_errmsg(*db));
   }
 
@@ -103,7 +103,7 @@ ArgonObject *Argon_new_statement(size_t argc, ArgonObject **argv,
 ArgonObject *Argon_finalise_statement(size_t argc, ArgonObject **argv,
                                       ArgonError *err, ArgonState *state,
                                       ArgonNativeAPI *api) {
-  if (api->fix_to_arg_size(2, argc, err)) {
+  if (api->fix_to_arg_size(3, argc, err)) {
     return api->ARGON_NULL;
   }
 
@@ -121,7 +121,7 @@ ArgonObject *Argon_finalise_statement(size_t argc, ArgonObject **argv,
   int rc = sqlite3_finalize(*stmt);
 
   if (rc) {
-    return api->throw_argon_error(err, "sqlite error", "%s",
+    return api->throw_argon_error(err, argv[2], "%s",
                                   sqlite3_errmsg(*db));
   }
 
@@ -131,7 +131,7 @@ ArgonObject *Argon_finalise_statement(size_t argc, ArgonObject **argv,
 ArgonObject *Argon_execute_statement(size_t argc, ArgonObject **argv,
                                      ArgonError *err, ArgonState *state,
                                      ArgonNativeAPI *api) {
-  if (api->fix_to_arg_size(3, argc, err)) {
+  if (api->fix_to_arg_size(4, argc, err)) {
     return api->ARGON_NULL;
   }
 
@@ -164,7 +164,7 @@ ArgonObject *Argon_execute_statement(size_t argc, ArgonObject **argv,
       int rc = sqlite3_bind_text(*stmt, i + 1, str.data, str.length,
                                  SQLITE_TRANSIENT);
       if (rc != SQLITE_OK) {
-        return api->throw_argon_error(err, "sqlite error", "%s",
+        return api->throw_argon_error(err, argv[3], "%s",
                                       sqlite3_errmsg(*db));
       }
       break;
@@ -177,7 +177,7 @@ ArgonObject *Argon_execute_statement(size_t argc, ArgonObject **argv,
         }
         int rc = sqlite3_bind_int64(*stmt, i + 1, num);
         if (rc != SQLITE_OK) {
-          return api->throw_argon_error(err, "sqlite error", "%s",
+          return api->throw_argon_error(err, argv[3], "%s",
                                         sqlite3_errmsg(*db));
         }
       } else {
@@ -187,7 +187,7 @@ ArgonObject *Argon_execute_statement(size_t argc, ArgonObject **argv,
         }
         int rc = sqlite3_bind_double(*stmt, i + 1, num);
         if (rc != SQLITE_OK) {
-          return api->throw_argon_error(err, "sqlite error", "%s",
+          return api->throw_argon_error(err, argv[3], "%s",
                                         sqlite3_errmsg(*db));
         }
       }
@@ -197,7 +197,7 @@ ArgonObject *Argon_execute_statement(size_t argc, ArgonObject **argv,
       int rc =
           sqlite3_bind_int64(*stmt, i + 1, item == api->ARGON_TRUE ? 1 : 0);
       if (rc != SQLITE_OK) {
-        return api->throw_argon_error(err, "sqlite error", "%s",
+        return api->throw_argon_error(err, argv[3], "%s",
                                       sqlite3_errmsg(*db));
       }
       break;
@@ -209,7 +209,7 @@ ArgonObject *Argon_execute_statement(size_t argc, ArgonObject **argv,
       int rc =
           sqlite3_bind_blob(*stmt, i + 1, buf.data, buf.size, SQLITE_TRANSIENT);
       if (rc != SQLITE_OK) {
-        return api->throw_argon_error(err, "sqlite error", "%s",
+        return api->throw_argon_error(err, argv[3], "%s",
                                       sqlite3_errmsg(*db));
       }
       break;
@@ -217,7 +217,7 @@ ArgonObject *Argon_execute_statement(size_t argc, ArgonObject **argv,
     case TYPE_NULL: {
       int rc = sqlite3_bind_null(*stmt, i + 1);
       if (rc != SQLITE_OK) {
-        return api->throw_argon_error(err, "sqlite error", "%s",
+        return api->throw_argon_error(err, argv[3], "%s",
                                       sqlite3_errmsg(*db));
       }
       break;
@@ -229,7 +229,7 @@ ArgonObject *Argon_execute_statement(size_t argc, ArgonObject **argv,
     int rc = sqlite3_step(*stmt);
 
     if (rc != SQLITE_DONE) {
-      return api->throw_argon_error(err, "sqlite error", "%s",
+      return api->throw_argon_error(err, argv[3], "%s",
                                     sqlite3_errmsg(*db));
     }
   }
@@ -240,7 +240,7 @@ ArgonObject *Argon_execute_statement(size_t argc, ArgonObject **argv,
 ArgonObject *Argon_statement_fetch(size_t argc, ArgonObject **argv,
                                    ArgonError *err, ArgonState *state,
                                    ArgonNativeAPI *api) {
-  if (api->fix_to_arg_size(3, argc, err)) {
+  if (api->fix_to_arg_size(4, argc, err)) {
     return api->ARGON_NULL;
   }
 
@@ -303,10 +303,10 @@ ArgonObject *Argon_statement_fetch(size_t argc, ArgonObject **argv,
     }
     return api->ARGON_NULL;
   } else if (rc != SQLITE_DONE) {
-    return api->throw_argon_error(err, "sqlite error", "%s",
+    return api->throw_argon_error(err, argv[3], "%s",
                                   sqlite3_errmsg(*db));
   }
-  return api->END_ITERATION;
+  return api->throw_argon_signal(err, api->SignalStopIteration);
 }
 
 void argon_module_init(ArgonState *vm, ArgonNativeAPI *api, ArgonError *err,

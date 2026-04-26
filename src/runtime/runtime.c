@@ -27,6 +27,7 @@
 #include "objects/literals/literals.h"
 #include "objects/number/number.h"
 #include "objects/object.h"
+#include "objects/slice/slice.h"
 #include "objects/string/string.h"
 #include "objects/term/term.h"
 #include "objects/tuple/tuple.h"
@@ -121,9 +122,7 @@ ArgonObject *LESS_THAN_EQUAL_FUNCTION;
 ArgonObject *GREATER_THAN_FUNCTION;
 ArgonObject *GREATER_THAN_EQUAL_FUNCTION;
 
-ArgonObject *BASE_CLASS___getattribute__(size_t argc, ArgonObject **argv,
-                                         ArErr *err, RuntimeState *state,
-                                         ArgonNativeAPI *api) {
+ARGON_METHOD(BASE_CLASS, __getattribute__, {
   (void)state;
   (void)api;
   if (argc != 2) {
@@ -183,7 +182,7 @@ ArgonObject *BASE_CLASS___getattribute__(size_t argc, ArgonObject **argv,
                  (int)name->value.as_str->length, name->value.as_str->data,
                  (int)access->value.as_str->length, access->value.as_str->data);
   return ARGON_NULL;
-}
+})
 
 ArgonObject *ARGON_ADDITION_FUNCTION(size_t argc, ArgonObject **argv,
                                      ArErr *err, RuntimeState *state,
@@ -559,9 +558,7 @@ ArgonObject *ARGON_GREATER_THAN_EQUAL_FUNCTION(size_t argc, ArgonObject **argv,
   return output;
 }
 
-ArgonObject *ARGON_TYPE_TYPE___call__(size_t argc, ArgonObject **argv,
-                                      ArErr *err, RuntimeState *state,
-                                      ArgonNativeAPI *api) {
+ARGON_METHOD(ARGON_TYPE_TYPE, __call__, {
   (void)api;
   (void)state;
   if (argc < 1) {
@@ -613,10 +610,9 @@ ArgonObject *ARGON_TYPE_TYPE___call__(size_t argc, ArgonObject **argv,
   }
 
   return new_object;
-}
+});
 
-ArgonObject *BASE_CLASS_address(size_t argc, ArgonObject **argv, ArErr *err,
-                                RuntimeState *state, ArgonNativeAPI *api) {
+ARGON_METHOD(BASE_CLASS, address, {
   (void)api;
   (void)state;
   if (argc < 1) {
@@ -628,10 +624,9 @@ ArgonObject *BASE_CLASS_address(size_t argc, ArgonObject **argv, ArErr *err,
   char buffer[32];
   snprintf(buffer, sizeof(buffer), "%p", argv[0]);
   return new_string_object_null_terminated(buffer);
-}
+})
 
-ArgonObject *BASE_CLASS___new__(size_t argc, ArgonObject **argv, ArErr *err,
-                                RuntimeState *state, ArgonNativeAPI *api) {
+ARGON_METHOD(BASE_CLASS, __new__, {
   (void)api;
   (void)state;
   if (argc < 1) {
@@ -642,10 +637,9 @@ ArgonObject *BASE_CLASS___new__(size_t argc, ArgonObject **argv, ArErr *err,
   }
   ArgonObject *new_obj = new_instance(argv[0], 0);
   return new_obj;
-}
+})
 
-ArgonObject *BASE_CLASS___init__(size_t argc, ArgonObject **argv, ArErr *err,
-                                 RuntimeState *state, ArgonNativeAPI *api) {
+ARGON_METHOD(BASE_CLASS, __init__, {
   (void)api;
   (void)state;
   (void)argv;
@@ -655,10 +649,9 @@ ArgonObject *BASE_CLASS___init__(size_t argc, ArgonObject **argv, ArErr *err,
     return ARGON_NULL;
   }
   return ARGON_NULL;
-}
+})
 
-ArgonObject *BASE_CLASS___setattr__(size_t argc, ArgonObject **argv, ArErr *err,
-                                    RuntimeState *state, ArgonNativeAPI *api) {
+ARGON_METHOD(BASE_CLASS, __setattr__, {
   (void)api;
   (void)state;
   if (argc != 3) {
@@ -693,10 +686,9 @@ ArgonObject *BASE_CLASS___setattr__(size_t argc, ArgonObject **argv, ArErr *err,
   add_field_l(argv[0], argv[1]->value.as_str->data, argv[1]->value.as_str->hash,
               argv[1]->value.as_str->length, argv[2]);
   return argv[2];
-}
+})
 
-ArgonObject *BASE_CLASS___string__(size_t argc, ArgonObject **argv, ArErr *err,
-                                   RuntimeState *state, ArgonNativeAPI *api) {
+ARGON_METHOD(BASE_CLASS, __string__, {
   (void)api;
   (void)state;
   if (argc != 1) {
@@ -724,10 +716,9 @@ ArgonObject *BASE_CLASS___string__(size_t argc, ArgonObject **argv, ArErr *err,
   else
     snprintf(buffer, sizeof(buffer), "<object at %p>", argv[0]);
   return new_string_object_null_terminated(buffer);
-}
+})
 
-ArgonObject *BASE_CLASS___repr__(size_t argc, ArgonObject **argv, ArErr *err,
-                                 RuntimeState *state, ArgonNativeAPI *api) {
+ARGON_METHOD(BASE_CLASS, __repr__, {
   (void)api;
   if (argc != 1) {
     *err = create_err(RuntimeError, "__repr__ expects 1 argument, got %" PRIu64,
@@ -736,10 +727,9 @@ ArgonObject *BASE_CLASS___repr__(size_t argc, ArgonObject **argv, ArErr *err,
   ArgonObject *string_method = get_builtin_field_for_class(
       get_builtin_field(argv[0], __class__), __string__, argv[0]);
   return argon_call(string_method, 0, NULL, err, state);
-}
+})
 
-ArgonObject *BASE_CLASS___boolean__(size_t argc, ArgonObject **argv, ArErr *err,
-                                    RuntimeState *state, ArgonNativeAPI *api) {
+ARGON_METHOD(BASE_CLASS, __boolean__, {
   (void)api;
   (void)argv;
   (void)state;
@@ -748,10 +738,9 @@ ArgonObject *BASE_CLASS___boolean__(size_t argc, ArgonObject **argv, ArErr *err,
                       "__boolean__ expects 1 argument, got %" PRIu64, argc);
   }
   return ARGON_TRUE;
-}
+})
 
-ArgonObject *BASE_CLASS___equal__(size_t argc, ArgonObject **argv, ArErr *err,
-                                  RuntimeState *state, ArgonNativeAPI *api) {
+ARGON_METHOD(BASE_CLASS, __equal__, {
   (void)api;
   (void)argv;
   (void)state;
@@ -760,11 +749,9 @@ ArgonObject *BASE_CLASS___equal__(size_t argc, ArgonObject **argv, ArErr *err,
                       "__equal__ expects 2 arguments, got %" PRIu64, argc);
   }
   return argv[0] == argv[1] ? ARGON_TRUE : ARGON_FALSE;
-}
+})
 
-ArgonObject *BASE_CLASS___not_equal__(size_t argc, ArgonObject **argv,
-                                      ArErr *err, RuntimeState *state,
-                                      ArgonNativeAPI *api) {
+ARGON_METHOD(BASE_CLASS, __not_equal__, {
   (void)api;
   (void)argv;
   (void)state;
@@ -773,11 +760,9 @@ ArgonObject *BASE_CLASS___not_equal__(size_t argc, ArgonObject **argv,
                       "__boolean__ expects 2 arguments, got %" PRIu64, argc);
   }
   return argv[0] != argv[1] ? ARGON_TRUE : ARGON_FALSE;
-}
+})
 
-ArgonObject *ARGON_STRING_TYPE___new__(size_t argc, ArgonObject **argv,
-                                       ArErr *err, RuntimeState *state,
-                                       ArgonNativeAPI *api) {
+ARGON_METHOD(ARGON_STRING_TYPE, __new__, {
   (void)api;
   (void)state;
   if (argc < 1) {
@@ -788,11 +773,9 @@ ArgonObject *ARGON_STRING_TYPE___new__(size_t argc, ArgonObject **argv,
   }
   ArgonObject *new_obj = new_instance(argv[0], sizeof(struct string_struct));
   return new_obj;
-}
+})
 
-ArgonObject *ARGON_STRING_TYPE___init__(size_t argc, ArgonObject **argv,
-                                        ArErr *err, RuntimeState *state,
-                                        ArgonNativeAPI *api) {
+ARGON_METHOD(ARGON_STRING_TYPE, __init__, {
   (void)api;
   if (argc != 2) {
     *err = create_err(RuntimeError,
@@ -815,7 +798,7 @@ ArgonObject *ARGON_STRING_TYPE___init__(size_t argc, ArgonObject **argv,
   }
   *err = create_err(ConversionError, "cannot convert to string");
   return ARGON_NULL;
-}
+})
 
 ArgonObject *ARGON_BOOL_TYPE___new__(size_t argc, ArgonObject **argv,
                                      ArErr *err, RuntimeState *state,
@@ -847,9 +830,7 @@ ArgonObject *ARGON_BOOL_TYPE___new__(size_t argc, ArgonObject **argv,
   return ARGON_NULL;
 }
 
-ArgonObject *ARGON_STRING_TYPE___add__(size_t argc, ArgonObject **argv,
-                                       ArErr *err, RuntimeState *state,
-                                       ArgonNativeAPI *api) {
+ARGON_METHOD(ARGON_STRING_TYPE, __add__, {
   (void)api;
   (void)state;
   if (argc != 2) {
@@ -873,7 +854,7 @@ ArgonObject *ARGON_STRING_TYPE___add__(size_t argc, ArgonObject **argv,
          argv[1]->value.as_str->length);
   ArgonObject *object = new_string_object_without_memcpy(concat, length, 0);
   return object;
-}
+})
 
 ArgonObject *ARGON_BOOL_TYPE___string__(size_t argc, ArgonObject **argv,
                                         ArErr *err, RuntimeState *state,
@@ -902,9 +883,7 @@ ArgonObject *ARGON_BOOL_TYPE___number__(size_t argc, ArgonObject **argv,
   return new_number_object_from_int64(argv[0] == ARGON_TRUE);
 }
 
-ArgonObject *ARGON_STRING_TYPE___string__(size_t argc, ArgonObject **argv,
-                                          ArErr *err, RuntimeState *state,
-                                          ArgonNativeAPI *api) {
+ARGON_METHOD(ARGON_STRING_TYPE, __string__, {
   (void)api;
   (void)state;
   if (argc != 1) {
@@ -912,25 +891,24 @@ ArgonObject *ARGON_STRING_TYPE___string__(size_t argc, ArgonObject **argv,
                       "__string__ expects 1 argument, got %" PRIu64, argc);
   }
   return argv[0];
-}
-ArgonObject *ARGON_STRING_TYPE___repr__(size_t argc, ArgonObject **argv,
-                                        ArErr *err, RuntimeState *state,
-                                        ArgonNativeAPI *api) {
+})
+ARGON_METHOD(ARGON_STRING_TYPE, __repr__, {
   (void)api;
   (void)state;
   if (argc != 1) {
     *err = create_err(RuntimeError, "__repr__ expects 1 argument, got %" PRIu64,
                       argc);
+    return ARGON_NULL;
   }
-  char *quoted = c_quote_string(argv[0]->value.as_str->data,
-                                argv[0]->value.as_str->length);
+  struct string self = api->argon_to_string(argv[0], err);
+  if (api->is_error(err))
+    return ARGON_NULL;
+  char *quoted = c_quote_string(self.data, self.length);
   ArgonObject *result = new_string_object_null_terminated(quoted);
   free(quoted);
   return result;
-}
-ArgonObject *ARGON_STRING_TYPE___hash__(size_t argc, ArgonObject **argv,
-                                        ArErr *err, RuntimeState *state,
-                                        ArgonNativeAPI *api) {
+})
+ARGON_METHOD(ARGON_STRING_TYPE, __hash__, {
   (void)api;
   (void)state;
   if (argc != 1) {
@@ -946,11 +924,9 @@ ArgonObject *ARGON_STRING_TYPE___hash__(size_t argc, ArgonObject **argv,
     argv[0]->value.as_str->hash = hash;
   }
   return new_number_object_from_int64(hash);
-}
+})
 
-ArgonObject *ARGON_STRING_TYPE___number__(size_t argc, ArgonObject **argv,
-                                          ArErr *err, RuntimeState *state,
-                                          ArgonNativeAPI *api) {
+ARGON_METHOD(ARGON_STRING_TYPE, __number__, {
   (void)api;
   (void)state;
   if (argc != 1) {
@@ -971,11 +947,9 @@ ArgonObject *ARGON_STRING_TYPE___number__(size_t argc, ArgonObject **argv,
   ArgonObject *object = new_number_object(r);
   mpq_clear(r);
   return object;
-}
+})
 
-ArgonObject *ARGON_STRING_TYPE___boolean__(size_t argc, ArgonObject **argv,
-                                           ArErr *err, RuntimeState *state,
-                                           ArgonNativeAPI *api) {
+ARGON_METHOD(ARGON_STRING_TYPE, __boolean__, {
   (void)api;
   (void)state;
   if (argc != 1) {
@@ -983,7 +957,7 @@ ArgonObject *ARGON_STRING_TYPE___boolean__(size_t argc, ArgonObject **argv,
                       "__boolean__ expects 1 argument, got %" PRIu64, argc);
   }
   return argv[0]->value.as_str->length == 0 ? ARGON_FALSE : ARGON_TRUE;
-}
+})
 
 ArgonObject *ARGON_BOOL_TYPE___boolean__(size_t argc, ArgonObject **argv,
                                          ArErr *err, RuntimeState *state,
@@ -1088,111 +1062,59 @@ void bootstrap_types() {
   add_builtin_field(ARGON_FUNCTION_TYPE, __base__, BASE_CLASS);
   add_builtin_field(ARGON_FUNCTION_TYPE, __name__,
                     new_string_object_null_terminated("function"));
+  add_builtin_field(ARGON_FUNCTION_TYPE, __new__, NULL);
 
   ARGON_METHOD_TYPE = new_class();
   add_builtin_field(ARGON_METHOD_TYPE, __base__, BASE_CLASS);
   add_builtin_field(ARGON_METHOD_TYPE, __name__,
                     new_string_object_null_terminated("method"));
 
-  add_builtin_field(
-      BASE_CLASS, __new__,
-      create_argon_native_function("__new__", BASE_CLASS___new__));
+  MOUNT_ARGON_METHOD(BASE_CLASS, __new__)
   add_builtin_field(
       BASE_CLASS, field__address,
       create_argon_native_function("address", BASE_CLASS_address));
   add_builtin_field(
       BASE_CLASS, __init__,
       create_argon_native_function("__init__", BASE_CLASS___new__));
-  add_builtin_field(
-      BASE_CLASS, __string__,
-      create_argon_native_function("__string__", BASE_CLASS___string__));
-  add_builtin_field(
-      BASE_CLASS, __repr__,
-      create_argon_native_function("__repr__", BASE_CLASS___repr__));
-  add_builtin_field(
-      ARGON_TYPE_TYPE, __call__,
-      create_argon_native_function("__call__", ARGON_TYPE_TYPE___call__));
-  add_builtin_field(
-      ARGON_STRING_TYPE, __new__,
-      create_argon_native_function("__new__", ARGON_STRING_TYPE___new__));
-  add_builtin_field(
-      ARGON_STRING_TYPE, __init__,
-      create_argon_native_function("__init__", ARGON_STRING_TYPE___init__));
-  add_builtin_field(
-      ARGON_STRING_TYPE, __hash__,
-      create_argon_native_function("__hash__", ARGON_STRING_TYPE___hash__));
-  add_builtin_field(
-      ARGON_STRING_TYPE, get_length,
-      create_argon_native_function("get_length", ARGON_STRING_TYPE_get_length));
-  add_builtin_field(
-      ARGON_STRING_TYPE, set_length,
-      create_argon_native_function("set_length", ARGON_STRING_TYPE_set_length));
-  add_builtin_field(
-      ARGON_STRING_TYPE, __add__,
-      create_argon_native_function("__add__", ARGON_STRING_TYPE___add__));
-  add_builtin_field(
-      ARGON_STRING_TYPE, __number__,
-      create_argon_native_function("__number__", ARGON_STRING_TYPE___number__));
-  add_builtin_field(
-      ARGON_NULL_TYPE, __boolean__,
-      create_argon_native_function("__boolean__", ARGON_NULL_TYPE___boolean__));
-  add_builtin_field(
-      ARGON_NULL_TYPE, __string__,
-      create_argon_native_function("__string__", ARGON_NULL_TYPE___string__));
-  add_builtin_field(
-      ARGON_NULL_TYPE, __number__,
-      create_argon_native_function("__number__", ARGON_NULL_TYPE___number__));
-  add_builtin_field(
-      ARGON_STRING_TYPE, __string__,
-      create_argon_native_function("__string__", ARGON_STRING_TYPE___string__));
-  add_builtin_field(
-      ARGON_STRING_TYPE, __repr__,
-      create_argon_native_function("__repr__", ARGON_STRING_TYPE___repr__));
-  add_builtin_field(
-      ARGON_STRING_TYPE, __equal__,
-      create_argon_native_function("__equal__", ARGON_STRING_TYPE___equal__));
-  add_builtin_field(ARGON_STRING_TYPE, __not_equal__,
-                    create_argon_native_function(
-                        "__not_equal__", ARGON_STRING_TYPE___not_equal__));
-  add_builtin_field(ARGON_STRING_TYPE, __less_than__,
-                    create_argon_native_function(
-                        "__less_than__", ARGON_STRING_TYPE___less_than__));
-  add_builtin_field(
-      ARGON_STRING_TYPE, __less_than_equal__,
-      create_argon_native_function("__less_than_equal__",
-                                   ARGON_STRING_TYPE___less_than_equal__));
-  add_builtin_field(
-      ARGON_STRING_TYPE, __greater_than__,
-      create_argon_native_function("__greater_than__",
-                                   ARGON_STRING_TYPE___greater_than__));
-  add_builtin_field(
-      ARGON_STRING_TYPE, __greater_than_equal__,
-      create_argon_native_function("__greater_than_equal__",
-                                   ARGON_STRING_TYPE___greater_than_equal__));
-  add_builtin_field(
-      ARGON_BOOL_TYPE, __new__,
-      create_argon_native_function("__new__", ARGON_BOOL_TYPE___new__));
-  add_builtin_field(
-      ARGON_BOOL_TYPE, __boolean__,
-      create_argon_native_function("__boolean__", ARGON_BOOL_TYPE___boolean__));
-  add_builtin_field(ARGON_STRING_TYPE, __boolean__,
-                    create_argon_native_function(
-                        "__boolean__", ARGON_STRING_TYPE___boolean__));
-  add_builtin_field(
-      BASE_CLASS, __boolean__,
-      create_argon_native_function("__boolean__", BASE_CLASS___boolean__));
-  add_builtin_field(
-      BASE_CLASS, __equal__,
-      create_argon_native_function("__equal__", BASE_CLASS___equal__));
-  add_builtin_field(
-      BASE_CLASS, __not_equal__,
-      create_argon_native_function("__not_equal__", BASE_CLASS___not_equal__));
-  add_builtin_field(
-      ARGON_BOOL_TYPE, __string__,
-      create_argon_native_function("__string__", ARGON_BOOL_TYPE___string__));
-  add_builtin_field(
-      ARGON_BOOL_TYPE, __number__,
-      create_argon_native_function("__number__", ARGON_BOOL_TYPE___number__));
+  MOUNT_ARGON_METHOD(BASE_CLASS, __string__)
+  MOUNT_ARGON_METHOD(BASE_CLASS, __repr__)
+  MOUNT_ARGON_METHOD(ARGON_TYPE_TYPE, __call__)
+  MOUNT_ARGON_METHOD(ARGON_STRING_TYPE, __new__)
+  MOUNT_ARGON_METHOD(ARGON_STRING_TYPE, __init__)
+  MOUNT_ARGON_METHOD(ARGON_STRING_TYPE, __hash__)
+  MOUNT_ARGON_METHOD(ARGON_STRING_TYPE, get_length)
+  MOUNT_ARGON_METHOD(ARGON_STRING_TYPE, set_length)
+  MOUNT_ARGON_METHOD(ARGON_STRING_TYPE, chr)
+  MOUNT_ARGON_METHOD(ARGON_STRING_TYPE, ord)
+  MOUNT_ARGON_METHOD(ARGON_STRING_TYPE, __iter__)
+  MOUNT_ARGON_METHOD(ARGON_STRING_TYPE, split)
+  MOUNT_ARGON_METHOD(ARGON_STRING_TYPE, __getitem__)
+  MOUNT_ARGON_METHOD(ARGON_STRING_TYPE, __add__)
+  MOUNT_ARGON_METHOD(ARGON_STRING_TYPE, __number__)
+  MOUNT_ARGON_METHOD(ARGON_STRING_TYPE, __contains__)
+  MOUNT_ARGON_METHOD(ARGON_NULL_TYPE, __boolean__)
+  MOUNT_ARGON_METHOD(ARGON_NULL_TYPE, __string__)
+  MOUNT_ARGON_METHOD(ARGON_NULL_TYPE, __number__)
+  MOUNT_ARGON_METHOD(ARGON_STRING_TYPE, __string__)
+  MOUNT_ARGON_METHOD(ARGON_STRING_TYPE, __repr__)
+  MOUNT_ARGON_METHOD(ARGON_STRING_TYPE, __equal__)
+  MOUNT_ARGON_METHOD(ARGON_STRING_TYPE, __not_equal__)
+  MOUNT_ARGON_METHOD(ARGON_STRING_TYPE, __less_than__)
+  MOUNT_ARGON_METHOD(ARGON_STRING_TYPE, __less_than_equal__)
+  MOUNT_ARGON_METHOD(ARGON_STRING_TYPE, __greater_than__)
+  MOUNT_ARGON_METHOD(ARGON_STRING_TYPE, __greater_than_equal__)
+  MOUNT_ARGON_METHOD(ARGON_STRING_TYPE, upper)
+  MOUNT_ARGON_METHOD(ARGON_STRING_TYPE, lower)
+  MOUNT_ARGON_METHOD(ARGON_STRING_TYPE, title)
+  MOUNT_ARGON_METHOD(ARGON_STRING_TYPE, replace)
+  MOUNT_ARGON_METHOD(ARGON_BOOL_TYPE, __new__)
+  MOUNT_ARGON_METHOD(ARGON_BOOL_TYPE, __boolean__)
+  MOUNT_ARGON_METHOD(ARGON_STRING_TYPE, __boolean__)
+  MOUNT_ARGON_METHOD(BASE_CLASS, __boolean__)
+  MOUNT_ARGON_METHOD(BASE_CLASS, __equal__)
+  MOUNT_ARGON_METHOD(BASE_CLASS, __not_equal__)
+  MOUNT_ARGON_METHOD(ARGON_BOOL_TYPE, __string__)
+  MOUNT_ARGON_METHOD(ARGON_BOOL_TYPE, __number__)
   ADDITION_FUNCTION =
       create_argon_native_function("add", ARGON_ADDITION_FUNCTION);
   SUBTRACTION_FUNCTION =
@@ -1220,12 +1142,15 @@ void bootstrap_types() {
       "greater_than_equal", ARGON_GREATER_THAN_EQUAL_FUNCTION);
   ARGON_RENDER_TEMPLATE =
       create_argon_native_function("RENDER_TEMPLATE", RENDER_TEMPLATE);
-  add_builtin_field(BASE_CLASS, __getattribute__,
-                    create_argon_native_function("__getattribute__",
-                                                 BASE_CLASS___getattribute__));
-  add_builtin_field(
-      BASE_CLASS, __setattr__,
-      create_argon_native_function("__setattr__", BASE_CLASS___setattr__));
+  MOUNT_ARGON_METHOD(BASE_CLASS, __getattribute__)
+  MOUNT_ARGON_METHOD(BASE_CLASS, __setattr__)
+
+  ARGON_STRING_ITERATOR_TYPE = new_class();
+
+  add_builtin_field(ARGON_STRING_ITERATOR_TYPE, __name__,
+                    new_string_object_null_terminated("string_iterator"));
+  MOUNT_ARGON_METHOD(ARGON_STRING_ITERATOR_TYPE, __next__)
+
   create_ARGON_DICTIONARY_TYPE();
   create_ARGON_NUMBER_TYPE();
   create_ARGON_BUFFER_TYPE();
@@ -1235,6 +1160,8 @@ void bootstrap_types() {
   init_array_type();
   init_tuple_type();
   init_range_iterator();
+  init_slice_type();
+  init_small_chars();
 
   native_api.ARGON_NULL = ARGON_NULL;
   native_api.ARGON_TRUE = ARGON_TRUE;
@@ -1258,10 +1185,12 @@ void bootstrap_globals() {
   add_to_scope(Global_Scope, "boolean", ARGON_BOOL_TYPE);
   add_to_scope(Global_Scope, "number", ARGON_NUMBER_TYPE);
   add_to_scope(Global_Scope, "dictionary", ARGON_DICTIONARY_TYPE);
+  add_to_scope(Global_Scope, "function", ARGON_FUNCTION_TYPE);
   add_to_scope(Global_Scope, "buffer", ARGON_BUFFER_TYPE);
   add_to_scope(Global_Scope, "array", ARRAY_TYPE);
   add_to_scope(Global_Scope, "tuple", ARGON_TUPLE_TYPE);
   add_to_scope(Global_Scope, "range", ARGON_RANGE_ITERATOR_TYPE);
+  add_to_scope(Global_Scope, "slice", ARGON_SLICE_TYPE);
 
   add_to_scope(Global_Scope, "add", ADDITION_FUNCTION);
   add_to_scope(Global_Scope, "subtract", SUBTRACTION_FUNCTION);
@@ -1286,6 +1215,8 @@ void bootstrap_globals() {
   // standard exceptions
   add_to_scope(Global_Scope, "Exception", Exception);
   add_to_scope(Global_Scope, "RuntimeError", RuntimeError);
+  add_to_scope(Global_Scope, "AssignError", AssignError);
+  add_to_scope(Global_Scope, "ValueError", ValueError);
   add_to_scope(Global_Scope, "SyntaxError", SyntaxError);
   add_to_scope(Global_Scope, "ConversionError", ConversionError);
   add_to_scope(Global_Scope, "MathsError", MathsError);
@@ -1420,6 +1351,22 @@ static inline void load_variable(int64_t length, int64_t offset, uint64_t hash,
   return;
 }
 
+static inline void delete_variable(int64_t length, int64_t offset,
+                                   uint64_t hash, Translated *translated,
+                                   struct Stack *stack, ArErr *err) {
+
+  struct Stack *current_stack = stack;
+  while (current_stack) {
+    if (hashmap_remove_GC(current_stack->scope, hash)) {
+      return;
+    }
+    current_stack = current_stack->prev;
+  }
+  *err = create_err(NameError, "Identifier '%.*s' is not defined", (int)length,
+                    arena_get(&translated->constants, offset));
+  return;
+}
+
 void init_runtime_state(RuntimeState *runtime, Translated translated,
                         char *path) {
   *runtime =
@@ -1531,7 +1478,11 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       [OP_EXCEPTION_CATCHER_POP] = &&DO_EXCEPTION_CATCHER_POP,
       [OP_LOAD_IS_INSTANCE_FUNCTION] = &&DO_LOAD_IS_INSTANCE_FUNCTION,
       [OP_LOAD_EXCEPTION_CLASS] = &&DO_LOAD_EXCEPTION_CLASS,
-      [OP_LOAD_STOPITERATION_CLASS] = &&DO_LOAD_STOPITERATION_CLASS};
+      [OP_LOAD_STOPITERATION_CLASS] = &&DO_LOAD_STOPITERATION_CLASS,
+      [OP_LOAD_SLICE_CLASS] = &&DO_LOAD_SLICE_CLASS,
+      [OP_DELETE_IDENTIFIER] = &&DO_DELETE_IDENTIFIER,
+      [OP_LOAD_DELATTR_METHOD] = &&DO_LOAD_DELATTR_METHOD,
+      [OP_LOAD_DELITEM_METHOD] = &&DO_LOAD_DELITEM_METHOD};
   _state.head = 0;
 
   ArErr err = *err_ptr;
@@ -1550,7 +1501,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
 
       if (KeyboardInterrupted) {
         err.ptr = KeyboardInterrupt_instance;
-        KeyboardInterrupted = false;
+        KeyboardInterrupted = 0;
         break;
       }
 
@@ -1751,6 +1702,17 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
                     currentStackFrame->stack, &err);
       continue;
     }
+    DO_DELETE_IDENTIFIER: {
+      int64_t length;
+      POP_U64(length);
+      int64_t offset;
+      POP_U64(offset);
+      uint64_t hash;
+      POP_U64(hash);
+      delete_variable(length, offset, hash, translated,
+                      currentStackFrame->stack, &err);
+      continue;
+    }
     DO_DECLARE: {
       int64_t length;
       POP_U64(length);
@@ -1781,8 +1743,8 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
 
       switch (iterator->type) {
       case TYPE_ARRAY_ITERATOR:
-        state->registers[0] = ARGON_ARRAY_ITERATOR___next__(1, &iterator, &err,
-                                                            state, &native_api);
+        state->registers[0] = ARRAY_ITERATOR_TYPE___next__(1, &iterator, &err,
+                                                           state, &native_api);
         break;
       case TYPE_RANGE_ITERATOR:
         state->registers[0] = ARGON_RANGE_ITERATOR_TYPE___next__(
@@ -2764,6 +2726,10 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       state->registers[0] = StopIteration;
       continue;
     }
+    DO_LOAD_SLICE_CLASS: {
+      state->registers[0] = ARGON_SLICE_TYPE;
+      continue;
+    }
     DO_LOAD_TEMPLATE_METHOD: {
       state->registers[0] = get_builtin_field_for_class(
           get_builtin_field(state->registers[0], __class__), __template__,
@@ -2781,6 +2747,16 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       if (!state->registers[0]) {
         err = create_err(RuntimeError,
                          "unable to get __setattr__ from objects class");
+      }
+      continue;
+    }
+    DO_LOAD_DELATTR_METHOD: {
+      state->registers[0] = get_builtin_field_for_class(
+          get_builtin_field(state->registers[0], __class__), __delattr__,
+          state->registers[0]);
+      if (!state->registers[0]) {
+        err = create_err(RuntimeError,
+                         "unable to get __delattr__ from objects class");
       }
       continue;
     }
@@ -2819,6 +2795,16 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       if (!state->registers[0]) {
         err = create_err(RuntimeError,
                          "unable to get __getitem__ from objects class");
+      }
+      continue;
+    }
+    DO_LOAD_DELITEM_METHOD: {
+      state->registers[0] = get_builtin_field_for_class(
+          get_builtin_field(state->registers[0], __class__), __delitem__,
+          state->registers[0]);
+      if (!state->registers[0]) {
+        err = create_err(RuntimeError,
+                         "unable to get __delitem__ from objects class");
       }
       continue;
     }
