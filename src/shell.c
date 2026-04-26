@@ -40,7 +40,11 @@ void handle_sigint(int sig) {
 
 int execute_code(char *context, char *path, Stack *scope,
                  RuntimeState *runtime_state) {
-  signal(SIGINT, sigint_handler);
+  struct sigaction sa = {0};
+  sa.sa_handler = sigint_handler;
+  sigemptyset(&sa.sa_mask);
+  sa.sa_flags = 0; // intentionally no SA_RESTART — let syscalls return EINTR
+  sigaction(SIGINT, &sa, NULL);
   ArErr err = no_err;
 
   DArray tokens;
@@ -199,7 +203,8 @@ int shell() {
          "GPL Version 3 or later,\n"
          "and you are welcome to redistribute it under certain conditions; "
          "type \"license\" for details.\n"
-         "You can learn more about what the term \"free software\" means at https://www.gnu.org/philosophy/free-sw.html\n\n",
+         "You can learn more about what the term \"free software\" means at "
+         "https://www.gnu.org/philosophy/free-sw.html\n\n",
          version_string);
 
   ArgonObject *output_object = create_argon_native_function("log", term_log);

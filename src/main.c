@@ -59,9 +59,7 @@ char *get_current_directory() {
 
 volatile sig_atomic_t KeyboardInterrupted = 0;
 
-void sigint_handler(int signum) {
-  KeyboardInterrupted = signum;
-}
+void sigint_handler(int signum) { KeyboardInterrupted = signum; }
 
 int main(int argc, char *argv[]) {
   setlocale(LC_ALL, "");
@@ -80,7 +78,11 @@ int main(int argc, char *argv[]) {
   EXC_ARGON = EXC ? new_string_object_null_terminated(EXC) : ARGON_NULL;
   if (argc <= 1)
     return shell();
-  signal(SIGINT, sigint_handler);
+  struct sigaction sa = {0};
+  sa.sa_handler = sigint_handler;
+  sigemptyset(&sa.sa_mask);
+  sa.sa_flags = 0; // intentionally no SA_RESTART — let syscalls return EINTR
+  sigaction(SIGINT, &sa, NULL);
   char *path_non_absolute = argv[1];
   ArErr err = {.ptr = ARGON_NULL};
 

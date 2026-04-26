@@ -123,7 +123,6 @@ ArgonObject *GREATER_THAN_FUNCTION;
 ArgonObject *GREATER_THAN_EQUAL_FUNCTION;
 
 ARGON_METHOD(BASE_CLASS, __getattribute__, {
-
   (void)state;
   (void)api;
   if (argc != 2) {
@@ -560,7 +559,6 @@ ArgonObject *ARGON_GREATER_THAN_EQUAL_FUNCTION(size_t argc, ArgonObject **argv,
 }
 
 ARGON_METHOD(ARGON_TYPE_TYPE, __call__, {
-
   (void)api;
   (void)state;
   if (argc < 1) {
@@ -615,7 +613,6 @@ ARGON_METHOD(ARGON_TYPE_TYPE, __call__, {
 });
 
 ARGON_METHOD(BASE_CLASS, address, {
-
   (void)api;
   (void)state;
   if (argc < 1) {
@@ -630,7 +627,6 @@ ARGON_METHOD(BASE_CLASS, address, {
 })
 
 ARGON_METHOD(BASE_CLASS, __new__, {
-
   (void)api;
   (void)state;
   if (argc < 1) {
@@ -644,7 +640,6 @@ ARGON_METHOD(BASE_CLASS, __new__, {
 })
 
 ARGON_METHOD(BASE_CLASS, __init__, {
-
   (void)api;
   (void)state;
   (void)argv;
@@ -657,7 +652,6 @@ ARGON_METHOD(BASE_CLASS, __init__, {
 })
 
 ARGON_METHOD(BASE_CLASS, __setattr__, {
-
   (void)api;
   (void)state;
   if (argc != 3) {
@@ -695,7 +689,6 @@ ARGON_METHOD(BASE_CLASS, __setattr__, {
 })
 
 ARGON_METHOD(BASE_CLASS, __string__, {
-
   (void)api;
   (void)state;
   if (argc != 1) {
@@ -726,7 +719,6 @@ ARGON_METHOD(BASE_CLASS, __string__, {
 })
 
 ARGON_METHOD(BASE_CLASS, __repr__, {
-
   (void)api;
   if (argc != 1) {
     *err = create_err(RuntimeError, "__repr__ expects 1 argument, got %" PRIu64,
@@ -738,7 +730,6 @@ ARGON_METHOD(BASE_CLASS, __repr__, {
 })
 
 ARGON_METHOD(BASE_CLASS, __boolean__, {
-
   (void)api;
   (void)argv;
   (void)state;
@@ -750,7 +741,6 @@ ARGON_METHOD(BASE_CLASS, __boolean__, {
 })
 
 ARGON_METHOD(BASE_CLASS, __equal__, {
-
   (void)api;
   (void)argv;
   (void)state;
@@ -762,7 +752,6 @@ ARGON_METHOD(BASE_CLASS, __equal__, {
 })
 
 ARGON_METHOD(BASE_CLASS, __not_equal__, {
-
   (void)api;
   (void)argv;
   (void)state;
@@ -774,7 +763,6 @@ ARGON_METHOD(BASE_CLASS, __not_equal__, {
 })
 
 ARGON_METHOD(ARGON_STRING_TYPE, __new__, {
-
   (void)api;
   (void)state;
   if (argc < 1) {
@@ -788,7 +776,6 @@ ARGON_METHOD(ARGON_STRING_TYPE, __new__, {
 })
 
 ARGON_METHOD(ARGON_STRING_TYPE, __init__, {
-
   (void)api;
   if (argc != 2) {
     *err = create_err(RuntimeError,
@@ -844,7 +831,6 @@ ArgonObject *ARGON_BOOL_TYPE___new__(size_t argc, ArgonObject **argv,
 }
 
 ARGON_METHOD(ARGON_STRING_TYPE, __add__, {
-
   (void)api;
   (void)state;
   if (argc != 2) {
@@ -898,7 +884,6 @@ ArgonObject *ARGON_BOOL_TYPE___number__(size_t argc, ArgonObject **argv,
 }
 
 ARGON_METHOD(ARGON_STRING_TYPE, __string__, {
-
   (void)api;
   (void)state;
   if (argc != 1) {
@@ -908,7 +893,6 @@ ARGON_METHOD(ARGON_STRING_TYPE, __string__, {
   return argv[0];
 })
 ARGON_METHOD(ARGON_STRING_TYPE, __repr__, {
-
   (void)api;
   (void)state;
   if (argc != 1) {
@@ -925,7 +909,6 @@ ARGON_METHOD(ARGON_STRING_TYPE, __repr__, {
   return result;
 })
 ARGON_METHOD(ARGON_STRING_TYPE, __hash__, {
-
   (void)api;
   (void)state;
   if (argc != 1) {
@@ -944,7 +927,6 @@ ARGON_METHOD(ARGON_STRING_TYPE, __hash__, {
 })
 
 ARGON_METHOD(ARGON_STRING_TYPE, __number__, {
-
   (void)api;
   (void)state;
   if (argc != 1) {
@@ -968,7 +950,6 @@ ARGON_METHOD(ARGON_STRING_TYPE, __number__, {
 })
 
 ARGON_METHOD(ARGON_STRING_TYPE, __boolean__, {
-
   (void)api;
   (void)state;
   if (argc != 1) {
@@ -1081,6 +1062,7 @@ void bootstrap_types() {
   add_builtin_field(ARGON_FUNCTION_TYPE, __base__, BASE_CLASS);
   add_builtin_field(ARGON_FUNCTION_TYPE, __name__,
                     new_string_object_null_terminated("function"));
+  add_builtin_field(ARGON_FUNCTION_TYPE, __new__, NULL);
 
   ARGON_METHOD_TYPE = new_class();
   add_builtin_field(ARGON_METHOD_TYPE, __base__, BASE_CLASS);
@@ -1121,6 +1103,10 @@ void bootstrap_types() {
   MOUNT_ARGON_METHOD(ARGON_STRING_TYPE, __less_than_equal__)
   MOUNT_ARGON_METHOD(ARGON_STRING_TYPE, __greater_than__)
   MOUNT_ARGON_METHOD(ARGON_STRING_TYPE, __greater_than_equal__)
+  MOUNT_ARGON_METHOD(ARGON_STRING_TYPE, upper)
+  MOUNT_ARGON_METHOD(ARGON_STRING_TYPE, lower)
+  MOUNT_ARGON_METHOD(ARGON_STRING_TYPE, title)
+  MOUNT_ARGON_METHOD(ARGON_STRING_TYPE, replace)
   MOUNT_ARGON_METHOD(ARGON_BOOL_TYPE, __new__)
   MOUNT_ARGON_METHOD(ARGON_BOOL_TYPE, __boolean__)
   MOUNT_ARGON_METHOD(ARGON_STRING_TYPE, __boolean__)
@@ -1199,6 +1185,7 @@ void bootstrap_globals() {
   add_to_scope(Global_Scope, "boolean", ARGON_BOOL_TYPE);
   add_to_scope(Global_Scope, "number", ARGON_NUMBER_TYPE);
   add_to_scope(Global_Scope, "dictionary", ARGON_DICTIONARY_TYPE);
+  add_to_scope(Global_Scope, "function", ARGON_FUNCTION_TYPE);
   add_to_scope(Global_Scope, "buffer", ARGON_BUFFER_TYPE);
   add_to_scope(Global_Scope, "array", ARRAY_TYPE);
   add_to_scope(Global_Scope, "tuple", ARGON_TUPLE_TYPE);
@@ -1514,7 +1501,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
 
       if (KeyboardInterrupted) {
         err.ptr = KeyboardInterrupt_instance;
-        KeyboardInterrupted = false;
+        KeyboardInterrupted = 0;
         break;
       }
 
@@ -1757,7 +1744,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       switch (iterator->type) {
       case TYPE_ARRAY_ITERATOR:
         state->registers[0] = ARRAY_ITERATOR_TYPE___next__(1, &iterator, &err,
-                                                            state, &native_api);
+                                                           state, &native_api);
         break;
       case TYPE_RANGE_ITERATOR:
         state->registers[0] = ARGON_RANGE_ITERATOR_TYPE___next__(

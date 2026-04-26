@@ -244,6 +244,10 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
     }
     state->registers[0] =
         object->value.native_fn(argc, argv, err, state, &native_api);
+    if (KeyboardInterrupted) {
+      err->ptr = KeyboardInterrupt_instance;
+      KeyboardInterrupted = 0;
+    }
     return;
   }
   default: {

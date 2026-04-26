@@ -311,6 +311,157 @@ ARGON_METHOD(ARGON_STRING_TYPE, set_length, {
   return ARGON_NULL;
 })
 
+ARGON_METHOD(ARGON_STRING_TYPE, upper, {
+  (void)api;
+  (void)state;
+  if (argc != 1) {
+    *err = create_err(RuntimeError, "upper expects 1 argument, got %" PRIu64,
+                      argc);
+    return ARGON_NULL;
+  }
+  struct string self = api->argon_to_string(argv[0], err);
+  if (api->is_error(err))
+    return ARGON_NULL;
+
+  ArgonObject *new_str_obj = api->string_to_argon(self);
+  struct string new_str = api->argon_to_string(new_str_obj, err);
+  if (api->is_error(err))
+    return ARGON_NULL;
+
+  for (size_t i = 0; i < new_str.length; i++) {
+    new_str.data[i] = toupper((unsigned char)new_str.data[i]);
+  }
+
+  return new_str_obj;
+})
+
+ARGON_METHOD(ARGON_STRING_TYPE, lower, {
+  (void)api;
+  (void)state;
+  if (argc != 1) {
+    *err = create_err(RuntimeError, "lower expects 1 argument, got %" PRIu64,
+                      argc);
+    return ARGON_NULL;
+  }
+  struct string self = api->argon_to_string(argv[0], err);
+  if (api->is_error(err))
+    return ARGON_NULL;
+
+  ArgonObject *new_str_obj = api->string_to_argon(self);
+  struct string new_str = api->argon_to_string(new_str_obj, err);
+  if (api->is_error(err))
+    return ARGON_NULL;
+
+  for (size_t i = 0; i < new_str.length; i++) {
+    new_str.data[i] = tolower((unsigned char)new_str.data[i]);
+  }
+
+  return new_str_obj;
+})
+
+ARGON_METHOD(ARGON_STRING_TYPE, title, {
+  (void)api;
+  (void)state;
+  if (argc != 1) {
+    *err = create_err(RuntimeError, "upper expects 1 argument, got %" PRIu64,
+                      argc);
+    return ARGON_NULL;
+  }
+  struct string self = api->argon_to_string(argv[0], err);
+  if (api->is_error(err))
+    return ARGON_NULL;
+
+  ArgonObject *new_str_obj = api->string_to_argon(self);
+  struct string new_str = api->argon_to_string(new_str_obj, err);
+  if (api->is_error(err))
+    return ARGON_NULL;
+
+  bool new_word = true;
+  for (size_t i = 0; i < new_str.length; i++) {
+    if (new_str.data[i] == ' ') {
+      new_word = true;
+      continue;
+    }
+    if (new_word) {
+      char upper = toupper((unsigned char)new_str.data[i]);
+      if (upper != new_str.data[i])
+        new_word = false;
+      new_str.data[i] = upper;
+    } else {
+      new_str.data[i] = tolower((unsigned char)new_str.data[i]);
+    }
+  }
+
+  return new_str_obj;
+})
+
+ARGON_METHOD(ARGON_STRING_TYPE, replace, {
+  (void)api;
+  (void)state;
+  if (argc != 3) {
+    *err = create_err(RuntimeError, "replace expects 3 arguments, got %" PRIu64,
+                      argc);
+    return ARGON_NULL;
+  }
+
+  struct string self = api->argon_to_string(argv[0], err);
+  if (api->is_error(err))
+    return ARGON_NULL;
+
+  struct string old = api->argon_to_string(argv[1], err);
+  if (api->is_error(err))
+    return ARGON_NULL;
+
+  struct string new = api->argon_to_string(argv[2], err);
+  if (api->is_error(err))
+    return ARGON_NULL;
+
+  // edge case: replacing empty string is undefined, just return self
+  if (old.length == 0)
+    return argv[0];
+
+  // count occurrences to pre-calculate the result length
+  size_t count = 0;
+  for (size_t i = 0; i + old.length <= self.length; ) {
+    if (memcmp(self.data + i, old.data, old.length) == 0) {
+      count++;
+      i += old.length;
+    } else {
+      i++;
+    }
+  }
+
+  if (count == 0)
+    return argv[0];
+
+  size_t new_len = self.length + count * (new.length - old.length);
+  char *buf = malloc(new_len + 1);
+  if (!buf) {
+    *err = create_err(RuntimeError, "out of memory");
+    return ARGON_NULL;
+  }
+
+  // build the result
+  size_t src = 0, dst = 0;
+  while (src + old.length <= self.length) {
+    if (memcmp(self.data + src, old.data, old.length) == 0) {
+      memcpy(buf + dst, new.data, new.length);
+      dst += new.length;
+      src += old.length;
+    } else {
+      buf[dst++] = self.data[src++];
+    }
+  }
+  // copy any remaining tail
+  memcpy(buf + dst, self.data + src, self.length - src);
+  buf[new_len] = '\0';
+
+  struct string result = {.data = buf, .length = new_len};
+  ArgonObject *result_obj = api->string_to_argon(result);
+  free(buf);
+  return result_obj;
+})
+
 ARGON_METHOD(ARGON_STRING_TYPE, __getitem__, {
   (void)api;
   (void)state;
@@ -461,8 +612,6 @@ ARGON_METHOD(ARGON_STRING_TYPE, __contains__, {
 
   return ARGON_FALSE;
 })
-
-
 
 char *char_chr(uint64_t codepoint, size_t *len_out) {
   char *out;

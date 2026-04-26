@@ -77,7 +77,11 @@
   X(split)                                                                     \
   X(join)                                                                      \
   X(chr)                                                                       \
-  X(ord)
+  X(ord)                                                                       \
+  X(upper)                                                                     \
+  X(lower)                                                                     \
+  X(title)                                                                     \
+  X(replace)
 
 typedef enum {
 #define X(name) name,
