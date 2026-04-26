@@ -383,10 +383,8 @@ ARGON_METHOD(ARGON_STRING_TYPE, title, {
       continue;
     }
     if (new_word) {
-      char upper = toupper((unsigned char)new_str.data[i]);
-      if (upper != new_str.data[i])
-        new_word = false;
-      new_str.data[i] = upper;
+      new_str.data[i] = toupper((unsigned char)new_str.data[i]);
+      new_word = false; // always reset, not just when char changed
     } else {
       new_str.data[i] = tolower((unsigned char)new_str.data[i]);
     }
@@ -422,7 +420,7 @@ ARGON_METHOD(ARGON_STRING_TYPE, replace, {
 
   // count occurrences to pre-calculate the result length
   size_t count = 0;
-  for (size_t i = 0; i + old.length <= self.length; ) {
+  for (size_t i = 0; i + old.length <= self.length;) {
     if (memcmp(self.data + i, old.data, old.length) == 0) {
       count++;
       i += old.length;
