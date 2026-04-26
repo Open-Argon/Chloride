@@ -7,15 +7,17 @@
 #ifndef IMPORT_H
 #define IMPORT_H
 #include "arobject.h"
+#include <linux/limits.h>
 
-extern char*CWD;
-extern char*EXC;
-extern ArgonObject*CWD_ARGON;
-extern ArgonObject*EXC_ARGON;
+extern char CWD[PATH_MAX];
+extern char EXC[PATH_MAX];
+extern char EXC_DIR[PATH_MAX];
+extern ArgonObject *CWD_ARGON;
+extern ArgonObject *EXC_ARGON;
 
 extern const char version_string[];
 
-char* get_executable_path();
+int get_executable_path(char*path, size_t size);
 
 extern struct hashmap_GC *importing_hash_table;
 extern struct hashmap_GC *imported_hash_table;

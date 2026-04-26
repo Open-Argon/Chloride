@@ -22,6 +22,7 @@
 #include "runtime/runtime.h"
 #include "translator/translator.h"
 #include <limits.h>
+#include <linux/limits.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
@@ -105,8 +106,9 @@ int ensure_dir_exists(const char *path) {
   return 0;
 }
 
-char *CWD;
-char *EXC;
+char CWD[PATH_MAX] = {0};
+char EXC[PATH_MAX] = {0};
+char EXC_DIR[PATH_MAX] = {0};
 ArgonObject *CWD_ARGON;
 ArgonObject *EXC_ARGON;
 
@@ -514,12 +516,26 @@ Translated load_argon_file(char *path, ArErr *err) {
   return gc_translated;
 }
 
-const char *PRE_PATHS_TO_TEST[] = {
-    "", "", "", "argon_modules", "argon_modules", "argon_modules"};
+const bool in_Exc_DIR[] = {
+    false, false, false, false, false, false,
+    true,  true,  true,  true,  true,  true,
+};
+const char *PRE_PATHS_TO_TEST[] = {"",
+                                   "",
+                                   "",
+                                   "argon_modules",
+                                   "argon_modules",
+                                   "argon_modules",
+                                   "stdlib",
+                                   "stdlib",
+                                   "stdlib",
+                                   "argon_modules",
+                                   "argon_modules",
+                                   "argon_modules"};
 const char *POST_PATHS_TO_TEST[sizeof(PRE_PATHS_TO_TEST) / sizeof(char *)] = {
-    "", "", "init", "", "", "init"};
+    "", "", "init", "", "", "init", "", "", "init", "", "", "init"};
 const char *EXTENTIONS_TO_TEST[sizeof(PRE_PATHS_TO_TEST) / sizeof(char *)] = {
-    "", ".ar", ".ar", "", ".ar", ".ar"};
+    "", ".ar", ".ar", "", ".ar", ".ar", "", ".ar", ".ar", "", ".ar", ".ar"};
 
 struct hashmap_GC *importing_hash_table;
 struct hashmap_GC *imported_hash_table;
@@ -537,8 +553,7 @@ struct hashmap_GC *imported_hash_table;
 #include <unistd.h>
 #endif
 
-char *get_executable_path() {
-  static char path[PATH_MAX];
+int get_executable_path(char *path, size_t size) {
 
 #if defined(_WIN32)
   if (GetModuleFileNameA(NULL, path, MAX_PATH) == 0) {
@@ -550,13 +565,13 @@ char *get_executable_path() {
     return NULL; // buffer too small
   }
 #else // Linux / Unix
-  ssize_t len = readlink("/proc/self/exe", path, sizeof(path) - 1);
+  ssize_t len = readlink("/proc/self/exe", path, size);
   if (len == -1)
-    return NULL;
+    return -1;
   path[len] = '\0';
 #endif
 
-  return path;
+  return 0;
 }
 
 Stack *ar_import(char *current_directory, char *path_relative, ArErr *err,
@@ -564,8 +579,8 @@ Stack *ar_import(char *current_directory, char *path_relative, ArErr *err,
   char path_c[PATH_MAX];
   bool found = false;
   for (size_t i = 0; i < sizeof(PRE_PATHS_TO_TEST) / sizeof(char *); i++) {
-    cwk_path_get_absolute(current_directory, PRE_PATHS_TO_TEST[i], path_c,
-                          sizeof(path_c));
+    cwk_path_get_absolute(in_Exc_DIR[i] ? EXC_DIR : current_directory,
+                          PRE_PATHS_TO_TEST[i], path_c, sizeof(path_c));
     cwk_path_get_absolute(path_c, path_relative, path_c, sizeof(path_c));
     cwk_path_get_absolute(path_c, POST_PATHS_TO_TEST[i], path_c,
                           sizeof(path_c));
