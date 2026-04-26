@@ -9,7 +9,6 @@
 #include "import.h"
 #include "memory.h"
 #include "runtime/internals/hashmap/hashmap.h"
-#include "runtime/objects/exceptions/exceptions.h"
 #include "runtime/objects/literals/literals.h"
 #include "runtime/objects/object.h"
 #include "runtime/objects/string/string.h"
@@ -61,11 +60,6 @@ char *get_current_directory() {
 volatile sig_atomic_t KeyboardInterrupted = 0;
 
 void sigint_handler(int signum) {
-  if (KeyboardInterrupted == signum) {
-    ArErr err = {KeyboardInterrupt_instance};
-    output_err(&err);
-    exit(signum);
-  }
   KeyboardInterrupted = signum;
 }
 
