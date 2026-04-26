@@ -555,13 +555,12 @@ struct hashmap_GC *imported_hash_table;
 int get_executable_path(char *path, size_t size) {
 
 #if defined(_WIN32)
-  if (GetModuleFileNameA(NULL, path, MAX_PATH) == 0) {
-    return NULL;
+  if (GetModuleFileNameA(NULL, path, size) == 0) {
+    return -1;
   }
 #elif defined(__APPLE__)
-  uint32_t size = sizeof(path);
   if (_NSGetExecutablePath(path, &size) != 0) {
-    return NULL; // buffer too small
+    return -1; // buffer too small
   }
 #else // Linux / Unix
   ssize_t len = readlink("/proc/self/exe", path, size);
