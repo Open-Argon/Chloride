@@ -46,6 +46,7 @@
   X(get_length)                                                                \
   X(set_length)                                                                \
   X(of_size)                                                                   \
+  X(extend)                                                                    \
   X(from_string)                                                               \
   X(to_string)                                                                 \
   X(__getattribute__)                                                          \

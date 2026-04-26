@@ -15,8 +15,8 @@ class tcp_connection do
   this.send_string(self,str) = do
     return __net__.net_send_string(self.__socket__, str)
   
-  this.recv(self,size) = do
-    return __net__.net_recv(self.__socket__, size)
+  this.recv(self,buff) = do
+    return __net__.net_recv(self.__socket__, buff)
   
   this.recv_string(self,size) = do
     return __net__.net_recv_string(self.__socket__, size)
