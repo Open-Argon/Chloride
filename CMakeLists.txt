@@ -3,24 +3,20 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 cmake_minimum_required(VERSION 3.16)
 project(argon C)
-
 # Conan will define FLEX_EXECUTABLE via an environment variable or toolchain
 # You should set it in CMakeLists.txt only if it's not set
 if(NOT DEFINED FLEX_EXECUTABLE)
     find_program(FLEX_EXECUTABLE flex REQUIRED)
 endif()
-
 # Set source and output files
 set(LEXER_SRC ${CMAKE_CURRENT_SOURCE_DIR}/src/lexer/lex.l)
 set(LEXER_C ${CMAKE_CURRENT_SOURCE_DIR}/src/lexer/lex.yy.c)
 set(LEXER_H ${CMAKE_CURRENT_SOURCE_DIR}/src/lexer/lex.yy.h)
-
 # Gather all C files EXCEPT the generated lex.yy.c
 file(GLOB_RECURSE CFILES CONFIGURE_DEPENDS
     ${CMAKE_CURRENT_SOURCE_DIR}/src/*.c
 )
 list(REMOVE_ITEM CFILES ${LEXER_C})  # remove if globbed
-
 # Step 1: Custom command to generate lexer
 add_custom_command(
     OUTPUT ${LEXER_C} ${LEXER_H}
@@ -28,21 +24,16 @@ add_custom_command(
     DEPENDS ${LEXER_SRC}
     COMMENT "Generating lexer with flex"
 )
-
 # Step 2: Custom target for lexer
 add_custom_target(GenerateLexer DEPENDS ${LEXER_C} ${LEXER_H})
-
 set(SOURCES
     external/xxhash/xxhash.c external/cwalk/src/cwalk.c external/libdye/src/dye.c ${CFILES} ${LEXER_C}
 )
-
 if(NOT WIN32)
     list(APPEND SOURCES external/linenoise/linenoise.c)
 endif()
-
 # Step 3: Add executable
 add_executable(argon ${SOURCES})
-
 if(MINGW)
     target_link_options(argon PRIVATE
         -static
@@ -50,69 +41,27 @@ if(MINGW)
         -static-libstdc++
     )
 endif()
-
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
 set(THREADS_PREFER_PTHREAD_FLAG ON)
-
 target_include_directories(argon PRIVATE
     ${CMAKE_SOURCE_DIR}/external/cwalk/include
     ${CMAKE_SOURCE_DIR}/external/libdye/include
     ${CMAKE_CURRENT_SOURCE_DIR}/src/lexer
 )
-
 # Step 4: Build order
 add_dependencies(argon GenerateLexer)
-
 # Step 5: Output path
 set_target_properties(argon PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/build/bin
 )
-
 # Step 6: Find libraries — support both Conan and pkg-config (e.g. Homebrew)
 find_package(Threads REQUIRED)
-
-if(NOT EXISTS "${CMAKE_BINARY_DIR}/conan_toolchain.cmake" AND NOT CONAN_EXPORTED)
-    # Non-Conan build — use find_package, which honours CMAKE_PREFIX_PATH
-    find_package(PkgConfig QUIET)
-
-    # Try find_package first (works with Homebrew CMAKE_PREFIX_PATH)
-    find_library(GMP_LIBRARIES NAMES gmp)
-    find_path(GMP_INCLUDE_DIRS NAMES gmp.h)
-
-    find_library(MPFR_LIBRARIES NAMES mpfr)
-    find_path(MPFR_INCLUDE_DIRS NAMES mpfr.h)
-
-    find_library(BDWGC_LIBRARIES NAMES gc)
-    find_path(BDWGC_INCLUDE_DIRS NAMES gc/gc.h gc.h)
-
-    # Fall back to pkg-config if find_library didn't work
-    if(NOT GMP_LIBRARIES AND PkgConfig_FOUND)
-        pkg_check_modules(GMP REQUIRED gmp)
-        pkg_check_modules(MPFR REQUIRED mpfr)
-        pkg_check_modules(BDWGC REQUIRED bdw-gc)
-    endif()
-
-    target_include_directories(argon PRIVATE
-        ${GMP_INCLUDE_DIRS}
-        ${MPFR_INCLUDE_DIRS}
-        ${BDWGC_INCLUDE_DIRS}
-    )
-
-    target_link_libraries(argon PRIVATE
-        ${GMP_LIBRARIES}
-        ${MPFR_LIBRARIES}
-        ${BDWGC_LIBRARIES}
-        Threads::Threads
-        m
-        $<$<PLATFORM_ID:Windows>:bcrypt>
-    )
-else()
+if(CONAN_EXPORTED OR EXISTS "${CMAKE_BINARY_DIR}/conan_toolchain.cmake")
     # Conan build
     set(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
     find_package(BDWgc REQUIRED)
     find_package(gmp REQUIRED)
     find_package(mpfr REQUIRED)
-
     target_link_libraries(argon PRIVATE
         BDWgc::BDWgc
         gmp::gmp
@@ -121,8 +70,25 @@ else()
         m
         $<$<PLATFORM_ID:Windows>:bcrypt>
     )
+else()
+    # Non-Conan build (Homebrew, manual CMake, Linux distros, etc.)
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(GMP REQUIRED gmp)
+    pkg_check_modules(MPFR REQUIRED mpfr)
+    pkg_check_modules(BDWGC REQUIRED bdw-gc)
+    target_include_directories(argon PRIVATE
+        ${GMP_INCLUDE_DIRS}
+        ${MPFR_INCLUDE_DIRS}
+        ${BDWGC_INCLUDE_DIRS}
+    )
+    target_link_libraries(argon PRIVATE
+        ${GMP_LIBRARIES}
+        ${MPFR_LIBRARIES}
+        ${BDWGC_LIBRARIES}
+        Threads::Threads
+        m
+        $<$<PLATFORM_ID:Windows>:bcrypt>
+    )
 endif()
-
 target_compile_options(argon PRIVATE -O3 -Wall -Wextra -Wno-unused-function -s)
-
 add_custom_command(TARGET argon POST_BUILD COMMAND ${CMAKE_STRIP} $<TARGET_FILE:argon>)
