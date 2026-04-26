@@ -7,7 +7,6 @@
 #ifndef IMPORT_H
 #define IMPORT_H
 #include "arobject.h"
-#include <linux/limits.h>
 
 extern char CWD[PATH_MAX];
 extern char EXC[PATH_MAX];

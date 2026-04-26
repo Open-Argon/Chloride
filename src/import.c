@@ -22,7 +22,6 @@
 #include "runtime/runtime.h"
 #include "translator/translator.h"
 #include <limits.h>
-#include <linux/limits.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
