@@ -71,11 +71,15 @@ int main(int argc, char *argv[]) {
   EXC_ARGON = new_string_object_null_terminated(EXC);
   if (argc <= 1)
     return shell();
+#ifdef _WIN32
+  signal(SIGINT, sigint_handler);
+#else
   struct sigaction sa = {0};
   sa.sa_handler = sigint_handler;
   sigemptyset(&sa.sa_mask);
-  sa.sa_flags = 0; // intentionally no SA_RESTART — let syscalls return EINTR
+  sa.sa_flags = 0;
   sigaction(SIGINT, &sa, NULL);
+#endif
   char *path_non_absolute = argv[1];
   ArErr err = {.ptr = ARGON_NULL};
 

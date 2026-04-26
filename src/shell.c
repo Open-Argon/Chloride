@@ -7,7 +7,6 @@
 #include "./lexer/lexer.h"
 #include "./lexer/token.h"
 #include "./runtime/call/call.h"
-#include "./runtime/objects/functions/functions.h"
 #include "./runtime/objects/term/term.h"
 #include "./runtime/runtime.h"
 #include "./translator/translator.h"
@@ -40,11 +39,15 @@ void handle_sigint(int sig) {
 
 int execute_code(char *context, char *path, Stack *scope,
                  RuntimeState *runtime_state) {
+#ifdef _WIN32
+  signal(SIGINT, sigint_handler);
+#else
   struct sigaction sa = {0};
   sa.sa_handler = sigint_handler;
   sigemptyset(&sa.sa_mask);
-  sa.sa_flags = 0; // intentionally no SA_RESTART — let syscalls return EINTR
+  sa.sa_flags = 0;
   sigaction(SIGINT, &sa, NULL);
+#endif
   ArErr err = no_err;
 
   DArray tokens;
