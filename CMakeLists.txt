@@ -72,11 +72,25 @@ set_target_properties(argon PROPERTIES
 find_package(Threads REQUIRED)
 
 if(NOT EXISTS "${CMAKE_BINARY_DIR}/conan_toolchain.cmake" AND NOT CONAN_EXPORTED)
-    # Non-Conan build (Homebrew, manual CMake, Linux distros, etc.)
-    find_package(PkgConfig REQUIRED)
-    pkg_check_modules(GMP REQUIRED gmp)
-    pkg_check_modules(MPFR REQUIRED mpfr)
-    pkg_check_modules(BDWGC REQUIRED bdw-gc)
+    # Non-Conan build — use find_package, which honours CMAKE_PREFIX_PATH
+    find_package(PkgConfig QUIET)
+
+    # Try find_package first (works with Homebrew CMAKE_PREFIX_PATH)
+    find_library(GMP_LIBRARIES NAMES gmp)
+    find_path(GMP_INCLUDE_DIRS NAMES gmp.h)
+
+    find_library(MPFR_LIBRARIES NAMES mpfr)
+    find_path(MPFR_INCLUDE_DIRS NAMES mpfr.h)
+
+    find_library(BDWGC_LIBRARIES NAMES gc)
+    find_path(BDWGC_INCLUDE_DIRS NAMES gc/gc.h gc.h)
+
+    # Fall back to pkg-config if find_library didn't work
+    if(NOT GMP_LIBRARIES AND PkgConfig_FOUND)
+        pkg_check_modules(GMP REQUIRED gmp)
+        pkg_check_modules(MPFR REQUIRED mpfr)
+        pkg_check_modules(BDWGC REQUIRED bdw-gc)
+    endif()
 
     target_include_directories(argon PRIVATE
         ${GMP_INCLUDE_DIRS}
