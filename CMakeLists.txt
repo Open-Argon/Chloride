@@ -56,19 +56,24 @@ if(MINGW)
 endif()
 
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
-# set(THREADS_PREFER_PTHREAD_FLAG ON)
 target_include_directories(argon PRIVATE
     ${CMAKE_SOURCE_DIR}/external/cwalk/include
     ${CMAKE_SOURCE_DIR}/external/libdye/include
     ${CMAKE_CURRENT_SOURCE_DIR}/src/lexer
 )
+
 # Step 4: Build order
 add_dependencies(argon GenerateLexer)
+
 # Step 5: Output path
 set_target_properties(argon PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/build/bin
 )
-# Step 6: Find libraries — support both Conan and pkg-config (e.g. Homebrew)
+
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+set(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
+
+# Step 6: Find libraries — added support for pkg-config for homebrew 
 find_package(Threads REQUIRED)
 if(CONAN_EXPORTED OR EXISTS "${CMAKE_BINARY_DIR}/conan_toolchain.cmake")
     # Conan build
