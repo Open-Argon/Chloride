@@ -614,8 +614,7 @@ Stack *ar_import(char *current_directory, char *path_relative, ArErr *err,
   // 2. Walk up the directory tree checking argon_modules at each level
   if (!found) {
     char walk_dir[PATH_MAX];
-    strncpy(walk_dir, current_directory, PATH_MAX);
-    walk_dir[PATH_MAX - 1] = '\0';
+    snprintf(walk_dir, PATH_MAX, "%s", current_directory);
 
     while (!found) {
       if (try_patterns(walk_dir, path_relative, MODULE_PATTERNS,
