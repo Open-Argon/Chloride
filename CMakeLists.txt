@@ -1,22 +1,27 @@
 # SPDX-FileCopyrightText: 2025 William Bell
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
+
 cmake_minimum_required(VERSION 3.16)
 project(argon C)
+
 # Conan will define FLEX_EXECUTABLE via an environment variable or toolchain
 # You should set it in CMakeLists.txt only if it's not set
 if(NOT DEFINED FLEX_EXECUTABLE)
     find_program(FLEX_EXECUTABLE flex REQUIRED)
 endif()
+
 # Set source and output files
 set(LEXER_SRC ${CMAKE_CURRENT_SOURCE_DIR}/src/lexer/lex.l)
 set(LEXER_C ${CMAKE_CURRENT_SOURCE_DIR}/src/lexer/lex.yy.c)
 set(LEXER_H ${CMAKE_CURRENT_SOURCE_DIR}/src/lexer/lex.yy.h)
+
 # Gather all C files EXCEPT the generated lex.yy.c
 file(GLOB_RECURSE CFILES CONFIGURE_DEPENDS
     ${CMAKE_CURRENT_SOURCE_DIR}/src/*.c
 )
 list(REMOVE_ITEM CFILES ${LEXER_C})  # remove if globbed
+
 # Step 1: Custom command to generate lexer
 add_custom_command(
     OUTPUT ${LEXER_C} ${LEXER_H}
@@ -24,17 +29,24 @@ add_custom_command(
     DEPENDS ${LEXER_SRC}
     COMMENT "Generating lexer with flex"
 )
+
 # Step 2: Custom target for lexer
 add_custom_target(GenerateLexer DEPENDS ${LEXER_C} ${LEXER_H})
+
 set(SOURCES
     external/xxhash/xxhash.c external/cwalk/src/cwalk.c external/libdye/src/dye.c ${CFILES} ${LEXER_C}
 )
+
 if(NOT WIN32)
     list(APPEND SOURCES external/linenoise/linenoise.c)
 endif()
+
 # Step 3: Add executable
 add_executable(argon ${SOURCES})
+
+# added this for homebrew formula
 install(TARGETS argon DESTINATION bin)
+
 if(MINGW)
     target_link_options(argon PRIVATE
         -static
@@ -42,8 +54,9 @@ if(MINGW)
         -static-libstdc++
     )
 endif()
+
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
-set(THREADS_PREFER_PTHREAD_FLAG ON)
+# set(THREADS_PREFER_PTHREAD_FLAG ON)
 target_include_directories(argon PRIVATE
     ${CMAKE_SOURCE_DIR}/external/cwalk/include
     ${CMAKE_SOURCE_DIR}/external/libdye/include
