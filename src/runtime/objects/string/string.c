@@ -506,7 +506,6 @@ ARGON_METHOD(ARGON_STRING_TYPE, __getitem__, {
   }
   return api->string_to_argon((struct string){&self.data[index], 1});
 })
-
 ARGON_METHOD(ARGON_STRING_TYPE, split, {
   if (argc != 2) {
     *err = create_err(RuntimeError, "split expects 2 arguments, got %" PRIu64,
@@ -522,33 +521,41 @@ ARGON_METHOD(ARGON_STRING_TYPE, split, {
   if (api->is_error(err))
     return ARGON_NULL;
 
-  char *start = s.data;
-  char *end = s.data + s.length;
   size_t dlen = delim.length;
 
   if (dlen == 0) {
-    return api->throw_argon_error(err, ValueError, "empty seperator");
+    return api->throw_argon_error(err, ValueError, "empty separator");
   }
 
   ArgonObject *object = new_instance(ARRAY_TYPE, sizeof(darray_armem));
   object->type = TYPE_ARRAY;
-
   object->value.as_array = darray_armem_create();
-
   darray_armem_init(object->value.as_array, sizeof(ArgonObject *), 0);
 
-  char *p = start;
+  // Guard: if source string is empty or has no data, return array with
+  // just the original (empty) string as the sole element.
+  if (s.length == 0 || s.data == NULL) {
+    ArgonObject *item = api->string_to_argon((struct string){s.data, 0});
+    darray_armem_insert(object->value.as_array, object->value.as_array->size,
+                        &item);
+    return object;
+  }
+
+  // Guard: delimiter data must not be null (length already checked above).
+  if (delim.data == NULL) {
+    return api->throw_argon_error(err, ValueError, "invalid separator");
+  }
+
+  char *start = s.data;
+  char *end   = s.data + s.length;
+  char *p     = start;
 
   while (p <= end - dlen) {
     if (memcmp(p, delim.data, dlen) == 0) {
-
       ArgonObject *item =
           api->string_to_argon((struct string){start, p - start});
-
-      // print segment [start, p)
       darray_armem_insert(object->value.as_array, object->value.as_array->size,
                           &item);
-
       p += dlen;
       start = p;
       continue;
@@ -556,12 +563,50 @@ ARGON_METHOD(ARGON_STRING_TYPE, split, {
     p++;
   }
 
-  // final segment
-  ArgonObject *item = api->string_to_argon((struct string){start, end - start});
+  // Final segment
+  ArgonObject *item =
+      api->string_to_argon((struct string){start, end - start});
   darray_armem_insert(object->value.as_array, object->value.as_array->size,
                       &item);
 
   return object;
+})
+
+ARGON_METHOD(ARGON_STRING_TYPE, strip, {
+  if (argc != 2) {
+    *err = create_err(RuntimeError, "strip expects 2 arguments, got %" PRIu64,
+                      argc);
+    return ARGON_NULL;
+  }
+
+  struct string s = api->argon_to_string(argv[0], err);
+  if (api->is_error(err))
+    return ARGON_NULL;
+
+  struct string chars = api->argon_to_string(argv[1], err);
+  if (api->is_error(err))
+    return ARGON_NULL;
+
+  // Empty string or no strip chars: return a copy as-is
+  if (s.length == 0 || s.data == NULL || chars.length == 0 || chars.data == NULL) {
+    return api->string_to_argon((struct string){s.data, s.length});
+  }
+
+  char *start = s.data;
+  char *end   = s.data + s.length - 1; // points to last char
+
+  // Strip from the left
+  while (start <= end && memchr(chars.data, (unsigned char)*start, chars.length) != NULL) {
+    start++;
+  }
+
+  // Strip from the right
+  while (end >= start && memchr(chars.data, (unsigned char)*end, chars.length) != NULL) {
+    end--;
+  }
+
+  // end is now pointing at the last kept char, so length = end - start + 1
+  return api->string_to_argon((struct string){start, end - start + 1});
 })
 
 ARGON_METHOD(ARGON_STRING_TYPE, __contains__, {
