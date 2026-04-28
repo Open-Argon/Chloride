@@ -55,12 +55,12 @@ pipeline {
             steps {
                 sh '''
                     apt update
-                    apt install -y cmake flex python3 python3-pip python3-venv make gcc-mingw-w64 mingw-w64 ninja-build zip jq gh
+                    apt install -y cmake flex python3 python3-pip python3-venv make gcc-mingw-w64 mingw-w64 ninja-build zip jq gh dpkg-dev
                     python3 -m venv /tmp/venv
                     . /tmp/venv/bin/activate
                     pip install --upgrade pip
                     pip install conan
-                    
+
                     mkdir -p archives macos-artifacts
                     rm -rf archives/* macos-artifacts/* *.zip *.tar.gz
                 '''
@@ -83,7 +83,7 @@ pipeline {
                     rm -rf build CMakeCache.txt CMakeFiles
                     conan install . --build=missing
                     conan build .
-                    
+
                     ./build-stdlib.sh
                     cp -r stdlib build/dist/
                 '''
@@ -107,19 +107,64 @@ pipeline {
             }
         }
 
+        stage('Debian Package Build') {
+            steps {
+                script {
+                    def version = env.TAG_NAME ?: "0.0.0-1"
+                    env.DEB_VERSION = version
+                    env.PACKAGE_ROOT = "${env.WORKSPACE}/argon_${version}_amd64"
+                }
+                sh '''
+                    set -e
+                    . /tmp/venv/bin/activate
+                    INSTALL_INTERNAL="/usr/local/lib/chloride"
+
+                    rm -rf "$PACKAGE_ROOT/usr" build CMakeCache.txt CMakeFiles
+
+                    conan install . --build=missing
+                    conan build .
+
+                    DESTDIR="$PACKAGE_ROOT" cmake --install build --prefix "$INSTALL_INTERNAL"
+
+                    ./build-stdlib.sh
+                    mkdir -p "$PACKAGE_ROOT$INSTALL_INTERNAL/stdlib"
+                    cp -R stdlib/* "$PACKAGE_ROOT$INSTALL_INTERNAL/stdlib/"
+
+                    mkdir -p "$PACKAGE_ROOT/usr/bin"
+                    cat <<EOF > "$PACKAGE_ROOT/usr/bin/argon"
+                    #!/bin/bash
+                    exec "$INSTALL_INTERNAL/bin/argon" "\\$@"
+                    EOF
+                    chmod +x "$PACKAGE_ROOT/usr/bin/argon"
+
+                    mkdir -p "$PACKAGE_ROOT/DEBIAN"
+                    cat <<EOF > "$PACKAGE_ROOT/DEBIAN/control"
+                    Package: argon
+                    Version: $DEB_VERSION
+                    Architecture: amd64
+                    Maintainer: Ugric
+                    Description: Interpreter written in C for the argon programming language
+                    EOF
+
+                    dpkg-deb --build "$PACKAGE_ROOT" "archives/argon_${DEB_VERSION}_amd64.deb"
+                '''
+                archiveArtifacts artifacts: "archives/argon_*_amd64.deb", allowEmptyArchive: false, fingerprint: true
+            }
+        }
+
         stage('Windows Build') {
             steps {
                 sh '''
-                  . /tmp/venv/bin/activate
-                  rm -rf build CMakeCache.txt CMakeFiles
-                  conan install . \
-                      --profile:host=mingw-x86_64.txt \
-                      --build=missing
-                  conan build . \
-                      --profile:host=mingw-x86_64.txt
+                    . /tmp/venv/bin/activate
+                    rm -rf build CMakeCache.txt CMakeFiles
+                    conan install . \
+                        --profile:host=mingw-x86_64.txt \
+                        --build=missing
+                    conan build . \
+                        --profile:host=mingw-x86_64.txt
 
-                  ./build-stdlib.sh --windows
-                  cp -r stdlib build/dist/
+                    ./build-stdlib.sh --windows
+                    cp -r stdlib build/dist/
                 '''
             }
         }
@@ -148,35 +193,35 @@ pipeline {
             }
             steps {
                 sh '''
-                set -e
+                    set -e
 
-                # Decide what ref to build
-                REF=$(git describe --tags --exact-match 2>/dev/null || git rev-parse HEAD)
-                echo "Triggering macOS build for ref: $REF"
+                    # Decide what ref to build
+                    REF=$(git describe --tags --exact-match 2>/dev/null || git rev-parse HEAD)
+                    echo "Triggering macOS build for ref: $REF"
 
-                # Trigger workflow
-                gh workflow run "$WORKFLOW" \
-                    --repo "$GH_REPO" \
-                    --ref main \
-                    -f ref="$REF" \
-                    -f build_name="$BUILD_NAME_ARG"
+                    # Trigger workflow
+                    gh workflow run "$WORKFLOW" \
+                        --repo "$GH_REPO" \
+                        --ref main \
+                        -f ref="$REF" \
+                        -f build_name="$BUILD_NAME_ARG"
 
-                # Get the latest run ID
-                RUN_ID=$(gh run list \
-                    --repo "$GH_REPO" \
-                    --workflow "$WORKFLOW" \
-                    --limit 1 \
-                    --json databaseId \
-                    -q '.[0].databaseId')
+                    # Get the latest run ID
+                    RUN_ID=$(gh run list \
+                        --repo "$GH_REPO" \
+                        --workflow "$WORKFLOW" \
+                        --limit 1 \
+                        --json databaseId \
+                        -q '.[0].databaseId')
 
-                echo "Waiting for GitHub Actions run $RUN_ID"
-                gh run watch "$RUN_ID" --repo "$GH_REPO"
+                    echo "Waiting for GitHub Actions run $RUN_ID"
+                    gh run watch "$RUN_ID" --repo "$GH_REPO"
 
-                # Download artifact
-                gh run download "$RUN_ID" \
-                    --repo "$GH_REPO" \
-                    --name macos-build \
-                    --dir macos-artifacts
+                    # Download artifact
+                    gh run download "$RUN_ID" \
+                        --repo "$GH_REPO" \
+                        --name macos-build \
+                        --dir macos-artifacts
                 '''
             }
         }
