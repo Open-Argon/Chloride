@@ -5,12 +5,12 @@
  */
 
 #include "dictionary.h"
+#include "../../err.h"
 #include "../../lexer/token.h"
 #include "../../memory.h"
+#include "../../runtime/objects/exceptions/exceptions.h"
 #include "../parser.h"
 #include "../string/string.h"
-#include "../../runtime/objects/exceptions/exceptions.h"
-#include "../../err.h"
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -55,10 +55,10 @@ ParsedValueReturn parse_dictionary(char *file, DArray *tokens, size_t *index) {
       } else if (!key.value) {
         free_parsed(parsedValue);
         free(parsedValue);
-        return (ParsedValueReturn){path_specific_create_err(token->line, token->column,
-                                              token->length, file,
-                                              SyntaxError, "expected key"),
-                                   NULL};
+        return (ParsedValueReturn){
+            path_specific_create_err(token->line, token->column, token->length,
+                                     file, SyntaxError, "expected key"),
+            NULL};
       }
       skip_newlines_and_indents(tokens, index);
       err = error_if_finished(file, tokens, index);
@@ -93,8 +93,9 @@ ParsedValueReturn parse_dictionary(char *file, DArray *tokens, size_t *index) {
           free_parsed(key.value);
           free(key.value);
           return (ParsedValueReturn){
-              path_specific_create_err(token->line, token->column, token->length, file,
-                         SyntaxError, "expected value"),
+              path_specific_create_err(token->line, token->column,
+                                       token->length, file, SyntaxError,
+                                       "expected value"),
               NULL};
         }
         skip_newlines_and_indents(tokens, index);
@@ -119,8 +120,9 @@ ParsedValueReturn parse_dictionary(char *file, DArray *tokens, size_t *index) {
           free_parsed(value.value);
           free(value.value);
           return (ParsedValueReturn){
-              path_specific_create_err(token->line, token->column, token->length, file,
-                         SyntaxError, "expected comma"),
+              path_specific_create_err(token->line, token->column,
+                                       token->length, file, SyntaxError,
+                                       "expected comma"),
               NULL};
         }
         break;
@@ -135,10 +137,10 @@ ParsedValueReturn parse_dictionary(char *file, DArray *tokens, size_t *index) {
         free(parsedValue);
         free_parsed(key.value);
         free(key.value);
-        return (ParsedValueReturn){path_specific_create_err(token->line, token->column,
-                                              token->length, file,
-                                              SyntaxError, "unexpected token"),
-                                   NULL};
+        return (ParsedValueReturn){
+            path_specific_create_err(token->line, token->column, token->length,
+                                     file, SyntaxError, "unexpected token"),
+            NULL};
       }
       ParsedDictionaryEntry entry = {key.value, value.value};
       darray_push(dictionary, &entry);
@@ -153,6 +155,16 @@ ParsedValueReturn parse_dictionary(char *file, DArray *tokens, size_t *index) {
         return (ParsedValueReturn){err, NULL};
       }
       token = darray_get(tokens, *index);
+      if (token->type == TOKEN_COMMA) {
+        (*index)++;
+        err = error_if_finished(file, tokens, index);
+        if (is_error(&err)) {
+          free_parsed(parsedValue);
+          free(parsedValue);
+          return (ParsedValueReturn){err, NULL};
+        }
+        token = darray_get(tokens, *index);
+      }
       if (token->type == TOKEN_RBRACE) {
         break;
       }
