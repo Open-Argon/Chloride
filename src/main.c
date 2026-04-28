@@ -67,10 +67,7 @@ int main(int argc, char *argv[]) {
   // runtime_hash_table = createHashmap_GC();
   get_current_directory(CWD, sizeof(CWD));
   get_executable_path(EXC, sizeof(EXC));
-  size_t dir_length;
-  cwk_path_get_dirname(EXC, &dir_length);
-  memcpy(EXC_DIR, EXC, dir_length);
-  EXC[dir_length] = '\0';
+  cwk_path_get_absolute(EXC, "..", EXC_DIR, sizeof(EXC_DIR));
   CWD_ARGON = new_string_object_null_terminated(CWD);
   EXC_ARGON = new_string_object_null_terminated(EXC);
   if (argc <= 1)
