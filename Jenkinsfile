@@ -85,7 +85,7 @@ pipeline {
                     conan build .
                     
                     ./build-stdlib.sh
-                    cp stdlib build/dist/
+                    cp -r stdlib build/dist/
                 '''
             }
         }
@@ -119,7 +119,7 @@ pipeline {
                       --profile:host=mingw-x86_64.txt
 
                   ./build-stdlib.sh --windows
-                  cp stdlib build/dist/
+                  cp -r stdlib build/dist/
                 '''
             }
         }

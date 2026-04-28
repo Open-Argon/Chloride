@@ -57,7 +57,7 @@ jobs:
           conan install . --build=missing
           conan build .
           ./build-stdlib.sh
-          cp stdlib build/dist/
+          cp -r stdlib build/dist/
 
       # -------------------
       # Package
