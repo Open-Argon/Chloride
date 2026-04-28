@@ -67,7 +67,7 @@ jobs:
           BUILD_NAME="${{ inputs.build_name }}"
           OUTPUT_FILE="archives/chloride-${BUILD_NAME}-macos-arm64.tar.gz"
           cp LICENSE.txt build/dist/
-          cp LICENSES build/dist/
+          cp -r LICENSES build/dist/
           tar -czf "$OUTPUT_FILE" -C build/dist .
           echo "Packaged $OUTPUT_FILE"
 
