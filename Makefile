@@ -21,6 +21,10 @@ endif
 FLEX_TOOL  = flex
 BUILD_DIR  = build/dev
 
+# Install prefix
+PREFIX	   ?= /usr/local
+INSTALL_DIR	= $(PREFIX)/bin
+
 # Source files
 CFILES = \
 	external/xxhash/xxhash.c \
@@ -112,3 +116,10 @@ clean:
 	rm -rf build bin
 	find . -type d -name "__arcache__" -exec rm -rf {} +
 	rm -f $(LEXER_C) $(LEXER_H)
+
+# Install stuff
+install: $(BINARY)
+	install -d $(INSTALL_DIR)
+	install -m 755 $(BINARY) $(INSTALL_DIR)/argon
+uninstall:
+	rm $(INSTALL_DIR)/argon
