@@ -111,9 +111,9 @@ pipeline {
             steps {
                 script {
                     def version = env.TAG_NAME ?: "0.0.0-1"
-                    env.DEB_VERSION = version
+                    env.DEB_VERSION = version.replaceFirst('^v', '')  // strip leading 'v'
                     env.OUTPUT_FILE = "archives/argon_${env.DEB_VERSION}_amd64.deb"
-                    env.PACKAGE_ROOT = "${env.WORKSPACE}/argon_${version}_amd64"
+                    env.PACKAGE_ROOT = "${env.WORKSPACE}/argon_${env.DEB_VERSION}_amd64"
                 }
                 sh '''
                     set -e
@@ -121,20 +121,16 @@ pipeline {
 
                     rm -rf "$PACKAGE_ROOT"
 
-                    # Install from the existing build instead of rebuilding
                     DESTDIR="$PACKAGE_ROOT" cmake --install build --prefix "$INSTALL_INTERNAL"
 
-                    # Copy stdlib built in the Linux Build stage
                     mkdir -p "$PACKAGE_ROOT$INSTALL_INTERNAL/stdlib"
                     cp -R stdlib/* "$PACKAGE_ROOT$INSTALL_INTERNAL/stdlib/"
 
-                    # Wrapper script
                     mkdir -p "$PACKAGE_ROOT/usr/bin"
                     printf '#!/bin/bash\nexec "%s/bin/argon" "$@"\n' "$INSTALL_INTERNAL" \
                         > "$PACKAGE_ROOT/usr/bin/argon"
                     chmod +x "$PACKAGE_ROOT/usr/bin/argon"
 
-                    # Control file — no leading whitespace or dpkg will reject it
                     mkdir -p "$PACKAGE_ROOT/DEBIAN"
                     printf 'Package: argon\nVersion: %s\nArchitecture: amd64\nMaintainer: Ugric\nDescription: Interpreter written in C for the argon programming language\n' \
                         "$DEB_VERSION" > "$PACKAGE_ROOT/DEBIAN/control"
