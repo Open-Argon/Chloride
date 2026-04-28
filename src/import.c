@@ -114,7 +114,7 @@ ArgonObject *EXC_ARGON;
 
 const char CACHE_FOLDER[] = "__arcache__";
 const char FILE_IDENTIFIER[5] = "ARBI";
-const char BYTECODE_EXTENTION[] = "arbin";
+#define BYTECODE_EXTENTION "bin"
 const uint32_t version_number = 1;
 const char version_string[] = "0.0.1";
 
@@ -302,7 +302,9 @@ Translated load_argon_file(char *path, ArErr *err) {
   }
 
   char basename[PATH_MAX];
-  memcpy(basename, basename_ptr, basename_length);
+  size_t safe_len = basename_length < PATH_MAX ? basename_length : PATH_MAX - 1;
+  memcpy(basename, basename_ptr, safe_len);
+  basename[safe_len] = '\0';
 
   size_t parent_directory_length;
   cwk_path_get_dirname(path, &parent_directory_length);
@@ -316,10 +318,10 @@ Translated load_argon_file(char *path, ArErr *err) {
                 sizeof(cache_folder_path));
 
   char cache_file_path[PATH_MAX];
-  cwk_path_join(cache_folder_path, basename, cache_file_path,
-                sizeof(cache_file_path));
-  cwk_path_change_extension(cache_file_path, BYTECODE_EXTENTION,
-                            cache_file_path, sizeof(cache_file_path));
+  int written =
+      snprintf(cache_file_path, sizeof(cache_file_path),
+               "%s/%s." BYTECODE_EXTENTION, cache_folder_path, basename);
+  bool can_use_cache = written > 0 && written < (int)sizeof(cache_file_path);
   FILE *file = fopen(path, "r");
   if (!file) {
     *err = create_err(FileError, "Unable to open file '%s'", path);
@@ -340,7 +342,8 @@ Translated load_argon_file(char *path, ArErr *err) {
 
   Translated translated;
 
-  if (load_cache(&translated, cache_file_path, hash, path) != 0) {
+  if (can_use_cache &&
+      load_cache(&translated, cache_file_path, hash, path) != 0) {
 
     DArray tokens;
     darray_init(&tokens, sizeof(Token));
@@ -438,44 +441,48 @@ Translated load_argon_file(char *path, ArErr *err) {
     malloc_trim(0);
 #endif
 
-    ensure_dir_exists(cache_folder_path);
+    if (can_use_cache) {
+      ensure_dir_exists(cache_folder_path);
+      file = fopen(cache_file_path, "wb");
+      if (file) {
 
-    file = fopen(cache_file_path, "wb");
+        uint64_t constantsSize = translated.constants.size;
+        uint64_t bytecodeSize = translated.bytecode.size;
 
-    uint64_t constantsSize = translated.constants.size;
-    uint64_t bytecodeSize = translated.bytecode.size;
+        uint32_t version_number_htole32ed = htole32(version_number);
+        uint64_t net_hash = htole64(hash);
+        constantsSize = htole64(constantsSize);
+        bytecodeSize = htole64(bytecodeSize);
 
-    uint32_t version_number_htole32ed = htole32(version_number);
-    uint64_t net_hash = htole64(hash);
-    constantsSize = htole64(constantsSize);
-    bytecodeSize = htole64(bytecodeSize);
+        XXH64_state_t *hash_state = XXH64_createState();
+        XXH64_reset(hash_state, 0);
 
-    XXH64_state_t *hash_state = XXH64_createState();
-    XXH64_reset(hash_state, 0);
+        write_and_hash(file, hash_state, &FILE_IDENTIFIER, sizeof(char),
+                       strlen(FILE_IDENTIFIER));
+        write_and_hash(file, hash_state, &version_number_htole32ed,
+                       sizeof(uint32_t), 1);
+        write_and_hash(file, hash_state, &net_hash, sizeof(net_hash), 1);
+        write_and_hash(file, hash_state, &translated.registerCount,
+                       sizeof(uint8_t), 1);
+        write_and_hash(file, hash_state, &constantsSize, sizeof(uint64_t), 1);
+        write_and_hash(file, hash_state, &bytecodeSize, sizeof(uint64_t), 1);
+        write_and_hash(file, hash_state, translated.constants.data, 1,
+                       translated.constants.size);
+        write_and_hash(file, hash_state, translated.bytecode.data,
+                       translated.bytecode.element_size,
+                       translated.bytecode.size);
 
-    write_and_hash(file, hash_state, &FILE_IDENTIFIER, sizeof(char),
-                   strlen(FILE_IDENTIFIER));
-    write_and_hash(file, hash_state, &version_number_htole32ed,
-                   sizeof(uint32_t), 1);
-    write_and_hash(file, hash_state, &net_hash, sizeof(net_hash), 1);
-    write_and_hash(file, hash_state, &translated.registerCount, sizeof(uint8_t),
-                   1);
-    write_and_hash(file, hash_state, &constantsSize, sizeof(uint64_t), 1);
-    write_and_hash(file, hash_state, &bytecodeSize, sizeof(uint64_t), 1);
-    write_and_hash(file, hash_state, translated.constants.data, 1,
-                   translated.constants.size);
-    write_and_hash(file, hash_state, translated.bytecode.data,
-                   translated.bytecode.element_size, translated.bytecode.size);
+        // Finalize the hash
+        uint64_t file_hash = XXH64_digest(hash_state);
+        XXH64_freeState(hash_state);
 
-    // Finalize the hash
-    uint64_t file_hash = XXH64_digest(hash_state);
-    XXH64_freeState(hash_state);
+        // Convert to little-endian before writing if needed
+        uint64_t file_hash_le = htole64(file_hash);
+        fwrite(&file_hash_le, sizeof(file_hash_le), 1, file);
 
-    // Convert to little-endian before writing if needed
-    uint64_t file_hash_le = htole64(file_hash);
-    fwrite(&file_hash_le, sizeof(file_hash_le), 1, file);
-
-    fclose(file);
+        fclose(file);
+      }
+    }
   }
   char path_length = strlen(translated.path) + 1;
   char *path_alloc = ar_alloc_atomic(path_length);
