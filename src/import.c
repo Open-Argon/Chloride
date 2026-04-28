@@ -537,9 +537,9 @@ static const PathPattern MODULE_PATTERNS[] = {
 
 // Patterns relative to exe directory
 static const PathPattern EXE_PATTERNS[] = {
-    {"stdlib", "", ""},           {"stdlib", "", ".ar"},
-    {"stdlib", "init", ".ar"},    {"argon_modules", "", ""},
-    {"argon_modules", "", ".ar"}, {"argon_modules", "init", ".ar"},
+    {"../stdlib", "", ""},           {"../stdlib", "", ".ar"},
+    {"../stdlib", "init", ".ar"},    {"../argon_modules", "", ""},
+    {"../argon_modules", "", ".ar"}, {"../argon_modules", "init", ".ar"},
 };
 
 struct hashmap_GC *importing_hash_table;

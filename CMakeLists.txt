@@ -67,7 +67,7 @@ add_dependencies(argon GenerateLexer)
 
 # Step 5: Output path
 set_target_properties(argon PROPERTIES
-    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/build/bin
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/build/dist/bin
 )
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
