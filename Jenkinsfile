@@ -117,35 +117,27 @@ pipeline {
                 }
                 sh '''
                     set -e
-                    . /tmp/venv/bin/activate
                     INSTALL_INTERNAL="/usr/local/lib/chloride"
 
-                    rm -rf "$PACKAGE_ROOT/usr" build CMakeCache.txt CMakeFiles
+                    rm -rf "$PACKAGE_ROOT"
 
-                    conan install . --build=missing
-                    conan build .
-
+                    # Install from the existing build instead of rebuilding
                     DESTDIR="$PACKAGE_ROOT" cmake --install build --prefix "$INSTALL_INTERNAL"
 
-                    ./build-stdlib.sh
+                    # Copy stdlib built in the Linux Build stage
                     mkdir -p "$PACKAGE_ROOT$INSTALL_INTERNAL/stdlib"
                     cp -R stdlib/* "$PACKAGE_ROOT$INSTALL_INTERNAL/stdlib/"
 
+                    # Wrapper script
                     mkdir -p "$PACKAGE_ROOT/usr/bin"
-                    cat <<EOF > "$PACKAGE_ROOT/usr/bin/argon"
-                    #!/bin/bash
-                    exec "$INSTALL_INTERNAL/bin/argon" "\\$@"
-                    EOF
+                    printf '#!/bin/bash\nexec "%s/bin/argon" "$@"\n' "$INSTALL_INTERNAL" \
+                        > "$PACKAGE_ROOT/usr/bin/argon"
                     chmod +x "$PACKAGE_ROOT/usr/bin/argon"
 
+                    # Control file — no leading whitespace or dpkg will reject it
                     mkdir -p "$PACKAGE_ROOT/DEBIAN"
-                    cat <<EOF > "$PACKAGE_ROOT/DEBIAN/control"
-                    Package: argon
-                    Version: $DEB_VERSION
-                    Architecture: amd64
-                    Maintainer: Ugric
-                    Description: Interpreter written in C for the argon programming language
-                    EOF
+                    printf 'Package: argon\nVersion: %s\nArchitecture: amd64\nMaintainer: Ugric\nDescription: Interpreter written in C for the argon programming language\n' \
+                        "$DEB_VERSION" > "$PACKAGE_ROOT/DEBIAN/control"
 
                     dpkg-deb --build "$PACKAGE_ROOT" "$OUTPUT_FILE"
                 '''
