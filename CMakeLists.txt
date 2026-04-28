@@ -53,7 +53,7 @@ target_include_directories(argon PRIVATE
 add_dependencies(argon GenerateLexer)
 # Step 5: Output path
 set_target_properties(argon PROPERTIES
-    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/build/bin
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/build/dist/bin
 )
 # Step 6: Find libraries — support both Conan and pkg-config (e.g. Homebrew)
 find_package(Threads REQUIRED)

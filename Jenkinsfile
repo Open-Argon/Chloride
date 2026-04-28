@@ -83,6 +83,9 @@ pipeline {
                     rm -rf build CMakeCache.txt CMakeFiles
                     conan install . --build=missing
                     conan build .
+                    
+                    ./build-stdlib.sh
+                    cp stdlib build/dist/
                 '''
             }
         }
@@ -96,8 +99,9 @@ pipeline {
                     echo "Packaging Linux as: ${env.OUTPUT_FILE}"
                 }
                 sh '''
-                    cp LICENSE.txt build/bin/
-                    tar -czf "$OUTPUT_FILE" -C build/bin .
+                    cp LICENSE.txt build/dist/
+                    cp LICENSES build/dist/
+                    tar -czf "$OUTPUT_FILE" -C build/dist .
                 '''
                 archiveArtifacts artifacts: "${env.OUTPUT_FILE}", allowEmptyArchive: false, fingerprint: true
             }
@@ -114,6 +118,8 @@ pipeline {
                   conan build . \
                       --profile:host=mingw-x86_64.txt
 
+                  ./build-stdlib.sh --windows
+                  cp stdlib build/dist/
                 '''
             }
         }
@@ -125,9 +131,10 @@ pipeline {
                     echo "Packaging Windows as: ${env.OUTPUT_FILE}"
                 }
                 sh '''
-                    cp LICENSE.txt build/bin/
+                    cp LICENSE.txt build/dist/
+                    cp LICENSES build/dist/
                     # Adjust packaging format if needed
-                    zip -r "$OUTPUT_FILE" build/bin/*
+                    zip -r "$OUTPUT_FILE" build/dist/*
                 '''
                 archiveArtifacts artifacts: "${env.OUTPUT_FILE}", allowEmptyArchive: false, fingerprint: true
             }
