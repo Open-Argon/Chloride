@@ -15,7 +15,7 @@ else
 	CC     = gcc
 	BINARY = bin/argon
 	LDFLAGS = $(shell pkg-config --libs gmp mpfr bdw-gc) -lm
-	CFLAGS  += $(shell pkg-config --cflags gmp mpfr bdw-gc)
+# 	CFLAGS  += $(shell pkg-config --cflags gmp mpfr bdw-gc)
 endif
 
 FLEX_TOOL  = flex
@@ -53,7 +53,7 @@ CFLAGS  = $(ARCHFLAGS) -Wall -Wextra -Wno-unused-function \
           -Iexternal/cwalk/include \
           -Iexternal/libdye/include \
           -Iexternal/bdwgc/include \
-          -I/opt/homebrew/include
+		  $(shell pkg-config --cflags gmp mpfr bdw-gc)
 
 # Strip flag (only for non-debug builds)
 STRIP_FLAG = -s
