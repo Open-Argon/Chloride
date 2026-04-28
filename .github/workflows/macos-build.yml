@@ -65,7 +65,7 @@ jobs:
       - name: Package artifact
         run: |
           BUILD_NAME="${{ inputs.build_name }}"
-          OUTPUT_FILE="archives/chloride-${BUILD_NAME}-macos-arm64.tar.gz"
+          OUTPUT_FILE="archives/argon-${BUILD_NAME}-macos-arm64.tar.gz"
           cp LICENSE.txt build/dist/
           cp -r LICENSES build/dist/
           tar -czf "$OUTPUT_FILE" -C build/dist .
@@ -78,4 +78,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: macos-build
-          path: archives/chloride-*-macos-arm64.tar.gz
+          path: archives/argon-*-macos-arm64.tar.gz

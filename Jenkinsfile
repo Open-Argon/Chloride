@@ -95,7 +95,7 @@ pipeline {
             steps {
                 script {
                     def version = env.TAG_NAME ?: "dev"
-                    env.OUTPUT_FILE = "archives/chloride-${version}-linux-x86_64.tar.gz"
+                    env.OUTPUT_FILE = "archives/argon-${version}-linux-x86_64.tar.gz"
                     echo "Packaging Linux as: ${env.OUTPUT_FILE}"
                 }
                 sh '''
@@ -161,7 +161,7 @@ pipeline {
             steps {
                 script {
                     def version = env.TAG_NAME ?: "dev"
-                    env.OUTPUT_FILE = "archives/chloride-${version}-windows-x86_64.zip"
+                    env.OUTPUT_FILE = "archives/argon-${version}-windows-x86_64.zip"
                     echo "Packaging Windows as: ${env.OUTPUT_FILE}"
                 }
                 sh '''
