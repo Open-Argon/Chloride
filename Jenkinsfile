@@ -112,6 +112,7 @@ pipeline {
                 script {
                     def version = env.TAG_NAME ?: "0.0.0-1"
                     env.DEB_VERSION = version
+                    env.OUTPUT_FILE = "archives/argon_${env.DEB_VERSION}_amd64.deb"
                     env.PACKAGE_ROOT = "${env.WORKSPACE}/argon_${version}_amd64"
                 }
                 sh '''
@@ -146,9 +147,9 @@ pipeline {
                     Description: Interpreter written in C for the argon programming language
                     EOF
 
-                    dpkg-deb --build "$PACKAGE_ROOT" "archives/argon_${DEB_VERSION}_amd64.deb"
+                    dpkg-deb --build "$PACKAGE_ROOT" "$OUTPUT_FILE"
                 '''
-                archiveArtifacts artifacts: "archives/argon_*_amd64.deb", allowEmptyArchive: false, fingerprint: true
+                archiveArtifacts artifacts: "${env.OUTPUT_FILE}", allowEmptyArchive: false, fingerprint: true
             }
         }
 
