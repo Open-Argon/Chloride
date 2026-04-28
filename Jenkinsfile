@@ -100,7 +100,7 @@ pipeline {
                 }
                 sh '''
                     cp LICENSE.txt build/dist/
-                    cp LICENSES build/dist/
+                    cp -r LICENSES build/dist/
                     tar -czf "$OUTPUT_FILE" -C build/dist .
                 '''
                 archiveArtifacts artifacts: "${env.OUTPUT_FILE}", allowEmptyArchive: false, fingerprint: true
@@ -132,7 +132,7 @@ pipeline {
                 }
                 sh '''
                     cp LICENSE.txt build/dist/
-                    cp LICENSES build/dist/
+                    cp -r LICENSES build/dist/
                     # Adjust packaging format if needed
                     zip -r "$OUTPUT_FILE" build/dist/*
                 '''
