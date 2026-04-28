@@ -83,11 +83,9 @@ int ensure_dir_exists(const char *path) {
   if (_stat(path, &st) != 0) {
     // Directory does not exist, create it
     if (_mkdir(path) != 0) {
-      perror("_mkdir failed");
       return -1;
     }
   } else if (!(st.st_mode & _S_IFDIR)) {
-    fprintf(stderr, "Path exists but is not a directory\n");
     return -1;
   }
 #else
@@ -95,11 +93,9 @@ int ensure_dir_exists(const char *path) {
   if (stat(path, &st) != 0) {
     // Directory does not exist, create it
     if (mkdir(path, 0755) != 0) {
-      perror("mkdir failed");
       return -1;
     }
   } else if (!S_ISDIR(st.st_mode)) {
-    fprintf(stderr, "Path exists but is not a directory\n");
     return -1;
   }
 #endif
@@ -441,8 +437,7 @@ Translated load_argon_file(char *path, ArErr *err) {
     malloc_trim(0);
 #endif
 
-    if (can_use_cache) {
-      ensure_dir_exists(cache_folder_path);
+    if (can_use_cache && ensure_dir_exists(cache_folder_path) == 0) {
       file = fopen(cache_file_path, "wb");
       if (file) {
 
