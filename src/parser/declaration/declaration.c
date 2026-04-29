@@ -10,13 +10,18 @@
 #include "../../hashmap/hashmap.h"
 #include "../../lexer/token.h"
 #include "../../memory.h"
+#include "../../runtime/objects/exceptions/exceptions.h"
 #include "../function/function.h"
 #include "../literals/literals.h"
-#include "../../runtime/objects/exceptions/exceptions.h"
 #include "../parser.h"
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#define setStage(n)                                                            \
+  if (stage < n)                                                               \
+  stage = n
 
 ParsedValueReturn parse_declaration(char *file, DArray *tokens, size_t *index) {
   (*index)++;
@@ -39,6 +44,10 @@ ParsedValueReturn parse_declaration(char *file, DArray *tokens, size_t *index) {
     declaration->column = token->column;
     bool isFunction = false;
     DArray parameters;
+    DArray *default_value_parameters = NULL;
+    char *v_parameter = NULL;
+    char *kw_parameter = NULL;
+    uint8_t stage = 0;
     declaration->from = parse_null();
 
     if (token->type != TOKEN_IDENTIFIER) {
@@ -76,22 +85,45 @@ ParsedValueReturn parse_declaration(char *file, DArray *tokens, size_t *index) {
         if ((*index) >= tokens->size) {
           hashmap_free(parameters_hashmap, NULL);
           declaration->from = create_parsed_function(
-              declaration->name, parameters, declaration->from);
+              declaration->name, parameters, default_value_parameters,
+              v_parameter, kw_parameter, declaration->from);
           return (ParsedValueReturn){no_err, parsedValue};
         }
         token = darray_get(tokens, *index);
       } else {
+
         while ((*index) < tokens->size) {
           skip_newlines_and_indents(tokens, index);
           ArErr err = error_if_finished(file, tokens, index);
           if (is_error(&err)) {
+            hashmap_free(parameters_hashmap, NULL);
+            darray_free(&parameters, free_parameter);
+            if (default_value_parameters) {
+              darray_free(default_value_parameters,
+                          free_default_value_parameter);
+              free(default_value_parameters);
+            }
+            if (v_parameter)
+              free(v_parameter);
+            if (kw_parameter)
+              free(kw_parameter);
             free_parsed(parsedValue);
             free(parsedValue);
             return (ParsedValueReturn){err, NULL};
           }
           token = darray_get(tokens, *index);
           if (token->type != TOKEN_IDENTIFIER) {
+            hashmap_free(parameters_hashmap, NULL);
             darray_free(&parameters, free_parameter);
+            if (default_value_parameters) {
+              darray_free(default_value_parameters,
+                          free_default_value_parameter);
+              free(default_value_parameters);
+            }
+            if (v_parameter)
+              free(v_parameter);
+            if (kw_parameter)
+              free(kw_parameter);
             free_parsed(parsedValue);
             free(parsedValue);
             return (ParsedValueReturn){
@@ -105,7 +137,17 @@ ParsedValueReturn parse_declaration(char *file, DArray *tokens, size_t *index) {
           uint64_t hash =
               siphash64_bytes(token->value, token->length, siphash_key_fixed);
           if (hashmap_lookup(parameters_hashmap, hash) != NULL) {
+            hashmap_free(parameters_hashmap, NULL);
             darray_free(&parameters, free_parameter);
+            if (default_value_parameters) {
+              darray_free(default_value_parameters,
+                          free_default_value_parameter);
+              free(default_value_parameters);
+            }
+            if (v_parameter)
+              free(v_parameter);
+            if (kw_parameter)
+              free(kw_parameter);
             free_parsed(parsedValue);
             free(parsedValue);
             return (ParsedValueReturn){
@@ -119,26 +161,50 @@ ParsedValueReturn parse_declaration(char *file, DArray *tokens, size_t *index) {
           strcpy(parameter_name, token->value);
           hashmap_insert(parameters_hashmap, hash, parameter_name, (void *)1,
                          0);
-          darray_push(&parameters, &parameter_name);
+          if (stage == 0) darray_push(&parameters, &parameter_name);
           (*index)++;
-          err = error_if_finished(file, tokens, index);
-          if (is_error(&err)) {
-            hashmap_free(parameters_hashmap, NULL);
-            darray_free(&parameters, free_parameter);
-            free_parsed(parsedValue);
-            free(parsedValue);
-            return (ParsedValueReturn){err, NULL};
-          }
           skip_newlines_and_indents(tokens, index);
           err = error_if_finished(file, tokens, index);
           if (is_error(&err)) {
             hashmap_free(parameters_hashmap, NULL);
             darray_free(&parameters, free_parameter);
+            if (default_value_parameters) {
+              darray_free(default_value_parameters,
+                          free_default_value_parameter);
+              free(default_value_parameters);
+            }
+            if (v_parameter)
+              free(v_parameter);
+            if (kw_parameter)
+              free(kw_parameter);
             free_parsed(parsedValue);
             free(parsedValue);
             return (ParsedValueReturn){err, NULL};
           }
           token = darray_get(tokens, *index);
+          if (stage <= 1 && token->type == TOKEN_ASSIGN) {
+            setStage(1);
+            (*index)++;
+            skip_newlines_and_indents(tokens, index);
+            err = error_if_finished(file, tokens, index);
+            if (is_error(&err)) {
+              hashmap_free(parameters_hashmap, NULL);
+              darray_free(&parameters, free_parameter);
+              if (default_value_parameters) {
+                darray_free(default_value_parameters,
+                            free_default_value_parameter);
+                free(default_value_parameters);
+              }
+              if (v_parameter)
+                free(v_parameter);
+              if (kw_parameter)
+                free(kw_parameter);
+              free_parsed(parsedValue);
+              free(parsedValue);
+              return (ParsedValueReturn){err, NULL};
+            }
+            
+          }
           if (token->type == TOKEN_RPAREN) {
             (*index)++;
             if ((*index) >= tokens->size)
@@ -146,7 +212,17 @@ ParsedValueReturn parse_declaration(char *file, DArray *tokens, size_t *index) {
             token = darray_get(tokens, *index);
             break;
           } else if (token->type != TOKEN_COMMA) {
+            hashmap_free(parameters_hashmap, NULL);
             darray_free(&parameters, free_parameter);
+            if (default_value_parameters) {
+              darray_free(default_value_parameters,
+                          free_default_value_parameter);
+              free(default_value_parameters);
+            }
+            if (v_parameter)
+              free(v_parameter);
+            if (kw_parameter)
+              free(kw_parameter);
             free_parsed(parsedValue);
             free(parsedValue);
             return (ParsedValueReturn){
@@ -160,6 +236,15 @@ ParsedValueReturn parse_declaration(char *file, DArray *tokens, size_t *index) {
           if (is_error(&err)) {
             hashmap_free(parameters_hashmap, NULL);
             darray_free(&parameters, free_parameter);
+            if (default_value_parameters) {
+              darray_free(default_value_parameters,
+                          free_default_value_parameter);
+              free(default_value_parameters);
+            }
+            if (v_parameter)
+              free(v_parameter);
+            if (kw_parameter)
+              free(kw_parameter);
             free_parsed(parsedValue);
             free(parsedValue);
             return (ParsedValueReturn){err, NULL};
@@ -199,8 +284,9 @@ ParsedValueReturn parse_declaration(char *file, DArray *tokens, size_t *index) {
       }
     }
     if (isFunction) {
-      declaration->from = create_parsed_function(declaration->name, parameters,
-                                                 declaration->from);
+      declaration->from = create_parsed_function(
+          declaration->name, parameters, default_value_parameters, v_parameter,
+          kw_parameter, declaration->from);
     }
     if ((*index) >= tokens->size)
       break;

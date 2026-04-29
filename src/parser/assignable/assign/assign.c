@@ -111,8 +111,8 @@ ParsedValueReturn parse_assign(char *file, DArray *tokens,
         NULL};
   }
   if (is_function) {
-    from.value =
-        create_parsed_function(function_name, function_args, from.value);
+    from.value = create_parsed_function(function_name, function_args, NULL,
+                                        NULL, NULL, from.value);
     if (to_free_function_name)
       free(function_name);
     free(assign_to->data);

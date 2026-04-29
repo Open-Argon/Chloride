@@ -7,7 +7,6 @@
 #ifndef parentheses_and_anonymous_function_H
 #define parentheses_and_anonymous_function_H
 #include "../parser.h"
-#include "../../lexer/token.h"
 
 ParsedValueReturn parse_parentheses(char *file, DArray *tokens, size_t *index);
 

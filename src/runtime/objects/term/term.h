@@ -6,9 +6,7 @@
 
 #ifndef runtime_term_H
 #define runtime_term_H
-#include "../../objects/literals/literals.h"
 #include "../../objects/object.h"
-#include "../../runtime.h"
 
 EXPOSE_ARGON_METHOD(term, log)
 

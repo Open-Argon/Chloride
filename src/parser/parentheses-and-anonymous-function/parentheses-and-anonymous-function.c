@@ -5,10 +5,10 @@
  */
 
 #include "parentheses-and-anonymous-function.h"
-#include "../../memory.h"
-#include "../assignable/identifier/identifier.h"
-#include "../../runtime/objects/exceptions/exceptions.h"
 #include "../../err.h"
+#include "../../memory.h"
+#include "../../runtime/objects/exceptions/exceptions.h"
+#include "../assignable/identifier/identifier.h"
 #include "../function/function.h"
 #include <stddef.h>
 #include <string.h>
@@ -44,10 +44,10 @@ ParsedValueReturn parse_parentheses(char *file, DArray *tokens, size_t *index) {
         break;
       } else if (token->type != TOKEN_COMMA) {
         darray_free(&list, (void (*)(void *))free_parsed);
-        return (ParsedValueReturn){path_specific_create_err(token->line, token->column,
-                                              token->length, file,
-                                              SyntaxError, "expected comma"),
-                                   NULL};
+        return (ParsedValueReturn){
+            path_specific_create_err(token->line, token->column, token->length,
+                                     file, SyntaxError, "expected comma"),
+            NULL};
       }
       (*index)++;
       skip_newlines_and_indents(tokens, index);
@@ -76,8 +76,9 @@ ParsedValueReturn parse_parentheses(char *file, DArray *tokens, size_t *index) {
           darray_free(&list, (void (*)(void *))free_parsed);
           darray_free(&parameters, free_parameter);
           return (ParsedValueReturn){
-              path_specific_create_err(token->line, token->column, token->length, file,
-                         SyntaxError, "expected identifier"),
+              path_specific_create_err(token->line, token->column,
+                                       token->length, file, SyntaxError,
+                                       "expected identifier"),
               NULL};
         }
         char *param = strdup(((ParsedIdentifier *)item->data)->name);
@@ -90,15 +91,15 @@ ParsedValueReturn parse_parentheses(char *file, DArray *tokens, size_t *index) {
         return parsedBody;
       }
       return (ParsedValueReturn){
-          no_err,
-          create_parsed_function("anonymous", parameters, parsedBody.value)};
+          no_err, create_parsed_function("anonymous", parameters, NULL, NULL,
+                                         NULL, parsedBody.value)};
     }
   }
   if (list.size != 1) {
-    return (ParsedValueReturn){path_specific_create_err(token->line, token->column,
-                                          token->length, file, SyntaxError,
-                                          "expected 1 body"),
-                               NULL};
+    return (ParsedValueReturn){
+        path_specific_create_err(token->line, token->column, token->length,
+                                 file, SyntaxError, "expected 1 body"),
+        NULL};
   }
   ParsedValue *parsedValue = checked_malloc(sizeof(ParsedValue));
   memcpy(parsedValue, darray_get(&list, 0), sizeof(ParsedValue));

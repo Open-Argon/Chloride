@@ -5,6 +5,7 @@
  */
 #include "term.h"
 #include "../../call/call.h"
+#include "../../objects/literals/literals.h"
 #include <stddef.h>
 #include <stdio.h>
 
@@ -19,8 +20,10 @@ ARGON_METHOD(term, log, {
     if (string_convert_method) {
       ArgonObject *string_object =
           argon_call(string_convert_method, 0, NULL, NULL, err, state);
-      fwrite(string_object->value.as_str->data, sizeof(char),
-             string_object->value.as_str->length, stdout);
+      struct string string = api->argon_to_string(string_object, err);
+      if (api->is_error(err))
+        return ARGON_NULL;
+      fwrite(string.data, sizeof(char), string.length, stdout);
     }
   }
   printf("\n");

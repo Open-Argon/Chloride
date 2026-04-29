@@ -29,13 +29,13 @@ class tcp do
 
   this.__init__(self,port) = do
     if (!this.__refcount__) __net__.net_init()
-    this.__refcount__=this.__refcount__+1
+    this.__refcount__+=1
     self.__socket__ = __net__.net_listen(port, SocketError)
 
   this.accept(self) = do
     return tcp_connection(__net__.net_accept(self.__socket__, SocketError))
   
   this.close(self) = do
-    this.__refcount__=this.__refcount__-1
+    this.__refcount__-=1
     if (!this.__refcount__) __net__.net_cleanup()
     return __net__.net_close(self.__socket__)
