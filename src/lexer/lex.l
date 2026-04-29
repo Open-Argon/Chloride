@@ -34,6 +34,7 @@ ESCAPE      \\([\"\\\/bfnrt`]|u[0-9a-fA-F]{4})
 "!"                 { return TOKEN_EXCLAMATION; }
 ","                 { return TOKEN_COMMA; }
 ":"                 { return TOKEN_COLON; }
+"?"                 { return TOKEN_QUESTION; }
 
 "="                 { return TOKEN_ASSIGN; }
 

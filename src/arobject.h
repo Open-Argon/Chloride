@@ -242,6 +242,11 @@ typedef struct Stack {
   struct Stack *prev;
 } Stack;
 
+struct default_value {
+  struct string_struct key;
+  ArgonObject *value;
+};
+
 struct argon_function_struct {
   Translated translated;
   uint8_t *bytecode;
@@ -249,6 +254,10 @@ struct argon_function_struct {
   Stack *stack;
   size_t number_of_parameters;
   struct string_struct *parameters;
+  size_t number_of_default_parameters;
+  struct default_value *default_parameters;
+  struct string_struct vargs;
+  struct string_struct kwargs;
   uint64_t line;
   uint64_t column;
 };

@@ -35,6 +35,7 @@ typedef struct call_instance {
   struct call_instance *previous;
   ArgonObject *to_call;
   ArgonObject **args;
+  hashmap_GC *kwargs;
   size_t args_length;
 } call_instance;
 
@@ -42,7 +43,7 @@ typedef struct ErrorCatch {
   size_t jump_to;
   Stack *stack;
   StackFrame *stackFrame;
-  call_instance*callInstance;
+  call_instance *callInstance;
 } ErrorCatch;
 
 typedef struct RuntimeState {
@@ -78,7 +79,7 @@ void bootstrap_types();
 
 void bootstrap_globals();
 
-bool is_instance(ArgonObject*object, ArgonObject*type);
+bool is_instance(ArgonObject *object, ArgonObject *type);
 
 static inline void *arena_get(ConstantArena *arena, size_t offset) {
   return (uint8_t *)arena->data + offset;
@@ -87,7 +88,8 @@ static inline void *arena_get(ConstantArena *arena, size_t offset) {
 static inline void run_instruction(Translated *translated, RuntimeState *state,
                                    struct Stack **stack, ArErr *err);
 
-void init_runtime_state(RuntimeState *runtime,Translated translated, char *path);
+void init_runtime_state(RuntimeState *runtime, Translated translated,
+                        char *path);
 
 Stack *create_scope(Stack *prev, bool force);
 

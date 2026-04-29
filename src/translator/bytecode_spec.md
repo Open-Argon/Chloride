@@ -59,13 +59,45 @@ initilises a function to a given register.
 
 1. the offset of the name of the function.
 1. the length of the name of the function.
-1. the number of arguments.
-1. the offset of the name of the argument.
-1. the length of the name of the argument.
-1. the hash of the name of the argument.
-1. instruction 4 to 6 loop for each argument.
 1. the offset of the bytecode of the function.
 1. the length of the bytecode of the function.
+1. the number of parameters.
+1. the number of default parameters.
+
+# OP_SET_FUNCTION_PARAMETER
+
+set the name of a parameter of the function stored in register 0.
+
+1. the parameter index.
+1. the offset of the name of the parameter.
+1. the length of the name of the parameter.
+1. the hash of the name of the parameter.
+
+# OP_SET_FUNCTION_POSITIONAL_PARAMETER
+
+set the name of a positional parameter of the function stored in register 0.
+
+1. the offset of the name of the parameter.
+1. the length of the name of the parameter.
+1. the hash of the name of the parameter.
+
+# OP_SET_FUNCTION_KEY_WORD_PARAMETER
+
+set the name of a key word parameter of the function stored in register 0.
+
+1. the offset of the name of the parameter.
+1. the length of the name of the parameter.
+1. the hash of the name of the parameter.
+
+# OP_SET_FUNCTION_DEFAULT_PARAMETER
+
+set the name and default value (stored in register 0) of a default parameter of the function stored in a defined register.
+
+1. the register storing the function. (*)
+1. the parameter index.
+1. the offset of the name of the parameter.
+1. the length of the name of the parameter.
+1. the hash of the name of the parameter.
 
 ## OP_IDENTIFIER
 
@@ -124,6 +156,12 @@ pops the top scope off the current
 initialises a call instance struct and arguments buffer.
 
 1. the number of objects for the arguments buffer
+
+## OP_SET_KEY_WORD_ARG
+
+1. the length of the identifer.
+1. the offset of the identifier.
+1. the fixed hash of the variable name.
 
 ## OP_INSERT_ARG
 

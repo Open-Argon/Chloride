@@ -1,9 +1,11 @@
 #ifndef Argon_NATIVE_FUNCTION_H
 #define Argon_NATIVE_FUNCTION_H
 
+#define ARGON_FUNCTION_ARGS size_t argc, ArgonObject **argv, ArgonHashmap *kwargs,     \
+                    ArErr *err, RuntimeState *state, ArgonNativeAPI *api
+
 #define ARGON_FUNCTION(NAME, ...)                                              \
-  ArgonObject *NAME(size_t argc, ArgonObject **argv, ArgonHashmap *kwargs,     \
-                    ArErr *err, RuntimeState *state, ArgonNativeAPI *api) {    \
+  ArgonObject *NAME(ARGON_FUNCTION_ARGS) {    \
     (void)argc;                                                                \
     (void)argv;                                                                \
     (void)kwargs;                                                              \
@@ -14,7 +16,6 @@
   }
 
 #define EXPOSE_ARGON_FUNCTION(NAME)                                            \
-  ArgonObject *NAME(size_t argc, ArgonObject **argv, ArgonHashmap *kwargs,     \
-                    ArErr *err, RuntimeState *state, ArgonNativeAPI *api);
+  ArgonObject *NAME(ARGON_FUNCTION_ARGS);
 
 #endif // Argon_NATIVE_FUNCTION_H

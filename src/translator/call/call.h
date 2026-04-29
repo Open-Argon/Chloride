@@ -7,7 +7,6 @@
 #ifndef BYTECODE_CALL_H
 #define BYTECODE_CALL_H
 #include "../../parser/assignable/call/call.h"
-#include "../translator.h"
 #include <stddef.h>
 
 size_t translate_parsed_call(Translated *translated, ParsedCall* call, ArErr *err);

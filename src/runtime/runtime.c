@@ -168,8 +168,8 @@ ARGON_METHOD(BASE_CLASS, __getattribute__, {
   ArgonObject *cls__getattr__ =
       get_builtin_field_for_class(class_to_access, __getattr__, to_access);
   if (cls__getattr__) {
-    value =
-        argon_call(cls__getattr__, 1, (ArgonObject *[]){access}, NULL, err, state);
+    value = argon_call(cls__getattr__, 1, (ArgonObject *[]){access}, NULL, err,
+                       state);
     if (is_error(err)) {
       return ARGON_NULL;
     }
@@ -204,8 +204,8 @@ ARGON_FUNCTION(ARGON_ADDITION_FUNCTION, {
                         cls___name__->value.as_str->data);
       return ARGON_NULL;
     }
-    output =
-        argon_call(object__add__, 1, (ArgonObject *[]){argv[i]}, NULL, err, state);
+    output = argon_call(object__add__, 1, (ArgonObject *[]){argv[i]}, NULL, err,
+                        state);
   }
   return output;
 })
@@ -231,8 +231,8 @@ ARGON_FUNCTION(ARGON_SUBTRACTION_FUNCTION, {
                         cls___name__->value.as_str->data);
       return ARGON_NULL;
     }
-    output = argon_call(function__subtract__, 1, (ArgonObject *[]){argv[i]}, NULL,
-                        err, state);
+    output = argon_call(function__subtract__, 1, (ArgonObject *[]){argv[i]},
+                        NULL, err, state);
   }
   return output;
 })
@@ -258,8 +258,8 @@ ARGON_FUNCTION(ARGON_MULTIPLY_FUNCTION, {
                         cls___name__->value.as_str->data);
       return ARGON_NULL;
     }
-    output = argon_call(function__multiply__, 1, (ArgonObject *[]){argv[i]}, NULL,
-                        err, state);
+    output = argon_call(function__multiply__, 1, (ArgonObject *[]){argv[i]},
+                        NULL, err, state);
   }
   return output;
 })
@@ -285,8 +285,8 @@ ARGON_FUNCTION(ARGON_EXPONENT_FUNCTION, {
                         cls___name__->value.as_str->data);
       return ARGON_NULL;
     }
-    output = argon_call(function__multiply__, 1, (ArgonObject *[]){argv[i]}, NULL,
-                        err, state);
+    output = argon_call(function__multiply__, 1, (ArgonObject *[]){argv[i]},
+                        NULL, err, state);
   }
   return output;
 })
@@ -311,8 +311,8 @@ ARGON_FUNCTION(ARGON_DIVIDE_FUNCTION, {
                         cls___name__->value.as_str->data);
       return ARGON_NULL;
     }
-    output = argon_call(function___divide__, 1, (ArgonObject *[]){argv[i]}, NULL, err,
-                        state);
+    output = argon_call(function___divide__, 1, (ArgonObject *[]){argv[i]},
+                        NULL, err, state);
   }
   return output;
 })
@@ -365,8 +365,8 @@ ARGON_FUNCTION(ARGON_MODULO_FUNCTION, {
                         cls___name__->value.as_str->data);
       return ARGON_NULL;
     }
-    output = argon_call(function___modulo__, 1, (ArgonObject *[]){argv[i]}, NULL, err,
-                        state);
+    output = argon_call(function___modulo__, 1, (ArgonObject *[]){argv[i]},
+                        NULL, err, state);
   }
   return output;
 })
@@ -391,8 +391,8 @@ ARGON_FUNCTION(ARGON_EQUAL_FUNCTION, {
                         cls___name__->value.as_str->data);
       return ARGON_NULL;
     }
-    output = argon_call(function___equal__, 1, (ArgonObject *[]){argv[i]}, NULL, err,
-                        state);
+    output = argon_call(function___equal__, 1, (ArgonObject *[]){argv[i]}, NULL,
+                        err, state);
   }
   return output;
 })
@@ -418,8 +418,8 @@ ARGON_FUNCTION(ARGON_NOT_EQUAL_FUNCTION, {
                         cls___name__->value.as_str->data);
       return ARGON_NULL;
     }
-    output = argon_call(function___not_equal__, 1, (ArgonObject *[]){argv[i]}, NULL,
-                        err, state);
+    output = argon_call(function___not_equal__, 1, (ArgonObject *[]){argv[i]},
+                        NULL, err, state);
   }
   return output;
 })
@@ -445,8 +445,8 @@ ARGON_FUNCTION(ARGON_LESS_THAN_FUNCTION, {
                         cls___name__->value.as_str->data);
       return ARGON_NULL;
     }
-    output = argon_call(function___less_than__, 1, (ArgonObject *[]){argv[i]}, NULL,
-                        err, state);
+    output = argon_call(function___less_than__, 1, (ArgonObject *[]){argv[i]},
+                        NULL, err, state);
   }
   return output;
 })
@@ -563,7 +563,8 @@ ARGON_METHOD(ARGON_TYPE_TYPE, __call__, {
     return ARGON_NULL;
   }
 
-  ArgonObject *new_object = argon_call(cls___new__, argc, argv, NULL, err, state);
+  ArgonObject *new_object =
+      argon_call(cls___new__, argc, argv, NULL, err, state);
   if (is_error(err))
     return ARGON_NULL;
   ArgonObject *ARGON_TYPE_TYPE___call___args[] = {ARGON_TYPE_TYPE, new_object};
@@ -777,7 +778,7 @@ ARGON_METHOD(ARGON_STRING_TYPE, __init__, {
   return ARGON_NULL;
 })
 
-ARGON_METHOD(ARGON_BOOL_TYPE,__new__, {
+ARGON_METHOD(ARGON_BOOL_TYPE, __new__, {
   (void)api;
   if (argc != 2) {
     *err = create_err(RuntimeError, "__new__ expects 2 arguments, got %" PRIu64,
@@ -832,7 +833,6 @@ ARGON_METHOD(ARGON_STRING_TYPE, __add__, {
 })
 
 ARGON_METHOD(ARGON_BOOL_TYPE, __string__, {
-
   (void)api;
   (void)state;
   if (argc != 1) {
@@ -845,7 +845,6 @@ ARGON_METHOD(ARGON_BOOL_TYPE, __string__, {
 })
 
 ARGON_METHOD(ARGON_BOOL_TYPE, __number__, {
-
   (void)api;
   (void)state;
   if (argc != 1) {
@@ -933,7 +932,6 @@ ARGON_METHOD(ARGON_STRING_TYPE, __boolean__, {
 })
 
 ARGON_METHOD(ARGON_BOOL_TYPE, __boolean__, {
-
   (void)api;
   (void)state;
   if (argc != 1) {
@@ -1391,6 +1389,12 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       [OP_DECLARE] = &&DO_DECLARE,
       [OP_LOAD_NULL] = &&DO_LOAD_NULL,
       [OP_LOAD_FUNCTION] = &&DO_LOAD_FUNCTION,
+      [OP_SET_FUNCTION_PARAMETER] = &&DO_SET_FUNCTION_PARAMETER,
+      [OP_SET_FUNCTION_POSITIONAL_PARAMETER] =
+          &&DO_SET_FUNCTION_POSITIONAL_PARAMETER,
+      [OP_SET_FUNCTION_KEY_WORD_PARAMETER] =
+          &&DO_SET_FUNCTION_KEY_WORD_PARAMETER,
+      [OP_SET_FUNCTION_DEFAULT_PARAMETER] = &&DO_SET_FUNCTION_DEFAULT_PARAMETER,
       [OP_IDENTIFIER] = &&DO_IDENTIFIER,
       [OP_BOOL] = &&DO_BOOL,
       [OP_JUMP_IF_FALSE] = &&DO_JUMP_IF_FALSE,
@@ -1400,6 +1404,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       [OP_POP_SCOPE] = &&DO_POP_SCOPE,
       [OP_INIT_CALL] = &&DO_INIT_CALL,
       [OP_INSERT_ARG] = &&DO_INSERT_ARG,
+      [OP_SET_KEY_WORD_ARG]=&&DO_SET_KEY_WORD_ARG,
       [OP_CALL] = &&DO_CALL,
       [OP_SOURCE_LOCATION] = &&DO_SOURCE_LOCATION,
       [OP_LOAD_BOOL] = &&DO_LOAD_BOOL,
@@ -1582,12 +1587,19 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       POP_U64(offset);
       uint64_t length;
       POP_U64(length);
+      uint64_t bytecode_offset;
+      POP_U64(bytecode_offset);
+      uint64_t bytecode_length;
+      POP_U64(bytecode_length);
       uint64_t number_of_parameters;
       POP_U64(number_of_parameters);
-      ArgonObject *object =
-          new_instance(ARGON_FUNCTION_TYPE,
-                       sizeof(struct argon_function_struct) +
-                           number_of_parameters * sizeof(struct string_struct));
+      uint64_t number_of_default_parameters;
+      POP_U64(number_of_default_parameters);
+      ArgonObject *object = new_instance(
+          ARGON_FUNCTION_TYPE,
+          sizeof(struct argon_function_struct) +
+              number_of_parameters * sizeof(struct string_struct) +
+              number_of_default_parameters * sizeof(struct default_value));
       object->type = TYPE_FUNCTION;
       add_builtin_field(
           object, __name__,
@@ -1599,26 +1611,91 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       object->value.argon_fn->parameters =
           (struct string_struct *)((char *)object->value.argon_fn +
                                    sizeof(struct argon_function_struct));
+      object->value.argon_fn->default_parameters =
+          (struct default_value *)((char *)object->value.argon_fn->parameters +
+                                   number_of_parameters *
+                                       sizeof(struct string_struct));
       object->value.argon_fn->translated = *translated;
       object->value.argon_fn->number_of_parameters = number_of_parameters;
-      for (size_t i = 0; i < object->value.argon_fn->number_of_parameters;
-           i++) {
-        POP_U64(offset);
-        POP_U64(length);
-        uint64_t hash;
-        POP_U64(hash);
-        object->value.argon_fn->parameters[i].data =
-            arena_get(&translated->constants, offset);
-        object->value.argon_fn->parameters[i].length = length;
-        object->value.argon_fn->parameters[i].hash = hash;
-      }
-      POP_U64(offset);
-      POP_U64(length);
+      object->value.argon_fn->number_of_default_parameters =
+          number_of_default_parameters;
+      object->value.argon_fn->vargs.data = NULL;
+      object->value.argon_fn->kwargs.data = NULL;
       object->value.argon_fn->bytecode =
-          arena_get(&translated->constants, offset);
-      object->value.argon_fn->bytecode_length = length;
+          arena_get(&translated->constants, bytecode_offset);
+      object->value.argon_fn->bytecode_length = bytecode_length;
       object->value.argon_fn->stack = currentStackFrame->stack;
       state->registers[0] = object;
+      continue;
+    }
+    DO_SET_FUNCTION_PARAMETER: {
+      uint64_t index;
+      POP_U64(index);
+      uint64_t offset;
+      POP_U64(offset);
+      uint64_t length;
+      POP_U64(length);
+      uint64_t hash;
+      POP_U64(hash);
+
+      state->registers[0]->value.argon_fn->parameters[index].data =
+          arena_get(&translated->constants, offset);
+      state->registers[0]->value.argon_fn->parameters[index].length = length;
+      state->registers[0]->value.argon_fn->parameters[index].hash = hash;
+      continue;
+    }
+    DO_SET_FUNCTION_POSITIONAL_PARAMETER: {
+      uint64_t offset;
+      POP_U64(offset);
+      uint64_t length;
+      POP_U64(length);
+      uint64_t hash;
+      POP_U64(hash);
+
+      state->registers[0]->value.argon_fn->vargs.data =
+          arena_get(&translated->constants, offset);
+      state->registers[0]->value.argon_fn->vargs.length = length;
+      state->registers[0]->value.argon_fn->vargs.hash = hash;
+      continue;
+    }
+    DO_SET_FUNCTION_KEY_WORD_PARAMETER: {
+      uint64_t offset;
+      POP_U64(offset);
+      uint64_t length;
+      POP_U64(length);
+      uint64_t hash;
+      POP_U64(hash);
+
+      state->registers[0]->value.argon_fn->kwargs.data =
+          arena_get(&translated->constants, offset);
+      state->registers[0]->value.argon_fn->kwargs.length = length;
+      state->registers[0]->value.argon_fn->kwargs.hash = hash;
+      continue;
+    }
+    DO_SET_FUNCTION_DEFAULT_PARAMETER: {
+      uint8_t func_register = POP_BYTE();
+      uint64_t index;
+      POP_U64(index);
+      uint64_t offset;
+      POP_U64(offset);
+      uint64_t length;
+      POP_U64(length);
+      uint64_t hash;
+      POP_U64(hash);
+
+      state->registers[func_register]
+          ->value.argon_fn->default_parameters[index]
+          .key.data = arena_get(&translated->constants, offset);
+      state->registers[func_register]
+          ->value.argon_fn->default_parameters[index]
+          .key.length = length;
+      state->registers[func_register]
+          ->value.argon_fn->default_parameters[index]
+          .key.hash = hash;
+
+      state->registers[func_register]
+          ->value.argon_fn->default_parameters[index]
+          .value = state->registers[0];
       continue;
     }
     DO_IMPORT:
@@ -1712,15 +1789,16 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
 
       switch (iterator->type) {
       case TYPE_ARRAY_ITERATOR:
-        state->registers[0] = ARRAY_ITERATOR_TYPE___next__(1, &iterator, NULL, &err,
-                                                           state, &native_api);
+        state->registers[0] = ARRAY_ITERATOR_TYPE___next__(
+            1, &iterator, NULL, &err, state, &native_api);
         break;
       case TYPE_RANGE_ITERATOR:
         state->registers[0] = ARGON_RANGE_ITERATOR_TYPE___next__(
             1, &iterator, NULL, &err, state, &native_api);
         break;
       default:
-        state->registers[0] = argon_call(iterator_next, 0, NULL, NULL, &err, state);
+        state->registers[0] =
+            argon_call(iterator_next, 0, NULL, NULL, &err, state);
       }
       continue;
     }
@@ -1734,7 +1812,8 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
         continue;
       }
       ArgonObject *args[] = {ARGON_BOOL_TYPE, state->registers[0]};
-      state->registers[0] = ARGON_BOOL_TYPE___new__(2, args, NULL, &err, state, NULL);
+      state->registers[0] =
+          ARGON_BOOL_TYPE___new__(2, args, NULL, &err, state, NULL);
       continue;
     }
     DO_JUMP_IF_FALSE: {
@@ -1777,7 +1856,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       *new_call_instance = (call_instance){
           state->call_instance, state->registers[0],
           (ArgonObject **)((char *)new_call_instance + sizeof(call_instance)),
-          length};
+          NULL, length};
       state->call_instance = new_call_instance;
       continue;
     }
@@ -1786,6 +1865,19 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       POP_U64(index);
       state->call_instance->args[index] = state->registers[0];
       continue;
+    DO_SET_KEY_WORD_ARG: {
+      int64_t length;
+      POP_U64(length);
+      int64_t offset;
+      POP_U64(offset);
+      uint64_t hash;
+      POP_U64(hash);
+      struct string_struct* key = ar_alloc(sizeof(struct string_struct));
+      *key = (struct string_struct){hash,arena_get(&translated->constants, offset), length};
+      if (!state->call_instance->kwargs) state->call_instance->kwargs = createHashmap_GC();
+      hashmap_insert_GC(state->call_instance->kwargs, hash, key, state->registers[0], 0);
+      continue;
+    }
     DO_CALL: {
       state->head = ip;
       run_call(state->call_instance->to_call, state->call_instance->args_length,

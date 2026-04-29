@@ -4,9 +4,21 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 #include "call.h"
+#include "../../err.h"
+#include "../../parser/function/function.h"
+#include "../../runtime/objects/exceptions/exceptions.h"
+#include "../translator.h"
+#include <string.h>
+#include "../../hash_data/hash_data.h"
 
 size_t translate_parsed_call(Translated *translated, ParsedCall *call,
                              ArErr *err) {
+  if (call->must_assign) {
+    *err =
+        path_specific_create_err(call->line, call->column, 1, translated->path,
+                                 SyntaxError, "Invalid syntax");
+    return 0;
+  }
   set_registers(translated, 1);
   size_t first = translate_parsed(translated, call->to_call, err);
   if (is_error(err)) {
@@ -30,6 +42,28 @@ size_t translate_parsed_call(Translated *translated, ParsedCall *call,
     }
     push_instruction_byte(translated, OP_INSERT_ARG);
     push_instruction_code(translated, i);
+  }
+
+  if (call->kwargs) {
+    for (size_t i = 0; i < call->kwargs->size; i++) {
+      struct default_value_parameter *arg =
+          (struct default_value_parameter *)darray_get(call->kwargs, i);
+      translate_parsed(translated, arg->value, err);
+      if (is_error(err)) {
+        translated->return_jump = old_return_jump;
+        return first;
+      }
+      size_t length = strlen(arg->name);
+      size_t identifier_pos =
+          arena_push(&translated->constants, arg->name, length);
+      set_registers(translated, 1);
+      push_instruction_byte(translated, OP_SET_KEY_WORD_ARG);
+      push_instruction_code(translated, length);
+      push_instruction_code(translated, identifier_pos);
+      push_instruction_code(
+          translated,
+          siphash64_bytes(arg->name, length, siphash_key_fixed));
+    }
   }
 
   translated->return_jump = old_return_jump;

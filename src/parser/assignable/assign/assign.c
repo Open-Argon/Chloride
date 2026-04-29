@@ -28,6 +28,9 @@ ParsedValueReturn parse_assign(char *file, DArray *tokens,
   char *function_name;
   bool to_free_function_name = false;
   DArray function_args;
+  DArray *function_default_args = NULL;
+  char *function_vargs = NULL;
+  char *function_kwargs = NULL;
   ParsedValue *function_assign_to;
   switch (assign_to->type) {
   case AST_IDENTIFIER:
@@ -39,6 +42,7 @@ ParsedValueReturn parse_assign(char *file, DArray *tokens,
     darray_init(&function_args, sizeof(char *));
     for (size_t i = 0; i < call->args.size; i++) {
       ParsedValue *arg = darray_get(&call->args, i);
+      printf("type: %d\n",arg->type);
       if (arg->type != AST_IDENTIFIER) {
         free_parsed(assign_to);
         free(assign_to);
@@ -51,11 +55,14 @@ ParsedValueReturn parse_assign(char *file, DArray *tokens,
                 "only use letters, digits, or _, and can't be keywords."),
             NULL};
       }
-
+      
       char *param = strdup(((ParsedIdentifier *)arg->data)->name);
       darray_push(&function_args, &param);
     }
     darray_free(&call->args, (void (*)(void *))free_parsed);
+    function_default_args = call->kwargs;
+    function_kwargs = call->kw_arg;
+    function_vargs = call->v_arg;
     is_function = true;
     function_assign_to = call->to_call;
     switch (function_assign_to->type) {
@@ -111,8 +118,8 @@ ParsedValueReturn parse_assign(char *file, DArray *tokens,
         NULL};
   }
   if (is_function) {
-    from.value = create_parsed_function(function_name, function_args, NULL,
-                                        NULL, NULL, from.value);
+    from.value = create_parsed_function(function_name, function_args, function_default_args,
+                                        function_vargs, function_kwargs, from.value);
     if (to_free_function_name)
       free(function_name);
     free(assign_to->data);
