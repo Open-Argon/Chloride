@@ -10,6 +10,7 @@
 #include "../runtime.h"
 #include <stdbool.h>
 #include <string.h>
+#include "../../../include/ArgonFunction.h"
 
 extern ArgonObject *BASE_CLASS;
 
@@ -62,20 +63,6 @@ get_builtin_field_with_recursion_support(ArgonObject *target,
 ArgonObject *create_argon_native_function(char *name, native_fn native_fn);
 
 ArgonObject *new_object(size_t endSize);
-
-#define ARGON_FUNCTION(NAME, ...)                                              \
-  ArgonObject *NAME(size_t argc, ArgonObject **argv, ArErr *err,               \
-                    RuntimeState *state, ArgonNativeAPI *api) {                \
-    (void)argc;                                                                \
-    (void)argv;                                                                \
-    (void)err;                                                                 \
-    (void)state;                                                               \
-    (void)api;                                                                 \
-    __VA_ARGS__                                                                \
-  }
-#define EXPOSE_ARGON_FUNCTION(NAME)                                            \
-  ArgonObject *NAME(size_t argc, ArgonObject **argv, ArErr *err,               \
-                    RuntimeState *state, ArgonNativeAPI *api);
 
 #define ARGON_FUNCTION_OBJECT(NAME) create_argon_native_function(#NAME, NAME)
 

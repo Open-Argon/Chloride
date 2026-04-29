@@ -15,6 +15,7 @@ extern "C" {
 #endif
 
 #include "ArgonTypes.h"
+#include "ArgonFunction.h"
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -23,6 +24,8 @@ extern "C" {
 typedef struct ArgonState ArgonState;
 
 typedef struct ArgonError ArgonError;
+
+typedef ArgonError ArErr;
 
 typedef struct ArgonObjectRegister ArgonObjectRegister;
 
