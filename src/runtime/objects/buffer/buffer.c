@@ -195,7 +195,7 @@ ARGON_METHOD(ARGON_BUFFER_TYPE, partition, {
   }
 
   return TUPLE_CREATE(3, (ArgonObject *[]){before_obj, sep_obj, after_obj},
-                      NULL, NULL, NULL);
+                      NULL, NULL, NULL, NULL);
 })
 
 ARGON_METHOD(ARGON_BUFFER_TYPE, split, {

@@ -38,8 +38,7 @@ ArgonObject *StopIteration;
 ArgonObject *KeyboardInterrupt_instance;
 ArgonObject *StopIteration_instance;
 
-ArgonObject *BaseException___new__(size_t argc, ArgonObject **argv, ArErr *err,
-                                   RuntimeState *state, ArgonNativeAPI *api) {
+ARGON_METHOD(BaseException, __new__, {
   (void)api;
   (void)state;
   if (argc < 2) {
@@ -52,13 +51,11 @@ ArgonObject *BaseException___new__(size_t argc, ArgonObject **argv, ArErr *err,
   add_builtin_field(new_obj, message, argv[1]);
 
   add_builtin_field(new_obj, stack_trace,
-                    ARRAY_CREATE(0, NULL, NULL, NULL, NULL));
+                    ARRAY_CREATE(0, NULL, NULL, NULL, NULL, NULL));
   return new_obj;
-}
+})
 
-ArgonObject *KeyboardInterrupt___new__(size_t argc, ArgonObject **argv,
-                                       ArErr *err, RuntimeState *state,
-                                       ArgonNativeAPI *api) {
+ARGON_METHOD(KeyboardInterrupt, __new__, {
   (void)argv;
   (void)api;
   (void)state;
@@ -68,10 +65,9 @@ ArgonObject *KeyboardInterrupt___new__(size_t argc, ArgonObject **argv,
     return ARGON_NULL;
   }
   return KeyboardInterrupt_instance;
-}
+})
 
-ArgonObject *StopIteration___new__(size_t argc, ArgonObject **argv, ArErr *err,
-                                   RuntimeState *state, ArgonNativeAPI *api) {
+ARGON_METHOD(StopIteration, __new__, {
   (void)argv;
   (void)api;
   (void)state;
@@ -81,7 +77,7 @@ ArgonObject *StopIteration___new__(size_t argc, ArgonObject **argv, ArErr *err,
     return ARGON_NULL;
   }
   return StopIteration_instance;
-}
+})
 
 void init_exceptions() {
   BaseException = new_class();

@@ -112,8 +112,8 @@ pipeline {
                 script {
                     def version = env.TAG_NAME ?: "0.0.0-1"
                     env.DEB_VERSION = version.replaceFirst('^v', '')  // strip leading 'v'
-                    env.OUTPUT_FILE = "archives/argon_${env.DEB_VERSION}_amd64.deb"
-                    env.PACKAGE_ROOT = "${env.WORKSPACE}/argon_${env.DEB_VERSION}_amd64"
+                    env.OUTPUT_FILE = "archives/argon-${env.DEB_VERSION}-x86_64.deb"
+                    env.PACKAGE_ROOT = "${env.WORKSPACE}/argon-${env.DEB_VERSION}-x86_64"
                 }
                 sh '''
                     set -e

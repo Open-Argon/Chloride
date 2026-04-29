@@ -7,12 +7,11 @@
 #include "native_loader.h"
 #include "../../err.h"
 #include "../objects/dictionary/dictionary.h"
+#include "../objects/exceptions/exceptions.h"
 #include "../objects/literals/literals.h"
 #include "../objects/string/string.h"
-#include "../objects/exceptions/exceptions.h"
 #include <inttypes.h>
 #include <stddef.h>
-#include <stdio.h>
 #include <stdlib.h>
 
 #if defined(_WIN32) || defined(_WIN64)
@@ -22,11 +21,10 @@
 #endif
 
 // load_native_code(path to dll / so / dylib)
-ArgonObject *ARGON_LOAD_NATIVE_CODE(size_t argc, ArgonObject **argv, ArErr *err,
-                                    RuntimeState *state, ArgonNativeAPI *api) {
+ARGON_FUNCTION(ARGON_LOAD_NATIVE_CODE, {
   if (argc != 1) {
     *err =
-        create_err( RuntimeError,
+        create_err(RuntimeError,
                    "load_native_code expects 1 argument, got %" PRIu64, argc);
     return ARGON_NULL;
   }
@@ -37,18 +35,17 @@ ArgonObject *ARGON_LOAD_NATIVE_CODE(size_t argc, ArgonObject **argv, ArErr *err,
 #if defined(_WIN32) || defined(_WIN64)
   HMODULE handle = LoadLibraryA(path_c);
   if (!handle) {
-    *err = create_err( RuntimeError,
-                      "Unable to load native code at path: %s", path_c);
+    *err = create_err(RuntimeError, "Unable to load native code at path: %s",
+                      path_c);
     free(path_c);
     return ARGON_NULL;
   }
 
-  FARPROC proc = GetProcAddress(
-          handle, "argon_module_init");
+  FARPROC proc = GetProcAddress(handle, "argon_module_init");
 
   if (!proc) {
     *err = create_err(
-         RuntimeError,
+        RuntimeError,
         "Unable to find argon_module_init in the native code at path: %s",
         path_c);
     free(path_c);
@@ -91,4 +88,4 @@ ArgonObject *ARGON_LOAD_NATIVE_CODE(size_t argc, ArgonObject **argv, ArErr *err,
     return ARGON_NULL;
 
   return create_dictionary(reg);
-}
+})

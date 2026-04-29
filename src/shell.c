@@ -293,7 +293,7 @@ int shell() {
         runtime_state.registers[0] != ARGON_NULL) {
       ArErr err = no_err;
       argon_call(output_object, 1,
-                 (ArgonObject *[]){runtime_state.registers[0]}, &err,
+                 (ArgonObject *[]){runtime_state.registers[0]}, NULL, &err,
                  &runtime_state);
     }
     totranslatelength = 0;

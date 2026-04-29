@@ -10,7 +10,6 @@
 #include "../../objects/object.h"
 #include "../../runtime.h"
 
-ArgonObject *term_log(size_t argc, ArgonObject **argv, ArErr *err,
-                      RuntimeState *state, ArgonNativeAPI *api);
+EXPOSE_ARGON_METHOD(term, log)
 
 #endif // runtime_term_H

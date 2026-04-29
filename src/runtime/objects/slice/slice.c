@@ -131,7 +131,7 @@ ARGON_METHOD(ARGON_SLICE_TYPE, indices, {
   ArgonObject *result_stop  = api->i64_to_argon(indices.stop);
   ArgonObject *result_step  = api->i64_to_argon(indices.step);
 
-  return TUPLE_CREATE(3, (ArgonObject *[]){result_start, result_stop, result_step},
+  return TUPLE_CREATE(3, (ArgonObject *[]){result_start, result_stop, result_step}, NULL,
                       err, state, api);
 })
 

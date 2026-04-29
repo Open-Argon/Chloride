@@ -71,7 +71,7 @@ ArErr create_err(ArgonObject *type, const char *fmt, ...) {
   free(msg);
 
   add_builtin_field(err_instance, stack_trace,
-                    ARRAY_CREATE(0, NULL, NULL, NULL, NULL));
+                    ARRAY_CREATE(0, NULL, NULL, NULL, NULL, NULL));
 
   return (ArErr){.ptr = err_instance};
 }
@@ -101,8 +101,8 @@ ArErr path_specific_create_err(int64_t line, int64_t column, int64_t length,
                                 new_number_object_from_int64(line),
                                 new_number_object_from_int64(column),
                                 new_number_object_from_int64(length)},
-              NULL, NULL, NULL)},
-          NULL, NULL, NULL));
+              NULL, NULL, NULL, NULL)},
+          NULL, NULL, NULL, NULL));
 
   return (ArErr){.ptr = err_instance};
 }
@@ -120,7 +120,7 @@ ArErr vcreate_err(ArgonObject *type, const char *fmt, va_list args) {
   }
 
   add_builtin_field(err_instance, stack_trace,
-                    ARRAY_CREATE(0, NULL, NULL, NULL, NULL));
+                    ARRAY_CREATE(0, NULL, NULL, NULL, NULL, NULL));
 
   return (ArErr){.ptr = err_instance};
 }

@@ -157,7 +157,7 @@ int64_t hash_object(ArgonObject *object, ArErr *err, RuntimeState *state) {
   if (!hash_function) {
     return (int64_t)object;
   }
-  ArgonObject *hash_result = argon_call(hash_function, 0, NULL, err, state);
+  ArgonObject *hash_result = argon_call(hash_function, 0, NULL, NULL, err, state);
   if (hash_result->type != TYPE_NUMBER ||
       !hash_result->value.as_number->is_int64) {
     *err =

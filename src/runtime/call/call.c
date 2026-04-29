@@ -80,12 +80,12 @@ double get_memory_usage_mb() {
 #endif
 
 ArgonObject *argon_call(ArgonObject *original_object, size_t argc,
-                        ArgonObject **argv, ArErr *err, RuntimeState *state) {
-  run_call(original_object, argc, argv, state, true, err);
+                        ArgonObject **argv, ArgonHashmap*kwargs, ArErr *err, RuntimeState *state) {
+  run_call(original_object, argc, argv, kwargs, state, true, err);
   return state->registers[0];
 }
 
-void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
+void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv, ArgonHashmap*kwargs,
               RuntimeState *state, bool CStackFrame, ArErr *err) {
   ArgonObject *object = original_object;
   if (object->type != TYPE_FUNCTION && object->type != TYPE_NATIVE_FUNCTION &&
@@ -243,7 +243,7 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
       }
     }
     state->registers[0] =
-        object->value.native_fn(argc, argv, err, state, &native_api);
+        object->value.native_fn(argc, argv, kwargs, err, state, &native_api);
     if (KeyboardInterrupted) {
       err->ptr = KeyboardInterrupt_instance;
       KeyboardInterrupted = 0;

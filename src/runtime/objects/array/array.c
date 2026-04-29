@@ -25,8 +25,7 @@ ArgonObject *ARRAY_TYPE;
 ArgonObject *ARRAY_ITERATOR_TYPE;
 ArgonObject *ARGON_ARRAY_CREATE;
 
-ArgonObject *ARRAY_CREATE(size_t argc, ArgonObject **argv, ArErr *err,
-                          RuntimeState *state, ArgonNativeAPI *api) {
+ARGON_FUNCTION(ARRAY_CREATE, {
   (void)err;
   (void)state;
   (void)api;
@@ -40,7 +39,7 @@ ArgonObject *ARRAY_CREATE(size_t argc, ArgonObject **argv, ArErr *err,
   memcpy(object->value.as_array->data, argv, argc * sizeof(ArgonObject *));
 
   return object;
-}
+})
 
 ARGON_METHOD(ARRAY_TYPE, __new__, {
   (void)api;
@@ -56,7 +55,7 @@ ARGON_METHOD(ARRAY_TYPE, __new__, {
   if (!iter_method)
     return api->throw_argon_error(err, RuntimeError,
                                   "Object doesn't have __iter__ method");
-  ArgonObject *iter_obj = argon_call(iter_method, 0, NULL, err, state);
+  ArgonObject *iter_obj = argon_call(iter_method, 0, NULL, NULL, err, state);
 
   ArgonObject *next_method = get_builtin_field_for_class(
       get_builtin_field(iter_obj, __class__), __next__, iter_obj);
@@ -70,7 +69,7 @@ ARGON_METHOD(ARRAY_TYPE, __new__, {
   darray_armem_init(object->value.as_array, sizeof(ArgonObject *), 0);
 
   while (true) {
-    ArgonObject *item = argon_call(next_method, 0, NULL, err, state);
+    ArgonObject *item = argon_call(next_method, 0, NULL, NULL, err, state);
     if (err->ptr == StopIteration_instance) {
       err->ptr = ARGON_NULL;
       break;
@@ -129,7 +128,7 @@ ARGON_METHOD(ARRAY_TYPE, __string__, {
 
     if (string_convert_method) {
       ArgonObject *string_object =
-          argon_call(string_convert_method, 0, NULL, err, state);
+          argon_call(string_convert_method, 0, NULL, NULL, err, state);
       bool resized = false;
       while (capacity < string_length + string_object->value.as_str->length) {
         capacity *= 2;
@@ -230,7 +229,7 @@ ARGON_METHOD(ARRAY_TYPE, __contains__, {
   for (size_t i = 0; i < arr->size; i++) {
     ArgonObject *result =
         argon_call(object__equal__, 1,
-                   (ArgonObject *[]){*(ArgonObject **)darray_armem_get(arr, i)},
+                   (ArgonObject *[]){*(ArgonObject **)darray_armem_get(arr, i)}, NULL,
                    err, state);
     if (api->is_error(err))
       return ARGON_NULL;
@@ -417,7 +416,7 @@ ARGON_METHOD(ARRAY_TYPE, __setitem__, {
     if (!iter_method)
       return api->throw_argon_error(err, RuntimeError,
                                     "Object doesn't have __iter__ method");
-    ArgonObject *iter_obj = argon_call(iter_method, 0, NULL, err, state);
+    ArgonObject *iter_obj = argon_call(iter_method, 0, NULL, NULL, err, state);
     if (api->is_error(err))
       return ARGON_NULL;
 
@@ -432,7 +431,7 @@ ARGON_METHOD(ARRAY_TYPE, __setitem__, {
     darray_armem_init(new_items, sizeof(ArgonObject *), 0);
 
     while (true) {
-      ArgonObject *item = argon_call(next_method, 0, NULL, err, state);
+      ArgonObject *item = argon_call(next_method, 0, NULL, NULL, err, state);
       if (err->ptr == StopIteration_instance) {
         err->ptr = ARGON_NULL;
         break;

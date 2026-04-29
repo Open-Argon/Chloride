@@ -104,7 +104,10 @@ typedef struct ArgonNativeAPI ArgonNativeAPI;
 
 typedef struct hashmap_GC hashmap_GC;
 
-typedef ArgonObject *(*native_fn)(size_t argc, ArgonObject **argv, ArErr *err,
+typedef hashmap_GC ArgonHashmap;
+
+typedef ArgonObject *(*native_fn)(size_t argc, ArgonObject **argv,
+                                  ArgonHashmap *kwargs, ArErr *err,
                                   RuntimeState *state, ArgonNativeAPI *api);
 
 struct rational {
@@ -131,7 +134,7 @@ struct ArgonNativeAPI {
   void (*register_ArgonObject)(hashmap_GC *reg, char *name, ArgonObject *obj);
   ArgonObject *(*create_argon_native_function)(char *name, native_fn);
   ArgonObject *(*call)(ArgonObject *original_object, size_t argc,
-                       ArgonObject **argv, ArErr *err, RuntimeState *state);
+                       ArgonObject **argv, ArgonHashmap*kwargs, ArErr *err, RuntimeState *state);
   ArgonObject *(*throw_argon_error)(ArErr *err, ArgonObject *type,
                                     const char *fmt, ...);
   bool (*is_error)(ArErr *err);

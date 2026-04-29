@@ -151,7 +151,7 @@ ARGON_METHOD(ARGON_NUMBER_TYPE, __new__, {
       get_builtin_field(object, __class__), __number__, object);
   if (boolean_convert_method) {
     ArgonObject *boolean_object =
-        argon_call(boolean_convert_method, 0, NULL, err, state);
+        argon_call(boolean_convert_method, 0, NULL, NULL, err, state);
     if (is_error(err))
       return ARGON_NULL;
     return boolean_object;

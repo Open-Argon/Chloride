@@ -8,8 +8,7 @@
 #include <stddef.h>
 #include <stdio.h>
 
-ArgonObject *term_log(size_t argc, ArgonObject **argv, ArErr *err,
-                      RuntimeState *state, ArgonNativeAPI *api) {
+ARGON_METHOD(term, log, {
   (void)api;
   for (size_t i = 0; i < argc; i++) {
     if (i != 0)
@@ -19,11 +18,11 @@ ArgonObject *term_log(size_t argc, ArgonObject **argv, ArErr *err,
 
     if (string_convert_method) {
       ArgonObject *string_object =
-          argon_call(string_convert_method, 0, NULL, err, state);
+          argon_call(string_convert_method, 0, NULL, NULL, err, state);
       fwrite(string_object->value.as_str->data, sizeof(char),
              string_object->value.as_str->length, stdout);
     }
   }
   printf("\n");
   return ARGON_NULL;
-}
+})

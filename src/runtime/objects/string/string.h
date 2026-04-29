@@ -14,8 +14,7 @@ extern ArgonObject *ARGON_RENDER_TEMPLATE;
 
 extern ArgonObject *ARGON_STRING_ITERATOR_TYPE;
 
-ArgonObject *RENDER_TEMPLATE(size_t argc, ArgonObject **argv, ArErr *err,
-                             RuntimeState *state, ArgonNativeAPI *api);
+EXPOSE_ARGON_FUNCTION(RENDER_TEMPLATE)
 
 char *c_quote_string(const char *input, size_t len);
 

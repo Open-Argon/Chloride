@@ -33,7 +33,9 @@ typedef struct ArgonObject ArgonObject;
 
 typedef struct ArgonNativeAPI ArgonNativeAPI;
 
-typedef ArgonObject *(*native_fn)(size_t argc, ArgonObject **argv,
+typedef struct ArgonHashmap ArgonHashmap;
+
+typedef ArgonObject *(*native_fn)(size_t argc, ArgonObject **argv, ArgonHashmap* kwargs,
                                   ArgonError *err, ArgonState *state,
                                   ArgonNativeAPI *api);
 
@@ -62,7 +64,7 @@ struct ArgonNativeAPI {
                                ArgonObject *obj);
   ArgonObject *(*create_argon_native_function)(char *name, native_fn);
   ArgonObject *(*call)(ArgonObject *original_object, size_t argc,
-                       ArgonObject **argv, ArgonError *err, ArgonState *state);
+                       ArgonObject **argv, ArgonHashmap*kwargs, ArgonError *err, ArgonState *state);
   ArgonObject *(*throw_argon_error)(ArgonError *err, ArgonObject *type,
                                     const char *fmt, ...);
   bool (*is_error)(ArgonError *err);

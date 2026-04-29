@@ -154,7 +154,8 @@ ARGON_METHOD(ARGON_STRING_TYPE, __not_equal__, {
                       "__not_equal__ expects 2 arguments, got %" PRIu64, argc);
     return ARGON_NULL;
   }
-  return ARGON_STRING_TYPE___equal__(argc, argv, err, state, api) == ARGON_TRUE
+  return ARGON_STRING_TYPE___equal__(argc, argv, kwargs, err, state, api) ==
+                 ARGON_TRUE
              ? ARGON_FALSE
              : ARGON_TRUE;
 })
@@ -547,8 +548,8 @@ ARGON_METHOD(ARGON_STRING_TYPE, split, {
   }
 
   char *start = s.data;
-  char *end   = s.data + s.length;
-  char *p     = start;
+  char *end = s.data + s.length;
+  char *p = start;
 
   while (p <= end - dlen) {
     if (memcmp(p, delim.data, dlen) == 0) {
@@ -564,8 +565,7 @@ ARGON_METHOD(ARGON_STRING_TYPE, split, {
   }
 
   // Final segment
-  ArgonObject *item =
-      api->string_to_argon((struct string){start, end - start});
+  ArgonObject *item = api->string_to_argon((struct string){start, end - start});
   darray_armem_insert(object->value.as_array, object->value.as_array->size,
                       &item);
 
@@ -588,20 +588,23 @@ ARGON_METHOD(ARGON_STRING_TYPE, strip, {
     return ARGON_NULL;
 
   // Empty string or no strip chars: return a copy as-is
-  if (s.length == 0 || s.data == NULL || chars.length == 0 || chars.data == NULL) {
+  if (s.length == 0 || s.data == NULL || chars.length == 0 ||
+      chars.data == NULL) {
     return api->string_to_argon((struct string){s.data, s.length});
   }
 
   char *start = s.data;
-  char *end   = s.data + s.length - 1; // points to last char
+  char *end = s.data + s.length - 1; // points to last char
 
   // Strip from the left
-  while (start <= end && memchr(chars.data, (unsigned char)*start, chars.length) != NULL) {
+  while (start <= end &&
+         memchr(chars.data, (unsigned char)*start, chars.length) != NULL) {
     start++;
   }
 
   // Strip from the right
-  while (end >= start && memchr(chars.data, (unsigned char)*end, chars.length) != NULL) {
+  while (end >= start &&
+         memchr(chars.data, (unsigned char)*end, chars.length) != NULL) {
     end--;
   }
 
@@ -849,7 +852,7 @@ char *argon_object_to_length_terminated_string_from___string__(
   }
 
   ArgonObject *string_object =
-      argon_call(string_convert_method, 0, NULL, err, state);
+      argon_call(string_convert_method, 0, NULL, NULL, err, state);
   if (is_error(err)) {
     *length = 0;
     return "";
@@ -873,7 +876,7 @@ char *argon_object_to_null_terminated_string(ArgonObject *object, ArErr *err,
     return "<object>";
 
   ArgonObject *string_object =
-      argon_call(string_convert_method, 0, NULL, err, state);
+      argon_call(string_convert_method, 0, NULL, NULL, err, state);
   if (is_error(err))
     return "";
 
@@ -947,8 +950,7 @@ ARGON_METHOD(ARGON_STRING_ITERATOR_TYPE, __next__, {
 
 ArgonObject *ARGON_RENDER_TEMPLATE;
 
-ArgonObject *RENDER_TEMPLATE(size_t argc, ArgonObject **argv, ArErr *err,
-                             RuntimeState *state, ArgonNativeAPI *api) {
+ARGON_FUNCTION(RENDER_TEMPLATE, {
   (void)api;
   (void)state;
   (void)argv;
@@ -972,7 +974,7 @@ ArgonObject *RENDER_TEMPLATE(size_t argc, ArgonObject **argv, ArErr *err,
 
     if (string_convert_method) {
       ArgonObject *string_object =
-          argon_call(string_convert_method, 0, NULL, err, state);
+          argon_call(string_convert_method, 0, NULL, NULL, err, state);
       bool resized = false;
       while (capacity < string_length + string_object->value.as_str->length) {
         capacity *= 2;
@@ -1001,4 +1003,4 @@ ArgonObject *RENDER_TEMPLATE(size_t argc, ArgonObject **argv, ArErr *err,
 
   free(string);
   return result;
-}
+})

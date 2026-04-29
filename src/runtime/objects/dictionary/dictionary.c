@@ -35,7 +35,7 @@ ARGON_METHOD(ARGON_DICTIONARY_TYPE, __new__, {
   if (!get_dictionary)
     return api->throw_argon_error(err, RuntimeError,
                                   "Object doesn't have __dictionary__ method");
-  ArgonObject *object = argon_call(get_dictionary, 0, NULL, err, state);
+  ArgonObject *object = argon_call(get_dictionary, 0, NULL, NULL, err, state);
   if (object->type != TYPE_DICTIONARY)
     return api->throw_argon_error(
         err, RuntimeError,
@@ -91,7 +91,7 @@ ARGON_METHOD(ARGON_DICTIONARY_TYPE, __string__, {
 
     if (string_convert_method) {
       ArgonObject *string_object =
-          argon_call(string_convert_method, 0, NULL, err, state);
+          argon_call(string_convert_method, 0, NULL, NULL, err, state);
       string =
           realloc(string, string_length + string_object->value.as_str->length);
       memcpy(string + string_length, string_object->value.as_str->data,
@@ -116,7 +116,7 @@ ARGON_METHOD(ARGON_DICTIONARY_TYPE, __string__, {
 
     if (string_convert_method) {
       ArgonObject *string_object =
-          argon_call(string_convert_method, 0, NULL, err, state);
+          argon_call(string_convert_method, 0, NULL, NULL, err, state);
       string =
           realloc(string, string_length + string_object->value.as_str->length);
       memcpy(string + string_length, string_object->value.as_str->data,
@@ -301,7 +301,7 @@ ARGON_METHOD(ARGON_DICTIONARY_ITERATOR_TYPE, __next__, {
       self->value.as_dictionary_iterator
           ->array[self->value.as_dictionary_iterator->current++];
 
-  return TUPLE_CREATE(2, (ArgonObject *[]){node->key, node->val}, err, state,
+  return TUPLE_CREATE(2, (ArgonObject *[]){node->key, node->val}, NULL, err, state,
                       api);
 })
 

@@ -24,8 +24,7 @@ ArgonObject *ARGON_TUPLE_TYPE;
 ArgonObject *ARGON_TUPLE_ITERATOR_TYPE;
 ArgonObject *ARGON_TUPLE_CREATE;
 
-ArgonObject *TUPLE_CREATE(size_t argc, ArgonObject **argv, ArErr *err,
-                          RuntimeState *state, ArgonNativeAPI *api) {
+ARGON_FUNCTION(TUPLE_CREATE, {
   (void)err;
   (void)state;
   (void)api;
@@ -36,7 +35,7 @@ ArgonObject *TUPLE_CREATE(size_t argc, ArgonObject **argv, ArErr *err,
   memcpy(object->value.as_tuple.data, argv, argc * sizeof(ArgonObject *));
 
   return object;
-}
+})
 
 ARGON_METHOD(ARGON_TUPLE_TYPE, __new__, {
   (void)api;
@@ -70,7 +69,7 @@ ARGON_METHOD(ARGON_TUPLE_TYPE, of, {
   if (!iter_method)
     return api->throw_argon_error(err, RuntimeError,
                                   "Object doesn't have __iter__ method");
-  ArgonObject *iter_obj = argon_call(iter_method, 0, NULL, err, state);
+  ArgonObject *iter_obj = argon_call(iter_method, 0, NULL, NULL, err, state);
 
   ArgonObject *next_method = get_builtin_field_for_class(
       get_builtin_field(iter_obj, __class__), __next__, iter_obj);
@@ -83,7 +82,7 @@ ARGON_METHOD(ARGON_TUPLE_TYPE, of, {
   ArgonObject **items = ar_alloc(items_size * sizeof(ArgonObject *));
 
   while (true) {
-    ArgonObject *item = argon_call(next_method, 0, NULL, err, state);
+    ArgonObject *item = argon_call(next_method, 0, NULL, NULL, err, state);
     if (err->ptr == StopIteration_instance) {
       err->ptr = ARGON_NULL;
       break;
@@ -152,7 +151,7 @@ ARGON_METHOD(ARGON_TUPLE_TYPE, __string__, {
 
     if (string_convert_method) {
       ArgonObject *string_object =
-          argon_call(string_convert_method, 0, NULL, err, state);
+          argon_call(string_convert_method, 0, NULL, NULL, err, state);
       bool resized = false;
       while (capacity < string_length + string_object->value.as_str->length) {
         capacity *= 2;

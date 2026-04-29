@@ -9,9 +9,9 @@
 #include "../runtime.h"
 
 ArgonObject *argon_call(ArgonObject *original_object, size_t argc,
-                        ArgonObject **argv, ArErr *err, RuntimeState *state);
+                        ArgonObject **argv, ArgonHashmap*kwargs, ArErr *err, RuntimeState *state);
 
-void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
+void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv, ArgonHashmap*kwargs,
               RuntimeState *state, bool CStackFrame, ArErr *err);
 
 #endif // runtime_call_H
