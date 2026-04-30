@@ -95,12 +95,12 @@ pipeline {
             steps {
                 sh '''
                     . /tmp/venv/bin/activate
-                    rm -rf build CMakeCache.txt CMakeFiles
-                    conan install . --build=missing
-                    conan build .
+                    rm -rf out/linux
+                    conan install . --build=missing -of "out/linux"
+                    conan build . -of "out/linux"
 
-                    ./build-stdlib.sh
-                    cp -r stdlib build/dist/
+                    cp -r stdlib out/linux/build/dist/
+                    ./build-stdlib.sh out/linux/build/dist/stdlib -j ARGON_INCLUDE="$(realpath include)"
                 '''
             }
         }
@@ -114,9 +114,9 @@ pipeline {
                     echo "Packaging Linux as: ${env.OUTPUT_FILE}"
                 }
                 sh '''
-                    cp LICENSE.txt build/dist/
-                    cp -r LICENSES build/dist/
-                    tar -czf "$OUTPUT_FILE" -C build/dist .
+                    cp LICENSE.txt out/linux/build/dist/
+                    cp -r LICENSES out/linux/build/dist/
+                    tar -czf "$OUTPUT_FILE" -C out/linux/build/dist .
                 '''
                 archiveArtifacts artifacts: "${env.OUTPUT_FILE}", allowEmptyArchive: false, fingerprint: true
             }
@@ -160,15 +160,15 @@ pipeline {
             steps {
                 sh '''
                     . /tmp/venv/bin/activate
-                    rm -rf build CMakeCache.txt CMakeFiles
+                    rm -rf out/windows
                     conan install . \
                         --profile:host=mingw-x86_64.txt \
-                        --build=missing
+                        --build=missing -of "out/windows"
                     conan build . \
-                        --profile:host=mingw-x86_64.txt
+                        --profile:host=mingw-x86_64.txt -of "out/windows"
 
-                    ./build-stdlib.sh --windows
-                    cp -r stdlib build/dist/
+                    cp -r stdlib out/windows/build/dist/
+                    ./build-stdlib.sh out/windows/build/dist/stdlib -j TARGET_OS=windows ARGON_INCLUDE="$(realpath include)"
                 '''
             }
         }
@@ -180,10 +180,10 @@ pipeline {
                     echo "Packaging Windows as: ${env.OUTPUT_FILE}"
                 }
                 sh '''
-                    cp LICENSE.txt build/dist/
-                    cp -r LICENSES build/dist/
+                    cp LICENSE.txt out/windows/build/dist/
+                    cp -r LICENSES out/windows/build/dist/
                     # Adjust packaging format if needed
-                    zip -r "$OUTPUT_FILE" build/dist/*
+                    zip -r "$OUTPUT_FILE" -C out/windows/build/dist .
                 '''
                 archiveArtifacts artifacts: "${env.OUTPUT_FILE}", allowEmptyArchive: false, fingerprint: true
             }

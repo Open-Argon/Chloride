@@ -53,11 +53,11 @@ jobs:
       - name: Build
         run: |
           source /tmp/venv/bin/activate
-          rm -rf build CMakeCache.txt CMakeFiles
-          conan install . --build=missing
-          conan build .
-          ./build-stdlib.sh
-          cp -r stdlib build/dist/
+          rm -rf out/macos
+          conan install . --build=missing -of "out/macos"
+          conan build . -of "out/macos"
+          cp -r stdlib out/macos/build/dist/
+          ./build-stdlib.sh out/macos/build/dist/stdlib -j ARGON_INCLUDE="$(realpath include)"
 
       # -------------------
       # Package
@@ -66,9 +66,9 @@ jobs:
         run: |
           BUILD_NAME="${{ inputs.build_name }}"
           OUTPUT_FILE="archives/argon-${BUILD_NAME}-macos-arm64.tar.gz"
-          cp LICENSE.txt build/dist/
-          cp -r LICENSES build/dist/
-          tar -czf "$OUTPUT_FILE" -C build/dist .
+          cp LICENSE.txt out/macos/build/dist/
+          cp -r LICENSES out/macos/build/dist/
+          tar -czf "$OUTPUT_FILE" -C out/macos/build/dist .
           echo "Packaged $OUTPUT_FILE"
 
       # -------------------

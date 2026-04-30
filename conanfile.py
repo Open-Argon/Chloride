@@ -47,5 +47,5 @@ class ArgonConan(ConanFile):
 
     def build(self):
         cmake = CMake(self)
-        cmake.configure()
+        cmake.configure(build_script_folder=".")
         cmake.build()
