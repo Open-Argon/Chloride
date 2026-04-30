@@ -54,7 +54,7 @@ void *thread_fn(void *arg) {
 
   ArgonState *state = args->api->new_state(&registers);
 
-  args->api->call(args->target, 0, NULL, args->err, state);
+  args->api->call(args->target, 0, NULL, NULL, args->err, state);
   int status = atomic_load(&args->status);
   atomic_store(&args->finished, 1);
 
@@ -69,8 +69,7 @@ void *thread_fn(void *arg) {
   return NULL;
 }
 
-ArgonObject *Argon_Thread(size_t argc, ArgonObject **argv, ArgonError *err,
-                          ArgonState *state, ArgonNativeAPI *api) {
+ARGON_FUNCTION(Argon_Thread, {
   if (api->fix_to_arg_size(2, argc, err)) {
     return api->ARGON_NULL;
   }
@@ -102,10 +101,9 @@ ArgonObject *Argon_Thread(size_t argc, ArgonObject **argv, ArgonError *err,
                                   "Failed to create thread");
   }
   return GC_managed_args_object;
-}
+})
 
-ArgonObject *Argon_Thread_join(size_t argc, ArgonObject **argv, ArgonError *err,
-                               ArgonState *state, ArgonNativeAPI *api) {
+ARGON_FUNCTION(Argon_Thread_join, {
   if (api->fix_to_arg_size(2, argc, err)) {
     return api->ARGON_NULL;
   }
@@ -140,11 +138,9 @@ ArgonObject *Argon_Thread_join(size_t argc, ArgonObject **argv, ArgonError *err,
 
   return api->throw_argon_error(err, api->RuntimeError,
                                 "Thread already joined or detached.");
-}
+})
 
-ArgonObject *Argon_Thread_detach(size_t argc, ArgonObject **argv,
-                                 ArgonError *err, ArgonState *state,
-                                 ArgonNativeAPI *api) {
+ARGON_FUNCTION(Argon_Thread_detach, {
   if (api->fix_to_arg_size(1, argc, err)) {
     return api->ARGON_NULL;
   }
@@ -180,25 +176,23 @@ ArgonObject *Argon_Thread_detach(size_t argc, ArgonObject **argv,
 
   return api->throw_argon_error(err, api->RuntimeError,
                                 "Thread already joined or detached.");
-}
+})
 
-ArgonObject *Argon_Err_object(size_t argc, ArgonObject **argv, ArgonError *err,
-                              ArgonState *state, ArgonNativeAPI *api) {
+ARGON_FUNCTION(Argon_Err_object, {
   if (api->fix_to_arg_size(0, argc, err)) {
     return api->ARGON_NULL;
   }
 
   return api->create_err_object();
-}
+})
 
-ArgonObject *Argon_Get_thread_id(size_t argc, ArgonObject **argv, ArgonError *err,
-                              ArgonState *state, ArgonNativeAPI *api) {
+ARGON_FUNCTION(Argon_Get_thread_id, {
   if (api->fix_to_arg_size(0, argc, err)) {
     return api->ARGON_NULL;
   }
 
   return api->i64_to_argon(mt_thread_current_id());
-}
+})
 
 void argon_module_init(ArgonState *vm, ArgonNativeAPI *api, ArgonError *err,
                        ArgonObjectRegister *reg) {

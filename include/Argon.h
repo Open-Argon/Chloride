@@ -23,6 +23,8 @@ extern "C" {
 
 typedef struct ArgonState ArgonState;
 
+typedef ArgonState RuntimeState;
+
 typedef struct ArgonError ArgonError;
 
 typedef ArgonError ArErr;

@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
 #include "Argon.h"
+#include "ArgonFunction.h"
 #include "socket.h"
 #include <inttypes.h>
 #include <stdint.h>
@@ -10,8 +11,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-ArgonObject *argon_net_init(size_t argc, ArgonObject **argv, ArgonError *err,
-                            ArgonState *state, ArgonNativeAPI *api) {
+ARGON_FUNCTION(argon_net_init, {
   (void)argv;
   (void)state;
   if (api->fix_to_arg_size(0, argc, err))
@@ -19,10 +19,9 @@ ArgonObject *argon_net_init(size_t argc, ArgonObject **argv, ArgonError *err,
 
   net_init();
   return api->ARGON_NULL;
-}
+})
 
-ArgonObject *argon_net_cleanup(size_t argc, ArgonObject **argv, ArgonError *err,
-                               ArgonState *state, ArgonNativeAPI *api) {
+ARGON_FUNCTION(argon_net_cleanup, {
   (void)argv;
   (void)state;
   if (api->fix_to_arg_size(0, argc, err))
@@ -30,10 +29,9 @@ ArgonObject *argon_net_cleanup(size_t argc, ArgonObject **argv, ArgonError *err,
 
   net_cleanup();
   return api->ARGON_NULL;
-}
+})
 
-ArgonObject *argon_net_listen(size_t argc, ArgonObject **argv, ArgonError *err,
-                              ArgonState *state, ArgonNativeAPI *api) {
+ARGON_FUNCTION(argon_net_listen, {
   (void)state;
   if (api->fix_to_arg_size(2, argc, err))
     return api->ARGON_NULL;
@@ -60,10 +58,9 @@ ArgonObject *argon_net_listen(size_t argc, ArgonObject **argv, ArgonError *err,
     return api->ARGON_NULL;
   memcpy(server_socket_buffer.data, &server_socket, server_socket_buffer.size);
   return server_socket_buffer_object;
-}
+})
 
-ArgonObject *argon_net_accept(size_t argc, ArgonObject **argv, ArgonError *err,
-                              ArgonState *state, ArgonNativeAPI *api) {
+ARGON_FUNCTION(argon_net_accept, {
   (void)state;
   if (api->fix_to_arg_size(2, argc, err))
     return api->ARGON_NULL;
@@ -94,10 +91,9 @@ ArgonObject *argon_net_accept(size_t argc, ArgonObject **argv, ArgonError *err,
          connection_socket_buffer.size);
 
   return connection_socket_buffer_object;
-}
+})
 
-ArgonObject *argon_net_send(size_t argc, ArgonObject **argv, ArgonError *err,
-                            ArgonState *state, ArgonNativeAPI *api) {
+ARGON_FUNCTION(argon_net_send, {
   (void)state;
   if (api->fix_to_arg_size(2, argc, err))
     return api->ARGON_NULL;
@@ -115,11 +111,9 @@ ArgonObject *argon_net_send(size_t argc, ArgonObject **argv, ArgonError *err,
 
   return api->i64_to_argon(
       net_send(connection_socket, data_buffer.data, data_buffer.size));
-}
+})
 
-ArgonObject *argon_net_send_string(size_t argc, ArgonObject **argv,
-                                   ArgonError *err, ArgonState *state,
-                                   ArgonNativeAPI *api) {
+ARGON_FUNCTION(argon_net_send_string, {
   (void)state;
   if (api->fix_to_arg_size(2, argc, err))
     return api->ARGON_NULL;
@@ -137,10 +131,9 @@ ArgonObject *argon_net_send_string(size_t argc, ArgonObject **argv,
 
   return api->i64_to_argon(
       net_send(connection_socket, data_string.data, data_string.length));
-}
+})
 
-ArgonObject *argon_net_recv(size_t argc, ArgonObject **argv, ArgonError *err,
-                            ArgonState *state, ArgonNativeAPI *api) {
+ARGON_FUNCTION(argon_net_recv, {
   (void)state;
   if (api->fix_to_arg_size(2, argc, err))
     return api->ARGON_NULL;
@@ -158,11 +151,9 @@ ArgonObject *argon_net_recv(size_t argc, ArgonObject **argv, ArgonError *err,
 
   return api->i64_to_argon(
       net_recv(connection_socket, data_buffer.data, data_buffer.size));
-}
+})
 
-ArgonObject *argon_net_recv_string(size_t argc, ArgonObject **argv,
-                                   ArgonError *err, ArgonState *state,
-                                   ArgonNativeAPI *api) {
+ARGON_FUNCTION(argon_net_recv_string, {
   (void)state;
   (void)argv;
   if (api->fix_to_arg_size(2, argc, err))
@@ -184,10 +175,9 @@ ArgonObject *argon_net_recv_string(size_t argc, ArgonObject **argv,
   int n = net_recv(connection_socket, data, size);
 
   return api->string_to_argon((struct string){data, n});
-}
+})
 
-ArgonObject *argon_net_close(size_t argc, ArgonObject **argv, ArgonError *err,
-                             ArgonState *state, ArgonNativeAPI *api) {
+ARGON_FUNCTION(argon_net_close, {
   (void)state;
   if (api->fix_to_arg_size(1, argc, err))
     return api->ARGON_NULL;
@@ -199,7 +189,7 @@ ArgonObject *argon_net_close(size_t argc, ArgonObject **argv, ArgonError *err,
   socket_t socket = *(socket_t *)socket_buffer.data;
   net_close(socket);
   return api->ARGON_NULL;
-}
+})
 
 void argon_module_init(ArgonState *vm, ArgonNativeAPI *api, ArgonError *err,
                        ArgonObjectRegister *reg) {

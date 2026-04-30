@@ -318,7 +318,6 @@ ParsedValueReturn parse_declaration(char *file, DArray *tokens, size_t *index) {
           hashmap_free(ps.seen, NULL); // ← add this before the return
           return (ParsedValueReturn){no_err, parsedValue};
         }
-        hashmap_free(ps.seen, NULL); // ← add this here too
         token = darray_get(tokens, *index);
       } else {
         err = parse_param_list(file, tokens, index, &ps);

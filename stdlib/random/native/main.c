@@ -5,18 +5,16 @@
 #include "Argon.h"
 #include "random.h"
 
-ArgonObject *argon_random_os_seed(size_t argc, ArgonObject **argv, ArgonError *err,
-                               ArgonState *state, ArgonNativeAPI *api) {
+ARGON_FUNCTION(argon_random_os_seed, {
   (void)state;
   (void)argv;
   if (api->fix_to_arg_size(0, argc, err))
     return api->ARGON_NULL;
 
   return api->i64_to_argon(random_os_seed());
-}
+})
 
-ArgonObject *argon_random_seed(size_t argc, ArgonObject **argv, ArgonError *err,
-                               ArgonState *state, ArgonNativeAPI *api) {
+ARGON_FUNCTION(argon_random_seed, {
   (void)state;
   if (api->fix_to_arg_size(1, argc, err))
     return api->ARGON_NULL;
@@ -36,10 +34,9 @@ ArgonObject *argon_random_seed(size_t argc, ArgonObject **argv, ArgonError *err,
   random_seed(random_buffer.data, seed);
 
   return random;
-}
+})
 
-ArgonObject *argon_random_next_number(size_t argc, ArgonObject **argv, ArgonError *err,
-                               ArgonState *state, ArgonNativeAPI *api) {
+ARGON_FUNCTION(argon_random_next_number, {
   (void)state;
   if (api->fix_to_arg_size(1, argc, err))
     return api->ARGON_NULL;
@@ -49,7 +46,7 @@ ArgonObject *argon_random_next_number(size_t argc, ArgonObject **argv, ArgonErro
     return api->ARGON_NULL;
 
   return api->double_to_argon(random_next_double(random_buffer.data));
-}
+})
 
 void argon_module_init(ArgonState *vm, ArgonNativeAPI *api, ArgonError *err,
                        ArgonObjectRegister *reg) {
