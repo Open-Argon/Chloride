@@ -222,13 +222,13 @@ pipeline {
                 archiveArtifacts artifacts: "${env.OUTPUT_FILE}", allowEmptyArchive: false, fingerprint: true
             }
         }
-        
+
         stage('Archive macOS') {
             steps {
                 archiveArtifacts artifacts: 'macos-artifacts/**/*.tar.gz', fingerprint: true
             }
         }
-
+    }
     post {
         always {
             script {
