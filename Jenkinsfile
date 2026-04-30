@@ -59,9 +59,8 @@ pipeline {
                     echo "Packaging Source as: ${env.OUTPUT_FILE}"
                 }
                 sh '''
-                git stash
+                mkdir -p archives
                 git ls-files --recurse-submodules | tar -czf $OUTPUT_FILE -T -
-                git stash pop
                 '''
                 archiveArtifacts artifacts: "${env.OUTPUT_FILE}", allowEmptyArchive: false, fingerprint: true
             }
