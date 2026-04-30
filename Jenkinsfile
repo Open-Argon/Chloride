@@ -91,17 +91,65 @@ pipeline {
                 '''
             }
         }
-        stage('Linux Build') {
-            steps {
-                sh '''
-                    . /tmp/venv/bin/activate
-                    rm -rf out/linux
-                    conan install . --build=missing -of "out/linux"
-                    conan build . -of "out/linux"
 
-                    cp -r stdlib out/linux/build/dist/
-                    ./build-stdlib.sh out/linux/build/dist/stdlib -j ARGON_INCLUDE="$(realpath include)"
-                '''
+        stage('Build (Parallel)') {
+            parallel {
+
+                stage('Linux Build') {
+                    stages {
+                        stage('Build') {
+                            steps {
+                                sh '''
+                                    . /tmp/venv/bin/activate
+                                    rm -rf out/linux
+                                    conan install . --build=missing -of "out/linux"
+                                    conan build . -of "out/linux"
+
+                                    cp -r stdlib out/linux/build/dist/
+                                    ./build-stdlib.sh out/linux/build/dist/stdlib -j ARGON_INCLUDE="$(realpath include)"
+                                '''
+                            }
+                        }
+                    }
+                }
+
+                stage('Windows Build') {
+                    stages {
+                        stage('Build') {
+                            steps {
+                                sh '''
+                                    . /tmp/venv/bin/activate
+                                    rm -rf out/windows
+                                    conan install . \
+                                        --profile:host=mingw-x86_64.txt \
+                                        --build=missing -of "out/windows"
+                                    conan build . \
+                                        --profile:host=mingw-x86_64.txt -of "out/windows"
+
+                                    cp -r stdlib out/windows/build/dist/
+                                    ./build-stdlib.sh out/windows/build/dist/stdlib -j TARGET_OS=windows ARGON_INCLUDE="$(realpath include)"
+                                '''
+                            }
+                        }
+                    }
+                }
+
+                stage('macOS Trigger') {
+                    steps {
+                        sh '''
+                            set -e
+
+                            REF=$(git describe --tags --exact-match 2>/dev/null || git rev-parse HEAD)
+                            echo "Triggering macOS build for ref: $REF"
+
+                            gh workflow run "macOS Build (Jenkins-triggered)" \
+                                --repo "open-argon/chloride" \
+                                --ref main \
+                                -f ref="$REF" \
+                                -f build_name="${TAG_NAME:-dev}"
+                        '''
+                    }
+                }
             }
         }
 
@@ -156,22 +204,6 @@ pipeline {
             }
         }
 
-        stage('Windows Build') {
-            steps {
-                sh '''
-                    . /tmp/venv/bin/activate
-                    rm -rf out/windows
-                    conan install . \
-                        --profile:host=mingw-x86_64.txt \
-                        --build=missing -of "out/windows"
-                    conan build . \
-                        --profile:host=mingw-x86_64.txt -of "out/windows"
-
-                    cp -r stdlib out/windows/build/dist/
-                    ./build-stdlib.sh out/windows/build/dist/stdlib -j TARGET_OS=windows ARGON_INCLUDE="$(realpath include)"
-                '''
-            }
-        }
         stage('Archive Windows') {
             steps {
                 script {
@@ -190,54 +222,12 @@ pipeline {
                 archiveArtifacts artifacts: "${env.OUTPUT_FILE}", allowEmptyArchive: false, fingerprint: true
             }
         }
-        stage('macOS Build (GitHub Actions)') {
-            environment {
-                GH_TOKEN = credentials('github-pat')
-                GH_REPO  = 'open-argon/chloride'
-                WORKFLOW = 'macOS Build (Jenkins-triggered)'
-                BUILD_NAME_ARG = "${env.TAG_NAME ?: 'dev'}"
-            }
-            steps {
-                sh '''
-                    set -e
-
-                    # Decide what ref to build
-                    REF=$(git describe --tags --exact-match 2>/dev/null || git rev-parse HEAD)
-                    echo "Triggering macOS build for ref: $REF"
-
-                    # Trigger workflow
-                    gh workflow run "$WORKFLOW" \
-                        --repo "$GH_REPO" \
-                        --ref main \
-                        -f ref="$REF" \
-                        -f build_name="$BUILD_NAME_ARG"
-
-                    # Get the latest run ID
-                    RUN_ID=$(gh run list \
-                        --repo "$GH_REPO" \
-                        --workflow "$WORKFLOW" \
-                        --limit 1 \
-                        --json databaseId \
-                        -q '.[0].databaseId')
-
-                    echo "Waiting for GitHub Actions run $RUN_ID"
-                    gh run watch "$RUN_ID" --repo "$GH_REPO"
-
-                    # Download artifact
-                    gh run download "$RUN_ID" \
-                        --repo "$GH_REPO" \
-                        --name macos-build \
-                        --dir macos-artifacts
-                '''
-            }
-        }
-
+        
         stage('Archive macOS') {
             steps {
                 archiveArtifacts artifacts: 'macos-artifacts/**/*.tar.gz', fingerprint: true
             }
         }
-    }
 
     post {
         always {
