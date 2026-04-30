@@ -109,10 +109,10 @@ ArgonObject *CWD_ARGON;
 ArgonObject *EXC_ARGON;
 
 const char CACHE_FOLDER[] = "__arcache__";
-const char FILE_IDENTIFIER[5] = "ARBI";
+const char FILE_IDENTIFIER[] = "ARBI";
 #define BYTECODE_EXTENTION "bin"
-const uint32_t version_number = 1;
-const char version_string[] = "0.0.1";
+const uint32_t version_number = 2;
+const char version_string[] = "4.0.0";
 
 bool file_exists(const char *path) {
   struct stat st;
