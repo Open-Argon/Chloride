@@ -104,7 +104,8 @@ pipeline {
                             steps {
                                 sh '''
                                     . /tmp/venv/bin/activate
-                                    rm -rf out/linux
+                                    rm -rf out/linux $CONAN_HOME
+                                    conan profile detect
                                     conan install . --build=missing -of "out/linux"
                                     conan build . -of "out/linux"
 
@@ -125,7 +126,8 @@ pipeline {
                             steps {
                                 sh '''
                                     . /tmp/venv/bin/activate
-                                    rm -rf out/windows
+                                    rm -rf out/windows $CONAN_HOME
+                                    conan profile detect
                                     conan install . \
                                         --profile:host=mingw-x86_64.txt \
                                         --build=missing -of "out/windows"
