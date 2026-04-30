@@ -136,7 +136,7 @@ pipeline {
 
                     rm -rf "$PACKAGE_ROOT"
 
-                    DESTDIR="$PACKAGE_ROOT" cmake --install build --prefix "$INSTALL_INTERNAL"
+                    DESTDIR="$PACKAGE_ROOT" cmake --install out/linux/build --prefix "$INSTALL_INTERNAL"
 
                     mkdir -p "$PACKAGE_ROOT$INSTALL_INTERNAL/stdlib"
                     cp -R stdlib/* "$PACKAGE_ROOT$INSTALL_INTERNAL/stdlib/"
