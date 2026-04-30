@@ -231,13 +231,13 @@ pipeline {
                 archiveArtifacts artifacts: "${env.OUTPUT_FILE}", allowEmptyArchive: false, fingerprint: true
             }
         }
-
+        
         stage('RPM Package Build') {
             steps {
                 script {
                     def version = env.TAG_NAME ?: "0.0.0-1"
                     GITEA_TOKEN = credentials('gitea-pat')
-                    env.RPM_VERSION = version.replaceFirst('^v', '').replaceAll('-', '.')  // strip 'v', replace '-' (invalid in RPM version)
+                    env.RPM_VERSION = version.replaceFirst('^v', '').replaceAll('-', '.')
                     env.OUTPUT_FILE = "archives/argon-${env.RPM_VERSION}-x86_64.rpm"
                 }
                 sh '''
@@ -245,7 +245,6 @@ pipeline {
                     INSTALL_INTERNAL="/usr/local/lib/chloride"
                     RPM_BUILD_ROOT="${WORKSPACE}/rpmbuild"
 
-                    # RPM build tree
                     mkdir -p "$RPM_BUILD_ROOT"/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
                     BUILD_DIR="$RPM_BUILD_ROOT/BUILD"
                     rm -rf "$BUILD_DIR"
@@ -253,37 +252,42 @@ pipeline {
                     mkdir -p "$BUILD_DIR$INSTALL_INTERNAL/stdlib"
                     cp -R out/linux/build/dist/stdlib/* "$BUILD_DIR$INSTALL_INTERNAL/stdlib/"
                     mkdir -p "$BUILD_DIR/usr/bin"
-                    printf '#!/bin/bash\\nexec "%s/bin/argon" "$@"\\n' "$INSTALL_INTERNAL" \
+                    printf \'#!/bin/bash\\nexec "%s/bin/argon" "$@"\\n\' "$INSTALL_INTERNAL" \
                         > "$BUILD_DIR/usr/bin/argon"
                     chmod +x "$BUILD_DIR/usr/bin/argon"
 
-                    # spec file
+                    # Note: closing delimiter must be at column 0, no leading whitespace
                     cat > "$RPM_BUILD_ROOT/SPECS/argon.spec" << SPEC
-                    Name:           argon
-                    Version:        ${RPM_VERSION}
-                    Release:        1
-                    Summary:        Interpreter written in C for the Argon Programming Language
-                    License:        GPL-3.0-or-later
-                    URL:            https://git.wbell.dev/Open-Argon/Chloride
-                    %description
-                    Interpreter written in C for the Argon Programming Language
-                    %install
-                    cp -r ${BUILD_DIR}/* %{buildroot}/
-                    %files
-                    /usr/bin/argon
-                    ${INSTALL_INTERNAL}/
-                    %changelog
-                    * $(date '+%a %b %d %Y') Jenkins <jenkins@wbell.dev> - ${RPM_VERSION}-1
-                    - Automated build from tag ${TAG_NAME}
-                    SPEC
-                    # Build the RPM (no source prep needed; BUILD dir is pre-populated)
-                    rpmbuild --define "_topdir $RPM_BUILD_ROOT" \
-                             --define "buildroot $BUILD_DIR" \
-                             --buildroot "$BUILD_DIR" \
-                             -bb "$RPM_BUILD_ROOT/SPECS/argon.spec"
+        Name:           argon
+        Version:        ${RPM_VERSION}
+        Release:        1
+        Summary:        Interpreter written in C for the Argon Programming Language
+        License:        GPL-3.0-or-later
+        URL:            https://git.wbell.dev/Open-Argon/Chloride
 
-                    # Locate and copy the produced RPM to archives/
+        %description
+        Interpreter written in C for the Argon Programming Language
+
+        %install
+        cp -r ${BUILD_DIR}/* %{buildroot}/
+
+        %files
+        /usr/bin/argon
+        ${INSTALL_INTERNAL}/bin/argon
+        ${INSTALL_INTERNAL}/stdlib/
+
+        %changelog
+        * $(date \'+%a %b %d %Y\') Jenkins <jenkins@wbell.dev> - ${RPM_VERSION}-1
+        - Automated build from tag ${TAG_NAME}
+        SPEC
+
+                    rpmbuild --define "_topdir $RPM_BUILD_ROOT" \
+                            --define "buildroot $BUILD_DIR" \
+                            --buildroot "$BUILD_DIR" \
+                            -bb "$RPM_BUILD_ROOT/SPECS/argon.spec"
+
                     BUILT_RPM=$(find "$RPM_BUILD_ROOT/RPMS" -name "argon-*.rpm" | head -1)
+                    mkdir -p archives
                     cp "$BUILT_RPM" "$OUTPUT_FILE"
 
                     curl --user Jenkins:$GITEA_TOKEN \
