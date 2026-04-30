@@ -96,6 +96,9 @@ pipeline {
             parallel {
 
                 stage('Linux Build') {
+                    environment {
+                        CONAN_HOME = "${WORKSPACE}/.conan-linux"
+                    }
                     stages {
                         stage('Build') {
                             steps {
@@ -114,6 +117,9 @@ pipeline {
                 }
 
                 stage('Windows Build') {
+                    environment {
+                        CONAN_HOME = "${WORKSPACE}/.conan-windows"
+                    }
                     stages {
                         stage('Build') {
                             steps {
@@ -134,19 +140,44 @@ pipeline {
                     }
                 }
 
-                stage('macOS Trigger') {
+                stage('macOS Build (GitHub Actions)') {
+                    environment {
+                        GH_TOKEN = credentials('github-pat')
+                        GH_REPO  = 'open-argon/chloride'
+                        WORKFLOW = 'macOS Build (Jenkins-triggered)'
+                        BUILD_NAME_ARG = "${env.TAG_NAME ?: 'dev'}"
+                    }
                     steps {
                         sh '''
                             set -e
 
+                            # Decide what ref to build
                             REF=$(git describe --tags --exact-match 2>/dev/null || git rev-parse HEAD)
                             echo "Triggering macOS build for ref: $REF"
 
-                            gh workflow run "macOS Build (Jenkins-triggered)" \
-                                --repo "open-argon/chloride" \
+                            # Trigger workflow
+                            gh workflow run "$WORKFLOW" \
+                                --repo "$GH_REPO" \
                                 --ref main \
                                 -f ref="$REF" \
-                                -f build_name="${TAG_NAME:-dev}"
+                                -f build_name="$BUILD_NAME_ARG"
+
+                            # Get the latest run ID
+                            RUN_ID=$(gh run list \
+                                --repo "$GH_REPO" \
+                                --workflow "$WORKFLOW" \
+                                --limit 1 \
+                                --json databaseId \
+                                -q '.[0].databaseId')
+
+                            echo "Waiting for GitHub Actions run $RUN_ID"
+                            gh run watch "$RUN_ID" --repo "$GH_REPO"
+
+                            # Download artifact
+                            gh run download "$RUN_ID" \
+                                --repo "$GH_REPO" \
+                                --name macos-build \
+                                --dir macos-artifacts
                         '''
                     }
                 }
@@ -229,6 +260,7 @@ pipeline {
             }
         }
     }
+
     post {
         always {
             script {
