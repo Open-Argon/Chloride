@@ -70,7 +70,7 @@ pipeline {
             steps {
                 sh '''
                     apt update
-                    apt install -y cmake flex python3 python3-pip python3-venv make gcc-mingw-w64 mingw-w64 ninja-build zip jq gh dpkg-dev
+                    apt install -y cmake flex python3 python3-pip python3-venv make gcc-mingw-w64 mingw-w64 ninja-build zip jq gh dpkg-dev rpm
                     python3 -m venv /tmp/venv
                     . /tmp/venv/bin/activate
                     pip install --upgrade pip
@@ -227,6 +227,68 @@ pipeline {
                     curl --user Jenkins:$GITEA_TOKEN \
                         --upload-file $OUTPUT_FILE \
                         https://git.wbell.dev/api/packages/Open-Argon/debian/pool/trixie/main/upload
+                '''
+                archiveArtifacts artifacts: "${env.OUTPUT_FILE}", allowEmptyArchive: false, fingerprint: true
+            }
+        }
+
+        stage('RPM Package Build') {
+            steps {
+                script {
+                    def version = env.TAG_NAME ?: "0.0.0-1"
+                    GITEA_TOKEN = credentials('gitea-pat')
+                    env.RPM_VERSION = version.replaceFirst('^v', '').replaceAll('-', '.')  // strip 'v', replace '-' (invalid in RPM version)
+                    env.OUTPUT_FILE = "archives/argon-${env.RPM_VERSION}-x86_64.rpm"
+                }
+                sh '''
+                    set -e
+                    INSTALL_INTERNAL="/usr/local/lib/chloride"
+                    RPM_BUILD_ROOT="${WORKSPACE}/rpmbuild"
+
+                    # RPM build tree
+                    mkdir -p "$RPM_BUILD_ROOT"/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
+                    BUILD_DIR="$RPM_BUILD_ROOT/BUILD"
+                    rm -rf "$BUILD_DIR"
+                    DESTDIR="$BUILD_DIR" cmake --install out/linux/build --prefix "$INSTALL_INTERNAL"
+                    mkdir -p "$BUILD_DIR$INSTALL_INTERNAL/stdlib"
+                    cp -R out/linux/build/dist/stdlib/* "$BUILD_DIR$INSTALL_INTERNAL/stdlib/"
+                    mkdir -p "$BUILD_DIR/usr/bin"
+                    printf '#!/bin/bash\\nexec "%s/bin/argon" "$@"\\n' "$INSTALL_INTERNAL" \
+                        > "$BUILD_DIR/usr/bin/argon"
+                    chmod +x "$BUILD_DIR/usr/bin/argon"
+
+                    # spec file
+                    cat > "$RPM_BUILD_ROOT/SPECS/argon.spec" << SPEC
+                    Name:           argon
+                    Version:        ${RPM_VERSION}
+                    Release:        1
+                    Summary:        Interpreter written in C for the Argon Programming Language
+                    License:        GPL-3.0-or-later
+                    URL:            https://git.wbell.dev/Open-Argon/Chloride
+                    %description
+                    Interpreter written in C for the Argon Programming Language
+                    %install
+                    cp -r ${BUILD_DIR}/* %{buildroot}/
+                    %files
+                    /usr/bin/argon
+                    ${INSTALL_INTERNAL}/
+                    %changelog
+                    * $(date '+%a %b %d %Y') Jenkins <jenkins@wbell.dev> - ${RPM_VERSION}-1
+                    - Automated build from tag ${TAG_NAME}
+                    SPEC
+                    # Build the RPM (no source prep needed; BUILD dir is pre-populated)
+                    rpmbuild --define "_topdir $RPM_BUILD_ROOT" \
+                             --define "buildroot $BUILD_DIR" \
+                             --buildroot "$BUILD_DIR" \
+                             -bb "$RPM_BUILD_ROOT/SPECS/argon.spec"
+
+                    # Locate and copy the produced RPM to archives/
+                    BUILT_RPM=$(find "$RPM_BUILD_ROOT/RPMS" -name "argon-*.rpm" | head -1)
+                    cp "$BUILT_RPM" "$OUTPUT_FILE"
+
+                    curl --user Jenkins:$GITEA_TOKEN \
+                        --upload-file "$OUTPUT_FILE" \
+                        https://git.wbell.dev/api/packages/Open-Argon/rpm/upload
                 '''
                 archiveArtifacts artifacts: "${env.OUTPUT_FILE}", allowEmptyArchive: false, fingerprint: true
             }
