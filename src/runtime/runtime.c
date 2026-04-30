@@ -1881,7 +1881,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
     DO_CALL: {
       state->head = ip;
       run_call(state->call_instance->to_call, state->call_instance->args_length,
-               state->call_instance->args, NULL, state, false, &err);
+               state->call_instance->args, state->call_instance->kwargs, state, false, &err);
       state->call_instance = (*state->call_instance).previous;
       ip = currentStackFrame->state.head;
       bytecode = &currentStackFrame->translated.bytecode;

@@ -42,7 +42,6 @@ ParsedValueReturn parse_assign(char *file, DArray *tokens,
     darray_init(&function_args, sizeof(char *));
     for (size_t i = 0; i < call->args.size; i++) {
       ParsedValue *arg = darray_get(&call->args, i);
-      printf("type: %d\n",arg->type);
       if (arg->type != AST_IDENTIFIER) {
         free_parsed(assign_to);
         free(assign_to);

@@ -8,6 +8,8 @@
 #include "../../err.h"
 #include "../../memory.h"
 #include "../api/api.h"
+#include "../objects/array/array.h"
+#include "../objects/dictionary/dictionary.h"
 #include "../objects/exceptions/exceptions.h"
 #include "../objects/string/string.h"
 #include <inttypes.h>
@@ -80,13 +82,15 @@ double get_memory_usage_mb() {
 #endif
 
 ArgonObject *argon_call(ArgonObject *original_object, size_t argc,
-                        ArgonObject **argv, ArgonHashmap*kwargs, ArErr *err, RuntimeState *state) {
+                        ArgonObject **argv, ArgonHashmap *kwargs, ArErr *err,
+                        RuntimeState *state) {
   run_call(original_object, argc, argv, kwargs, state, true, err);
   return state->registers[0];
 }
 
-void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv, ArgonHashmap*kwargs,
-              RuntimeState *state, bool CStackFrame, ArErr *err) {
+void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
+              ArgonHashmap *kwargs, RuntimeState *state, bool CStackFrame,
+              ArErr *err) {
   ArgonObject *object = original_object;
   if (object->type != TYPE_FUNCTION && object->type != TYPE_NATIVE_FUNCTION &&
       object->type != TYPE_METHOD) {
@@ -108,38 +112,192 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv, Arg
   }
   switch (object->type) {
   case TYPE_FUNCTION: {
-    if (argc + binding_object_exists !=
-        object->value.argon_fn->number_of_parameters) {
-      ArgonObject *type_object_name = get_builtin_field_for_class(
-          get_builtin_field(object, __class__), __name__, original_object);
-      ArgonObject *object_name =
-          get_builtin_field_for_class(object, __name__, original_object);
-      *err = create_err(TypeError,
-                        "%.*s %.*s takes %" PRIu64 " argument(s) but %" PRIu64
-                        " was given",
-                        (int)type_object_name->value.as_str->length,
-                        type_object_name->value.as_str->data,
-                        (int)object_name->value.as_str->length,
-                        object_name->value.as_str->data,
-                        object->value.argon_fn->number_of_parameters, argc);
-      return;
-    }
+    // ── build a "bound" bitset to track which parameters have been filled ──
+    size_t n_params = object->value.argon_fn->number_of_parameters;
+    bool *bound = checked_malloc(n_params * sizeof(bool));
+    memset(bound, 0, n_params * sizeof(bool));
+
+    // ── bind self / binding_object ────────────────────────────────────────
     Stack *scope = create_scope(object->value.argon_fn->stack, true);
     if (binding_object) {
       struct string_struct key = object->value.argon_fn->parameters[0];
-      ArgonObject *value = binding_object;
       hashmap_insert_GC(scope->scope, key.hash,
                         new_string_object(key.data, key.length, key.hash),
-                        value, 0);
+                        binding_object, 0);
+      bound[0] = true;
     }
+
+    // ── bind positional args left to right ────────────────────────────────
+    size_t positional_start = binding_object_exists;
+    size_t next_positional = positional_start;
+    size_t next_default = 0; // tracks position in default_parameters
     for (size_t i = 0; i < argc; i++) {
-      struct string_struct key =
-          object->value.argon_fn->parameters[i + binding_object_exists];
-      ArgonObject *value = argv[i];
-      hashmap_insert_GC(scope->scope, key.hash,
-                        new_string_object(key.data, key.length, key.hash),
-                        value, 0);
+      if (next_positional < n_params) {
+        // bind to a normal parameter slot
+        struct string_struct key =
+            object->value.argon_fn->parameters[next_positional];
+        hashmap_insert_GC(scope->scope, key.hash,
+                          new_string_object(key.data, key.length, key.hash),
+                          argv[i], 0);
+        bound[next_positional] = true;
+        next_positional++;
+      } else if (next_default <
+                 object->value.argon_fn->number_of_default_parameters) {
+        // bind to a default parameter slot (overrides the default)
+        struct string_struct key =
+            object->value.argon_fn->default_parameters[next_default].key;
+        hashmap_insert_GC(scope->scope, key.hash,
+                          new_string_object(key.data, key.length, key.hash),
+                          argv[i], 0);
+        next_default++;
+      } else {
+        // genuinely too many args
+        if (object->value.argon_fn->vargs.data == NULL) {
+          ArgonObject *type_object_name = get_builtin_field_for_class(
+              get_builtin_field(object, __class__), __name__, original_object);
+          ArgonObject *object_name =
+              get_builtin_field_for_class(object, __name__, original_object);
+          *err = create_err(
+              TypeError,
+              "%.*s %.*s takes %" PRIu64 " argument(s) but too many were given",
+              (int)type_object_name->value.as_str->length,
+              type_object_name->value.as_str->data,
+              (int)object_name->value.as_str->length,
+              object_name->value.as_str->data,
+              n_params + object->value.argon_fn->number_of_default_parameters);
+          free(bound);
+          return;
+        }
+        break;
+      }
     }
+
+    // ── bind keyword args ─────────────────────────────────────────────────
+    struct hashmap_GC *leftover_kwargs = NULL; // for **kw_arg
+
+    if (kwargs != NULL) {
+      size_t kwargs_array_length;
+      struct node_GC **kwargs_array =
+          hashmap_GC_to_array(kwargs, &kwargs_array_length);
+
+      for (size_t i = 0; i < kwargs_array_length; i++) {
+        struct string_struct *name = kwargs_array[i]->key;
+        ArgonObject *value = kwargs_array[i]->val;
+
+        // find matching parameter by name
+        bool found = false;
+        for (size_t j = positional_start; j < n_params; j++) {
+          struct string_struct key = object->value.argon_fn->parameters[j];
+          if (key.hash == name->hash && key.length == name->length &&
+              memcmp(key.data, name->data, name->length) == 0) {
+            if (bound[j]) {
+              ArgonObject *object_name = get_builtin_field_for_class(
+                  object, __name__, original_object);
+              *err = create_err(TypeError,
+                                "%.*s got multiple values for argument '%.*s'",
+                                (int)object_name->value.as_str->length,
+                                object_name->value.as_str->data,
+                                (int)name->length, name->data);
+              free(bound);
+              return;
+            }
+            hashmap_insert_GC(scope->scope, key.hash,
+                              new_string_object(key.data, key.length, key.hash),
+                              value, 0);
+            bound[j] = true;
+            found = true;
+            break;
+          }
+        }
+
+        if (!found) {
+          // unexpected kwarg — goes to **kw_arg if available, else error
+          if (object->value.argon_fn->kwargs.data == NULL) {
+            ArgonObject *object_name =
+                get_builtin_field_for_class(object, __name__, original_object);
+            *err = create_err(
+                TypeError, "%.*s got an unexpected keyword argument '%.*s'",
+                (int)object_name->value.as_str->length,
+                object_name->value.as_str->data, (int)name->length, name->data);
+            free(bound);
+            return;
+          }
+          if (leftover_kwargs == NULL)
+            leftover_kwargs = createHashmap_GC();
+          hashmap_insert_GC(
+              leftover_kwargs, name->hash,
+              new_string_object(name->data, name->length, name->hash), value,
+              0);
+        }
+      }
+    }
+
+    // ── fill defaults for unbound params ──────────────────────────────────
+    for (size_t i = 0; i < object->value.argon_fn->number_of_default_parameters;
+         i++) {
+      struct default_value dv = object->value.argon_fn->default_parameters[i];
+      if (hashmap_lookup_GC(scope->scope, dv.key.hash) == NULL) {
+        hashmap_insert_GC(
+            scope->scope, dv.key.hash,
+            new_string_object(dv.key.data, dv.key.length, dv.key.hash),
+            dv.value, 0);
+      }
+    }
+
+    // ── collect leftover positionals into vargs ───────────────────────────
+    if (object->value.argon_fn->vargs.data != NULL) {
+      // count how many positionals were consumed by normal params
+      size_t consumed = 0;
+      for (size_t i = positional_start; i < n_params; i++)
+        if (bound[i])
+          consumed++;
+      size_t n_vargs = (argc > consumed) ? argc - consumed : 0;
+      ArgonObject *array_obj = new_instance(ARRAY_TYPE, sizeof(darray_armem));
+      array_obj->type = TYPE_ARRAY;
+
+      array_obj->value.as_array = darray_armem_create();
+
+      darray_armem_init(array_obj->value.as_array, sizeof(ArgonObject *),
+                        n_vargs);
+      size_t vi = 0;
+      for (size_t i = next_positional; i < argc && vi < n_vargs; i++)
+        ((ArgonObject **)array_obj->value.as_array->data)[vi++] = argv[i];
+
+      struct string_struct vkey = object->value.argon_fn->vargs;
+
+      hashmap_insert_GC(scope->scope, vkey.hash,
+                        new_string_object(vkey.data, vkey.length, vkey.hash),
+                        array_obj, 0);
+    }
+
+    // ── bind leftover kwargs to **kw_arg ──────────────────────────────────
+    if (object->value.argon_fn->kwargs.data != NULL) {
+      if (leftover_kwargs == NULL)
+        leftover_kwargs = createHashmap_GC();
+      struct string_struct kwkey = object->value.argon_fn->kwargs;
+      // leftover_kwargs is your raw hashmap — wrap into dict as needed
+      (void)leftover_kwargs; // TODO: wrap into ArgonObject dict
+      hashmap_insert_GC(scope->scope, kwkey.hash,
+                        new_string_object(kwkey.data, kwkey.length, kwkey.hash),
+                        create_dictionary(leftover_kwargs), 0);
+    }
+
+    // ── check all required params are bound ───────────────────────────────
+    for (size_t i = positional_start; i < n_params; i++) {
+      if (!bound[i]) {
+        struct string_struct key = object->value.argon_fn->parameters[i];
+        ArgonObject *object_name =
+            get_builtin_field_for_class(object, __name__, original_object);
+        *err = create_err(TypeError, "%.*s missing required argument '%.*s'",
+                          (int)object_name->value.as_str->length,
+                          object_name->value.as_str->data, (int)key.length,
+                          key.data);
+        free(bound);
+        return;
+      }
+    }
+
+    free(bound);
     if (CStackFrame) {
       if (state->c_depth >= MAX_C_STACK_LIMIT) {
         *err = create_err(

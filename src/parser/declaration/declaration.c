@@ -12,6 +12,7 @@
 #include "../../memory.h"
 #include "../../runtime/objects/exceptions/exceptions.h"
 #include "../function/function.h"
+#include "param_list.h"
 #include "../literals/literals.h"
 #include "../parser.h"
 #include <stdint.h>
@@ -24,16 +25,7 @@
   stage = n
 // ── Parameter parsing state ──────────────────────────────────────────────────
 
-typedef struct {
-  struct hashmap *seen; // duplicate-detection
-  DArray positional;    // char *
-  DArray *defaults;     // default_value_parameter, lazy-allocated
-  char *v_param;        // *args  name, or NULL
-  char *kw_param;       // **kwargs name, or NULL
-  uint8_t stage;        // 0=positional 1=defaults 2=*args 3=**kwargs
-} ParamState;
-
-static void param_state_init(ParamState *ps) {
+void param_state_init(ParamState *ps) {
   ps->seen = createHashmap();
   darray_init(&ps->positional, sizeof(char *));
   ps->defaults = NULL;
@@ -42,7 +34,7 @@ static void param_state_init(ParamState *ps) {
   ps->stage = 0;
 }
 
-static void param_state_free(ParamState *ps) {
+void param_state_free(ParamState *ps) {
   if (ps->seen)
     hashmap_free(ps->seen, NULL);
   darray_free(&ps->positional, free_parameter);
@@ -75,7 +67,7 @@ static ParsedValueReturn decl_err(ParsedValue *parsedValue,
 // Returns no_err on success (ps is populated).
 // Returns an error and leaves ps partially populated (caller must still call
 // param_state_free).
-static ArErr parse_param_list(char *file, DArray *tokens, size_t *index,
+ArErr parse_param_list(char *file, DArray *tokens, size_t *index,
                               ParamState *ps) {
   // index is already pointing past the TOKEN_LPAREN
   ArErr err;

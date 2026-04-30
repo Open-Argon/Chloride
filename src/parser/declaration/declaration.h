@@ -7,7 +7,6 @@
 #ifndef DECLARATION_H
 #define DECLARATION_H
 #include "../parser.h"
-#include "../../lexer/token.h"  // for Token
 
 typedef struct {
   char * name;

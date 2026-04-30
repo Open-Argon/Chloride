@@ -5,11 +5,11 @@
  */
 #include "call.h"
 #include "../../err.h"
+#include "../../hash_data/hash_data.h"
 #include "../../parser/function/function.h"
 #include "../../runtime/objects/exceptions/exceptions.h"
 #include "../translator.h"
 #include <string.h>
-#include "../../hash_data/hash_data.h"
 
 size_t translate_parsed_call(Translated *translated, ParsedCall *call,
                              ArErr *err) {
@@ -61,8 +61,7 @@ size_t translate_parsed_call(Translated *translated, ParsedCall *call,
       push_instruction_code(translated, length);
       push_instruction_code(translated, identifier_pos);
       push_instruction_code(
-          translated,
-          siphash64_bytes(arg->name, length, siphash_key_fixed));
+          translated, siphash64_bytes(arg->name, length, siphash_key_fixed));
     }
   }
 
