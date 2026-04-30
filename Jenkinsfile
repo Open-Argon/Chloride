@@ -82,16 +82,6 @@ pipeline {
             }
         }
 
-        stage('Setup Conan Profile') {
-            steps {
-                sh '''
-                    . /tmp/venv/bin/activate
-                    rm -rf ~/.conan2
-                    conan profile detect
-                '''
-            }
-        }
-
         stage('Build (Parallel)') {
             parallel {
 
