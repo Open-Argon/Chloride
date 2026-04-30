@@ -51,6 +51,20 @@ pipeline {
             }
         }
 
+        stage('Archive Source') {
+            steps {
+                script {
+                    def version = env.TAG_NAME ?: "dev"
+                    env.OUTPUT_FILE = "archives/chloride-source-${version}.tar.gz"
+                    echo "Packaging Source as: ${env.OUTPUT_FILE}"
+                }
+                sh '''
+                git stash && git ls-files --recurse-submodules | tar -czf $OUTPUT_FILE -T - && git stash pop
+                '''
+                archiveArtifacts artifacts: "${env.OUTPUT_FILE}", allowEmptyArchive: false, fingerprint: true
+            }
+        }
+
         stage('Setup Conan') {
             steps {
                 sh '''
