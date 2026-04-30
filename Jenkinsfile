@@ -241,12 +241,15 @@ pipeline {
                     env.OUTPUT_FILE = "archives/argon-${env.RPM_VERSION}-x86_64.rpm"
                 }
                 sh '''
-                    #!/bin/bash
                     set -e
                     INSTALL_INTERNAL="/usr/local/lib/chloride"
                     RPM_BUILD_ROOT="${WORKSPACE}/rpmbuild"
 
-                    mkdir -p "$RPM_BUILD_ROOT"/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
+                    mkdir -p "$RPM_BUILD_ROOT/BUILD"
+                    mkdir -p "$RPM_BUILD_ROOT/RPMS"
+                    mkdir -p "$RPM_BUILD_ROOT/SOURCES"
+                    mkdir -p "$RPM_BUILD_ROOT/SPECS"
+                    mkdir -p "$RPM_BUILD_ROOT/SRPMS"
                     BUILD_DIR="$RPM_BUILD_ROOT/BUILD"
                     rm -rf "$BUILD_DIR"
                     DESTDIR="$BUILD_DIR" cmake --install out/linux/build --prefix "$INSTALL_INTERNAL"
