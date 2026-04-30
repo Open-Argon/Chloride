@@ -182,8 +182,10 @@ pipeline {
                 sh '''
                     cp LICENSE.txt out/windows/build/dist/
                     cp -r LICENSES out/windows/build/dist/
-                    # Adjust packaging format if needed
-                    zip -r "$OUTPUT_FILE" -C out/windows/build/dist .
+                    
+                    (
+                    cd "out/windows/build/dist" && zip -r "../../../../$OUTPUT_FILE" .
+                    )
                 '''
                 archiveArtifacts artifacts: "${env.OUTPUT_FILE}", allowEmptyArchive: false, fingerprint: true
             }
