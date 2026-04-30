@@ -241,6 +241,7 @@ pipeline {
                     env.OUTPUT_FILE = "archives/argon-${env.RPM_VERSION}-x86_64.rpm"
                 }
                 sh '''
+                    #!/bin/bash
                     set -e
                     INSTALL_INTERNAL="/usr/local/lib/chloride"
                     RPM_BUILD_ROOT="${WORKSPACE}/rpmbuild"
