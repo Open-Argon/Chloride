@@ -211,23 +211,30 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
         }
 
         if (!found) {
-          // unexpected kwarg — goes to **kw_arg if available, else error
-          if (object->value.argon_fn->kwargs.data == NULL) {
-            ArgonObject *object_name =
-                get_builtin_field_for_class(object, __name__, original_object);
-            *err = create_err(
-                TypeError, "%.*s got an unexpected keyword argument '%.*s'",
-                (int)object_name->value.as_str->length,
-                object_name->value.as_str->data, (int)name->length, name->data);
-            free(bound);
-            return;
+          // also search default_parameters
+          for (size_t j = 0; j < object->value.argon_fn->number_of_default_parameters; j++) {
+            struct string_struct key = object->value.argon_fn->default_parameters[j].key;
+            if (key.hash == name->hash && key.length == name->length &&
+                memcmp(key.data, name->data, name->length) == 0) {
+              if (hashmap_lookup_GC(scope->scope, key.hash) != NULL) {
+                ArgonObject *object_name =
+                    get_builtin_field_for_class(object, __name__, original_object);
+                *err = create_err(TypeError,
+                                  "%.*s got multiple values for argument '%.*s'",
+                                  (int)object_name->value.as_str->length,
+                                  object_name->value.as_str->data,
+                                  (int)name->length, name->data);
+                free(bound);
+                free(kwargs_array);
+                return;
+              }
+              hashmap_insert_GC(scope->scope, key.hash,
+                                new_string_object(key.data, key.length, key.hash),
+                                value, 0);
+              found = true;
+              break;
+            }
           }
-          if (leftover_kwargs == NULL)
-            leftover_kwargs = createHashmap_GC();
-          hashmap_insert_GC(
-              leftover_kwargs, name->hash,
-              new_string_object(name->data, name->length, name->hash), value,
-              0);
         }
       }
     }
