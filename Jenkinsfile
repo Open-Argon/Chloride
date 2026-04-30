@@ -210,7 +210,7 @@ pipeline {
                     DESTDIR="$PACKAGE_ROOT" cmake --install out/linux/build --prefix "$INSTALL_INTERNAL"
 
                     mkdir -p "$PACKAGE_ROOT$INSTALL_INTERNAL/stdlib"
-                    cp -R stdlib/* "$PACKAGE_ROOT$INSTALL_INTERNAL/stdlib/"
+                    cp -R out/linux/build/dist/stdlib/* "$PACKAGE_ROOT$INSTALL_INTERNAL/stdlib/"
 
                     mkdir -p "$PACKAGE_ROOT/usr/bin"
                     printf '#!/bin/bash\nexec "%s/bin/argon" "$@"\n' "$INSTALL_INTERNAL" \
