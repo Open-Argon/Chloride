@@ -238,29 +238,25 @@ pipeline {
                     def version = env.TAG_NAME ?: "0.0.0-1"
                     GITEA_TOKEN = credentials('gitea-pat')
                     env.RPM_VERSION = version.replaceFirst('^v', '').replaceAll('-', '.')
-                    env.OUTPUT_FILE = "archives/argon-${env.RPM_VERSION}-x86_64.rpm"
                 }
                 sh '''
                     set -e
                     INSTALL_INTERNAL="/usr/local/lib/chloride"
                     RPM_BUILD_ROOT="${WORKSPACE}/rpmbuild"
 
-                    mkdir -p "$RPM_BUILD_ROOT/BUILD"
-                    mkdir -p "$RPM_BUILD_ROOT/RPMS"
-                    mkdir -p "$RPM_BUILD_ROOT/SOURCES"
-                    mkdir -p "$RPM_BUILD_ROOT/SPECS"
-                    mkdir -p "$RPM_BUILD_ROOT/SRPMS"
+                    mkdir -p "$RPM_BUILD_ROOT/BUILD" "$RPM_BUILD_ROOT/RPMS" \
+                            "$RPM_BUILD_ROOT/SOURCES" "$RPM_BUILD_ROOT/SPECS" "$RPM_BUILD_ROOT/SRPMS"
+
                     BUILD_DIR="$RPM_BUILD_ROOT/BUILD"
                     rm -rf "$BUILD_DIR"
                     DESTDIR="$BUILD_DIR" cmake --install out/linux/build --prefix "$INSTALL_INTERNAL"
                     mkdir -p "$BUILD_DIR$INSTALL_INTERNAL/stdlib"
                     cp -R out/linux/build/dist/stdlib/* "$BUILD_DIR$INSTALL_INTERNAL/stdlib/"
                     mkdir -p "$BUILD_DIR/usr/bin"
-                    printf \'#!/bin/bash\\nexec "%s/bin/argon" "$@"\\n\' "$INSTALL_INTERNAL" \
+                    printf '#!/bin/bash\nexec "%s/bin/argon" "$@"\n' "$INSTALL_INTERNAL" \
                         > "$BUILD_DIR/usr/bin/argon"
                     chmod +x "$BUILD_DIR/usr/bin/argon"
 
-                    # Note: closing delimiter must be at column 0, no leading whitespace
                     cat > "$RPM_BUILD_ROOT/SPECS/argon.spec" << SPEC
         Name:           argon
         Version:        ${RPM_VERSION}
@@ -281,7 +277,7 @@ pipeline {
         ${INSTALL_INTERNAL}/stdlib/
 
         %changelog
-        * $(date \'+%a %b %d %Y\') Jenkins <jenkins@wbell.dev> - ${RPM_VERSION}-1
+        * $(date '+%a %b %d %Y') Jenkins <jenkins@wbell.dev> - ${RPM_VERSION}-1
         - Automated build from tag ${TAG_NAME}
         SPEC
 
@@ -291,14 +287,24 @@ pipeline {
                             -bb "$RPM_BUILD_ROOT/SPECS/argon.spec"
 
                     BUILT_RPM=$(find "$RPM_BUILD_ROOT/RPMS" -name "argon-*.rpm" | head -1)
+                    echo "Built RPM: $BUILT_RPM"
+
                     mkdir -p archives
+                    # Derive the output filename from the actual built RPM name, not a predicted one
+                    OUTPUT_FILE="archives/$(basename "$BUILT_RPM")"
                     cp "$BUILT_RPM" "$OUTPUT_FILE"
+
+                    # Write the path out so Jenkins can archive it
+                    echo "$OUTPUT_FILE" > "${WORKSPACE}/rpm_output_file.txt"
 
                     curl --user Jenkins:$GITEA_TOKEN \
                         --upload-file "$OUTPUT_FILE" \
                         https://git.wbell.dev/api/packages/Open-Argon/rpm/upload
                 '''
-                archiveArtifacts artifacts: "${env.OUTPUT_FILE}", allowEmptyArchive: false, fingerprint: true
+                script {
+                    env.RPM_OUTPUT_FILE = readFile("${env.WORKSPACE}/rpm_output_file.txt").trim()
+                }
+                archiveArtifacts artifacts: "${env.RPM_OUTPUT_FILE}", allowEmptyArchive: false, fingerprint: true
             }
         }
 
