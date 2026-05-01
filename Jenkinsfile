@@ -231,70 +231,75 @@ pipeline {
                 archiveArtifacts artifacts: "${env.OUTPUT_FILE}", allowEmptyArchive: false, fingerprint: true
             }
         }
+        
         stage('RPM Package Build') {
             steps {
                 script {
                     def version = env.TAG_NAME ?: "0.0.0-1"
                     GITEA_TOKEN = credentials('gitea-pat')
                     env.RPM_VERSION = version.replaceFirst('^v', '').replaceAll('-', '.')
+                    env.OUTPUT_FILE = "archives/argon-${env.RPM_VERSION}-x86_64.rpm"
+                    env.RPM_BUILD_ROOT = "${env.WORKSPACE}/rpmbuild"
                 }
                 sh '''
                     set -e
                     INSTALL_INTERNAL="/usr/local/lib/chloride"
-                    RPM_BUILD_ROOT="${WORKSPACE}/rpmbuild"
 
                     mkdir -p "$RPM_BUILD_ROOT/BUILD" "$RPM_BUILD_ROOT/RPMS" \
                             "$RPM_BUILD_ROOT/SOURCES" "$RPM_BUILD_ROOT/SPECS" "$RPM_BUILD_ROOT/SRPMS"
 
-                    BUILD_DIR="$RPM_BUILD_ROOT/BUILD"
-                    rm -rf "$BUILD_DIR"
-                    DESTDIR="$BUILD_DIR" cmake --install out/linux/build --prefix "$INSTALL_INTERNAL"
-                    mkdir -p "$BUILD_DIR$INSTALL_INTERNAL/stdlib"
-                    cp -R out/linux/build/dist/stdlib/* "$BUILD_DIR$INSTALL_INTERNAL/stdlib/"
-                    mkdir -p "$BUILD_DIR/usr/bin"
-                    printf '#!/bin/bash\nexec "%s/bin/argon" "$@"\n' "$INSTALL_INTERNAL" \
-                        > "$BUILD_DIR/usr/bin/argon"
-                    chmod +x "$BUILD_DIR/usr/bin/argon"
+                    PACKAGE_ROOT="$RPM_BUILD_ROOT/BUILDROOT"
+                    rm -rf "$PACKAGE_ROOT"
+
+                    DESTDIR="$PACKAGE_ROOT" cmake --install out/linux/build --prefix "$INSTALL_INTERNAL"
+
+                    mkdir -p "$PACKAGE_ROOT$INSTALL_INTERNAL/stdlib"
+                    cp -R out/linux/build/dist/stdlib/* "$PACKAGE_ROOT$INSTALL_INTERNAL/stdlib/"
+
+                    mkdir -p "$PACKAGE_ROOT/usr/bin"
+                    printf \'#!/bin/bash\\nexec "%s/bin/argon" "$@"\\n\' "$INSTALL_INTERNAL" \
+                        > "$PACKAGE_ROOT/usr/bin/argon"
+                    chmod +x "$PACKAGE_ROOT/usr/bin/argon"
+
+                    CHANGELOG_DATE=$(date \'+%a %b %d %Y\')
 
                     cat > "$RPM_BUILD_ROOT/SPECS/argon.spec" << SPEC
-        Name:           argon
-        Version:        ${RPM_VERSION}
-        Release:        1
-        Summary:        Interpreter written in C for the Argon Programming Language
-        License:        GPL-3.0-or-later
-        URL:            https://git.wbell.dev/Open-Argon/Chloride
+Name:           argon
+Version:        ${RPM_VERSION}
+Release:        1%{?dist}
+Summary:        Interpreter written in C for the Argon Programming Language
+License:        GPL-3.0-or-later
+URL:            https://git.wbell.dev/Open-Argon/Chloride
+BuildArch:      x86_64
 
-        %description
-        Interpreter written in C for the Argon Programming Language
+%description
+Interpreter written in C for the Argon Programming Language
 
-        %install
-        cp -r ${BUILD_DIR}/* %{buildroot}/
+%install
+cp -r ${PACKAGE_ROOT}/* %{buildroot}/
 
-        %files
-        /usr/bin/argon
-        ${INSTALL_INTERNAL}/bin/argon
-        ${INSTALL_INTERNAL}/stdlib/
+%files
+/usr/bin/argon
+${INSTALL_INTERNAL}/bin/argon
+${INSTALL_INTERNAL}/stdlib/
 
-        %changelog
-        * $(date '+%a %b %d %Y') Jenkins <jenkins@wbell.dev> - ${RPM_VERSION}-1
-        - Automated build from tag ${TAG_NAME}
-        SPEC
+%changelog
+* ${CHANGELOG_DATE} Jenkins <jenkins@wbell.dev> - ${RPM_VERSION}-1
+- Automated build from tag ${TAG_NAME}
+SPEC
 
                     rpmbuild --define "_topdir $RPM_BUILD_ROOT" \
-                            --define "buildroot $BUILD_DIR" \
-                            --buildroot "$BUILD_DIR" \
                             -bb "$RPM_BUILD_ROOT/SPECS/argon.spec"
 
                     BUILT_RPM=$(find "$RPM_BUILD_ROOT/RPMS" -name "argon-*.rpm" | head -1)
-                    echo "Built RPM: $BUILT_RPM"
                     mkdir -p archives
-                    cp "$BUILT_RPM" archives/
+                    cp "$BUILT_RPM" "$OUTPUT_FILE"
 
                     curl --user Jenkins:$GITEA_TOKEN \
-                        --upload-file "$BUILT_RPM" \
+                        --upload-file "$OUTPUT_FILE" \
                         https://git.wbell.dev/api/packages/Open-Argon/rpm/upload
                 '''
-                archiveArtifacts artifacts: 'archives/argon-*.rpm', allowEmptyArchive: false, fingerprint: true
+                archiveArtifacts artifacts: "${env.OUTPUT_FILE}", allowEmptyArchive: false, fingerprint: true
             }
         }
 
