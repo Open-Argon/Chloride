@@ -246,11 +246,12 @@ pipeline {
                     set -e
                     INSTALL_INTERNAL="/usr/local/lib/chloride"
 
+                    rm -r "$RPM_BUILD_ROOT"
+
                     mkdir -p "$RPM_BUILD_ROOT/BUILD" "$RPM_BUILD_ROOT/RPMS" \
                             "$RPM_BUILD_ROOT/SOURCES" "$RPM_BUILD_ROOT/SPECS" "$RPM_BUILD_ROOT/SRPMS"
 
                     PACKAGE_ROOT="$RPM_BUILD_ROOT/BUILDROOT"
-                    rm -rf "$PACKAGE_ROOT"
 
                     DESTDIR="$PACKAGE_ROOT" cmake --install out/linux/build --prefix "$INSTALL_INTERNAL"
 
