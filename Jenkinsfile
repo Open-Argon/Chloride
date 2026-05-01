@@ -227,9 +227,6 @@ pipeline {
                     curl --user Jenkins:$GITEA_TOKEN \
                         --upload-file $OUTPUT_FILE \
                         https://git.wbell.dev/api/packages/Open-Argon/debian/pool/trixie/main/upload
-                    curl --user Jenkins:$GITEA_TOKEN \
-                        --upload-file $OUTPUT_FILE \
-                        https://git.wbell.dev/api/packages/Open-Argon/debian/pool/trixie/main/upload
                 '''
                 archiveArtifacts artifacts: "${env.OUTPUT_FILE}", allowEmptyArchive: false, fingerprint: true
             }
@@ -298,9 +295,6 @@ SPEC
                     mkdir -p archives
                     cp "$BUILT_RPM" "$OUTPUT_FILE"
 
-                    curl --user Jenkins:$GITEA_TOKEN \
-                        --upload-file "$OUTPUT_FILE" \
-                        https://git.wbell.dev/api/packages/Open-Argon/rpm/upload
                     curl --user Jenkins:$GITEA_TOKEN \
                         --upload-file "$OUTPUT_FILE" \
                         https://git.wbell.dev/api/packages/Open-Argon/rpm/upload
