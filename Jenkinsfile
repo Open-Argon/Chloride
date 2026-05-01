@@ -197,11 +197,11 @@ pipeline {
             steps {
                 script {
                     def version = env.TAG_NAME ?: "0.0.0-1"
-                    env.GITEA_TOKEN = credentials('gitea-pat')
                     env.DEB_VERSION = version.replaceFirst('^v', '')  // strip leading 'v'
                     env.OUTPUT_FILE = "archives/argon-${env.DEB_VERSION}-x86_64.deb"
                     env.PACKAGE_ROOT = "${env.WORKSPACE}/argon-${env.DEB_VERSION}-x86_64"
                 }
+                withCredentials([string(credentialsId: 'gitea-pat', variable: 'GITEA_TOKEN')]) {
                 sh '''
                     set -e
                     INSTALL_INTERNAL="/usr/local/lib/chloride"
@@ -224,10 +224,11 @@ pipeline {
 
                     dpkg-deb --build "$PACKAGE_ROOT" "$OUTPUT_FILE"
 
-                    curl --user Jenkins:$GITEA_TOKEN \
+                    curl --fail --user Jenkins:$GITEA_TOKEN \
                         --upload-file $OUTPUT_FILE \
                         https://git.wbell.dev/api/packages/Open-Argon/debian/pool/trixie/main/upload
                 '''
+                }
                 archiveArtifacts artifacts: "${env.OUTPUT_FILE}", allowEmptyArchive: false, fingerprint: true
             }
         }
@@ -236,11 +237,11 @@ pipeline {
             steps {
                 script {
                     def version = env.TAG_NAME ?: "0.0.0-1"
-                    env.GITEA_TOKEN = credentials('gitea-pat')
                     env.RPM_VERSION = version.replaceFirst('^v', '').replaceAll('-', '.')
                     env.OUTPUT_FILE = "archives/argon-${env.RPM_VERSION}-x86_64.rpm"
                     env.RPM_BUILD_ROOT = "${env.WORKSPACE}/rpmbuild"
                 }
+                withCredentials([string(credentialsId: 'gitea-pat', variable: 'GITEA_TOKEN')]) {
                 sh '''
                     set -e
                     INSTALL_INTERNAL="/usr/local/lib/chloride"
@@ -295,10 +296,11 @@ SPEC
                     mkdir -p archives
                     cp "$BUILT_RPM" "$OUTPUT_FILE"
 
-                    curl --user Jenkins:$GITEA_TOKEN \
+                    curl --fail --user Jenkins:$GITEA_TOKEN \
                         --upload-file "$OUTPUT_FILE" \
                         https://git.wbell.dev/api/packages/Open-Argon/rpm/upload
                 '''
+                }
                 archiveArtifacts artifacts: "${env.OUTPUT_FILE}", allowEmptyArchive: false, fingerprint: true
             }
         }
