@@ -197,7 +197,7 @@ pipeline {
             steps {
                 script {
                     def version = env.TAG_NAME ?: "0.0.0-1"
-                    GITEA_TOKEN = credentials('gitea-pat')
+                    env.GITEA_TOKEN = credentials('gitea-pat')
                     env.DEB_VERSION = version.replaceFirst('^v', '')  // strip leading 'v'
                     env.OUTPUT_FILE = "archives/argon-${env.DEB_VERSION}-x86_64.deb"
                     env.PACKAGE_ROOT = "${env.WORKSPACE}/argon-${env.DEB_VERSION}-x86_64"
@@ -236,7 +236,7 @@ pipeline {
             steps {
                 script {
                     def version = env.TAG_NAME ?: "0.0.0-1"
-                    GITEA_TOKEN = credentials('gitea-pat')
+                    env.GITEA_TOKEN = credentials('gitea-pat')
                     env.RPM_VERSION = version.replaceFirst('^v', '').replaceAll('-', '.')
                     env.OUTPUT_FILE = "archives/argon-${env.RPM_VERSION}-x86_64.rpm"
                     env.RPM_BUILD_ROOT = "${env.WORKSPACE}/rpmbuild"
