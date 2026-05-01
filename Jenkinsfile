@@ -231,7 +231,6 @@ pipeline {
                 archiveArtifacts artifacts: "${env.OUTPUT_FILE}", allowEmptyArchive: false, fingerprint: true
             }
         }
-        
         stage('RPM Package Build') {
             steps {
                 script {
@@ -288,23 +287,14 @@ pipeline {
 
                     BUILT_RPM=$(find "$RPM_BUILD_ROOT/RPMS" -name "argon-*.rpm" | head -1)
                     echo "Built RPM: $BUILT_RPM"
-
                     mkdir -p archives
-                    # Derive the output filename from the actual built RPM name, not a predicted one
-                    OUTPUT_FILE="archives/$(basename "$BUILT_RPM")"
-                    cp "$BUILT_RPM" "$OUTPUT_FILE"
-
-                    # Write the path out so Jenkins can archive it
-                    echo "$OUTPUT_FILE" > "${WORKSPACE}/rpm_output_file.txt"
+                    cp "$BUILT_RPM" archives/
 
                     curl --user Jenkins:$GITEA_TOKEN \
-                        --upload-file "$OUTPUT_FILE" \
+                        --upload-file "$BUILT_RPM" \
                         https://git.wbell.dev/api/packages/Open-Argon/rpm/upload
                 '''
-                script {
-                    env.RPM_OUTPUT_FILE = readFile("${env.WORKSPACE}/rpm_output_file.txt").trim()
-                }
-                archiveArtifacts artifacts: "${env.RPM_OUTPUT_FILE}", allowEmptyArchive: false, fingerprint: true
+                archiveArtifacts artifacts: 'archives/argon-*.rpm', allowEmptyArchive: false, fingerprint: true
             }
         }
 
