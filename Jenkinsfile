@@ -222,6 +222,14 @@ pipeline {
                     printf 'Package: argon\nVersion: %s\nArchitecture: amd64\nMaintainer: Ugric\nDescription: Interpreter written in C for the argon programming language\n' \
                         "$DEB_VERSION" > "$PACKAGE_ROOT/DEBIAN/control"
 
+                    cat > "$PACKAGE_ROOT/DEBIAN/postrm" << 'EOF'
+#!/bin/bash
+if [ "$1" = "remove" ] || [ "$1" = "purge" ]; then
+    rm -rf /usr/local/lib/chloride
+fi
+EOF
+                    chmod +x "$PACKAGE_ROOT/DEBIAN/postrm"
+
                     dpkg-deb --build "$PACKAGE_ROOT" "$OUTPUT_FILE"
 
                     curl --fail --user Jenkins:$GITEA_TOKEN \
