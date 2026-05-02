@@ -4,11 +4,11 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 #include "while.h"
+#include "../../err.h"
 #include "../../lexer/token.h"
 #include "../../memory.h"
-#include "../../err.h"
-#include "../parser.h"
 #include "../../runtime/objects/exceptions/exceptions.h"
+#include "../parser.h"
 #include <stddef.h>
 
 ParsedValueReturn parse_while(char *file, DArray *tokens, size_t *index) {
@@ -17,45 +17,18 @@ ParsedValueReturn parse_while(char *file, DArray *tokens, size_t *index) {
   if (is_error(&err)) {
     return (ParsedValueReturn){err, NULL};
   }
-  // Parse ( condition )
+  // Parse condition
   Token *token = darray_get(tokens, *index);
-  if (token->type != TOKEN_LPAREN) {
-    return (ParsedValueReturn){path_specific_create_err(token->line, token->column,
-                                          token->length, file, SyntaxError,
-                                          "expected '(' after while"),
-                               NULL};
-  }
-
-  (*index)++;
-  err = error_if_finished(file, tokens, index);
-  if (is_error(&err)) {
-    return (ParsedValueReturn){err, NULL};
-  }
-  skip_newlines_and_indents(tokens, index);
   ParsedValueReturn condition = parse_token(file, tokens, index, true);
   if (is_error(&condition.err)) {
     return condition;
   } else if (!condition.value) {
-    return (ParsedValueReturn){path_specific_create_err(token->line, token->column,
-                                          token->length, file, SyntaxError,
-                                          "expected condition"),
-                               NULL};
+    return (ParsedValueReturn){
+        path_specific_create_err(token->line, token->column, token->length,
+                                 file, SyntaxError, "expected condition"),
+        NULL};
   }
-  skip_newlines_and_indents(tokens, index);
-
-  token = darray_get(tokens, *index);
-  if (token->type != TOKEN_RPAREN) {
-    if (condition.value) {
-      free_parsed(condition.value);
-      free(condition.value);
-    }
-    return (ParsedValueReturn){path_specific_create_err(token->line, token->column,
-                                          token->length, file, SyntaxError,
-                                          "missing closing ')' in condition"),
-                               NULL};
-  }
-
-  (*index)++;
+  
   err = error_if_finished(file, tokens, index);
   if (is_error(&err)) {
     if (condition.value) {
@@ -80,10 +53,10 @@ ParsedValueReturn parse_while(char *file, DArray *tokens, size_t *index) {
       free_parsed(condition.value);
       free(condition.value);
     }
-    return (ParsedValueReturn){path_specific_create_err(token->line, token->column,
-                                          token->length, file, SyntaxError,
-                                          "expected body"),
-                               NULL};
+    return (ParsedValueReturn){
+        path_specific_create_err(token->line, token->column, token->length,
+                                 file, SyntaxError, "expected body"),
+        NULL};
   }
 
   ParsedValue *Parsedvalue = checked_malloc(sizeof(ParsedValue));
