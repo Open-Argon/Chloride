@@ -359,7 +359,7 @@ SPEC
                     set -e
                     
                     python3 build-wxs.py "out/windows/build/argon.wxs"
-
+                    cat out/windows/build/argon.wxs
                     wix build -acceptEula wix7 "out/windows/build/argon.wxs" -o $OUTPUT_FILE
                 '''
                 archiveArtifacts artifacts: "${env.OUTPUT_FILE}", allowEmptyArchive: false, fingerprint: true
