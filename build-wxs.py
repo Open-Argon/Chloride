@@ -39,9 +39,9 @@ def build_dir_tree(paths):
 def render_dirs(tree, parent_id, parent_path=""):
     lines = []
     for name, subtree in sorted(tree.items()):
-        path = os.path.join(parent_path, name) if parent_path else name
+        path = parent_path + "_" + name if parent_path else name  # only used for ID, not Name
         did = dir_id(path)
-        lines.append(f'        <Directory Id="{did}" Name="{name}">')
+        lines.append(f'        <Directory Id="{did}" Name="{name}">')  # Name is just `name`
         lines.extend(render_dirs(subtree, did, path))
         lines.append(f'        </Directory>')
     return lines
@@ -68,7 +68,8 @@ stdlib_paths = [p for p in rel_paths if p.startswith("stdlib" + os.sep)]
 other_paths  = [p for p in rel_paths if not p.startswith("stdlib" + os.sep)]
 
 # Build stdlib dir tree
-stdlib_dirs = build_dir_tree([p[len("stdlib/"):] for p in stdlib_paths])
+prefix = "stdlib" + os.sep
+stdlib_dirs = build_dir_tree([p[len(prefix):] for p in stdlib_paths])
 
 wxs = f"""<?xml version="1.0" encoding="UTF-8"?>
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
