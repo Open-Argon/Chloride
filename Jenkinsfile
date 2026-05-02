@@ -241,12 +241,12 @@ pipeline {
                     env.OUTPUT_FILE = "archives/argon-${env.RPM_VERSION}-x86_64.rpm"
                     env.RPM_BUILD_ROOT = "${env.WORKSPACE}/rpmbuild"
                 }
-                withCredentials([string(credentialsId: 'gitea-pat', variable: 'GITEA_TOKEN')]) {
+                withCredentials([string(credentialsId: 'gitea-pat', variable: 'GITEA_TOKEN'), file(credentialsId: 'rpm-signing-key', variable: 'GPG_KEY_FILE')]) {
                 sh '''
                     set -e
                     INSTALL_INTERNAL="/usr/local/lib/chloride"
 
-                    rm -r "$RPM_BUILD_ROOT"
+                    rm -rf "$RPM_BUILD_ROOT"
 
                     mkdir -p "$RPM_BUILD_ROOT/BUILD" "$RPM_BUILD_ROOT/RPMS" \
                             "$RPM_BUILD_ROOT/SOURCES" "$RPM_BUILD_ROOT/SPECS" "$RPM_BUILD_ROOT/SRPMS"
@@ -296,6 +296,10 @@ SPEC
                     BUILT_RPM=$(find "$RPM_BUILD_ROOT/RPMS" -name "argon-*.rpm" | head -1)
                     mkdir -p archives
                     cp "$BUILT_RPM" "$OUTPUT_FILE"
+                    
+                    gpg --batch --import "$GPG_KEY_FILE"
+                    echo "%_gpg_name Argon Packages <packages@wbell.dev>" > ~/.rpmmacros
+                    rpm --addsign "$OUTPUT_FILE"
 
                     curl --fail --user Jenkins:$GITEA_TOKEN \
                         --upload-file "$OUTPUT_FILE" \
