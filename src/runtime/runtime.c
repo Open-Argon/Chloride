@@ -1218,6 +1218,8 @@ void bootstrap_globals() {
   struct hashmap_GC *argon_term = createHashmap_GC();
   add_to_hashmap(argon_term, "log",
                  create_argon_native_function("log", term_log));
+  add_to_hashmap(argon_term, "input",
+                 create_argon_native_function("input", term_input));
   add_to_scope(Global_Scope, "term", create_dictionary(argon_term));
   add_to_scope(
       Global_Scope, "load_native_code",

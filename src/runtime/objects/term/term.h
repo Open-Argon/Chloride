@@ -9,5 +9,6 @@
 #include "../../objects/object.h"
 
 EXPOSE_ARGON_METHOD(term, log)
+EXPOSE_ARGON_METHOD(term, input)
 
 #endif // runtime_term_H

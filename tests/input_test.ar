@@ -1,0 +1,3 @@
+test_prompt = ""
+test_prompt = term.input("Prompt: ")
+term.log(test_prompt)
