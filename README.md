@@ -15,43 +15,9 @@ SPDX-License-Identifier: GFDL-1.3-or-later
 
 Chloride is designed as a **drop-in replacement** for the older Go implementation (`argon-v3`), providing a **more efficient runtime** and a **cleaner, more consistent object model**.
 
-## Build
+## Installation
 
-Currently, offical builds are only being made for linux x86_64, windows x86_64, and macOS arm64 at [the project's Jenkins instance](https://jenkins.wbell.dev/job/argon/).
-
-If this does not satisfy your requirements, feel free to build for your platform. 
-
-There are two ways to build Chloride. **Conan is recommended for anyone who is not developing Chloride**. Conan is a cross platform package manager and compiler tool.
-
-If you are developing Chloride, it is recommended to use **make**, as that has been set up to build for dynamic linking and has debug tools.
-
-### Conan
-
-For **conan**, the dependencies are `conan`, `flex`, `cmake` and `gcc`.
-
-install using conan.
-```
-conan install . --build=missing
-```
-
-and finally build using conan.
-```
-conan build .
-```
-
-The final build can be found in `build/bin`.
-
-### Make
-
-For **make**, there are more dependencies, since we are not using conan to manage them. The exact dependencies are not fixed, so you may need to read through the **Makefile** to determine which packages are required (or attempt a build to see what is missing).
-
-Development is only currently set up to be possible on posix systems. If you are on windows, it's recommended to use **WSL**.
-
-To build normally, run `make -j$(nproc)`.
-
-If you are building from posix to windows, run `make -j$(nproc) TARGET_OS=windows`.
-
-If you are wanting to debug, use `make -j$(nproc) full-debug`. Of course if you are wanting to debug for windows, add `TARGET_OS=windows`.
+Installation instructions can be found [here](installation.md).
 
 ## Overview
 
