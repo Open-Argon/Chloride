@@ -298,7 +298,7 @@ SPEC
                     cp "$BUILT_RPM" "$OUTPUT_FILE"
                     
                     gpg --batch --import "$GPG_KEY_FILE"
-                    echo "%_gpg_name Argon Packages <packages@wbell.dev>" > ~/.rpmmacros
+                    echo "%_gpg_name William Bell <william@wbell.dev>" > ~/.rpmmacros
                     rpm --addsign "$OUTPUT_FILE"
 
                     curl --fail --user Jenkins:$GITEA_TOKEN \
