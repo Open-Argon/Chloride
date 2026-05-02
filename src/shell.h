@@ -9,4 +9,6 @@
 
 int shell();
 
+char *input(const char *prompt);
+
 #endif // ARGON_SHELL_H 
