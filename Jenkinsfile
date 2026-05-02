@@ -55,7 +55,7 @@ pipeline {
             steps {
                 script {
                     def version = env.TAG_NAME ?: "dev"
-                    env.OUTPUT_FILE = "archives/chloride-source-${version}.tar.gz"
+                    env.OUTPUT_FILE = "archives/source.tar.gz"
                     echo "Packaging Source as: ${env.OUTPUT_FILE}"
                 }
                 sh '''

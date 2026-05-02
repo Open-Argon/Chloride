@@ -1,0 +1,9 @@
+# SPDX-FileCopyrightText: 2025 William Bell
+#
+# SPDX-License-Identifier: LGPL-3.0-or-later
+
+class FileError(Exception) null
+class FileReadError(FileError) null
+class FileNotFoundError(FileError) null
+class FilePermissionError(FileError) null
+class FileExistsError(FileError) null

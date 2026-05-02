@@ -1,0 +1,7 @@
+import "file" expose open
+
+let f = open("/dev/stdout", "w")
+
+f.write("hello world\n")
+
+f.close()
