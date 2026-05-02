@@ -41,8 +41,9 @@ for root, dirs, files in os.walk(DIST_DIR):
 
 # Add to PATH
 lines.append('  ; Add to PATH')
-lines.append('  EnVar::SetHKLM')
-lines.append('  EnVar::AddValue "PATH" "$INSTDIR\\bin"')
+lines.append('  ReadRegStr $0 HKLM "SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment" "PATH"')
+lines.append('  WriteRegExpandStr HKLM "SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment" "PATH" "$0;$INSTDIR\\bin"')
+lines.append('  SendMessage ${HWND_BROADCAST} ${WM_WININICHANGE} 0 "STR:Environment" /TIMEOUT=5000')
 lines.append('')
 
 # Write uninstaller
@@ -56,8 +57,7 @@ lines.append(f'  WriteRegStr HKLM "Software\\Microsoft\\Windows\\CurrentVersion\
 lines.append('SectionEnd')
 lines.append('')
 lines.append('Section "Uninstall"')
-lines.append(f'  EnVar::SetHKLM')
-lines.append(f'  EnVar::DeleteValue "PATH" "$INSTDIR\\bin"')
+lines.append('  ; Note: PATH entry at $INSTDIR\\bin should be removed manually or via a custom action')
 lines.append(f'  DeleteRegKey HKLM "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{APP_NAME}"')
 lines.append(f'  DeleteRegKey HKLM "Software\\{APP_NAME}"')
 lines.append('  RMDir /r "$INSTDIR"')
