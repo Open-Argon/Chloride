@@ -7,6 +7,7 @@ pipeline {
     environment {
         GITEA_URL = 'https://git.wbell.dev'
         GITEA_REPO = 'Open-Argon/Chloride'
+        PATH = "${env.PATH}:${env.HOME}/.dotnet/tools"
     }
 
     stages {
@@ -70,9 +71,10 @@ pipeline {
             steps {
                 sh '''
                     apt update
-                    apt install -y cmake flex python3 python3-pip python3-venv make gcc-mingw-w64 mingw-w64 ninja-build zip jq gh dpkg-dev rpm gpg
+                    apt install -y cmake flex python3 python3-pip python3-venv make gcc-mingw-w64 mingw-w64 ninja-build zip jq gh dpkg-dev rpm gpg dotnet-sdk-8.0
                     python3 -m venv /tmp/venv
                     . /tmp/venv/bin/activate
+                    dotnet tool install --global wix
                     pip install --upgrade pip
                     pip install conan
 
@@ -326,12 +328,32 @@ SPEC
                     echo "Packaging Windows as: ${env.OUTPUT_FILE}"
                 }
                 sh '''
+                    set -e
                     cp LICENSE.txt out/windows/build/dist/
                     cp -r LICENSES out/windows/build/dist/
                     
                     (
                     cd "out/windows/build/dist" && zip -r "../../../../$OUTPUT_FILE" .
                     )
+                '''
+                archiveArtifacts artifacts: "${env.OUTPUT_FILE}", allowEmptyArchive: false, fingerprint: true
+            }
+        }
+
+        stage('Windows MSI build') {
+            steps {
+                script {
+                    def version = env.TAG_NAME ?: "dev"
+                    env.ARGON_VERSION = "${version}"
+                    env.OUTPUT_FILE = "archives/argon-${version}-windows-x86_64.msi"
+                    echo "Packaging Windows as: ${env.OUTPUT_FILE}"
+                }
+                sh '''
+                    set -e
+                    
+                    python3 build-wxs.py "out/windows/build/argon.wxs"
+
+                    wix build "out/windows/build/argon.wxs" -o $OUTPUT_FILE
                 '''
                 archiveArtifacts artifacts: "${env.OUTPUT_FILE}", allowEmptyArchive: false, fingerprint: true
             }
