@@ -71,6 +71,13 @@ pipeline {
             steps {
                 sh '''
                     apt update
+
+                    # Add Microsoft package feed for dotnet
+                    apt install -y wget
+                    wget -q https://packages.microsoft.com/config/debian/13/packages-microsoft-prod.deb
+                    dpkg -i packages-microsoft-prod.deb
+                    apt update
+
                     apt install -y cmake flex python3 python3-pip python3-venv make gcc-mingw-w64 mingw-w64 ninja-build zip jq gh dpkg-dev rpm gpg dotnet-sdk-8.0
                     python3 -m venv /tmp/venv
                     . /tmp/venv/bin/activate
