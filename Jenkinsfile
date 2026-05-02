@@ -346,15 +346,14 @@ SPEC
                 script {
                     def version = env.TAG_NAME ?: "dev"
                     env.ARGON_VERSION = "${version}"
-                    env.OUTPUT_FILE = "archives/argon-${version}-windows-x86_64.msi"
+                    env.OUTPUT_FILE = "archives/argon-${version}-windows-installer-x86_64.exe"
                     echo "Packaging Windows as: ${env.OUTPUT_FILE}"
                 }
                 sh '''
                     set -e
                     
-                    python3 build-windows-installer.py "out/windows/build/installer.nsi"
-                    cat "out/windows/build/installer.nsi"
-                    makensis "out/windows/build/installer.nsi"
+                    python3 build-windows-installer.py
+                    makensis -DOUTFILE="$OUTPUT_FILE" installer.nsi
                 '''
                 archiveArtifacts artifacts: "${env.OUTPUT_FILE}", allowEmptyArchive: false, fingerprint: true
             }
