@@ -7,7 +7,6 @@ pipeline {
     environment {
         GITEA_URL = 'https://git.wbell.dev'
         GITEA_REPO = 'Open-Argon/Chloride'
-        PATH = "${env.PATH}:${env.HOME}/.dotnet/tools"
     }
 
     stages {
@@ -73,15 +72,10 @@ pipeline {
                     apt update
 
                     # Add Microsoft package feed for dotnet
-                    apt install -y wget
-                    wget -q https://packages.microsoft.com/config/debian/13/packages-microsoft-prod.deb
-                    dpkg -i packages-microsoft-prod.deb
-                    apt update
 
-                    apt install -y cmake flex python3 python3-pip python3-venv make gcc-mingw-w64 mingw-w64 ninja-build zip jq gh dpkg-dev rpm gpg dotnet-sdk-8.0
+                    apt install -y cmake flex python3 python3-pip python3-venv make gcc-mingw-w64 mingw-w64 ninja-build zip jq gh dpkg-dev rpm gpg nsis
                     python3 -m venv /tmp/venv
                     . /tmp/venv/bin/activate
-                    dotnet tool install --global wix
                     pip install --upgrade pip
                     pip install conan
 
@@ -347,7 +341,7 @@ SPEC
             }
         }
 
-        stage('Windows MSI build') {
+        stage('Windows Installer build') {
             steps {
                 script {
                     def version = env.TAG_NAME ?: "dev"
@@ -358,9 +352,9 @@ SPEC
                 sh '''
                     set -e
                     
-                    python3 build-wxs.py "out/windows/build/argon.wxs"
-                    cat out/windows/build/argon.wxs
-                    wix build -acceptEula wix7 "out/windows/build/argon.wxs" -o $OUTPUT_FILE
+                    python3 build-windows-installer.py "out/windows/build/installer.nsi"
+                    cat "out/windows/build/installer.nsi"
+                    makensis "out/windows/build/installer.nsi"
                 '''
                 archiveArtifacts artifacts: "${env.OUTPUT_FILE}", allowEmptyArchive: false, fingerprint: true
             }
