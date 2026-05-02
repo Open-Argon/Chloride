@@ -360,7 +360,7 @@ SPEC
                     
                     python3 build-wxs.py "out/windows/build/argon.wxs"
 
-                    wix build "out/windows/build/argon.wxs" -o $OUTPUT_FILE
+                    wix build -acceptEula wix7 "out/windows/build/argon.wxs" -o $OUTPUT_FILE
                 '''
                 archiveArtifacts artifacts: "${env.OUTPUT_FILE}", allowEmptyArchive: false, fingerprint: true
             }
