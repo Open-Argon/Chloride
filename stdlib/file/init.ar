@@ -64,7 +64,7 @@ class File do
     this.size(self) = do
         if (self.closed) do
             throw FileError("I/O operation on closed file")
-        _file.file_size(self._handle, FileError)
+        return _file.file_size(self._handle, FileError)
     
 
 let open(path, mode="r") = do
