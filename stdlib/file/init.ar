@@ -12,52 +12,52 @@ class File do
         let valid_base = ["r", "w", "a", "x"]
         let valid_mods = ["b", "+"]
 
-        if mode.length == 0 do
+        if (mode.length == 0) do
             throw FileError("mode cannot be empty")
 
-        if mode[0] not in valid_base do
+        if (mode[0] not in valid_base) do
             throw FileError("invalid mode: '" + mode + "'")
 
         let seen = []
-        for char in mode[1:] do
-            if char not in valid_mods do
+        for (char in mode[1:]) do
+            if (char not in valid_mods) do
                 throw FileError("invalid mode character: '" + char + "'")
-            if char in seen do
+            if (char in seen) do
                 throw FileError("duplicate mode character: '" + char + "'")
             seen.append(char)
 
     this.read(self, size?) = do
         if ("r" not in self.mode) throw FileReadError("file not in read mode.")
-        if !size do
+        if (!size) do
             return _file.read_all(self._handle, self._binary, FileReadError)
         let result = _file.read(self._handle, self._binary, size, FileReadError)
-        if !self._binary && result == null do
+        if (!self._binary && result == null) do
             return ""
         return result
     this.write(self, data) = do
         if ("w" not in self.mode && "a" not in self.mode && "x" not in self.mode && "+" not in self.mode) do
             throw FileError("file not in write mode.")
-        if self.closed do
+        if (self.closed) do
             throw FileError("I/O operation on closed file")
         return _file.write(self._handle, data, self._binary, FileError)
     this.close(self) = do
-        if self.closed do
+        if (self.closed) do
             return
         _file.close(self._handle, FileError)
         self.closed = true
 
     this.seek(self, offset, whence=0) = do
-        if self.closed do
+        if (self.closed) do
             throw FileError("I/O operation on closed file")
         _file.seek(self._handle, offset, whence, FileError)
 
     this.tell(self) = do
-        if self.closed do
+        if (self.closed) do
             throw FileError("I/O operation on closed file")
         return _file.tell(self._handle, FileError)
 
     this.flush(self) = do
-        if self.closed do
+        if (self.closed) do
             throw FileError("I/O operation on closed file")
         _file.flush(self._handle, FileError)
     

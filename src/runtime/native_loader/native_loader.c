@@ -35,8 +35,9 @@ ARGON_FUNCTION(ARGON_LOAD_NATIVE_CODE, {
 #if defined(_WIN32) || defined(_WIN64)
   HMODULE handle = LoadLibraryA(path_c);
   if (!handle) {
-    *err = create_err(RuntimeError, "Unable to load native code at path: %s",
-                      path_c);
+    *err = create_err(RuntimeError,
+                      "Unable to load native code at path '%s': error code %lu",
+                      path_c, GetLastError());
     free(path_c);
     return ARGON_NULL;
   }
@@ -44,10 +45,10 @@ ARGON_FUNCTION(ARGON_LOAD_NATIVE_CODE, {
   FARPROC proc = GetProcAddress(handle, "argon_module_init");
 
   if (!proc) {
-    *err = create_err(
-        RuntimeError,
-        "Unable to find argon_module_init in the native code at path: %s",
-        path_c);
+    *err =
+        create_err(RuntimeError,
+                   "Unable to find 'argon_module_init' in '%s': error code %lu",
+                   path_c, GetLastError());
     free(path_c);
     FreeLibrary(handle);
     return ARGON_NULL;
@@ -57,8 +58,9 @@ ARGON_FUNCTION(ARGON_LOAD_NATIVE_CODE, {
   void *handle = dlopen(path_c, RTLD_NOW | RTLD_LOCAL);
   if (!handle) {
     const char *dlerr = dlerror();
-    *err = create_err( RuntimeError, "%s",
-                      dlerr ? dlerr : "unknown");
+    *err = create_err(RuntimeError,
+    "Unable to load native code at path '%s': %s",
+    path_c, dlerr ? dlerr : "unknown error");
     free(path_c);
     return ARGON_NULL;
   }
@@ -68,10 +70,10 @@ ARGON_FUNCTION(ARGON_LOAD_NATIVE_CODE, {
           handle, "argon_module_init");
 
   if (!init) {
-    *err = create_err(
-         RuntimeError,
-        "Unable to find argon_module_init in the native code at path: %s",
-        path_c);
+    const char *sym_err = dlerror();
+    *err = create_err(RuntimeError,
+        "Unable to find 'argon_module_init' in '%s': %s",
+        path_c, sym_err ? sym_err : "symbol not found");
     free(path_c);
     dlclose(handle);
     return ARGON_NULL;
