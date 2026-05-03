@@ -1,0 +1,11 @@
+import "date" expose Date
+
+let date = Date.now()
+
+term.log(date.years)
+
+term.log(date.unix())
+
+term.log(date.to_string())
+
+term.log(Date.now_utc().http_date())

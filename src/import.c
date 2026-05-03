@@ -111,8 +111,8 @@ ArgonObject *EXC_ARGON;
 const char CACHE_FOLDER[] = "__arcache__";
 const char FILE_IDENTIFIER[] = "ARBI";
 #define BYTECODE_EXTENTION "bin"
-const uint32_t version_number = 2;
-const char version_string[] = "4.0.0";
+const uint32_t bytecode_version_number = 2;
+const char version_string[] = "4.0.1";
 
 bool file_exists(const char *path) {
   struct stat st;
@@ -204,14 +204,14 @@ int load_cache(Translated *translated_dest, char *joined_paths, uint64_t hash,
     goto FAILED;
   }
 
-  uint32_t read_version;
-  if (fread(&read_version, 1, sizeof(read_version), bytecode_file) !=
-      sizeof(read_version)) {
+  uint32_t read_bytecode_version;
+  if (fread(&read_bytecode_version, 1, sizeof(read_bytecode_version), bytecode_file) !=
+      sizeof(read_bytecode_version)) {
     goto FAILED;
   }
-  read_version = le32toh(read_version);
+  read_bytecode_version = le32toh(read_bytecode_version);
 
-  if (read_version != version_number) {
+  if (read_bytecode_version != bytecode_version_number) {
     goto FAILED;
   }
 
@@ -444,7 +444,7 @@ Translated load_argon_file(char *path, ArErr *err) {
         uint64_t constantsSize = translated.constants.size;
         uint64_t bytecodeSize = translated.bytecode.size;
 
-        uint32_t version_number_htole32ed = htole32(version_number);
+        uint32_t version_number_htole32ed = htole32(bytecode_version_number);
         uint64_t net_hash = htole64(hash);
         constantsSize = htole64(constantsSize);
         bytecodeSize = htole64(bytecodeSize);

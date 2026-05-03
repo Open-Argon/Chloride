@@ -120,6 +120,21 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
     // ── bind self / binding_object ────────────────────────────────────────
     Stack *scope = create_scope(object->value.argon_fn->stack, true);
     if (binding_object) {
+      if (n_params == 0) {
+        ArgonObject *type_object_name = get_builtin_field_for_class(
+            get_builtin_field(object, __class__), __name__, original_object);
+        ArgonObject *object_name =
+            get_builtin_field_for_class(object, __name__, original_object);
+        *err = create_err(TypeError,
+                          "%.*s %.*s is missing a 'self' parameter and cannot "
+                          "be used as a method",
+                          (int)type_object_name->value.as_str->length,
+                          type_object_name->value.as_str->data,
+                          (int)object_name->value.as_str->length,
+                          object_name->value.as_str->data);
+        free(bound);
+        return;
+      }
       struct string_struct key = object->value.argon_fn->parameters[0];
       hashmap_insert_GC(scope->scope, key.hash,
                         new_string_object(key.data, key.length, key.hash),
@@ -212,25 +227,27 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
 
         if (!found) {
           // also search default_parameters
-          for (size_t j = 0; j < object->value.argon_fn->number_of_default_parameters; j++) {
-            struct string_struct key = object->value.argon_fn->default_parameters[j].key;
+          for (size_t j = 0;
+               j < object->value.argon_fn->number_of_default_parameters; j++) {
+            struct string_struct key =
+                object->value.argon_fn->default_parameters[j].key;
             if (key.hash == name->hash && key.length == name->length &&
                 memcmp(key.data, name->data, name->length) == 0) {
               if (hashmap_lookup_GC(scope->scope, key.hash) != NULL) {
-                ArgonObject *object_name =
-                    get_builtin_field_for_class(object, __name__, original_object);
-                *err = create_err(TypeError,
-                                  "%.*s got multiple values for argument '%.*s'",
-                                  (int)object_name->value.as_str->length,
-                                  object_name->value.as_str->data,
-                                  (int)name->length, name->data);
+                ArgonObject *object_name = get_builtin_field_for_class(
+                    object, __name__, original_object);
+                *err = create_err(
+                    TypeError, "%.*s got multiple values for argument '%.*s'",
+                    (int)object_name->value.as_str->length,
+                    object_name->value.as_str->data, (int)name->length,
+                    name->data);
                 free(bound);
                 free(kwargs_array);
                 return;
               }
-              hashmap_insert_GC(scope->scope, key.hash,
-                                new_string_object(key.data, key.length, key.hash),
-                                value, 0);
+              hashmap_insert_GC(
+                  scope->scope, key.hash,
+                  new_string_object(key.data, key.length, key.hash), value, 0);
               found = true;
               break;
             }

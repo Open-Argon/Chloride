@@ -1,0 +1,48 @@
+# SPDX-FileCopyrightText: 2025 William Bell
+#
+# SPDX-License-Identifier: LGPL-3.0-or-later
+
+let _date = load_native_code(program.file.directory+"native/bin/date"+platform.lib_ext)
+
+class Date do
+    this.__init__(self, seconds = 0, minutes = 0, hours = 0, days = 0, months = 0, years = 0) = do
+        self.seconds = seconds
+        self.minutes = minutes
+        self.hours = hours
+        self.days = days
+        self.months = months
+        self.years = years
+    this.now() = do
+        let ts = _date.time_now()
+        let parts = _date.time_to_parts_local(_date.time_get_seconds(ts))
+        return this(seconds=_date.time_parts_get_second(parts),minutes = _date.time_parts_get_minute(parts),hours = _date.time_parts_get_hour(parts),days = _date.time_parts_get_day(parts),months = _date.time_parts_get_month(parts),years = _date.time_parts_get_year(parts))
+    this.unix(self) = do
+        return _date.time_from_parts(self.years, self.months, self.days, self.hours, self.minutes, self.seconds)
+    this.to_string(self, fmt = "%Y-%m-%d %H:%M:%S") = do
+        return _date.time_format(self.years, self.months, self.days, self.hours, self.minutes, self.seconds, fmt)
+
+    this.from_string(str, fmt = "%Y-%m-%d %H:%M:%S") = do
+        let parts = _date.time_parse(str, fmt)
+        return this(
+            seconds = _date.time_parts_get_second(parts),
+            minutes = _date.time_parts_get_minute(parts),
+            hours   = _date.time_parts_get_hour(parts),
+            days    = _date.time_parts_get_day(parts),
+            months  = _date.time_parts_get_month(parts),
+            years   = _date.time_parts_get_year(parts)
+        )
+
+    this.now_utc() = do
+        let ts = _date.time_now()
+        let parts = _date.time_to_parts_utc(_date.time_get_seconds(ts))
+        return this(
+            seconds = _date.time_parts_get_second(parts),
+            minutes = _date.time_parts_get_minute(parts),
+            hours   = _date.time_parts_get_hour(parts),
+            days    = _date.time_parts_get_day(parts),
+            months  = _date.time_parts_get_month(parts),
+            years   = _date.time_parts_get_year(parts)
+        )
+
+    this.http_date(self) = do
+        return _date.time_format(self.years, self.months, self.days, self.hours, self.minutes, self.seconds, "%a, %d %b %Y %H:%M:%S GMT")
