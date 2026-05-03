@@ -3,15 +3,12 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
 #ifdef _WIN32
-#include "strtime/bsdshim.h"
-typedef struct mytm mytm;
-extern int bsd_strptime(const char *s, const char *format, mytm *tm);
-#define strptime bsd_strptime
-#else
-#define _XOPEN_SOURCE 700
-#define _POSIX_C_SOURCE 200809L
-typedef struct tm mytm;
+#define timegm _mkgmtime
+#define WIN_PTHREADS_TIME_H  // block pthread_time.h's clock_gettime declaration
+#include <windows.h>
 #endif
+
+#define _GNU_SOURCE
 #include "Argon.h"
 #include "ArgonFunction.h"
 #include <stddef.h>
@@ -20,11 +17,30 @@ typedef struct tm mytm;
 #include <unistd.h>
 #include <time.h>
 
-static time_t portable_timegm(struct tm *t) {
-  tzset();
-  time_t local = mktime(t);
-  return local - timezone; // timezone is seconds west of UTC
+#ifdef _WIN32
+#include "win32_strptime.h"
+typedef int clockid_t;
+#define CLOCK_REALTIME  0
+#define CLOCK_MONOTONIC 1
+
+static int clock_gettime(clockid_t clk_id, struct timespec *tp) {
+    if (clk_id == CLOCK_MONOTONIC) {
+        LARGE_INTEGER freq, count;
+        QueryPerformanceFrequency(&freq);
+        QueryPerformanceCounter(&count);
+        tp->tv_sec  = count.QuadPart / freq.QuadPart;
+        tp->tv_nsec = (long)((count.QuadPart % freq.QuadPart) * 1000000000LL / freq.QuadPart);
+    } else {
+        FILETIME ft;
+        GetSystemTimeAsFileTime(&ft);
+        unsigned long long t = ((unsigned long long)ft.dwHighDateTime << 32) | ft.dwLowDateTime;
+        t -= 116444736000000000ULL;
+        tp->tv_sec  = t / 10000000;
+        tp->tv_nsec = (long)((t % 10000000) * 100);
+    }
+    return 0;
 }
+#endif
 
 ARGON_FUNCTION(time_now, {
   if (api->fix_to_arg_size(0, argc, err))
@@ -121,7 +137,7 @@ ARGON_FUNCTION(time_from_parts_utc, {
   t.tm_min = (int)api->argon_to_i64(argv[4], err);
   t.tm_sec = (int)api->argon_to_i64(argv[5], err);
   t.tm_isdst = 0;
-  return api->i64_to_argon((int64_t)portable_timegm(&t));
+  return api->i64_to_argon((int64_t)timegm(&t));
 })
 
 ARGON_FUNCTION(time_format_utc, {
@@ -145,7 +161,7 @@ ARGON_FUNCTION(time_format_utc, {
 })
 
 ARGON_FUNCTION(time_parse, {
-  mytm t = {0};
+  struct tm t = {0};
   struct string str_str = api->argon_to_string(argv[0], err);
   char *str = malloc(str_str.length + 1);
   if (!str)
@@ -170,15 +186,7 @@ ARGON_FUNCTION(time_parse, {
   struct tm *buf = api->argon_buffer_to_buffer(parts, err).data;
   if (api->is_error(err))
     return api->ARGON_NULL;
-  buf->tm_hour = t.tm_hour;
-  buf->tm_isdst = t.tm_isdst;
-  buf->tm_mday = t.tm_mday;
-  buf->tm_min = t.tm_min;
-  buf->tm_mon = t.tm_mon;
-  buf->tm_sec = t.tm_sec;
-  buf->tm_wday = t.tm_wday;
-  buf->tm_yday = t.tm_yday;
-  buf->tm_year = t.tm_yday;
+  *buf = t;
   return parts;
 })
 
