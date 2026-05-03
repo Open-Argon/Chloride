@@ -67,9 +67,25 @@ ParsedValueReturn parse_if(char *file, DArray *tokens, size_t *index) {
     ParsedValueReturn condition = {no_err, NULL};
 
     if (token->type != TOKEN_ELSE) {
-      // Parse condition
+      // Parse ( condition )
       token = darray_get(tokens, *index);
-      
+      if (token->type != TOKEN_LPAREN) {
+        darray_free(parsed_if, free_conditional);
+        free(parsed_if);
+        return (ParsedValueReturn){
+            path_specific_create_err(token->line, token->column, token->length, file,
+                       SyntaxError, "expected '(' after if"),
+            NULL};
+      }
+
+      (*index)++;
+      ArErr err = error_if_finished(file, tokens, index);
+      if (is_error(&err)) {
+        darray_free(parsed_if, free_conditional);
+        free(parsed_if);
+        return (ParsedValueReturn){err, NULL};
+      }
+      skip_newlines_and_indents(tokens, index);
       condition = parse_token(file, tokens, index, true);
       if (is_error(&condition.err)) {
         darray_free(parsed_if, free_conditional);
@@ -82,6 +98,33 @@ ParsedValueReturn parse_if(char *file, DArray *tokens, size_t *index) {
             path_specific_create_err(token->line, token->column, token->length, file,
                        SyntaxError, "expected condition"),
             NULL};
+      }
+      skip_newlines_and_indents(tokens, index);
+
+      token = darray_get(tokens, *index);
+      if (token->type != TOKEN_RPAREN) {
+        if (condition.value) {
+          free_parsed(condition.value);
+          free(condition.value);
+        }
+        darray_free(parsed_if, free_conditional);
+        free(parsed_if);
+        return (ParsedValueReturn){
+            path_specific_create_err(token->line, token->column, token->length, file,
+                       SyntaxError, "missing closing ')' in condition"),
+            NULL};
+      }
+
+      (*index)++;
+      err = error_if_finished(file, tokens, index);
+      if (is_error(&err)) {
+        if (condition.value) {
+          free_parsed(condition.value);
+          free(condition.value);
+        }
+        darray_free(parsed_if, free_conditional);
+        free(parsed_if);
+        return (ParsedValueReturn){err, NULL};
       }
     }
 
