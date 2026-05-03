@@ -2,21 +2,28 @@
 //
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
-#include <stddef.h>
+#ifdef _WIN32
+#include "strtime/bsdshim.h"
+typedef struct mytm mytm;
+extern int bsd_strptime(const char *s, const char *format, mytm *tm);
+#define strptime bsd_strptime
+#else
+#define _XOPEN_SOURCE 700
+#define _POSIX_C_SOURCE 200809L
+typedef struct tm mytm;
+#endif
 #include "Argon.h"
 #include "ArgonFunction.h"
+#include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
 #include <unistd.h>
-#include "strtime/bsdshim.h"
-
-extern int bsd_strptime(const char *s, const char *format, struct mytm *tm);
+#include <time.h>
 
 static time_t portable_timegm(struct tm *t) {
-    tzset();
-    time_t local = mktime(t);
-    return local - timezone; // timezone is seconds west of UTC
+  tzset();
+  time_t local = mktime(t);
+  return local - timezone; // timezone is seconds west of UTC
 }
 
 ARGON_FUNCTION(time_now, {
@@ -72,7 +79,7 @@ ARGON_FUNCTION(time_to_parts_utc, {
 })
 
 #define GET_tm                                                                 \
-  if (api->fix_to_arg_size(1, argc, err))                                     \
+  if (api->fix_to_arg_size(1, argc, err))                                      \
     return api->ARGON_NULL;                                                    \
   struct tm *tm = api->argon_buffer_to_buffer(argv[0], err).data;
 
@@ -96,11 +103,11 @@ ARGON_FUNCTION(time_parts_get_yday,
 ARGON_FUNCTION(time_from_parts, {
   struct tm t = {0};
   t.tm_year = (int)api->argon_to_i64(argv[0], err) - 1900;
-  t.tm_mon  = (int)api->argon_to_i64(argv[1], err) - 1;
+  t.tm_mon = (int)api->argon_to_i64(argv[1], err) - 1;
   t.tm_mday = (int)api->argon_to_i64(argv[2], err);
   t.tm_hour = (int)api->argon_to_i64(argv[3], err);
-  t.tm_min  = (int)api->argon_to_i64(argv[4], err);
-  t.tm_sec  = (int)api->argon_to_i64(argv[5], err);
+  t.tm_min = (int)api->argon_to_i64(argv[4], err);
+  t.tm_sec = (int)api->argon_to_i64(argv[5], err);
   t.tm_isdst = -1;
   return api->i64_to_argon((int64_t)mktime(&t));
 })
@@ -108,11 +115,11 @@ ARGON_FUNCTION(time_from_parts, {
 ARGON_FUNCTION(time_from_parts_utc, {
   struct tm t = {0};
   t.tm_year = (int)api->argon_to_i64(argv[0], err) - 1900;
-  t.tm_mon  = (int)api->argon_to_i64(argv[1], err) - 1;
+  t.tm_mon = (int)api->argon_to_i64(argv[1], err) - 1;
   t.tm_mday = (int)api->argon_to_i64(argv[2], err);
   t.tm_hour = (int)api->argon_to_i64(argv[3], err);
-  t.tm_min  = (int)api->argon_to_i64(argv[4], err);
-  t.tm_sec  = (int)api->argon_to_i64(argv[5], err);
+  t.tm_min = (int)api->argon_to_i64(argv[4], err);
+  t.tm_sec = (int)api->argon_to_i64(argv[5], err);
   t.tm_isdst = 0;
   return api->i64_to_argon((int64_t)portable_timegm(&t));
 })
@@ -138,7 +145,7 @@ ARGON_FUNCTION(time_format_utc, {
 })
 
 ARGON_FUNCTION(time_parse, {
-  struct mytm t = {0};
+  mytm t = {0};
   struct string str_str = api->argon_to_string(argv[0], err);
   char *str = malloc(str_str.length + 1);
   if (!str)
@@ -155,7 +162,7 @@ ARGON_FUNCTION(time_parse, {
   memcpy(fmt, fmt_str.data, fmt_str.length);
   fmt[fmt_str.length] = '\0';
 
-  bsd_strptime(str, fmt, &t);
+  strptime(str, fmt, &t);
   free(str);
   free(fmt);
 
