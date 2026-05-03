@@ -6,37 +6,37 @@ let _date = load_native_code(program.file.directory+"native/bin/date"+platform.l
 
 class Date do
     this.__init__(self, timestamp_ms = null, timestamp_s = null, date = null, year = null, month = null, day = null, hour = null, minute = null, second = null) = do
-        if date != null do
+        if (date != null) do
             self.__ts = date.__ts
-        else if timestamp_ms != null do
+        else if (timestamp_ms != null) do
             self.__ts = timestamp_ms
-        else if timestamp_s != null do
+        else if (timestamp_s != null) do
             self.__ts = timestamp_s * 1000
-        else if year != null || month != null || day != null || hour != null || minute != null || second != null do
+        else if (year != null || month != null || day != null || hour != null || minute != null || second != null) do
             let base = _date.time_to_parts_utc(0)
             self.__ts = _date.time_from_parts_utc(
                 (do
-                    if year != null return year
+                    if (year != null) return year
                     return _date.time_parts_get_year(base)
                 ),
                 (do
-                    if month != null return month
+                    if (month != null) return month
                     return _date.time_parts_get_month(base)
                 ),
                 (do
-                    if day != null return day
+                    if (day != null) return day
                     return _date.time_parts_get_day(base)
                 ),
                 (do
-                    if hour != null return hour
+                    if (hour != null) return hour
                     return 0
                 ),
                 (do
-                    if minute != null return minute
+                    if (minute != null) return minute
                     return 0
                 ),
                 (do
-                    if second != null return second
+                    if (second != null) return second
                     return 0
                 )
             ) * 1000
