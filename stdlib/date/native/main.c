@@ -9,7 +9,7 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
-#include "../../../external/strtime/bsdshim.h"
+#include "strtime/bsdshim.h"
 
 extern int bsd_strptime(const char *s, const char *format, struct mytm *tm);
 
