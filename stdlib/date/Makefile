@@ -71,9 +71,12 @@ ARGON_INCLUDE ?= ../../include
 # ------------------------------------------------------------
 # Sources
 # ------------------------------------------------------------
-SRC := $(wildcard $(SRC_DIR)/*.c) $(ARGON_INCLUDE)/../external/strtime/strptime.c $(ARGON_INCLUDE)/../external/strtime/timelocal.c $(ARGON_INCLUDE)/../external/strtime/gmtime_r.c
+SRC := $(wildcard $(SRC_DIR)/*.c)
 OUT := $(BIN_DIR)/$(LIB).$(LIB_EXT)
 
+ifeq ($(TARGET_OS),windows)
+	SRC += $(ARGON_INCLUDE)/../external/strtime/strptime.c $(ARGON_INCLUDE)/../external/strtime/timelocal.c $(ARGON_INCLUDE)/../external/strtime/gmtime_r.c
+endif
 # ------------------------------------------------------------
 # Phony targets
 # ------------------------------------------------------------
