@@ -60,6 +60,11 @@ class File do
         if (self.closed) do
             throw FileError("I/O operation on closed file")
         _file.flush(self._handle, FileError)
+        
+    this.size(self) = do
+        if (self.closed) do
+            throw FileError("I/O operation on closed file")
+        _file.file_size(self._handle, FileError)
     
 
 let open(path, mode="r") = do

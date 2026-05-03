@@ -10,6 +10,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#if defined(__linux__) || defined(__APPLE__) || defined(__unix__)
+#include <sys/stat.h>
+#endif
+
 typedef struct {
   FILE *fp;
   int is_open;
@@ -320,6 +324,42 @@ ARGON_FUNCTION(flush, {
   return api->ARGON_NULL;
 })
 
+ARGON_FUNCTION(file_size, {
+  if (api->fix_to_arg_size(2, argc, err))
+    return api->ARGON_NULL;
+
+  struct buffer handle_buffer = api->argon_buffer_to_buffer(argv[0], err);
+  if (api->is_error(err))
+    return api->ARGON_NULL;
+
+  FileHandle *handle = handle_buffer.data;
+  if (!handle->is_open)
+    return api->throw_argon_error(err, argv[1], "file is closed");
+
+#if defined(__linux__) || defined(__APPLE__) || defined(__unix__)
+  struct stat st;
+  if (fstat(fileno(handle->fp), &st) == 0)
+    return api->i64_to_argon((int64_t)st.st_size);
+  // fall through to seek/tell if fstat fails for some reason
+#endif
+
+  long current = ftell(handle->fp);
+  if (current < 0)
+    return api->throw_argon_error(err, argv[1], "%s", strerror(errno));
+
+  if (fseek(handle->fp, 0, SEEK_END) != 0)
+    return api->throw_argon_error(err, argv[1], "%s", strerror(errno));
+
+  long size = ftell(handle->fp);
+  if (size < 0)
+    return api->throw_argon_error(err, argv[1], "%s", strerror(errno));
+
+  if (fseek(handle->fp, current, SEEK_SET) != 0)
+    return api->throw_argon_error(err, argv[1], "%s", strerror(errno));
+
+  return api->i64_to_argon((int64_t)size);
+})
+
 void argon_module_init(ArgonState *vm, ArgonNativeAPI *api, ArgonError *err,
                        ArgonObjectRegister *reg) {
   (void)vm;
@@ -341,4 +381,7 @@ void argon_module_init(ArgonState *vm, ArgonNativeAPI *api, ArgonError *err,
                             api->create_argon_native_function("tell", tell));
   api->register_ArgonObject(reg, "flush",
                             api->create_argon_native_function("flush", flush));
+  api->register_ArgonObject(
+      reg, "file_size",
+      api->create_argon_native_function("file_size", file_size));
 }

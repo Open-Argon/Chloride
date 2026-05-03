@@ -22,8 +22,23 @@ let ceil(num) = do
 
     return i
 
-let round(num) = do
+let round(num, precision=1) = do
+    num = num/precision
     if (num >= 0) do
-        return floor(num + 0.5)
+        return floor(num + 0.5)*precision
     else do
-        return ceil(num - 0.5)
+        return ceil(num - 0.5)*precision
+
+let max(*nums) = do
+    let biggest = null
+    for (num in nums) do
+        if (biggest == null || num > biggest) do
+            biggest = num
+    return biggest
+
+let min(*nums) = do
+    let smallest = null
+    for (num in nums) do
+        if (smallest == null || num < smallest) do
+            smallest = num
+    return smallest
