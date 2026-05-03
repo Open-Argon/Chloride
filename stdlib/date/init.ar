@@ -1,48 +1,184 @@
-# SPDX-FileCopyrightText: 2025 William Bell
+# SPDX-FileCopyrightText: 2026 William Bell
 #
 # SPDX-License-Identifier: LGPL-3.0-or-later
 
 let _date = load_native_code(program.file.directory+"native/bin/date"+platform.lib_ext)
 
 class Date do
-    this.__init__(self, seconds = 0, minutes = 0, hours = 0, days = 0, months = 0, years = 0) = do
-        self.seconds = seconds
-        self.minutes = minutes
-        self.hours = hours
-        self.days = days
-        self.months = months
-        self.years = years
+    this.__init__(self, timestamp_ms = null, timestamp_s = null, date = null, year = null, month = null, day = null, hour = null, minute = null, second = null) = do
+        if date != null do
+            self.__ts = date.__ts
+        else if timestamp_ms != null do
+            self.__ts = timestamp_ms
+        else if timestamp_s != null do
+            self.__ts = timestamp_s * 1000
+        else if year != null || month != null || day != null || hour != null || minute != null || second != null do
+            let base = _date.time_to_parts_utc(0)
+            self.__ts = _date.time_from_parts_utc(
+                (do
+                    if year != null return year
+                    return _date.time_parts_get_year(base)
+                ),
+                (do
+                    if month != null return month
+                    return _date.time_parts_get_month(base)
+                ),
+                (do
+                    if day != null return day
+                    return _date.time_parts_get_day(base)
+                ),
+                (do
+                    if hour != null return hour
+                    return 0
+                ),
+                (do
+                    if minute != null return minute
+                    return 0
+                ),
+                (do
+                    if second != null return second
+                    return 0
+                )
+            ) * 1000
+        else do
+            self.__ts = 0
+
     this.now() = do
         let ts = _date.time_now()
-        let parts = _date.time_to_parts_local(_date.time_get_seconds(ts))
-        return this(seconds=_date.time_parts_get_second(parts),minutes = _date.time_parts_get_minute(parts),hours = _date.time_parts_get_hour(parts),days = _date.time_parts_get_day(parts),months = _date.time_parts_get_month(parts),years = _date.time_parts_get_year(parts))
-    this.unix(self) = do
-        return _date.time_from_parts(self.years, self.months, self.days, self.hours, self.minutes, self.seconds)
-    this.to_string(self, fmt = "%Y-%m-%d %H:%M:%S") = do
-        return _date.time_format(self.years, self.months, self.days, self.hours, self.minutes, self.seconds, fmt)
+        return this(_date.time_get_seconds(ts) * 1000 + _date.time_get_subsecond(ts) / 1000000)
+
+    this.now_utc() = do
+        return Date.now()
 
     this.from_string(str, fmt = "%Y-%m-%d %H:%M:%S") = do
         let parts = _date.time_parse(str, fmt)
-        return this(
-            seconds = _date.time_parts_get_second(parts),
-            minutes = _date.time_parts_get_minute(parts),
-            hours   = _date.time_parts_get_hour(parts),
-            days    = _date.time_parts_get_day(parts),
-            months  = _date.time_parts_get_month(parts),
-            years   = _date.time_parts_get_year(parts)
-        )
+        return this(_date.time_from_parts(
+            _date.time_parts_get_year(parts),
+            _date.time_parts_get_month(parts),
+            _date.time_parts_get_day(parts),
+            _date.time_parts_get_hour(parts),
+            _date.time_parts_get_minute(parts),
+            _date.time_parts_get_second(parts)
+        ) * 1000)
 
-    this.now_utc() = do
-        let ts = _date.time_now()
-        let parts = _date.time_to_parts_utc(_date.time_get_seconds(ts))
-        return this(
-            seconds = _date.time_parts_get_second(parts),
-            minutes = _date.time_parts_get_minute(parts),
-            hours   = _date.time_parts_get_hour(parts),
-            days    = _date.time_parts_get_day(parts),
-            months  = _date.time_parts_get_month(parts),
-            years   = _date.time_parts_get_year(parts)
-        )
+    this.unix(self) = do
+        return self.__ts // 1000
+
+    this.unix_ms(self) = do
+        return self.__ts
+
+    # getters - accessible as .year, .month etc
+    this.get_year(self) = do
+        return _date.time_parts_get_year(_date.time_to_parts_utc(self.unix()))
+
+    this.get_month(self) = do
+        return _date.time_parts_get_month(_date.time_to_parts_utc(self.unix()))
+
+    this.get_day(self) = do
+        return _date.time_parts_get_day(_date.time_to_parts_utc(self.unix()))
+
+    this.get_hour(self) = do
+        return _date.time_parts_get_hour(_date.time_to_parts_utc(self.unix()))
+
+    this.get_minute(self) = do
+        return _date.time_parts_get_minute(_date.time_to_parts_utc(self.unix()))
+
+    this.get_second(self) = do
+        return _date.time_parts_get_second(_date.time_to_parts_utc(self.unix()))
+
+    this.get_day_of_week(self) = do
+        return _date.time_parts_get_wday(_date.time_to_parts_utc(self.unix()))
+
+    this.get_day_of_year(self) = do
+        return _date.time_parts_get_yday(_date.time_to_parts_utc(self.unix()))
+
+    this.to_string(self, fmt = "%Y-%m-%d %H:%M:%S") = do
+        return _date.time_format_utc(self.unix(), fmt)
 
     this.http_date(self) = do
-        return _date.time_format(self.years, self.months, self.days, self.hours, self.minutes, self.seconds, "%a, %d %b %Y %H:%M:%S GMT")
+        return _date.time_format_utc(self.unix(), "%a, %d %b %Y %H:%M:%S GMT")
+
+    this.to_local_string(self, fmt = "%Y-%m-%d %H:%M:%S") = do
+        return _date.time_format(self.year, self.month, self.day, self.hour, self.minute, self.second, fmt)
+
+    this.monotonic() = do
+        return _date.time_monotonic()
+        
+    this.__parts(self) = do
+        return _date.time_to_parts_utc(self.unix())
+
+    this.__recompose(self, parts) = do
+        self.__ts = _date.time_from_parts_utc(
+            _date.time_parts_get_year(parts),
+            _date.time_parts_get_month(parts),
+            _date.time_parts_get_day(parts),
+            _date.time_parts_get_hour(parts),
+            _date.time_parts_get_minute(parts),
+            _date.time_parts_get_second(parts)
+        ) * 1000
+
+    this.set_year(self, value) = do
+        let p = self.__parts()
+        self.__ts = _date.time_from_parts_utc(
+            value,
+            _date.time_parts_get_month(p),
+            _date.time_parts_get_day(p),
+            _date.time_parts_get_hour(p),
+            _date.time_parts_get_minute(p),
+            _date.time_parts_get_second(p)
+        ) * 1000
+
+    this.set_month(self, value) = do
+        let p = self.__parts()
+        self.__ts = _date.time_from_parts_utc(
+            _date.time_parts_get_year(p),
+            value,
+            _date.time_parts_get_day(p),
+            _date.time_parts_get_hour(p),
+            _date.time_parts_get_minute(p),
+            _date.time_parts_get_second(p)
+        ) * 1000
+
+    this.set_day(self, value) = do
+        let p = self.__parts()
+        self.__ts = _date.time_from_parts_utc(
+            _date.time_parts_get_year(p),
+            _date.time_parts_get_month(p),
+            value,
+            _date.time_parts_get_hour(p),
+            _date.time_parts_get_minute(p),
+            _date.time_parts_get_second(p)
+        ) * 1000
+
+    this.set_hour(self, value) = do
+        let p = self.__parts()
+        self.__ts = _date.time_from_parts_utc(
+            _date.time_parts_get_year(p),
+            _date.time_parts_get_month(p),
+            _date.time_parts_get_day(p),
+            value,
+            _date.time_parts_get_minute(p),
+            _date.time_parts_get_second(p)
+        ) * 1000
+
+    this.set_minute(self, value) = do
+        let p = self.__parts()
+        self.__ts = _date.time_from_parts_utc(
+            _date.time_parts_get_year(p),
+            _date.time_parts_get_month(p),
+            _date.time_parts_get_day(p),
+            _date.time_parts_get_hour(p),
+            value,
+            _date.time_parts_get_second(p)
+        ) * 1000
+
+    this.set_second(self, value) = do
+        let p = self.__parts()
+        self.__ts = _date.time_from_parts_utc(
+            _date.time_parts_get_year(p),
+            _date.time_parts_get_month(p),
+            _date.time_parts_get_day(p),
+            _date.time_parts_get_hour(p),
+            _date.time_parts_get_minute(p),
+            value
+        ) * 1000

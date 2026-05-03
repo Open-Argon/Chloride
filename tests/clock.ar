@@ -1,0 +1,9 @@
+import "date" expose Date
+import "time" as time
+
+let date = Date.now()
+
+while (true) do
+    term.log(date.http_date())
+    time.snooze(1)
+    date.second+=1
