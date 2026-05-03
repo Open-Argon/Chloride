@@ -148,6 +148,7 @@ ParsedValueReturn parse_dictionary(char *file, DArray *tokens, size_t *index) {
         break;
       }
       (*index)++;
+      skip_newlines_and_indents(tokens, index);
       err = error_if_finished(file, tokens, index);
       if (is_error(&err)) {
         free_parsed(parsedValue);
@@ -157,6 +158,7 @@ ParsedValueReturn parse_dictionary(char *file, DArray *tokens, size_t *index) {
       token = darray_get(tokens, *index);
       if (token->type == TOKEN_COMMA) {
         (*index)++;
+        skip_newlines_and_indents(tokens, index);
         err = error_if_finished(file, tokens, index);
         if (is_error(&err)) {
           free_parsed(parsedValue);
