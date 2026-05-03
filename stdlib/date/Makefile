@@ -27,7 +27,7 @@ ifeq ($(TARGET_OS),windows)
 
 	SHARED_LDFLAGS := -shared
 	PLATFORM_LDFLAGS := \
-		-lws2_32 -lm
+		-lws2_32 -lm -lpthread
 
 	PLATFORM_CFLAGS := \
 		-DWIN32 \
@@ -71,7 +71,7 @@ ARGON_INCLUDE ?= ../../include
 # ------------------------------------------------------------
 # Sources
 # ------------------------------------------------------------
-SRC := $(wildcard $(SRC_DIR)/*.c)
+SRC := $(wildcard $(SRC_DIR)/*.c) ../../external/strtime/strptime.c ../../external/strtime/timelocal.c ../../external/strtime/gmtime_r.c
 OUT := $(BIN_DIR)/$(LIB).$(LIB_EXT)
 
 # ------------------------------------------------------------

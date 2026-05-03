@@ -3,14 +3,15 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
 #include <stddef.h>
-#define _XOPEN_SOURCE 700
-#define _POSIX_C_SOURCE 200809L
 #include "Argon.h"
 #include "ArgonFunction.h"
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
+#include "../../../external/strtime/bsdshim.h"
+
+extern int bsd_strptime(const char *s, const char *format, struct mytm *tm);
 
 static time_t portable_timegm(struct tm *t) {
     tzset();
@@ -137,7 +138,7 @@ ARGON_FUNCTION(time_format_utc, {
 })
 
 ARGON_FUNCTION(time_parse, {
-  struct tm t = {0};
+  struct mytm t = {0};
   struct string str_str = api->argon_to_string(argv[0], err);
   char *str = malloc(str_str.length + 1);
   if (!str)
@@ -154,7 +155,7 @@ ARGON_FUNCTION(time_parse, {
   memcpy(fmt, fmt_str.data, fmt_str.length);
   fmt[fmt_str.length] = '\0';
 
-  strptime(str, fmt, &t);
+  bsd_strptime(str, fmt, &t);
   free(str);
   free(fmt);
 
@@ -162,7 +163,15 @@ ARGON_FUNCTION(time_parse, {
   struct tm *buf = api->argon_buffer_to_buffer(parts, err).data;
   if (api->is_error(err))
     return api->ARGON_NULL;
-  *buf = t;
+  buf->tm_hour = t.tm_hour;
+  buf->tm_isdst = t.tm_isdst;
+  buf->tm_mday = t.tm_mday;
+  buf->tm_min = t.tm_min;
+  buf->tm_mon = t.tm_mon;
+  buf->tm_sec = t.tm_sec;
+  buf->tm_wday = t.tm_wday;
+  buf->tm_yday = t.tm_yday;
+  buf->tm_year = t.tm_yday;
   return parts;
 })
 

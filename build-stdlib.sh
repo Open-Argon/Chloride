@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set -e
 
 STDLIB_DIR=""
 MAKE_ARGS=()
