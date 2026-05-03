@@ -17,3 +17,9 @@
 [submodule "external/bdwgc"]
 	path = external/bdwgc
 	url = https://github.com/bdwgc/bdwgc.git
+[submodule "stdlib/date/external/strtime"]
+	path = stdlib/date/external/strtime
+	url = https://github.com/knz/strtime
+[submodule "external/strtime"]
+	path = external/strtime
+	url = https://github.com/knz/strtime
