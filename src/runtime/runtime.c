@@ -564,7 +564,7 @@ ARGON_METHOD(ARGON_TYPE_TYPE, __call__, {
   }
 
   ArgonObject *new_object =
-      argon_call(cls___new__, argc, argv, NULL, err, state);
+      argon_call(cls___new__, argc, argv, kwargs, err, state);
   if (is_error(err))
     return ARGON_NULL;
   ArgonObject *ARGON_TYPE_TYPE___call___args[] = {ARGON_TYPE_TYPE, new_object};
@@ -582,7 +582,7 @@ ARGON_METHOD(ARGON_TYPE_TYPE, __call__, {
           (int)cls___name__->value.as_str->length,
           cls___name__->value.as_str->data);
     }
-    argon_call(cls___init__, argc - 1, argv + 1, NULL, err, state);
+    argon_call(cls___init__, argc - 1, argv + 1, kwargs, err, state);
     if (is_error(err))
       return ARGON_NULL;
   }

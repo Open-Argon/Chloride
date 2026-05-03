@@ -1,0 +1,18 @@
+
+do
+    let some_func(test="bruh it failed") = do
+        term.log(test)
+
+    let some_random_function() = do
+        return "nice it worked"
+
+    some_func(test=some_random_function())
+
+do
+    class some_func do
+        this.__init__(self,test="bruh it failed") = do
+            term.log(test)
+
+    let some_random_value = "nice it worked"
+
+    some_func(test=some_random_value)
