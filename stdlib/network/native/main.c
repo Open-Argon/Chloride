@@ -46,8 +46,7 @@ ARGON_FUNCTION(argon_net_listen, {
   if (server_socket < 0)
 #endif
     return api->throw_argon_error(
-        err, argv[1], "failed to open a tcp socket on port %" PRIu64,
-        port);
+        err, argv[1], "failed to open a tcp socket on port %" PRIu64, port);
 
   ArgonObject *server_socket_buffer_object =
       api->create_argon_buffer(sizeof(socket_t));
@@ -190,6 +189,114 @@ ARGON_FUNCTION(argon_net_close, {
   return api->ARGON_NULL;
 })
 
+ARGON_FUNCTION(argon_net_connect, {
+  (void)state;
+  if (api->fix_to_arg_size(3, argc, err))
+    return api->ARGON_NULL;
+
+  struct string host = api->argon_to_string(argv[0], err);
+  if (api->is_error(err))
+    return api->ARGON_NULL;
+
+  int64_t port = api->argon_to_i64(argv[1], err);
+  if (api->is_error(err))
+    return api->ARGON_NULL;
+
+  socket_t sock = net_connect(host.data, (int)port);
+#ifdef _WIN32
+  if (sock == INVALID_SOCKET)
+#else
+  if (sock < 0)
+#endif
+    return api->throw_argon_error(
+        err, argv[2], "failed to connect to %s:%" PRId64, host.data, port);
+
+  ArgonObject *buf_obj = api->create_argon_buffer(sizeof(socket_t));
+  struct buffer buf = api->argon_buffer_to_buffer(buf_obj, err);
+  if (api->is_error(err))
+    return api->ARGON_NULL;
+  memcpy(buf.data, &sock, buf.size);
+  return buf_obj;
+})
+
+ARGON_FUNCTION(argon_net_set_nonblocking, {
+  (void)state;
+  if (api->fix_to_arg_size(2, argc, err))
+    return api->ARGON_NULL;
+
+  struct buffer socket_buf = api->argon_buffer_to_buffer(argv[0], err);
+  if (api->is_error(err))
+    return api->ARGON_NULL;
+  socket_t sock = *(socket_t *)socket_buf.data;
+
+  int64_t enable = api->argon_to_i64(argv[1], err);
+  if (api->is_error(err))
+    return api->ARGON_NULL;
+
+  return api->i64_to_argon(net_set_nonblocking(sock, (int)enable));
+})
+
+ARGON_FUNCTION(argon_net_poll, {
+  (void)state;
+  if (api->fix_to_arg_size(4, argc, err))
+    return api->ARGON_NULL;
+
+  struct buffer socket_buf = api->argon_buffer_to_buffer(argv[0], err);
+  if (api->is_error(err))
+    return api->ARGON_NULL;
+  socket_t sock = *(socket_t *)socket_buf.data;
+
+  int64_t want_read = api->argon_to_i64(argv[1], err);
+  if (api->is_error(err))
+    return api->ARGON_NULL;
+  int64_t want_write = api->argon_to_i64(argv[2], err);
+  if (api->is_error(err))
+    return api->ARGON_NULL;
+  int64_t timeout_ms = api->argon_to_i64(argv[3], err);
+  if (api->is_error(err))
+    return api->ARGON_NULL;
+
+  return api->i64_to_argon(
+      net_poll(sock, (int)want_read, (int)want_write, (int)timeout_ms));
+})
+
+ARGON_FUNCTION(argon_net_peek, {
+  (void)state;
+  if (api->fix_to_arg_size(2, argc, err))
+    return api->ARGON_NULL;
+
+  struct buffer socket_buf = api->argon_buffer_to_buffer(argv[0], err);
+  if (api->is_error(err))
+    return api->ARGON_NULL;
+  socket_t sock = *(socket_t *)socket_buf.data;
+
+  struct buffer data_buf = api->argon_buffer_to_buffer(argv[1], err);
+  if (api->is_error(err))
+    return api->ARGON_NULL;
+
+  return api->i64_to_argon(net_peek(sock, data_buf.data, (int)data_buf.size));
+})
+
+ARGON_FUNCTION(argon_net_set_opt, {
+  (void)state;
+  if (api->fix_to_arg_size(3, argc, err))
+    return api->ARGON_NULL;
+
+  struct buffer socket_buf = api->argon_buffer_to_buffer(argv[0], err);
+  if (api->is_error(err))
+    return api->ARGON_NULL;
+  socket_t sock = *(socket_t *)socket_buf.data;
+
+  int64_t opt = api->argon_to_i64(argv[1], err);
+  if (api->is_error(err))
+    return api->ARGON_NULL;
+  int64_t value = api->argon_to_i64(argv[2], err);
+  if (api->is_error(err))
+    return api->ARGON_NULL;
+
+  return api->i64_to_argon(net_set_opt(sock, (int)opt, (int)value));
+})
+
 void argon_module_init(ArgonState *vm, ArgonNativeAPI *api, ArgonError *err,
                        ArgonObjectRegister *reg) {
   (void)vm;
@@ -221,4 +328,20 @@ void argon_module_init(ArgonState *vm, ArgonNativeAPI *api, ArgonError *err,
   api->register_ArgonObject(
       reg, "net_close",
       api->create_argon_native_function("net_close", argon_net_close));
+  api->register_ArgonObject(
+      reg, "net_connect",
+      api->create_argon_native_function("net_connect", argon_net_connect));
+  api->register_ArgonObject(
+      reg, "net_set_nonblocking",
+      api->create_argon_native_function("net_set_nonblocking",
+                                        argon_net_set_nonblocking));
+  api->register_ArgonObject(
+      reg, "net_poll",
+      api->create_argon_native_function("net_poll", argon_net_poll));
+  api->register_ArgonObject(
+      reg, "net_peek",
+      api->create_argon_native_function("net_peek", argon_net_peek));
+  api->register_ArgonObject(
+      reg, "net_set_opt",
+      api->create_argon_native_function("net_set_opt", argon_net_set_opt));
 }
