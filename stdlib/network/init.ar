@@ -3,6 +3,17 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 let __net__ = load_native_code(program.file.directory+"native/bin/network"+platform.lib_ext)
 
+# Option constants mirroring NET_OPT_* in socket.h
+let NET_OPT_KEEPALIVE = 1
+let NET_OPT_NODELAY   = 2
+let NET_OPT_REUSEADDR = 3
+let NET_OPT_RCVTIMEO  = 4
+let NET_OPT_SNDTIMEO  = 5
+
+# Poll bitmask constants
+let NET_POLL_READ  = 1
+let NET_POLL_WRITE = 2
+
 class SocketError(Exception) null
 
 class tcp_connection do
@@ -20,7 +31,20 @@ class tcp_connection do
   
   this.recv_string(self,size) = do
     return __net__.net_recv_string(self.__socket__, size)
-  
+  this.peek(self, buff) = do
+    return __net__.net_peek(self.__socket__, buff)
+
+  # Returns a NET_POLL_* bitmask, 0 on timeout, -1 on error.
+  # Pass timeout_ms=-1 to block indefinitely.
+  this.poll(self, want_read, want_write, timeout_ms) = do
+    return __net__.net_poll(self.__socket__, want_read, want_write, timeout_ms)
+
+  this.set_nonblocking(self, enable) = do
+    return __net__.net_set_nonblocking(self.__socket__, enable)
+
+  this.set_opt(self, opt, value) = do
+    return __net__.net_set_opt(self.__socket__, opt, value)
+    
   this.close(self) = do
     return __net__.net_close(self.__socket__)
 
@@ -34,8 +58,44 @@ class tcp do
 
   this.accept(self) = do
     return tcp_connection(__net__.net_accept(self.__socket__, SocketError))
-  
+
+  this.set_nonblocking(self, enable) = do
+    return __net__.net_set_nonblocking(self.__socket__, enable)
+
+  this.set_opt(self, opt, value) = do
+    return __net__.net_set_opt(self.__socket__, opt, value)
+
+  this.poll(self, want_read, want_write, timeout_ms) = do
+    return __net__.net_poll(self.__socket__, want_read, want_write, timeout_ms)
+
   this.close(self) = do
     this.__refcount__-=1
     if (!this.__refcount__) __net__.net_cleanup()
     return __net__.net_close(self.__socket__)
+
+class tcp_client do
+  this.__init__(self, host, port) = do
+    __net__.net_init()
+    self.__socket__ = __net__.net_connect(host, port, SocketError)
+    self.__conn__   = tcp_connection(self.__socket__)
+
+  this.send(self, buff)= do
+    return self.__conn__.send(buff)
+  this.send_string(self, str) = do
+    return self.__conn__.send_string(str)
+  this.recv(self, buff) = do
+    return self.__conn__.recv(buff)
+  this.recv_string(self, size) = do
+    return self.__conn__.recv_string(size)
+  this.peek(self, buff) = do
+    return self.__conn__.peek(buff)
+  this.poll(self, r, w, ms) = do
+    return self.__conn__.poll(r, w, ms)
+  this.set_nonblocking(self, e) = do
+    return self.__conn__.set_nonblocking(e)
+  this.set_opt(self, opt, val) = do
+    return self.__conn__.set_opt(opt, val)
+
+  this.close(self) = do
+    self.__conn__.close()
+    __net__.net_cleanup()
