@@ -57,6 +57,7 @@
   X(__getitem__)                                                               \
   X(__setitem__)                                                               \
   X(__delitem__)                                                               \
+  X(get_value)                                                                 \
   X(__hash__)                                                                  \
   X(__repr__)                                                                  \
   X(append)                                                                    \
@@ -134,7 +135,8 @@ struct ArgonNativeAPI {
   void (*register_ArgonObject)(hashmap_GC *reg, char *name, ArgonObject *obj);
   ArgonObject *(*create_argon_native_function)(char *name, native_fn);
   ArgonObject *(*call)(ArgonObject *original_object, size_t argc,
-                       ArgonObject **argv, ArgonHashmap*kwargs, ArErr *err, RuntimeState *state);
+                       ArgonObject **argv, ArgonHashmap *kwargs, ArErr *err,
+                       RuntimeState *state);
   ArgonObject *(*throw_argon_error)(ArErr *err, ArgonObject *type,
                                     const char *fmt, ...);
   bool (*is_error)(ArErr *err);
