@@ -1,4 +1,309 @@
-# SPDX-FileCopyrightText: 2025 William Bell
+# SPDX-FileCopyrightText: 2026 William Bell
 #
 # SPDX-License-Identifier: LGPL-3.0-or-later
 
+let __is_windows__ = platform.os == "windows"
+let __sep__        = "/"
+
+# ---------------------------------------------------------------------------
+# Internal helpers
+# ---------------------------------------------------------------------------
+
+let __starts_with__(s, prefix) = do
+    if (prefix.length > s.length) do
+        return false
+    return s[0:prefix.length] == prefix
+
+let __ends_with__(s, suffix) = do
+    if (suffix.length > s.length) do
+        return false
+    return s[s.length-suffix.length:] == suffix
+
+let __normalise__(p) = do
+    if (__is_windows__) do
+        p = p.replace("\\", "/")
+    let unc = __starts_with__(p, "//") && !__starts_with__(p, "///")
+    while ("//" in p) do
+        p = p.replace("//", "/")
+    if (unc) do
+        p = "/" + p
+    return p
+
+let __is_abs__(p) = do
+    p = __normalise__(p)
+    if (__is_windows__) do
+        return (p.length >= 3 && p[1] == ":" && p[2] == "/") || __starts_with__(p, "//")
+    return __starts_with__(p, "/")
+
+let __strip_trailing_sep__(p) = do
+    while (p.length > 1 && __ends_with__(p, "/")) do
+        p = p[0:p.length-1]
+    return p
+
+# ---------------------------------------------------------------------------
+# path.sep  — always "/"
+# path.os   — "windows" | "linux" | "darwin" | …
+# ---------------------------------------------------------------------------
+
+let sep = __sep__
+let os  = platform.os
+
+# ---------------------------------------------------------------------------
+# path.normalise(p)
+# ---------------------------------------------------------------------------
+
+let normalise(p) = do
+    return __strip_trailing_sep__(__normalise__(p))
+
+# ---------------------------------------------------------------------------
+# path.join(*parts)
+# ---------------------------------------------------------------------------
+
+let __join(parts) = do
+    let result = ""
+    for (part in parts) do
+        part = __normalise__(part)
+        if (__is_abs__(part)) do
+            result = part
+        else if (result == "" || __ends_with__(result, "/")) do
+            result = result + part
+        else do
+            result = result + "/" + part
+    return __strip_trailing_sep__(__normalise__(result))
+
+let join(*parts) = __join(parts)
+
+# ---------------------------------------------------------------------------
+# path.split(p)
+#   Returns tuple(head, tail)
+# ---------------------------------------------------------------------------
+
+let split(p) = do
+    p = __strip_trailing_sep__(__normalise__(p))
+    let idx = do
+        for (i in range(p.length-1, 0, -1)) do
+            if (p[i]=="/") return i
+        return -1
+    if (idx == -1) do
+        return tuple("", p)
+    let head = do
+        if (idx == 0) return "/"
+        return p[0:idx]
+    let tail = p[idx+1:]
+    return tuple(head, tail)
+
+# ---------------------------------------------------------------------------
+# path.dirname(p)
+# path.basename(p)
+# ---------------------------------------------------------------------------
+
+let dirname(p) = do
+    return split(p)[0]
+
+let basename(p) = do
+    return split(p)[1]
+
+# ---------------------------------------------------------------------------
+# path.splitext(p)
+#   Returns tuple(root, ext)
+# ---------------------------------------------------------------------------
+
+let splitext(p) = do
+    let base = basename(p)
+    let dir  = dirname(p)
+    let dot  = do
+        for (i in range(base.length-1, 0, -1)) do
+            if (base[i]==".") return i
+        return -1
+    if (dot <= 0) do
+        return tuple(p, "")
+    let root = base[0:dot]
+    let e    = base[dot:]
+    if (dir == "") do
+        return tuple(root, e)
+    return tuple(dir + "/" + root, e)
+
+# ---------------------------------------------------------------------------
+# path.ext(p)
+# ---------------------------------------------------------------------------
+
+let ext(p) = do
+    return splitext(p)[1]
+
+# ---------------------------------------------------------------------------
+# path.stem(p)
+# ---------------------------------------------------------------------------
+
+let stem(p) = do
+    return splitext(basename(p))[0]
+
+# ---------------------------------------------------------------------------
+# path.parts(p)
+# ---------------------------------------------------------------------------
+
+let parts(p) = do
+    p = __strip_trailing_sep__(__normalise__(p))
+    let result = []
+    let abs = __is_abs__(p)
+    if (abs) do
+        if (__is_windows__ && p.length >= 3 && p[1] == ":") do
+            result.append(p[0:3])
+            p = p[3:]
+        else do
+            result.append("/")
+            p = p[1:]
+    let pieces = p.split("/")
+    for (piece in pieces) do
+        if (piece != "") do
+            result.append(piece)
+    return result
+
+# ---------------------------------------------------------------------------
+# path.is_absolute(p)
+# path.is_relative(p)
+# ---------------------------------------------------------------------------
+
+let is_absolute(p) = do
+    return __is_abs__(__normalise__(p))
+
+let is_relative(p) = do
+    return !is_absolute(p)
+
+# ---------------------------------------------------------------------------
+# path.resolve(*parts)
+#   Lexically resolve "." and ".." — does not hit the filesystem.
+# ---------------------------------------------------------------------------
+
+let resolve(*parts) = do
+    let p = __join(parts)
+    let abs = __is_abs__(p)
+    let drive = ""
+
+    if (__is_windows__ && p.length >= 3 && p[1] == ":") do
+        drive = p[0:3]
+        p = p[3:]
+    else if (abs) do
+        p = p[1:]
+
+    let segments = p.split("/")
+    let stack = []
+    for (seg in segments) do
+        if (seg == "" || seg == ".") do
+            continue
+        if (seg == "..") do
+            if (stack.length > 0) do
+                stack.pop()
+            else if (!abs) do
+                stack.append("..")
+        else do
+            stack.append(seg)
+
+    let result = stack.join("/")
+    if (abs) do
+        return drive + "/" + result
+    if (result == "") return "."
+    return result
+
+# ---------------------------------------------------------------------------
+# path.relative_to(p, base)
+# ---------------------------------------------------------------------------
+
+let relative_to(p, base) = do
+    p    = resolve(p)
+    base = resolve(base)
+    if (!__starts_with__(p, base)) do
+        throw ValueError(`'$(p)' is not relative to '$(base)'`)
+    let rest = p[base.length:]
+    if (__starts_with__(rest, "/")) do
+        rest = rest[1:]
+    if (rest == "") return "."
+    return rest
+
+# ---------------------------------------------------------------------------
+# path.is_relative_to(p, base)
+# ---------------------------------------------------------------------------
+
+let is_relative_to(p, base) = do
+    try do
+        relative_to(p, base)
+        return true
+    catch do
+        return false
+
+# ---------------------------------------------------------------------------
+# path.with_name(p, name)
+# ---------------------------------------------------------------------------
+
+let with_name(p, name) = do
+    let d = dirname(p)
+    if (d == "") do
+        return name
+    return d + "/" + name
+
+# ---------------------------------------------------------------------------
+# path.with_stem(p, new_stem)
+# ---------------------------------------------------------------------------
+
+let with_stem(p, new_stem) = do
+    return with_name(p, new_stem + ext(p))
+
+# ---------------------------------------------------------------------------
+# path.with_ext(p, new_ext)
+# ---------------------------------------------------------------------------
+
+let with_ext(p, new_ext) = do
+    return with_name(p, stem(p) + new_ext)
+
+# ---------------------------------------------------------------------------
+# path.common_prefix(paths)
+# ---------------------------------------------------------------------------
+
+let common_prefix(paths) = do
+    if (paths.length == 0) do
+        return ""
+    let split_paths = []
+    for (p in paths) do
+        split_paths.append(parts(resolve(p)))
+    let ref = split_paths[0]
+    let common = []
+    for (i in range(ref.length)) do
+        let seg = ref[i]
+        let all_match = true
+        for (sp in split_paths) do
+            if (i >= sp.length || sp[i] != seg) do
+                all_match = false
+                break
+        if (!all_match) do
+            break
+        common.append(seg)
+    if (common.length == 0) do
+        return ""
+    if (common.length == 1 && (common[0] == "/" || __ends_with__(common[0], ":/"))) do
+        return common[0]
+    return common.join("/")
+
+# ---------------------------------------------------------------------------
+# path.expand_user(p)
+# ---------------------------------------------------------------------------
+
+let expand_user(p) = do
+    p = __normalise__(p)
+    if (!__starts_with__(p, "~")) do
+        return p
+    let home = do
+        if (__is_windows__) return __normalise__(env["USERPROFILE"])
+        return env["HOME"]
+    home = __strip_trailing_sep__(home)
+    if (p == "~") do
+        return home
+    if (__starts_with__(p, "~/")) do
+        return home + p[1:]
+    return p
+
+# ---------------------------------------------------------------------------
+# path.is_hidden(p)
+# ---------------------------------------------------------------------------
+
+let is_hidden(p) = do
+    let b = basename(p)
+    return __starts_with__(b, ".") && b != "." && b != ".."
