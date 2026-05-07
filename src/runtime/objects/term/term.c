@@ -7,6 +7,8 @@
 #include "../../../shell.h"
 #include "../../call/call.h"
 #include "../../objects/literals/literals.h"
+#include "../exceptions/exceptions.h"
+#include "../../../err.h"
 #include <inttypes.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -33,9 +35,25 @@ ARGON_METHOD(term, log, {
   return ARGON_NULL;
 })
 
+ARGON_METHOD(term, error, {
+  if (argc != 1)
+    return api->throw_argon_error(err, api->RuntimeError,
+                           "expects 1 argument, got %" PRIu64, argc);
+
+  if (!is_instance(argv[0], BaseException))
+    return api->throw_argon_error(err, api->RuntimeError,
+                           "expects instance of BaseException");
+
+  ArErr err = {argv[0]};
+
+  output_err(&err);
+
+  return ARGON_NULL;
+})
+
 ARGON_METHOD(term, input, {
   if (argc >= 2)
-    api->throw_argon_error(err, api->RuntimeError,
+    return api->throw_argon_error(err, api->RuntimeError,
                            "expects at most 1 argument, got %" PRIu64, argc);
   struct string prompt_str = {NULL, 0};
   if (argc == 1) {
