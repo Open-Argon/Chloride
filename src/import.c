@@ -111,7 +111,7 @@ ArgonObject *EXC_ARGON;
 const char CACHE_FOLDER[] = "__arcache__";
 const char FILE_IDENTIFIER[] = "ARBI";
 #define BYTECODE_EXTENTION "bin"
-const uint32_t bytecode_version_number = 2;
+const uint32_t bytecode_version_number = 3;
 const char version_string[] = "4.0.1";
 
 bool file_exists(const char *path) {
