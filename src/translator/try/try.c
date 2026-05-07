@@ -74,7 +74,7 @@ size_t translate_parsed_try(Translated *translated, ParsedTry *parsedTry,
   push_instruction_byte(translated, OP_COPY_TO_REGISTER);
   push_instruction_byte(translated, err_register);
   push_instruction_byte(translated, 0);
-  push_instruction_byte(translated, OP_THROW);
+  push_instruction_byte(translated, OP_QUIET_THROW);
 
   set_instruction_code(translated, is_exception_type,
                        translated->bytecode.size);

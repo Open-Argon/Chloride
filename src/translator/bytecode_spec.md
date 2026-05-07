@@ -410,6 +410,10 @@ exposes the value in the dictionary stored in register 0 to the current scope, a
 
 throws the error stored in register 0
 
+## OP_QUIET_THROW
+
+throws the error quietly (doesnt store the current source location) stored in register 0
+
 ## OP_EXCEPTION_CATCHER_PUSH
 
 pushes an exception catcher onto the exception catcher stack. when an exception occurs the error object is extracted, placed in register 0, it jumps to the position set to jump to, and pops the exception catcher off the exception catcher stack.

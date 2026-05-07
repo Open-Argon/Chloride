@@ -1460,7 +1460,8 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       [OP_LOAD_SLICE_CLASS] = &&DO_LOAD_SLICE_CLASS,
       [OP_DELETE_IDENTIFIER] = &&DO_DELETE_IDENTIFIER,
       [OP_LOAD_DELATTR_METHOD] = &&DO_LOAD_DELATTR_METHOD,
-      [OP_LOAD_DELITEM_METHOD] = &&DO_LOAD_DELITEM_METHOD};
+      [OP_LOAD_DELITEM_METHOD] = &&DO_LOAD_DELITEM_METHOD,
+      [OP_QUIET_THROW] = &&DO_QUIET_THROW};
   _state.head = 0;
 
   ArErr err = *err_ptr;
@@ -1475,6 +1476,8 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
     uint8_t *bc = bytecode->data;
     Translated *translated = &currentStackFrame->translated;
     RuntimeState *state = &currentStackFrame->state;
+    bool quiet_throw=false;
+
     while (ip < bytecode_size && !is_error(&err)) {
 
       if (KeyboardInterrupted) {
@@ -2409,6 +2412,18 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       continue;
     }
 
+
+    DO_QUIET_THROW: {
+      if (!is_instance(state->registers[0], BaseException)) {
+        err =
+            create_err(TypeError, "exceptions must derive from BaseException");
+        continue;
+      }
+      err.ptr = state->registers[0];
+      quiet_throw=true;
+      continue;
+    }
+
     DO_EXCEPTION_CATCHER_PUSH: {
       ErrorCatch err_catch;
       POP_U64(err_catch.jump_to);
@@ -2893,7 +2908,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
 
     if (is_error(&err)) {
       ArgonObject *stack_trace_obj = get_builtin_field(err.ptr, stack_trace);
-      if (stack_trace_obj && stack_trace_obj->type == TYPE_ARRAY) {
+      if (stack_trace_obj && stack_trace_obj->type == TYPE_ARRAY && !quiet_throw) {
         ArgonObject *frame = TUPLE_CREATE(
             4,
             (ArgonObject *[]){new_string_object_null_terminated(
