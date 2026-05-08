@@ -1,24 +1,30 @@
-let stringify(value) = do
+let stringify(value, pretty=false, parents=null) = do
+    if (parents==null) parents = []
+    else if (value in parents) throw ValueError("circular JSON serialisation")
     if (is_instance(value, string) || is_instance(value, number) || value==null || value==true || value==false) do
         return value.__repr__()
     else if (is_instance(value, dictionary)) do
         output = ["{"]
         let is_first = true
+        parents.append(value)
         for (keyval in value) do
             if (!is_first) output.append(",")
-            output.append(stringify(string(keyval[0])))
+            output.append(stringify(string(keyval[0]), pretty=pretty, parents=parents))
             output.append(":")
-            output.append(stringify(keyval[1]))
+            output.append(stringify(keyval[1], pretty=pretty, parents=parents))
             is_first=false
+        parents.pop()
         output.append("}")
         return output.join("")
     else if (is_instance(value, array)) do
         output = ["["]
         let is_first = true
+        parents.append(value)
         for (item in value) do
             if (!is_first) output.append(",")
-            output.append(stringify(item))
+            output.append(stringify(item, pretty=pretty, parents=parents))
             is_first = false
+        parents.pop()
         output.append("]")
         return output.join("")
     throw TypeError(`Object of type $(type(value).__name__) is not JSON serialisable`)

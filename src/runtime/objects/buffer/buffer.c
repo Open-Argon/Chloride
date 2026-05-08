@@ -7,13 +7,14 @@
 
 #include "../../../err.h"
 #include "../../../memory.h"
-#include "../exceptions/exceptions.h"
 #include "../array/array.h"
+#include "../exceptions/exceptions.h"
 #include "../slice/slice.h"
 #include "../string/string.h"
 #include "../tuple/tuple.h"
 #include <inttypes.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -58,9 +59,12 @@ ARGON_METHOD(ARGON_BUFFER_TYPE, of_size, {
   (void)state;
   if (api->fix_to_arg_size(1, argc, err))
     return api->ARGON_NULL;
-  size_t n = api->argon_to_i64(argv[0], err);
+  int64_t n = api->argon_to_i64(argv[0], err);
   if (api->is_error(err))
     return api->ARGON_NULL;
+  if (n < 0)
+    return api->throw_argon_error(
+        err, ValueError, "buffer cannot have a negative size. got %" PRId64, n);
   return create_ARGON_BUFFER_object(n);
 })
 
@@ -219,9 +223,9 @@ ARGON_METHOD(ARGON_BUFFER_TYPE, split, {
   darray_armem_init(object->value.as_array, sizeof(ArgonObject *), 0);
 
   char *start = (char *)self.data;
-  char *end   = (char *)self.data + self.size;
+  char *end = (char *)self.data + self.size;
   size_t dlen = delim.size;
-  char *p     = start;
+  char *p = start;
 
   while (p <= end - dlen) {
     if (memcmp(p, delim.data, dlen) == 0) {
@@ -230,7 +234,8 @@ ARGON_METHOD(ARGON_BUFFER_TYPE, split, {
       ArgonObject *item = api->create_argon_buffer(seg_size);
       struct buffer slice = api->argon_buffer_to_buffer(item, err);
       memcpy(slice.data, start, seg_size);
-      darray_armem_insert(object->value.as_array, object->value.as_array->size, &item);
+      darray_armem_insert(object->value.as_array, object->value.as_array->size,
+                          &item);
 
       p += dlen;
       start = p;
@@ -244,7 +249,8 @@ ARGON_METHOD(ARGON_BUFFER_TYPE, split, {
   ArgonObject *item = api->create_argon_buffer(seg_size);
   struct buffer slice = api->argon_buffer_to_buffer(item, err);
   memcpy(slice.data, start, seg_size);
-  darray_armem_insert(object->value.as_array, object->value.as_array->size, &item);
+  darray_armem_insert(object->value.as_array, object->value.as_array->size,
+                      &item);
 
   return object;
 })
