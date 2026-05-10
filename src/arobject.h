@@ -57,7 +57,7 @@
   X(__getitem__)                                                               \
   X(__setitem__)                                                               \
   X(__delitem__)                                                               \
-  X(get_value)                                                                 \
+  X(value_get)                                                                 \
   X(__hash__)                                                                  \
   X(__repr__)                                                                  \
   X(append)                                                                    \

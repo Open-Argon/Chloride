@@ -255,13 +255,13 @@ ARGON_METHOD(ARGON_DICTIONARY_TYPE, __delitem__, {
   return ARGON_NULL;
 })
 
-ARGON_METHOD(ARGON_DICTIONARY_TYPE, get_value, {
+ARGON_METHOD(ARGON_DICTIONARY_TYPE, value_get, {
 
   (void)api;
   (void)state;
   if (argc <2 || argc>3) {
     *err = create_err(RuntimeError,
-                      "get_value expects 2 or 3 arguments, got %" PRIu64, argc);
+                      "value_get expects 2 or 3 arguments, got %" PRIu64, argc);
     return ARGON_NULL;
   }
   ArgonObject *object = argv[0];
@@ -347,7 +347,7 @@ void create_ARGON_DICTIONARY_TYPE() {
   add_builtin_field(ARGON_DICTIONARY_TYPE, __getattr__, getter);
   add_builtin_field(ARGON_DICTIONARY_TYPE, __delattr__, deleter);
   MOUNT_ARGON_METHOD(ARGON_DICTIONARY_TYPE, __string__)
-  MOUNT_ARGON_METHOD(ARGON_DICTIONARY_TYPE, get_value)
+  MOUNT_ARGON_METHOD(ARGON_DICTIONARY_TYPE, value_get)
   MOUNT_ARGON_METHOD(ARGON_DICTIONARY_TYPE, __contains__)
   MOUNT_ARGON_METHOD(ARGON_DICTIONARY_TYPE, __iter__)
   MOUNT_ARGON_METHOD(ARGON_DICTIONARY_TYPE, __dictionary__)
