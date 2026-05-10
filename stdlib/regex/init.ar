@@ -1,0 +1,56 @@
+# SPDX-FileCopyrightText: 2025 William Bell
+#
+# SPDX-License-Identifier: LGPL-3.0-or-later
+import "path" as path
+import "./exceptions" expose RegexError
+
+let __regex__ = load_native_code(path.resolve(program.file.directory, "native", "bin", "regex"+platform.lib_ext))
+
+class Regex do
+  let __static_cache__ = {}
+
+  this.__new__(cls, pattern) = do
+    let instance = super.__init__(cls, pattern)
+    instance.__inited = false
+    return instance
+
+  this.__init__(self, pattern) = do
+    self.__inited = true
+    self.__re__ = __regex__.compile(pattern, RegexError)
+    self.is_intern = false
+    self.pattern = pattern
+
+  this.close(self) = do
+    if (self.is_intern) throw RuntimeError("Can't free regular expression that is static")
+    __regex__.re_free(self.__re__)
+    delete self.__re__
+
+  this.intern(pattern) = do
+    if (pattern in __static_cache__) do
+      return __static_cache__[pattern]
+    let instance = this(pattern)
+    __static_cache__[pattern] = instance
+    instance.is_intern = true
+    return instance
+
+  this.match(self, subject) = __regex__.match(self.__re__, subject)
+
+  this.find(self, subject) = do
+    let results = []
+    __regex__.find(self.__re__, subject, results.append, results)
+    return results
+
+  this.find_all(self, subject) = do
+    let results = []
+    __regex__.find_all(self.__re__, subject, results.append, results, results.append, () = [])
+    return results
+
+  this.replace(self, subject, replacement) = __regex__.replace(self.__re__, subject, replacement)
+
+  this.replace_all(self, subject, replacement) = __regex__.replace_all(self.__re__, subject, replacement)
+
+  this.split(self, subject) = do
+    let results = []
+    __regex__.split(self.__re__, subject, results.append, results)
+    return results
+

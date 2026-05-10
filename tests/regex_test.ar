@@ -1,0 +1,47 @@
+import "regex" expose Regex
+
+# Basic match check
+let re = Regex("\\d+")
+term.log(re.match("hello 123"))  # true
+term.log(re.match("hello"))      # false
+re.close()
+
+# Find first match and captures
+re = Regex("(\\w+)@(\\w+\\.\\w+)")
+let result = re.find("contact me at foo@example.com please")
+# result[0] = "foo@example.com"
+# result[1] = "foo"
+# result[2] = "example.com"
+re.close()
+
+# Find all matches
+re = Regex("\\d+")
+results = re.find_all("1 fish 2 fish 3 fish")
+# results = [["1"], ["2"], ["3"]]
+re.close()
+
+# Replace first match
+re = Regex("\\d+")
+term.log(re.replace("hello 123 world 456", "NUM"))  # "hello NUM world 456"
+re.close()
+
+# Replace all matches
+re = Regex("\\d+")
+term.log(re.replace_all("hello 123 world 456", "NUM"))  # "hello NUM world NUM"
+re.close()
+
+# Replace with backreferences
+re = Regex("(\\w+)@(\\w+\\.\\w+)")
+term.log(re.replace("foo@example.com", "$2/$1"))  # "example.com/foo"
+re.close()
+
+# Split
+re = Regex(",\\s*")
+let parts = re.split("one, two,   three,four")
+# parts = ["one", "two", "three", "four"]
+re.close()
+
+# Interned pattern — no need to close, lives forever
+let EMAIL = Regex.intern("(\\w+)@(\\w+\\.\\w+)")
+term.log(EMAIL.match("foo@example.com"))  # true
+# EMAIL.close() would throw RuntimeError

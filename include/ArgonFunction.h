@@ -22,4 +22,14 @@
   api->register_ArgonObject(reg, #NAME,                                        \
                             api->create_argon_native_function(#NAME, NAME));
 
+#define INIT_ARGON_MODULE(...)                                                       \
+  void argon_module_init(ArgonState *vm, ArgonNativeAPI *api, ArgonError *err, \
+                         ArgonObjectRegister *reg) {                           \
+    (void)vm;                                                                  \
+    (void)api;                                                                 \
+    (void)err;                                                                 \
+    (void)reg;                                                                 \
+    __VA_ARGS__                                                                \
+  }
+
 #endif // Argon_NATIVE_FUNCTION_H

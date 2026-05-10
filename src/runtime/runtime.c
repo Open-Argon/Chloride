@@ -666,6 +666,51 @@ ARGON_METHOD(BASE_CLASS, __setattr__, {
   return argv[2];
 })
 
+ARGON_METHOD(BASE_CLASS, __delattr__, {
+  (void)api;
+  (void)state;
+  if (argc != 2) {
+    *err = create_err(RuntimeError,
+                      "__delattr__ expects 2 argument, got %" PRIu64, argc);
+    return ARGON_NULL;
+  }
+  char *name_text = argv[1]->value.as_str->data;
+  size_t name_len = argv[1]->value.as_str->length;
+
+  size_t deleter_len = name_len + 4; // "get_" = 4
+  char *deleter_name = malloc(deleter_len);
+
+  memcpy(deleter_name, "del_", 4);
+  memcpy(deleter_name + 4, name_text, name_len);
+
+  /* If your get_field_l needs a hash, recompute it */
+  uint64_t deleter_hash =
+      siphash64_bytes(deleter_name, deleter_len, siphash_key_fixed);
+
+  ArgonObject *deleter =
+      get_field_for_class_l(get_builtin_field(argv[0], __class__), deleter_name,
+                            deleter_hash, deleter_len, argv[0]);
+  free(deleter_name);
+  if (deleter)
+    return argon_call(deleter, 0, NULL, NULL, err, state);
+
+  if (!argv[1]->value.as_str->hash)
+    argv[1]->value.as_str->hash =
+        siphash64_bytes(argv[1]->value.as_str->data,
+                        argv[1]->value.as_str->length, siphash_key_fixed);
+
+  if (!get_field_l(argv[0], argv[1]->value.as_str->data,
+                   argv[1]->value.as_str->hash, argv[1]->value.as_str->length,
+                   true, true))
+    return api->throw_argon_error(
+        err, RuntimeError, "attribute '%*.s' doesn't exist",
+        (int)argv[1]->value.as_str->length, argv[1]->value.as_str->data);
+
+  add_field_l(argv[0], argv[1]->value.as_str->data, argv[1]->value.as_str->hash,
+              argv[1]->value.as_str->length, NULL);
+  return argv[2];
+})
+
 ARGON_METHOD(BASE_CLASS, __string__, {
   (void)api;
   (void)state;
@@ -785,10 +830,8 @@ ARGON_METHOD(ARGON_BOOL_TYPE, __new__, {
                       argc);
     return ARGON_NULL;
   }
-  ArgonObject *self = argv[0];
   ArgonObject *object = argv[1];
 
-  self->type = TYPE_STRING;
   ArgonObject *boolean_convert_method = get_builtin_field_for_class(
       get_builtin_field(object, __class__), __boolean__, object);
   if (boolean_convert_method) {
@@ -1111,6 +1154,7 @@ void bootstrap_types() {
       create_argon_native_function("RENDER_TEMPLATE", RENDER_TEMPLATE);
   MOUNT_ARGON_METHOD(BASE_CLASS, __getattribute__)
   MOUNT_ARGON_METHOD(BASE_CLASS, __setattr__)
+  MOUNT_ARGON_METHOD(BASE_CLASS, __delattr__)
 
   ARGON_STRING_ITERATOR_TYPE = new_class();
 
@@ -1408,7 +1452,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       [OP_POP_SCOPE] = &&DO_POP_SCOPE,
       [OP_INIT_CALL] = &&DO_INIT_CALL,
       [OP_INSERT_ARG] = &&DO_INSERT_ARG,
-      [OP_SET_KEY_WORD_ARG]=&&DO_SET_KEY_WORD_ARG,
+      [OP_SET_KEY_WORD_ARG] = &&DO_SET_KEY_WORD_ARG,
       [OP_CALL] = &&DO_CALL,
       [OP_SOURCE_LOCATION] = &&DO_SOURCE_LOCATION,
       [OP_LOAD_BOOL] = &&DO_LOAD_BOOL,
@@ -1476,7 +1520,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
     uint8_t *bc = bytecode->data;
     Translated *translated = &currentStackFrame->translated;
     RuntimeState *state = &currentStackFrame->state;
-    bool quiet_throw=false;
+    bool quiet_throw = false;
 
     while (ip < bytecode_size && !is_error(&err)) {
 
@@ -1879,16 +1923,20 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       POP_U64(offset);
       uint64_t hash;
       POP_U64(hash);
-      struct string_struct* key = ar_alloc(sizeof(struct string_struct));
-      *key = (struct string_struct){hash,arena_get(&translated->constants, offset), length};
-      if (!state->call_instance->kwargs) state->call_instance->kwargs = createHashmap_GC();
-      hashmap_insert_GC(state->call_instance->kwargs, hash, key, state->registers[0], 0);
+      struct string_struct *key = ar_alloc(sizeof(struct string_struct));
+      *key = (struct string_struct){
+          hash, arena_get(&translated->constants, offset), length};
+      if (!state->call_instance->kwargs)
+        state->call_instance->kwargs = createHashmap_GC();
+      hashmap_insert_GC(state->call_instance->kwargs, hash, key,
+                        state->registers[0], 0);
       continue;
     }
     DO_CALL: {
       state->head = ip;
       run_call(state->call_instance->to_call, state->call_instance->args_length,
-               state->call_instance->args, state->call_instance->kwargs, state, false, &err);
+               state->call_instance->args, state->call_instance->kwargs, state,
+               false, &err);
       state->call_instance = (*state->call_instance).previous;
       ip = currentStackFrame->state.head;
       bytecode = &currentStackFrame->translated.bytecode;
@@ -2412,7 +2460,6 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       continue;
     }
 
-
     DO_QUIET_THROW: {
       if (!is_instance(state->registers[0], BaseException)) {
         err =
@@ -2420,7 +2467,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
         continue;
       }
       err.ptr = state->registers[0];
-      quiet_throw=true;
+      quiet_throw = true;
       continue;
     }
 
@@ -2908,7 +2955,8 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
 
     if (is_error(&err)) {
       ArgonObject *stack_trace_obj = get_builtin_field(err.ptr, stack_trace);
-      if (stack_trace_obj && stack_trace_obj->type == TYPE_ARRAY && !quiet_throw) {
+      if (stack_trace_obj && stack_trace_obj->type == TYPE_ARRAY &&
+          !quiet_throw) {
         ArgonObject *frame = TUPLE_CREATE(
             4,
             (ArgonObject *[]){new_string_object_null_terminated(

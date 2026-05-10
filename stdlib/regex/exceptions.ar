@@ -1,0 +1,1 @@
+class RegexError(Exception) null

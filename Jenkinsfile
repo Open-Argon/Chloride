@@ -190,6 +190,8 @@ pipeline {
                 sh '''
                     cp LICENSE.txt out/linux/build/dist/
                     cp -r LICENSES out/linux/build/dist/
+                    cp -r include out/windows/build/dist/
+                    
                     tar -czf "$OUTPUT_FILE" -C out/linux/build/dist .
                 '''
                 archiveArtifacts artifacts: "${env.OUTPUT_FILE}", allowEmptyArchive: false, fingerprint: true
@@ -332,6 +334,7 @@ SPEC
                     set -e
                     cp LICENSE.txt out/windows/build/dist/
                     cp -r LICENSES out/windows/build/dist/
+                    cp -r include out/windows/build/dist/
                     
                     (
                     cd "out/windows/build/dist" && zip -r "../../../../$OUTPUT_FILE" .

@@ -13,16 +13,21 @@ for arg in "$@"; do
     fi
 done
 
-# Require stdlib dir explicitly (fail fast instead of guessing)
 if [ -z "$STDLIB_DIR" ]; then
-    echo "Usage: $0 <stdlib-path> [make-args...]" >&2
-    exit 1
+    STDLIB_DIR="stdlib"
+    echo "defaulting to $STDLIB_DIR"
 fi
 
 STDLIB_DIR="$(cd "$STDLIB_DIR" && pwd)"
 
 for lib in "$STDLIB_DIR"/*/; do
-    if [ -f "$lib/Makefile" ]; then
+    if [ -f "$lib/build.sh" ]; then
+        echo ">>> Building $(basename "$lib") (via build.sh)..."
+        bash "$lib/build.sh" "${MAKE_ARGS[@]}"
+        if [ $? -ne 0 ]; then
+            echo "!!! Failed to build $(basename "$lib")" >&2
+        fi
+    elif [ -f "$lib/Makefile" ]; then
         echo ">>> Building $(basename "$lib")..."
         make -C "$lib" clean && \
         make -C "$lib" "${MAKE_ARGS[@]}"

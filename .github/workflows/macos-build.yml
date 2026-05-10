@@ -68,6 +68,8 @@ jobs:
           OUTPUT_FILE="archives/argon-${BUILD_NAME}-macos-arm64.tar.gz"
           cp LICENSE.txt out/macos/build/dist/
           cp -r LICENSES out/macos/build/dist/
+          cp -r include out/windows/build/dist/
+          
           tar -czf "$OUTPUT_FILE" -C out/macos/build/dist .
           echo "Packaged $OUTPUT_FILE"
 
