@@ -190,7 +190,7 @@ pipeline {
                 sh '''
                     cp LICENSE.txt out/linux/build/dist/
                     cp -r LICENSES out/linux/build/dist/
-                    cp -r include out/windows/build/dist/
+                    cp -r include out/linux/build/dist/
                     
                     tar -czf "$OUTPUT_FILE" -C out/linux/build/dist .
                 '''
