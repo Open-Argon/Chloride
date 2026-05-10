@@ -45,4 +45,4 @@ git clone https://git.wbell.dev/github-mirror/pcre2 $SCRIPT_DIR/pcre2 \
 
 (cd $SCRIPT_DIR && make $@)
 
-# rm -rf $SCRIPT_DIR/pcre2
+rm -rf $SCRIPT_DIR/pcre2
