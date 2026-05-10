@@ -12,12 +12,14 @@ let result = re.find("contact me at foo@example.com please")
 # result[0] = "foo@example.com"
 # result[1] = "foo"
 # result[2] = "example.com"
+term.log(result)
 re.close()
 
 # Find all matches
 re = Regex("\\d+")
 results = re.find_all("1 fish 2 fish 3 fish")
 # results = [["1"], ["2"], ["3"]]
+term.log(results)
 re.close()
 
 # Replace first match

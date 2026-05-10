@@ -119,7 +119,7 @@ ARGON_FUNCTION(find, {
   return list;
 })
 
-// find_all(re_buf, subject, append_fn, outer_list, inner_append_fn, inner_list_factory) -> outer_list
+// find_all(re_buf, subject, append_fn, outer_list, inner_list_factory, inner_list_get_append_method) -> outer_list
 // For each match, calls inner_list_factory() to get a new list, appends captures into it,
 // then appends that inner list into outer_list via append_fn
 ARGON_FUNCTION(find_all, {
@@ -133,8 +133,8 @@ ARGON_FUNCTION(find_all, {
 
   ArgonObject *append_fn      = argv[2]; // outer list append
   ArgonObject *outer_list     = argv[3];
-  ArgonObject *inner_append   = argv[4]; // inner list append
-  ArgonObject *list_factory   = argv[5]; // callable -> new empty list
+  ArgonObject *list_factory   = argv[4]; // callable -> new empty list
+  ArgonObject *list_factory_get_append   = argv[5]; // callable -> new empty list
 
   pcre2_match_data *md = pcre2_match_data_create_from_pattern(re, NULL);
   PCRE2_SIZE offset = 0;
@@ -146,6 +146,7 @@ ARGON_FUNCTION(find_all, {
 
     // create a new inner list for this match's captures
     ArgonObject *inner_list = api->call(list_factory, 0, NULL, NULL, err, state);
+    ArgonObject *inner_list_append = api->call(list_factory_get_append, 1, (ArgonObject*[]){inner_list}, NULL, err, state);
     if (api->is_error(err)) {
       pcre2_match_data_free(md);
       return api->ARGON_NULL;
@@ -153,7 +154,7 @@ ARGON_FUNCTION(find_all, {
 
     for (int i = 0; i < rc; i++) {
       ArgonObject *s = make_string(api, subject.data + ov[2*i], ov[2*i+1] - ov[2*i]);
-      api->call(inner_append, 1, (ArgonObject *[]){s}, NULL, err, state);
+      api->call(inner_list_append, 1, (ArgonObject *[]){s}, NULL, err, state);
       if (api->is_error(err)) {
         pcre2_match_data_free(md);
         return api->ARGON_NULL;

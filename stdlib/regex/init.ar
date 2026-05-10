@@ -42,7 +42,7 @@ class Regex do
 
   this.find_all(self, subject) = do
     let results = []
-    __regex__.find_all(self.__re__, subject, results.append, results, results.append, () = [])
+    __regex__.find_all(self.__re__, subject, results.append, results, () = [], (arr)=arr.append)
     return results
 
   this.replace(self, subject, replacement) = __regex__.replace(self.__re__, subject, replacement)
