@@ -253,6 +253,26 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
             }
           }
         }
+        if (!found) {
+          // still not found — goes to leftover_kwargs or error
+          if (object->value.argon_fn->kwargs.data == NULL) {
+            ArgonObject *object_name =
+                get_builtin_field_for_class(object, __name__, original_object);
+            *err = create_err(
+                TypeError, "%.*s got an unexpected keyword argument '%.*s'",
+                (int)object_name->value.as_str->length,
+                object_name->value.as_str->data, (int)name->length, name->data);
+            free(bound);
+            free(kwargs_array);
+            return;
+          }
+          if (leftover_kwargs == NULL)
+            leftover_kwargs = createHashmap_GC();
+          hashmap_insert_GC(
+              leftover_kwargs, name->hash,
+              new_string_object(name->data, name->length, name->hash), value,
+              0);
+        }
       }
     }
 
@@ -284,7 +304,7 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
       darray_armem_init(array_obj->value.as_array, sizeof(ArgonObject *),
                         n_vargs);
       size_t vi = 0;
-      for (size_t i = next_positional; i < argc && vi < n_vargs; i++)
+      for (size_t i = consumed; i < argc && vi < n_vargs; i++)
         ((ArgonObject **)array_obj->value.as_array->data)[vi++] = argv[i];
 
       struct string_struct vkey = object->value.argon_fn->vargs;
@@ -310,6 +330,7 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
     for (size_t i = positional_start; i < n_params; i++) {
       if (!bound[i]) {
         struct string_struct key = object->value.argon_fn->parameters[i];
+
         ArgonObject *object_name =
             get_builtin_field_for_class(object, __name__, original_object);
         *err = create_err(TypeError, "%.*s missing required argument '%.*s'",
