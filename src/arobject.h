@@ -83,7 +83,8 @@
   X(lower)                                                                     \
   X(title)                                                                     \
   X(replace)                                                                   \
-  X(strip)
+  X(strip)                                                                     \
+  X(index_of)
 
 typedef enum {
 #define X(name) name,

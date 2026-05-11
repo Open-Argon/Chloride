@@ -659,6 +659,65 @@ ARGON_METHOD(ARGON_STRING_TYPE, __contains__, {
   return ARGON_FALSE;
 })
 
+ARGON_METHOD(ARGON_STRING_TYPE, index_of, {
+  if (argc != 2 && argc != 3) {
+    *err = create_err(RuntimeError,
+                      "index_of expects 2 or 3 arguments, got %" PRIu64, argc);
+    return ARGON_NULL;
+  }
+
+  struct string self = api->argon_to_string(argv[0], err);
+  if (api->is_error(err))
+    return ARGON_NULL;
+
+  struct string needle = api->argon_to_string(argv[1], err);
+  if (api->is_error(err))
+    return ARGON_NULL;
+
+  int64_t from = 0;
+  if (argc == 3) {
+    from = api->argon_to_i64(argv[2], err);
+    if (api->is_error(err))
+      return ARGON_NULL;
+    if (from < 0)
+      from += (int64_t)self.length;
+    if (from < 0)
+      from = 0;
+    if (from >= (int64_t)self.length)
+      return new_number_object_from_int64(-1);
+  }
+
+  // empty needle always found at from
+  if (needle.length == 0)
+    return new_number_object_from_int64(from);
+
+  // needle longer than remaining string
+  if (needle.length > self.length - (size_t)from)
+    return new_number_object_from_int64(-1);
+
+  // Boyer-Moore-Horspool
+  size_t skip[256];
+  for (size_t i = 0; i < 256; i++)
+    skip[i] = needle.length;
+  for (size_t i = 0; i < needle.length - 1; i++)
+    skip[(unsigned char)needle.data[i]] = needle.length - 1 - i;
+
+  size_t i = (size_t)from + needle.length - 1;
+  while (i < self.length) {
+    size_t j = needle.length - 1;
+    size_t k = i;
+    while (self.data[k] == needle.data[j]) {
+      if (j == 0)
+        return new_number_object_from_int64((int64_t)k);
+      k--;
+      j--;
+    }
+    i += skip[(unsigned char)self.data[i]];
+  }
+
+  return new_number_object_from_int64(-1);
+})
+
 char *char_chr(uint64_t codepoint, size_t *len_out) {
   char *out;
 
