@@ -28,7 +28,7 @@ ifeq ($(TARGET_OS),windows)
 	SHARED_LDFLAGS := -shared
 	PLATFORM_LDFLAGS := -lbcrypt
 
-	PLATFORM_CFLAGS := 
+	PLATFORM_CFLAGS := -DPCRE2_STATIC
 
 else ifeq ($(UNAME_S),Darwin)
 
