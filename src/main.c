@@ -15,6 +15,7 @@
 #include "runtime/objects/string/string.h"
 #include "runtime/runtime.h"
 #include "shell.h"
+#include "version.h"
 
 #include <locale.h>
 #include <signal.h>
@@ -52,7 +53,7 @@ void sigint_handler(int signum) { KeyboardInterrupted = signum; }
 
 int main(int argc, char *argv[]) {
   if (argc >= 2 && strcmp(argv[1], "--version") == 0) {
-    printf("%s\n", version_string);
+    printf("%s\n", VERSION);
     return 0;
   }
   setlocale(LC_ALL, "");

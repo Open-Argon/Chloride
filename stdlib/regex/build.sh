@@ -2,7 +2,6 @@
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
-rm -rf $SCRIPT_DIR/pcre2
 make -C $SCRIPT_DIR clean
 
 # Parse make-style arguments
@@ -25,14 +24,7 @@ fi
 
 echo "Building for $TARGET_OS using $CC..."
 
-
-git clone https://git.wbell.dev/github-mirror/pcre2 $SCRIPT_DIR/pcre2 \
-    --branch main \
-    -c advice.detachedHead=false --depth 1
-
-(cd $SCRIPT_DIR/pcre2 && git submodule update --init)
-
-(cd $SCRIPT_DIR/pcre2 && \
+(cd ./external/pcre2 && \
     cmake -G Ninja \
     -DPCRE2_SUPPORT_JIT=ON \
     -DCMAKE_C_COMPILER=$CC \
@@ -40,9 +32,7 @@ git clone https://git.wbell.dev/github-mirror/pcre2 $SCRIPT_DIR/pcre2 \
     -DPCRE2_BUILD_TESTS=OFF \
     -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
     -DCMAKE_BUILD_WITH_INSTALL_RPATH=ON \
-    -B $SCRIPT_DIR/pcre2/build && \
-    cmake --build $SCRIPT_DIR/pcre2/build)
+    -B $SCRIPT_DIR/native/pcre2/build && \
+    cmake --build $SCRIPT_DIR/native/pcre2/build)
 
 (cd $SCRIPT_DIR && make $@)
-
-rm -rf $SCRIPT_DIR/pcre2

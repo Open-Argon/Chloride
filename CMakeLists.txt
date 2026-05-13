@@ -55,6 +55,21 @@ if(MINGW)
     )
 endif()
 
+# Get version from git tag
+execute_process(
+    COMMAND git describe --tags
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    OUTPUT_VARIABLE GIT_VERSION
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    ERROR_QUIET
+)
+
+if(NOT GIT_VERSION)
+    set(GIT_VERSION "unknown")
+endif()
+
+add_compile_definitions(VERSION="${GIT_VERSION}")
+
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
 target_include_directories(argon PRIVATE
     ${CMAKE_SOURCE_DIR}/external/cwalk/include

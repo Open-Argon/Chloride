@@ -68,7 +68,7 @@ ARGON_INCLUDE ?= ../../include
 # ------------------------------------------------------------
 # Sources
 # ------------------------------------------------------------
-SRC := $(wildcard $(SRC_DIR)/*.c) ./pcre2/build/libpcre2-8.a
+SRC := $(wildcard $(SRC_DIR)/*.c) ./native/pcre2/build/libpcre2-8.a
 OUT := $(BIN_DIR)/$(LIB).$(LIB_EXT)
 
 # ------------------------------------------------------------
@@ -92,7 +92,7 @@ $(OUT): $(SRC)
 		$(PLATFORM_CFLAGS) \
 		$(CFLAGS) \
 		-I$(ARGON_INCLUDE) \
-		-I./pcre2/build/interface \
+		-I./native/pcre2/build/interface \
 		$(SHARED_LDFLAGS) \
 		-o $@ \
 		$^ \

@@ -10,7 +10,6 @@
 #include "../call/call.h"
 #include "../objects/buffer/buffer.h"
 #include "../objects/exceptions/exceptions.h"
-#include "../objects/functions/functions.h"
 #include "../objects/literals/literals.h"
 #include "../objects/number/number.h"
 #include "../objects/object.h"

@@ -31,6 +31,7 @@
 #else
 #include "../external/linenoise/linenoise.h"
 #endif
+#include "version.h"
 
 void handle_sigint(int sig) {
   printf("\nBye :)\n");
@@ -208,7 +209,7 @@ int shell() {
          "type \"license\" for details.\n"
          "You can learn more about what the term \"free software\" means at "
          "https://www.gnu.org/philosophy/free-sw.html\n\n",
-         version_string);
+         VERSION);
 
   ArgonObject *output_object = create_argon_native_function("log", term_log);
   char *totranslate = NULL;

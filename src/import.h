@@ -14,8 +14,6 @@ extern char EXC_DIR[PATH_MAX];
 extern ArgonObject *CWD_ARGON;
 extern ArgonObject *EXC_ARGON;
 
-extern const char version_string[];
-
 int get_executable_path(char*path, size_t size);
 
 extern struct hashmap_GC *importing_hash_table;

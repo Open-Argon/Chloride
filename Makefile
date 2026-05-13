@@ -55,6 +55,8 @@ CFLAGS  = $(ARCHFLAGS) -Wall -Wextra -Wno-unused-function \
           -Iexternal/bdwgc/include \
 		  $(shell pkg-config --cflags gmp mpfr bdw-gc)
 
+VERSION := $(shell git describe --tags)
+CFLAGS += -DVERSION=\"$(VERSION)\"
 # Strip flag (only for non-debug builds)
 STRIP_FLAG = -s
 
