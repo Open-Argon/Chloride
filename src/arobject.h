@@ -11,6 +11,7 @@
 #include "dynamic_array/darray.h"
 #include "runtime/internals/dynamic_array_armem/darray_armem.h"
 #include "runtime/internals/hashmap/hashmap.h"
+#include "../include/Argon.h"
 #include <gmp.h>
 #include <limits.h>
 #include <stddef.h>
@@ -98,108 +99,17 @@ typedef struct RuntimeState RuntimeState;
 
 typedef struct ArgonObject ArgonObject; // forward declaration
 
-typedef struct {
+struct ArErr {
   ArgonObject *ptr;
-} ArErr;
+};
+
+#undef ArgonError
+
+
 
 typedef struct ArgonNativeAPI ArgonNativeAPI;
 
 typedef struct hashmap_GC hashmap_GC;
-
-typedef hashmap_GC ArgonHashmap;
-
-typedef ArgonObject *(*native_fn)(size_t argc, ArgonObject **argv,
-                                  ArgonHashmap *kwargs, ArErr *err,
-                                  RuntimeState *state, ArgonNativeAPI *api);
-
-struct rational {
-  int64_t n;
-  int64_t d;
-};
-
-struct string {
-  char *data;
-  size_t length;
-};
-
-struct buffer {
-  void *data;
-  size_t size;
-};
-
-struct array {
-  ArgonObject **items;
-  size_t size;
-};
-
-struct ArgonNativeAPI {
-  void (*register_ArgonObject)(hashmap_GC *reg, char *name, ArgonObject *obj);
-  ArgonObject *(*create_argon_native_function)(char *name, native_fn);
-  ArgonObject *(*call)(ArgonObject *original_object, size_t argc,
-                       ArgonObject **argv, ArgonHashmap *kwargs, ArErr *err,
-                       RuntimeState *state);
-  ArgonObject *(*throw_argon_error)(ArErr *err, ArgonObject *type,
-                                    const char *fmt, ...);
-  bool (*is_error)(ArErr *err);
-  bool (*fix_to_arg_size)(size_t limit, size_t argc, ArErr *err);
-
-  // numbers
-  ArgonObject *(*i64_to_argon)(int64_t);
-  ArgonObject *(*double_to_argon)(double);
-  ArgonObject *(*rational_to_argon)(struct rational);
-  int64_t (*argon_to_i64)(ArgonObject *, ArErr *);
-  double (*argon_to_double)(ArgonObject *, ArErr *);
-  struct rational (*argon_to_rational)(ArgonObject *, ArErr *);
-
-  // strings
-  ArgonObject *(*string_to_argon)(struct string);
-  struct string (*argon_to_string)(ArgonObject *, ArErr *);
-
-  // buffers
-  ArgonObject *(*create_argon_buffer)(size_t size);
-  void (*resize_argon_buffer)(ArgonObject *obj, ArErr *err, size_t new_size);
-  struct buffer (*argon_buffer_to_buffer)(ArgonObject *obj, ArErr *err);
-
-  // literals
-  ArgonObject *ARGON_NULL;
-  ArgonObject *ARGON_TRUE;
-  ArgonObject *ARGON_FALSE;
-
-  int (*register_thread)();
-  int (*unregister_thread)();
-
-  ArgonObject *(*create_err_object)();
-  ArErr *(*err_object_to_err)(ArgonObject *, ArErr *);
-  RuntimeState *(*new_state)(ArgonObject **registers);
-  void (*set_err)(ArgonObject *object, ArErr *err);
-  void *(*malloc)(size_t);
-  void (*free)(void *);
-
-  struct array (*argon_to_array)(ArgonObject *, ArErr *);
-  int (*argon_get_ArgonType)(ArgonObject *);
-  bool (*argon_is_i64)(ArgonObject *);
-
-  ArgonObject *BaseException;
-  ArgonObject *Exception;
-  ArgonObject *RuntimeError;
-  ArgonObject *SyntaxError;
-  ArgonObject *ConversionError;
-  ArgonObject *MathsError;
-  ArgonObject *ZeroDivisionError;
-  ArgonObject *NameError;
-  ArgonObject *TypeError;
-  ArgonObject *InternalError;
-  ArgonObject *IndexError;
-  ArgonObject *AttributeError;
-  ArgonObject *PathError;
-  ArgonObject *FileError;
-  ArgonObject *ImportError;
-  ArgonObject *SignalException;
-  ArgonObject *SignalKeyboardInterrupt;
-  ArgonObject *SignalStopIteration;
-
-  ArgonObject *(*throw_argon_signal)(ArErr *, ArgonObject *);
-};
 
 typedef struct {
   void *data;

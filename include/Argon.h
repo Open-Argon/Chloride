@@ -14,32 +14,28 @@ extern "C" {
 #include <stddef.h>
 #endif
 
-#include "ArgonTypes.h"
 #include "ArgonFunction.h"
+#include "ArgonTypes.h"
 #include <stdbool.h>
 #include <stdint.h>
 
 #define ARGON_NATIVE_API_VERSION 1
 
-typedef struct ArgonState ArgonState;
+typedef struct RuntimeState ArgonState;
 
-typedef ArgonState RuntimeState;
+typedef struct ArErr ArErr;
 
-typedef struct ArgonError ArgonError;
+typedef struct ArErr ArgonError;
 
-typedef ArgonError ArErr;
-
-typedef struct ArgonObjectRegister ArgonObjectRegister;
+typedef struct hashmap_GC ArgonObjectRegister;
 
 typedef struct ArgonObject ArgonObject;
 
 typedef struct ArgonNativeAPI ArgonNativeAPI;
 
-typedef struct ArgonHashmap ArgonHashmap;
+typedef struct hashmap_GC ArgonHashmap;
 
-typedef ArgonObject *(*native_fn)(size_t argc, ArgonObject **argv, ArgonHashmap* kwargs,
-                                  ArgonError *err, ArgonState *state,
-                                  ArgonNativeAPI *api);
+typedef ArgonObject *(*native_fn)(ARGON_FUNCTION_ARGS);
 
 struct rational {
   int64_t n;
@@ -66,7 +62,8 @@ struct ArgonNativeAPI {
                                ArgonObject *obj);
   ArgonObject *(*create_argon_native_function)(char *name, native_fn);
   ArgonObject *(*call)(ArgonObject *original_object, size_t argc,
-                       ArgonObject **argv, ArgonHashmap*kwargs, ArgonError *err, ArgonState *state);
+                       ArgonObject **argv, ArgonHashmap *kwargs,
+                       ArgonError *err, ArgonState *state);
   ArgonObject *(*throw_argon_error)(ArgonError *err, ArgonObject *type,
                                     const char *fmt, ...);
   bool (*is_error)(ArgonError *err);
@@ -129,7 +126,7 @@ struct ArgonNativeAPI {
   ArgonObject *SignalKeyboardInterrupt;
   ArgonObject *SignalStopIteration;
 
-  ArgonObject* (*throw_argon_signal)(ArgonError*, ArgonObject*);
+  ArgonObject *(*throw_argon_signal)(ArgonError *, ArgonObject *);
 };
 
 __attribute__((visibility("default"))) void

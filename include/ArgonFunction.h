@@ -2,8 +2,8 @@
 #define Argon_NATIVE_FUNCTION_H
 
 #define ARGON_FUNCTION_ARGS                                                    \
-  size_t argc, ArgonObject **argv, ArgonHashmap *kwargs, ArErr *err,           \
-      RuntimeState *state, ArgonNativeAPI *api
+  size_t argc, ArgonObject **argv, ArgonHashmap *kwargs, ArgonError *err,      \
+      ArgonState *state, ArgonNativeAPI *api
 
 #define ARGON_FUNCTION(NAME, ...)                                              \
   ArgonObject *NAME(ARGON_FUNCTION_ARGS) {                                     \
@@ -22,7 +22,7 @@
   api->register_ArgonObject(reg, #NAME,                                        \
                             api->create_argon_native_function(#NAME, NAME));
 
-#define INIT_ARGON_MODULE(...)                                                       \
+#define INIT_ARGON_MODULE(...)                                                 \
   void argon_module_init(ArgonState *vm, ArgonNativeAPI *api, ArgonError *err, \
                          ArgonObjectRegister *reg) {                           \
     (void)vm;                                                                  \

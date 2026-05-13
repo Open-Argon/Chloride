@@ -10,7 +10,6 @@
 #include "../runtime.h"
 #include <stdbool.h>
 #include <string.h>
-#include "../../../include/ArgonFunction.h"
 
 extern ArgonObject *BASE_CLASS;
 
