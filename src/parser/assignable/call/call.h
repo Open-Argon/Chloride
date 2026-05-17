@@ -10,11 +10,11 @@
 
 typedef struct {
   ParsedValue *to_call;
-  DArray args;          // positional ParsedValue
-  DArray *kwargs;       // struct parsed_kwarg, lazy-allocated (NULL if none)
-  char *v_arg;          // *ident — identifier to collect extra positional into, or NULL
-  char *kw_arg;         // **ident — identifier to collect extra kwargs into, or NULL
-  bool must_assign;     // true if v_arg or kw_arg is set
+  DArray args;    // positional ParsedValue
+  DArray *kwargs; // struct parsed_kwarg, lazy-allocated (NULL if none)
+  ParsedValue *v_arg;  // *ident — identifier to collect extra positional into, or NULL
+  ParsedValue *kw_arg; // **ident — identifier to collect extra kwargs into, or NULL
+  bool cannot_assign; // 
   uint64_t line;
   uint64_t column;
 } ParsedCall;

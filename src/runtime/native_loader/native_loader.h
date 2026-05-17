@@ -7,7 +7,6 @@
 #ifndef native_loader_H
 #define native_loader_H
 #include "../../arobject.h"
-#include "../objects/object.h"
 
 typedef void (*argon_module_init_fn)(
     RuntimeState *,

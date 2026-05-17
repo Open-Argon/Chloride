@@ -19,12 +19,12 @@
 // ───────────────────────────────────────────────────────
 
 typedef struct {
-  DArray args;    // positional ParsedValue
-  DArray *kwargs; // struct parsed_kwarg, lazy-allocated
-  char *v_arg;    // *ident or NULL
-  char *kw_arg;   // **ident or NULL
-  uint8_t stage;  // 0=positional 1=kwargs 2=*arg 3=**arg
-  bool must_assign;
+  DArray args;         // positional ParsedValue
+  DArray *kwargs;      // struct parsed_kwarg, lazy-allocated
+  ParsedValue *v_arg;  // *ident or NULL
+  ParsedValue *kw_arg; // **ident or NULL
+  uint8_t stage;       // 0=positional 1=kwargs 2=*arg 3=**arg
+  bool must_call;
 } CallArgState;
 
 static void call_arg_state_init(CallArgState *cs) {
@@ -33,7 +33,7 @@ static void call_arg_state_init(CallArgState *cs) {
   cs->v_arg = NULL;
   cs->kw_arg = NULL;
   cs->stage = 0;
-  cs->must_assign = false;
+  cs->must_call = false;
 }
 
 static void call_arg_state_free(CallArgState *cs) {
@@ -42,10 +42,14 @@ static void call_arg_state_free(CallArgState *cs) {
     darray_free(cs->kwargs, free_default_value_parameter);
     free(cs->kwargs);
   }
-  if (cs->v_arg)
+  if (cs->v_arg) {
+    free_parsed(cs->v_arg);
     free(cs->v_arg);
-  if (cs->kw_arg)
+  }
+  if (cs->kw_arg) {
+    free_parsed(cs->kw_arg);
     free(cs->kw_arg);
+  }
 }
 
 // ── Arg list parser
@@ -76,7 +80,6 @@ static ArErr parse_arg_list(char *file, DArray *tokens, size_t *index,
 
     // ── *ident or **ident ─────────────────────────────────────────────────
     if (token->type == TOKEN_STAR) {
-      cs->must_assign = true;
       (*index)++;
       err = error_if_finished(file, tokens, index);
       if (is_error(&err))
@@ -86,23 +89,37 @@ static ArErr parse_arg_list(char *file, DArray *tokens, size_t *index,
       if (token->type == TOKEN_STAR) {
         // **ident
         if (cs->kw_arg)
-          return ARG_ERR("only one **ident argument is allowed");
+          return ARG_ERR("only one **value argument is allowed");
         (*index)++;
         err = error_if_finished(file, tokens, index);
         if (is_error(&err))
           return err;
         token = darray_get(tokens, *index);
-        if (token->type != TOKEN_IDENTIFIER)
-          return ARG_ERR("expected identifier after **");
-        cs->kw_arg = strcpy(checked_malloc(token->length + 1), token->value);
+        ParsedValueReturn val = parse_token(file, tokens, index, true);
+
+        if (is_error(&val.err)) {
+          return val.err;
+        } else {
+          return ARG_ERR("expected value");
+        }
+        if (!cs->must_call)
+          cs->must_call = val.value->type == AST_IDENTIFIER;
+        cs->kw_arg = val.value;
         cs->stage = 3;
       } else {
         // *ident
         if (cs->stage >= 2)
-          return ARG_ERR("only one *ident argument is allowed");
-        if (token->type != TOKEN_IDENTIFIER)
-          return ARG_ERR("expected identifier after *");
-        cs->v_arg = strcpy(checked_malloc(token->length + 1), token->value);
+          return ARG_ERR("only one *value argument is allowed");
+        token = darray_get(tokens, *index);
+        ParsedValueReturn val = parse_token(file, tokens, index, true);
+
+        if (is_error(&val.err)) {
+          return val.err;
+        } else {
+          return ARG_ERR("expected value");
+        }
+        if (!cs->must_call) cs->must_call = val.value->type == AST_IDENTIFIER;
+        cs->v_arg = val.value;
         cs->stage = 2;
       }
 
@@ -118,7 +135,7 @@ static ArErr parse_arg_list(char *file, DArray *tokens, size_t *index,
         return no_err;
       }
       if (token->type != TOKEN_COMMA)
-        return ARG_ERR("expected comma or ) after *ident/**ident");
+        return ARG_ERR("expected comma or ) after *value/**value");
       (*index)++;
       continue;
     }
@@ -142,7 +159,7 @@ static ArErr parse_arg_list(char *file, DArray *tokens, size_t *index,
 
     if (is_kwarg) {
       if (cs->stage == 3)
-        return ARG_ERR("no arguments allowed after **ident");
+        return ARG_ERR("no arguments allowed after **value");
       cs->stage = 1;
 
       // token is still the identifier (index is on the = now)
