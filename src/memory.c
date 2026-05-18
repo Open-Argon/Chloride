@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <stdlib.h> // for malloc/free (temp arena fallback)
 #include <string.h>
+#include <inttypes.h>
 
 void *checked_malloc(size_t size) {
   void *ptr = malloc(size);
@@ -48,7 +49,7 @@ void ar_memory_shutdown() {
 void *ar_alloc(size_t size) {
   void *ptr = GC_MALLOC(size);
   if (!ptr) {
-    fprintf(stderr, "panic: unable to allocate memory\n");
+    fprintf(stderr, "panic: unable to allocate memory: %"PRId64"\n", size);
     exit(EXIT_FAILURE);
   }
   return ptr;
@@ -57,7 +58,7 @@ void *ar_alloc(size_t size) {
 void *ar_realloc(void *old, size_t size) {
   void *ptr = GC_REALLOC(old, size);
   if (!ptr) {
-    fprintf(stderr, "panic: unable to allocate memory\n");
+    fprintf(stderr, "panic: unable to reallocate memory (%p): %"PRId64"\n", old, size);
     exit(EXIT_FAILURE);
   }
   return ptr;

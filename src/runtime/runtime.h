@@ -34,9 +34,12 @@ typedef struct SourceLocation {
 typedef struct call_instance {
   struct call_instance *previous;
   ArgonObject *to_call;
-  ArgonObject **args;
+  struct {
+    ArgonObject **arr;
+    size_t length;
+    size_t capacity;
+  } args;
   hashmap_GC *kwargs;
-  size_t args_length;
 } call_instance;
 
 typedef struct ErrorCatch {

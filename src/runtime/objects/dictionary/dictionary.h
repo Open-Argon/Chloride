@@ -10,6 +10,8 @@
 
 extern ArgonObject *ARGON_DICTIONARY_TYPE;
 
+EXPOSE_ARGON_METHOD(ARGON_DICTIONARY_ITERATOR_TYPE, __next__)
+
 void create_ARGON_DICTIONARY_TYPE();
 
 ArgonObject* create_dictionary(struct hashmap_GC*hashmap);

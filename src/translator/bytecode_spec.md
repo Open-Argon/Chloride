@@ -167,6 +167,14 @@ initialises a call instance struct and arguments buffer.
 
 1. index of the argument in the arguments buffer to write the object from register 0 into.
 
+## OP_UNPACK_ARGS
+
+takes the object in register 0 and iterates over its iterator object, appending each item as positional arguments
+
+## OP_UNPACK_KEY_WORD_ARGS
+
+takes the object in register 0 and iterates over its iterator object, appending each item as key word arguments (index 0 as key and index 1 as value). the key must be a string object, otherwise an error is throw.
+
 ## OP_CALL
 
 call the function at the head of the call instance stack, then pops it off the stack.

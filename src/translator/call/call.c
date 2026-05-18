@@ -4,21 +4,13 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 #include "call.h"
-#include "../../err.h"
 #include "../../hash_data/hash_data.h"
 #include "../../parser/function/function.h"
-#include "../../runtime/objects/exceptions/exceptions.h"
 #include "../translator.h"
 #include <string.h>
 
 size_t translate_parsed_call(Translated *translated, ParsedCall *call,
                              ArErr *err) {
-  if (call->must_assign) {
-    *err =
-        path_specific_create_err(call->line, call->column, 1, translated->path,
-                                 SyntaxError, "Invalid syntax");
-    return 0;
-  }
   set_registers(translated, 1);
   size_t first = translate_parsed(translated, call->to_call, err);
   if (is_error(err)) {
@@ -43,6 +35,10 @@ size_t translate_parsed_call(Translated *translated, ParsedCall *call,
     push_instruction_byte(translated, OP_INSERT_ARG);
     push_instruction_code(translated, i);
   }
+  if (call->v_arg) {
+    translate_parsed(translated, call->v_arg, err);
+    push_instruction_byte(translated, OP_UNPACK_ARGS);
+  }
 
   if (call->kwargs) {
     for (size_t i = 0; i < call->kwargs->size; i++) {
@@ -63,6 +59,10 @@ size_t translate_parsed_call(Translated *translated, ParsedCall *call,
       push_instruction_code(
           translated, siphash64_bytes(arg->name, length, siphash_key_fixed));
     }
+  }
+  if (call->kw_arg) {
+    translate_parsed(translated, call->kw_arg, err);
+    push_instruction_byte(translated, OP_UNPACK_KEY_WORD_ARGS);
   }
 
   translated->return_jump = old_return_jump;

@@ -13,6 +13,8 @@
 
 extern ArgonObject *ARGON_NUMBER_TYPE;
 
+#define SMALL_INTS_OBJ_PTR(offset) &small_ints[offset - small_ints_min].obj
+
 void mpq_set_si64(mpq_t q, int64_t n, int64_t d);
 
 void create_ARGON_NUMBER_TYPE();

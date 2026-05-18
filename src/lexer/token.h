@@ -94,8 +94,6 @@ typedef enum {
   TOKEN_TEMPLATE_END,
   TOKEN_TEMPLATE_TEXT,
   TOKEN_TEMPLATE_EXPR_END,
-  
-  TOKEN_ELLIPSIS
 } ArTokenType;
 
 typedef struct {

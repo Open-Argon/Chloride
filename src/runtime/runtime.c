@@ -1117,7 +1117,7 @@ void bootstrap_types() {
   MOUNT_ARGON_METHOD(ARGON_STRING_TYPE, lower)
   MOUNT_ARGON_METHOD(ARGON_STRING_TYPE, title)
   MOUNT_ARGON_METHOD(ARGON_STRING_TYPE, replace)
-  MOUNT_ARGON_METHOD(ARGON_STRING_TYPE,index_of)
+  MOUNT_ARGON_METHOD(ARGON_STRING_TYPE, index_of)
   MOUNT_ARGON_METHOD(ARGON_BOOL_TYPE, __new__)
   MOUNT_ARGON_METHOD(ARGON_BOOL_TYPE, __boolean__)
   MOUNT_ARGON_METHOD(ARGON_STRING_TYPE, __boolean__)
@@ -1453,7 +1453,9 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       [OP_POP_SCOPE] = &&DO_POP_SCOPE,
       [OP_INIT_CALL] = &&DO_INIT_CALL,
       [OP_INSERT_ARG] = &&DO_INSERT_ARG,
+      [OP_UNPACK_ARGS] = &&DO_UNPACK_ARGS,
       [OP_SET_KEY_WORD_ARG] = &&DO_SET_KEY_WORD_ARG,
+      [OP_UNPACK_KEY_WORD_ARGS] = &&DO_UNPACK_KEY_WORD_ARGS,
       [OP_CALL] = &&DO_CALL,
       [OP_SOURCE_LOCATION] = &&DO_SOURCE_LOCATION,
       [OP_LOAD_BOOL] = &&DO_LOAD_BOOL,
@@ -1848,6 +1850,14 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
         state->registers[0] = ARGON_RANGE_ITERATOR_TYPE___next__(
             1, &iterator, NULL, &err, state, &native_api);
         break;
+      case TYPE_STRING_ITERATOR:
+        state->registers[0] = ARGON_STRING_ITERATOR_TYPE___next__(
+            1, &iterator, NULL, &err, state, &native_api);
+        break;
+      case TYPE_DICTIONARY_ITERATOR:
+        state->registers[0] = ARGON_DICTIONARY_ITERATOR_TYPE___next__(
+            1, &iterator, NULL, &err, state, &native_api);
+        break;
       default:
         state->registers[0] =
             argon_call(iterator_next, 0, NULL, NULL, &err, state);
@@ -1903,20 +1913,64 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
     DO_INIT_CALL: {
       size_t length;
       POP_U64(length);
-      call_instance *new_call_instance =
-          ar_alloc(sizeof(call_instance) + length * sizeof(ArgonObject *));
+      call_instance *new_call_instance = ar_alloc(sizeof(call_instance));
       *new_call_instance = (call_instance){
-          state->call_instance, state->registers[0],
-          (ArgonObject **)((char *)new_call_instance + sizeof(call_instance)),
-          NULL, length};
+          state->call_instance,
+          state->registers[0],
+          {(ArgonObject **)(ar_alloc(length * sizeof(ArgonObject *))), length,
+           length},
+          NULL};
       state->call_instance = new_call_instance;
       continue;
     }
     DO_INSERT_ARG:;
       size_t index;
       POP_U64(index);
-      state->call_instance->args[index] = state->registers[0];
+      state->call_instance->args.arr[index] = state->registers[0];
       continue;
+    DO_UNPACK_ARGS: {
+      ArgonObject *object = state->registers[0];
+      ArgonObject *iterator_method =
+          get_builtin_field_for_class(CLASS_OF(object), __iter__, object);
+      if (!iterator_method) {
+        err = create_err(RuntimeError,
+                         "unable to get __iter__ from objects class");
+        continue;
+      }
+      ArgonObject *iterator =
+          argon_call(iterator_method, 0, NULL, NULL, &err, state);
+      if (is_error(&err)) {
+        continue;
+      }
+      ArgonObject *next =
+          get_builtin_field_for_class(CLASS_OF(iterator), __next__, iterator);
+      if (!next) {
+        err = create_err(RuntimeError,
+                         "unable to get __next__ from objects iterator class");
+        break;
+      }
+      while (true) {
+        ArgonObject *item = argon_call(next, 0, NULL, NULL, &err, state);
+        if (is_error(&err)) {
+          if (err.ptr == StopIteration_instance) {
+            err.ptr = ARGON_NULL;
+          }
+          break;
+        }
+        if (state->call_instance->args.capacity <=
+            state->call_instance->args.length) {
+          if (state->call_instance->args.capacity == 0)
+            state->call_instance->args.capacity = 1;
+          state->call_instance->args.capacity *= 2;
+          state->call_instance->args.arr = ar_realloc(
+              state->call_instance->args.arr,
+              state->call_instance->args.capacity * sizeof(ArgonObject *));
+        }
+        state->call_instance->args.arr[state->call_instance->args.length++] =
+            item;
+      }
+      continue;
+    }
     DO_SET_KEY_WORD_ARG: {
       int64_t length;
       POP_U64(length);
@@ -1933,11 +1987,79 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
                         state->registers[0], 0);
       continue;
     }
+    DO_UNPACK_KEY_WORD_ARGS: {
+      if (!state->call_instance->kwargs)
+        state->call_instance->kwargs = createHashmap_GC();
+
+      ArgonObject *object = state->registers[0];
+      ArgonObject *iterator_method =
+          get_builtin_field_for_class(CLASS_OF(object), __iter__, object);
+      if (!iterator_method) {
+        err = create_err(RuntimeError,
+                         "unable to get __iter__ from objects class");
+        continue;
+      }
+      ArgonObject *iterator =
+          argon_call(iterator_method, 0, NULL, NULL, &err, state);
+      if (is_error(&err)) {
+        continue;
+      }
+      ArgonObject *next =
+          get_builtin_field_for_class(CLASS_OF(iterator), __next__, iterator);
+      if (!next) {
+        err = create_err(RuntimeError,
+                         "unable to get __next__ from objects iterator class");
+        break;
+      }
+      while (true) {
+        ArgonObject *item = argon_call(next, 0, NULL, NULL, &err, state);
+        if (is_error(&err)) {
+          if (err.ptr == StopIteration_instance) {
+            err.ptr = ARGON_NULL;
+          }
+          break;
+        }
+        ArgonObject *getter = GET_METHOD_OF_OBJECT(item, __getitem__);
+        if (!getter) {
+          err = create_err(RuntimeError,
+                           "unable to get __getitem__ from item in object");
+          break;
+        }
+
+        ArgonObject *key =
+            argon_call(getter, 1, (ArgonObject *[]){SMALL_INTS_OBJ_PTR(0)},
+                       NULL, &err, state);
+        if (is_error(&err)) {
+          break;
+        }
+
+        if (key->type != TYPE_STRING) {
+          err = create_err(TypeError, "keywords must be strings");
+          break;
+        }
+
+        int64_t hash = hash_object(key, &err, state);
+        if (is_error(&err)) {
+          break;
+        }
+
+        ArgonObject *value =
+            argon_call(getter, 1, (ArgonObject *[]){SMALL_INTS_OBJ_PTR(1)},
+                       NULL, &err, state);
+        if (is_error(&err)) {
+          break;
+        }
+
+        hashmap_insert_GC(state->call_instance->kwargs, hash, key->value.as_str,
+                          value, 0);
+      }
+      continue;
+    }
     DO_CALL: {
       state->head = ip;
-      run_call(state->call_instance->to_call, state->call_instance->args_length,
-               state->call_instance->args, state->call_instance->kwargs, state,
-               false, &err);
+      run_call(state->call_instance->to_call, state->call_instance->args.length,
+               state->call_instance->args.arr, state->call_instance->kwargs,
+               state, false, &err);
       state->call_instance = (*state->call_instance).previous;
       ip = currentStackFrame->state.head;
       bytecode = &currentStackFrame->translated.bytecode;

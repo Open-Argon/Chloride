@@ -8,13 +8,19 @@
 #define CALL_H
 #include "../../parser.h"
 
+typedef enum {
+  ASSIGN_NOT_ALLOWED,
+  ASSIGN_ALLOWED,
+  ASSIGN_REQUIRED,
+} AssignMode;
+
 typedef struct {
   ParsedValue *to_call;
   DArray args;    // positional ParsedValue
   DArray *kwargs; // struct parsed_kwarg, lazy-allocated (NULL if none)
   ParsedValue *v_arg;  // *ident — identifier to collect extra positional into, or NULL
   ParsedValue *kw_arg; // **ident — identifier to collect extra kwargs into, or NULL
-  bool cannot_assign; // 
+  AssignMode assign_mode;
   uint64_t line;
   uint64_t column;
 } ParsedCall;

@@ -39,6 +39,14 @@ ParsedValueReturn parse_assign(char *file, DArray *tokens,
     break;
   case AST_CALL:;
     ParsedCall *call = assign_to->data;
+    if (call->assign_mode == ASSIGN_NOT_ALLOWED) {
+      free_parsed(assign_to);
+      free(assign_to);
+      return (ParsedValueReturn){
+          path_specific_create_err(token->line, token->column, token->length,
+                                   file, SyntaxError, "Invalid syntax"),
+          NULL};
+    }
     darray_init(&function_args, sizeof(char *));
     for (size_t i = 0; i < call->args.size; i++) {
       ParsedValue *arg = darray_get(&call->args, i);
@@ -54,14 +62,24 @@ ParsedValueReturn parse_assign(char *file, DArray *tokens,
                 "only use letters, digits, or _, and can't be keywords."),
             NULL};
       }
-      
+
       char *param = strdup(((ParsedIdentifier *)arg->data)->name);
       darray_push(&function_args, &param);
     }
     darray_free(&call->args, (void (*)(void *))free_parsed);
     function_default_args = call->kwargs;
-    function_kwargs = call->kw_arg;
-    function_vargs = call->v_arg;
+    function_kwargs =
+        call->kw_arg ? ((ParsedIdentifier *)call->kw_arg->data)->name : NULL;
+    if (function_kwargs) {
+      free(call->kw_arg->data);
+      free(call->kw_arg);
+    }
+    function_vargs =
+        call->v_arg ? ((ParsedIdentifier *)call->v_arg->data)->name : NULL;
+    if (function_vargs) {
+      free(call->v_arg->data);
+      free(call->v_arg);
+    }
     is_function = true;
     function_assign_to = call->to_call;
     switch (function_assign_to->type) {
@@ -117,8 +135,9 @@ ParsedValueReturn parse_assign(char *file, DArray *tokens,
         NULL};
   }
   if (is_function) {
-    from.value = create_parsed_function(function_name, function_args, function_default_args,
-                                        function_vargs, function_kwargs, from.value);
+    from.value = create_parsed_function(function_name, function_args,
+                                        function_default_args, function_vargs,
+                                        function_kwargs, from.value);
     if (to_free_function_name)
       free(function_name);
     free(assign_to->data);

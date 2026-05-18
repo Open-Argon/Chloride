@@ -81,4 +81,8 @@ ArgonObject *new_object(size_t endSize);
 #define MOUNT_ARGON_METHOD(TYPE, NAME)                                         \
   MOUNT_ARGON_METHOD_OBJECT(TYPE, NAME, ARGON_METHOD_OBJECT(TYPE, NAME))
 
+#define CLASS_OF(OBJ) get_builtin_field(OBJ, __class__)
+
+#define GET_METHOD_OF_OBJECT(OBJ, FIELD) get_builtin_field_for_class(CLASS_OF(OBJ), FIELD, OBJ)
+
 #endif // OBJECT_H

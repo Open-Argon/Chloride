@@ -21,10 +21,10 @@
 typedef struct {
   DArray args;         // positional ParsedValue
   DArray *kwargs;      // struct parsed_kwarg, lazy-allocated
-  ParsedValue *v_arg;  // *ident or NULL
-  ParsedValue *kw_arg; // **ident or NULL
+  ParsedValue *v_arg;  // *token or NULL
+  ParsedValue *kw_arg; // **token or NULL
   uint8_t stage;       // 0=positional 1=kwargs 2=*arg 3=**arg
-  bool must_call;
+  AssignMode assign_mode;
 } CallArgState;
 
 static void call_arg_state_init(CallArgState *cs) {
@@ -33,7 +33,7 @@ static void call_arg_state_init(CallArgState *cs) {
   cs->v_arg = NULL;
   cs->kw_arg = NULL;
   cs->stage = 0;
-  cs->must_call = false;
+  cs->assign_mode = ASSIGN_ALLOWED;
 }
 
 static void call_arg_state_free(CallArgState *cs) {
@@ -78,7 +78,7 @@ static ArErr parse_arg_list(char *file, DArray *tokens, size_t *index,
       return no_err;
     }
 
-    // ── *ident or **ident ─────────────────────────────────────────────────
+    // ── *token or **token ─────────────────────────────────────────────────
     if (token->type == TOKEN_STAR) {
       (*index)++;
       err = error_if_finished(file, tokens, index);
@@ -87,43 +87,38 @@ static ArErr parse_arg_list(char *file, DArray *tokens, size_t *index,
       token = darray_get(tokens, *index);
 
       if (token->type == TOKEN_STAR) {
-        // **ident
         if (cs->kw_arg)
-          return ARG_ERR("only one **value argument is allowed");
+          return ARG_ERR("only one **expr argument is allowed");
         (*index)++;
-        err = error_if_finished(file, tokens, index);
-        if (is_error(&err))
-          return err;
         token = darray_get(tokens, *index);
         ParsedValueReturn val = parse_token(file, tokens, index, true);
-
-        if (is_error(&val.err)) {
+        if (is_error(&val.err))
           return val.err;
-        } else {
-          return ARG_ERR("expected value");
-        }
-        if (!cs->must_call)
-          cs->must_call = val.value->type == AST_IDENTIFIER;
+        if (!val.value)
+          return ARG_ERR("expected value after **");
         cs->kw_arg = val.value;
+        if (cs->assign_mode == ASSIGN_ALLOWED)
+          cs->assign_mode = token->type == TOKEN_IDENTIFIER
+                                ? ASSIGN_ALLOWED
+                                : ASSIGN_NOT_ALLOWED;
         cs->stage = 3;
       } else {
-        // *ident
         if (cs->stage >= 2)
-          return ARG_ERR("only one *value argument is allowed");
-        token = darray_get(tokens, *index);
+          return ARG_ERR("only one *expr argument is allowed");
         ParsedValueReturn val = parse_token(file, tokens, index, true);
-
-        if (is_error(&val.err)) {
+        if (is_error(&val.err))
           return val.err;
-        } else {
-          return ARG_ERR("expected value");
-        }
-        if (!cs->must_call) cs->must_call = val.value->type == AST_IDENTIFIER;
+        if (!val.value)
+          return ARG_ERR("expected value after *");
         cs->v_arg = val.value;
+        if (cs->assign_mode == ASSIGN_ALLOWED)
+          cs->assign_mode = token->type == TOKEN_IDENTIFIER
+                                ? ASSIGN_ALLOWED
+                                : ASSIGN_NOT_ALLOWED;
         cs->stage = 2;
       }
 
-      (*index)++;
+      // no (*index)++ here — parse_token already advanced it
       skip_newlines_and_indents(tokens, index);
       err = error_if_finished(file, tokens, index);
       if (is_error(&err))
@@ -135,7 +130,7 @@ static ArErr parse_arg_list(char *file, DArray *tokens, size_t *index,
         return no_err;
       }
       if (token->type != TOKEN_COMMA)
-        return ARG_ERR("expected comma or ) after *value/**value");
+        return ARG_ERR("expected comma or ) after *expr/**expr");
       (*index)++;
       continue;
     }
@@ -159,7 +154,7 @@ static ArErr parse_arg_list(char *file, DArray *tokens, size_t *index,
 
     if (is_kwarg) {
       if (cs->stage == 3)
-        return ARG_ERR("no arguments allowed after **value");
+        return ARG_ERR("no arguments allowed after **token");
       cs->stage = 1;
 
       // token is still the identifier (index is on the = now)
@@ -204,16 +199,19 @@ static ArErr parse_arg_list(char *file, DArray *tokens, size_t *index,
       char *null_shorthand_name = NULL;
       if (token->type == TOKEN_IDENTIFIER) {
         size_t saved = *index;
-        Token *ident_token = token;
         (*index)++;
         if (*index < tokens->size) {
           Token *next = darray_get(tokens, *index);
           if (next->type == TOKEN_QUESTION) {
+            if (cs->assign_mode == ASSIGN_NOT_ALLOWED) {
+              return ARG_ERR(
+                  "using ? shorthand in a call which cannot be assigned to.");
+            }
+            cs->assign_mode = ASSIGN_REQUIRED;
             is_null_shorthand = true;
-            null_shorthand_name = strcpy(
-                checked_malloc(ident_token->length + 1), ident_token->value);
+            null_shorthand_name =
+                strcpy(checked_malloc(token->length + 1), token->value);
             (*index)++; // consume ?
-            cs->must_assign = true;
           }
         }
         if (!is_null_shorthand)
@@ -224,7 +222,7 @@ static ArErr parse_arg_list(char *file, DArray *tokens, size_t *index,
         // x? is identical to x=null — treat as a kwarg
         if (cs->stage == 3) {
           free(null_shorthand_name);
-          return ARG_ERR("no arguments allowed after **ident");
+          return ARG_ERR("no arguments allowed after **token");
         }
         cs->stage = 1;
 
@@ -247,7 +245,7 @@ static ArErr parse_arg_list(char *file, DArray *tokens, size_t *index,
         if (cs->stage == 1)
           return ARG_ERR("positional argument follows keyword argument");
         if (cs->stage == 3)
-          return ARG_ERR("no arguments allowed after **ident");
+          return ARG_ERR("no arguments allowed after **token");
 
         ParsedValueReturn val = parse_token(file, tokens, index, true);
         if (is_error(&val.err))
@@ -300,7 +298,7 @@ ParsedValueReturn parse_call(char *file, DArray *tokens, size_t *index,
   call->kwargs = NULL;
   call->v_arg = NULL;
   call->kw_arg = NULL;
-  call->must_assign = false;
+  call->assign_mode = ASSIGN_ALLOWED;
   call->args.data = NULL;
   parsedValue->data = call;
   parsedValue->type = AST_CALL;
@@ -336,7 +334,7 @@ ParsedValueReturn parse_call(char *file, DArray *tokens, size_t *index,
   call->kwargs = cs.kwargs;
   call->v_arg = cs.v_arg;
   call->kw_arg = cs.kw_arg;
-  call->must_assign = cs.must_assign;
+  call->assign_mode = cs.assign_mode;
 
   return (ParsedValueReturn){no_err, parsedValue};
 }
@@ -354,10 +352,14 @@ void free_parse_call(void *ptr) {
     darray_free(call->kwargs, free_default_value_parameter);
     free(call->kwargs);
   }
-  if (call->v_arg)
+  if (call->v_arg) {
+    free_parsed(call->v_arg);
     free(call->v_arg);
-  if (call->kw_arg)
+  }
+  if (call->kw_arg) {
+    free_parsed(call->kw_arg);
     free(call->kw_arg);
+  }
   free_parsed(call->to_call);
   free(call->to_call);
   free(call);

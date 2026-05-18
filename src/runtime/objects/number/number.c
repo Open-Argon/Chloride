@@ -1502,7 +1502,7 @@ ArgonObject *new_number_object_from_num_and_den(int64_t n, int64_t d) {
 
 ArgonObject *new_number_object_from_int64(int64_t i64) {
   if (i64 >= small_ints_min && i64 <= small_ints_max) {
-    return &small_ints[i64 - small_ints_min].obj;
+    return SMALL_INTS_OBJ_PTR(i64);
   }
   ArgonObject *object =
       new_small_instance(ARGON_NUMBER_TYPE, sizeof(struct as_number));

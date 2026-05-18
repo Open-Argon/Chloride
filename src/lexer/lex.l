@@ -30,7 +30,6 @@ ESCAPE      \\([\"\\\/bfnrt`]|u[0-9a-fA-F]{4})
     exit(1);
 }
 
-"..."               { return TOKEN_ELLIPSIS; }
 "."                 { return TOKEN_DOT; }
 "!"                 { return TOKEN_EXCLAMATION; }
 ","                 { return TOKEN_COMMA; }

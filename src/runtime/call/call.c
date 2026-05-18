@@ -8,10 +8,10 @@
 #include "../../err.h"
 #include "../../memory.h"
 #include "../api/api.h"
-#include "../objects/array/array.h"
 #include "../objects/dictionary/dictionary.h"
 #include "../objects/exceptions/exceptions.h"
 #include "../objects/string/string.h"
+#include "../objects/tuple/tuple.h"
 #include <inttypes.h>
 #include <math.h>
 #include <stdbool.h>
@@ -21,7 +21,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define MAX_C_STACK_LIMIT 100
+#ifndef MAX_C_STACK_LIMIT
+#define MAX_C_STACK_LIMIT 64
+#endif
 
 #if defined(_WIN32)
 #ifndef _WIN32_WINNT
@@ -242,7 +244,6 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
                     object_name->value.as_str->data, (int)name->length,
                     name->data);
                 free(bound);
-                free(kwargs_array);
                 return;
               }
               hashmap_insert_GC(
@@ -263,7 +264,6 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
                 (int)object_name->value.as_str->length,
                 object_name->value.as_str->data, (int)name->length, name->data);
             free(bound);
-            free(kwargs_array);
             return;
           }
           if (leftover_kwargs == NULL)
@@ -296,22 +296,14 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
         if (bound[i])
           consumed++;
       size_t n_vargs = (argc > consumed) ? argc - consumed : 0;
-      ArgonObject *array_obj = new_instance(ARRAY_TYPE, sizeof(darray_armem));
-      array_obj->type = TYPE_ARRAY;
-
-      array_obj->value.as_array = darray_armem_create();
-
-      darray_armem_init(array_obj->value.as_array, sizeof(ArgonObject *),
-                        n_vargs);
-      size_t vi = 0;
-      for (size_t i = consumed; i < argc && vi < n_vargs; i++)
-        ((ArgonObject **)array_obj->value.as_array->data)[vi++] = argv[i];
+      ArgonObject *tuple_obj =
+          TUPLE_CREATE(n_vargs, argv + consumed, NULL, err, state, &native_api);
 
       struct string_struct vkey = object->value.argon_fn->vargs;
 
       hashmap_insert_GC(scope->scope, vkey.hash,
                         new_string_object(vkey.data, vkey.length, vkey.hash),
-                        array_obj, 0);
+                        tuple_obj, 0);
     }
 
     // ── bind leftover kwargs to **kw_arg ──────────────────────────────────
