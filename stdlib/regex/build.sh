@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 
 # SPDX-FileCopyrightText: 2026 William Bell
+#
+# SPDX-License-Identifier: LGPL-3.0-or-later
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 

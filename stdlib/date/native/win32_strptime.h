@@ -1,5 +1,7 @@
 /*
  * SPDX-FileCopyrightText: 2026 William Bell
+ *
+ * SPDX-License-Identifier: LGPL-3.0-or-later
  */
 
 // win32_strptime.h

@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
 # SPDX-FileCopyrightText: 2026 William Bell
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
 
 import os
 import sys

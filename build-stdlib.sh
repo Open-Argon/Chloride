@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 
 # SPDX-FileCopyrightText: 2026 William Bell
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
 
 set -e
 
