@@ -295,6 +295,7 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
       for (size_t i = positional_start; i < n_params; i++)
         if (bound[i])
           consumed++;
+      consumed += next_default;
       size_t n_vargs = (argc > consumed) ? argc - consumed : 0;
       ArgonObject *tuple_obj =
           TUPLE_CREATE(n_vargs, argv + consumed, NULL, err, state, &native_api);

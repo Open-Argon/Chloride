@@ -1,0 +1,10 @@
+let f(x, a=null, *args, **kwargs)=do
+    return `x=$(x), a=$(a), args=$(args), kwargs=$(kwargs)`
+
+term.log(f(1))
+term.log(f(1,2))
+term.log(f(1,2,3))
+term.log(f(a=2, *["this should go to x"]))
+term.log(f(1, a=2, **["this should go to kwargs"]))
+term.log(f(1, a=2, **{wow:"this should go to kwargs"}))
+term.log(f(a=2, **{x:"this should go to x"}))

@@ -6,12 +6,17 @@
 
 #include "call.h"
 #include "../../../err.h"
+#include "../../../hash_data/hash_data.h"
+#include "../../../hashmap/hashmap.h"
 #include "../../../lexer/token.h"
 #include "../../../memory.h"
 #include "../../../runtime/objects/exceptions/exceptions.h"
+#include "../../assignable/identifier/identifier.h"
 #include "../../function/function.h"
 #include "../../literals/literals.h"
 #include "../../parser.h"
+#include <stdbool.h>
+#include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -126,8 +131,7 @@ static ArErr parse_arg_list(char *file, DArray *tokens, size_t *index,
       token = darray_get(tokens, *index);
 
       if (token->type == TOKEN_RPAREN) {
-        (*index)++;
-        return no_err;
+        goto RETURN_CHECKS;
       }
       if (token->type != TOKEN_COMMA)
         return ARG_ERR("expected comma or ) after *expr/**expr");
@@ -266,8 +270,7 @@ static ArErr parse_arg_list(char *file, DArray *tokens, size_t *index,
 
     // ── comma or closing paren ────────────────────────────────────────────
     if (token->type == TOKEN_RPAREN) {
-      (*index)++;
-      return no_err;
+      goto RETURN_CHECKS;
     }
     if (token->type != TOKEN_COMMA)
       return ARG_ERR("expected comma");
@@ -281,6 +284,47 @@ static ArErr parse_arg_list(char *file, DArray *tokens, size_t *index,
   return path_specific_create_err(0, 0, 0, file, SyntaxError,
                                   "unexpected end of file in argument list");
 #undef ARG_ERR
+RETURN_CHECKS:
+
+  if (cs->assign_mode != ASSIGN_NOT_ALLOWED) {
+    struct hashmap *seen = createHashmap();
+    for (size_t i = 0; i < cs->args.size; i++) {
+      ParsedIdentifier *param = ((ParsedValue *)darray_get(&cs->args, i))->data;
+      uint64_t hash =
+          siphash64_bytes(param->name, strlen(param->name), siphash_key_fixed);
+      if (hashmap_lookup(seen, hash)) {
+        cs->assign_mode = ASSIGN_NOT_ALLOWED;
+        break;
+      }
+      hashmap_insert(seen, hash, NULL, (void *)1, 0);
+    }
+
+    if (cs->v_arg) {
+      ParsedIdentifier *param = cs->v_arg->data;
+      uint64_t hash =
+          siphash64_bytes(param->name, strlen(param->name), siphash_key_fixed);
+      if (hashmap_lookup(seen, hash)) {
+        cs->assign_mode = ASSIGN_NOT_ALLOWED;
+      } else {
+        hashmap_insert(seen, hash, NULL, (void *)1, 0);
+      }
+    }
+
+    if (cs->kw_arg) {
+      ParsedIdentifier *param = cs->kw_arg->data;
+      uint64_t hash =
+          siphash64_bytes(param->name, strlen(param->name), siphash_key_fixed);
+      if (hashmap_lookup(seen, hash)) {
+        cs->assign_mode = ASSIGN_NOT_ALLOWED;
+      } else {
+        hashmap_insert(seen, hash, NULL, (void *)1, 0);
+      }
+    }
+
+    hashmap_free(seen, NULL);
+  }
+  (*index)++;
+  return no_err;
 }
 
 // ── Public parse_call

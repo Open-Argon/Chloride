@@ -12,9 +12,9 @@
 #include "../../memory.h"
 #include "../../runtime/objects/exceptions/exceptions.h"
 #include "../function/function.h"
-#include "param_list.h"
 #include "../literals/literals.h"
 #include "../parser.h"
+#include "param_list.h"
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -68,7 +68,7 @@ static ParsedValueReturn decl_err(ParsedValue *parsedValue,
 // Returns an error and leaves ps partially populated (caller must still call
 // param_state_free).
 ArErr parse_param_list(char *file, DArray *tokens, size_t *index,
-                              ParamState *ps) {
+                       ParamState *ps) {
   // index is already pointing past the TOKEN_LPAREN
   ArErr err;
 
@@ -110,6 +110,13 @@ ArErr parse_param_list(char *file, DArray *tokens, size_t *index,
         token = darray_get(tokens, *index);
         if (token->type != TOKEN_IDENTIFIER)
           return PARAM_ERR("expected identifier after **");
+        
+        // duplicate check
+        uint64_t hash =
+            siphash64_bytes(token->value, token->length, siphash_key_fixed);
+        if (hashmap_lookup(ps->seen, hash) != NULL)
+          return PARAM_ERR("duplicate argument in function definition");
+
         ps->kw_param = strcpy(checked_malloc(token->length + 1), token->value);
         ps->stage = 3;
       } else {
@@ -118,6 +125,13 @@ ArErr parse_param_list(char *file, DArray *tokens, size_t *index,
           return PARAM_ERR("only one *args parameter is allowed");
         if (token->type != TOKEN_IDENTIFIER)
           return PARAM_ERR("expected identifier after *");
+
+        // duplicate check
+        uint64_t hash =
+            siphash64_bytes(token->value, token->length, siphash_key_fixed);
+        if (hashmap_lookup(ps->seen, hash) != NULL)
+          return PARAM_ERR("duplicate argument in function definition");
+
         ps->v_param = strcpy(checked_malloc(token->length + 1), token->value);
         ps->stage = 2;
       }

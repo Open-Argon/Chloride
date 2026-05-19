@@ -1,7 +1,7 @@
 /*
  * SPDX-FileCopyrightText: 2026 William Bell
  *
- * SPDX-License-Identifier: LGPL-3.0-or-later
+ * SPDX-License-Identifier: MIT
  */
 
 #ifndef Argon_NATIVE_TYPES_H
