@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 William Bell
+
 import re
 import sys
 from pathlib import Path

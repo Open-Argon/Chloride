@@ -1,3 +1,7 @@
+/*
+ * SPDX-FileCopyrightText: 2026 William Bell
+ */
+
 // win32_strptime.h
 #pragma once
 #ifdef _WIN32

@@ -1,1 +1,5 @@
+# SPDX-FileCopyrightText: 2026 William Bell
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 for (i from 0 to 1e8) do

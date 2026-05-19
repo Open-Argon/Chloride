@@ -1,3 +1,7 @@
+/*
+ * SPDX-FileCopyrightText: 2026 William Bell
+ */
+
 #pragma once
 #include <stdatomic.h>
 

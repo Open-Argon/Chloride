@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 William Bell
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 class CustomError(Exception) do
 
 class MyError(CustomError) do

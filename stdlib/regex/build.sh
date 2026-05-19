@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+# SPDX-FileCopyrightText: 2026 William Bell
+
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 make -C $SCRIPT_DIR clean

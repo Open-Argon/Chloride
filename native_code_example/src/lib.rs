@@ -1,8 +1,6 @@
-/*
- * SPDX-FileCopyrightText: 2025 William Bell
- *
- * SPDX-License-Identifier: MIT
- */
+// SPDX-FileCopyrightText: 2025, 2026 William Bell
+//
+// SPDX-License-Identifier: MIT
 
 use std::ffi::CString;
 use std::os::raw::{c_char, c_void};

@@ -1,2 +1,4 @@
+# SPDX-FileCopyrightText: 2026 William Bell
+
 *.ar linguist-language=Argon
 *.ar linguist-detectable=true

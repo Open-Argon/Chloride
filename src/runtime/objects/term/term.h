@@ -1,5 +1,6 @@
 /*
- * SPDX-FileCopyrightText: 2025 William Bell
+ * SPDX-FileCopyrightText: 2025, 2026 William Bell
+ * SPDX-FileCopyrightText: 2026 TussockyJoker
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  */

@@ -1,3 +1,7 @@
+/*
+ * SPDX-FileCopyrightText: 2026 William Bell
+ */
+
 #ifndef Argon_NATIVE_FUNCTION_H
 #define Argon_NATIVE_FUNCTION_H
 

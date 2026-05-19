@@ -1,3 +1,7 @@
+<!--
+SPDX-FileCopyrightText: 2026 William Bell
+-->
+
 # Installation
 
 Chloride mainly targets Linux, Mac, Windows, and FreeBSD, in order of priority. These targets aren't exclusive, so if you're having issues on a different platform, feel free to open an issue and we will try to resolve it. Also, feel free to fix the issue yourself and send a Pull Request.
