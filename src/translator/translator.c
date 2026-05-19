@@ -9,10 +9,11 @@
 #include "../hash_data/hash_data.h"
 #include "../hashmap/hashmap.h"
 #include "../parser/assignable/item/item.h"
+#include "../parser/conditional_expression/conditional_expression.h"
 #include "../parser/dictionary/dictionary.h"
-#include "../parser/throw/throw.h"
 #include "../parser/not/not.h"
 #include "../parser/range/range.h"
+#include "../parser/throw/throw.h"
 #include "access/access.h"
 #include "assignment/assignment.h"
 #include "break/break.h"
@@ -176,26 +177,49 @@ size_t translate_parsed(Translated *translated, ParsedValue *parsedValue,
                                 err);
   case AST_TRY:
     return translate_parsed_try(translated, (ParsedTry *)parsedValue->data,
-                                  err);
+                                err);
   case AST_WHILE:
     return translate_parsed_while(translated, (ParsedWhile *)parsedValue->data,
                                   err);
   case AST_TEMPLATE:
-    return translate_parsed_template(translated,(ParsedTemplate *)parsedValue->data, err);
+    return translate_parsed_template(translated,
+                                     (ParsedTemplate *)parsedValue->data, err);
   case AST_DOWRAP:
     return translate_parsed_dowrap(translated, (DArray *)parsedValue->data,
                                    err);
-  case AST_THROW:{
-    ParsedThrow* throw = (ParsedThrow *)parsedValue->data;
-    size_t first = translate_parsed(
-        translated, throw->value, err);
+  case AST_THROW: {
+    ParsedThrow *throw = (ParsedThrow *)parsedValue->data;
+    size_t first = translate_parsed(translated, throw->value, err);
 
     push_instruction_byte(translated, OP_SOURCE_LOCATION);
     push_instruction_code(translated, throw->line);
     push_instruction_code(translated, throw->column);
     push_instruction_code(translated, throw->length);
-    
+
     push_instruction_byte(translated, OP_THROW);
+    return first;
+  }
+  case AST_CONDITIONAL_EXCEPTION: {
+    ParsedConditionalExpression *conditional_expression =
+        (ParsedConditionalExpression *)parsedValue->data;
+    size_t first =
+        translate_parsed(translated, conditional_expression->condition, err);
+
+    push_instruction_byte(translated, OP_BOOL);
+    push_instruction_byte(translated, OP_JUMP_IF_FALSE);
+    push_instruction_byte(translated, 0);
+    uint64_t jump_index = push_instruction_code(translated, 0);
+
+    translate_parsed(translated, conditional_expression->true_body, err);
+    
+    push_instruction_byte(translated, OP_JUMP);
+    size_t skip_index = push_instruction_code(translated, 0);
+
+    set_instruction_code(
+        translated, jump_index,
+        translate_parsed(translated, conditional_expression->false_body, err));
+
+    set_instruction_code(translated, skip_index, translated->bytecode.size);
     return first;
   }
   case AST_RETURN:
@@ -260,7 +284,8 @@ size_t translate_parsed(Translated *translated, ParsedValue *parsedValue,
     push_instruction_code(translated, range->length);
 
     push_instruction_byte(translated, OP_CALL);
-    if (range->inclusive) push_instruction_byte(translated, OP_MAKE_RANGE_INCLUSIVE);
+    if (range->inclusive)
+      push_instruction_byte(translated, OP_MAKE_RANGE_INCLUSIVE);
     return first;
   }
   case AST_ARRAY: {

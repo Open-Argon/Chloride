@@ -16,6 +16,7 @@
 #include "assignable/item/item.h"
 #include "break/break.h"
 #include "class/class.h"
+#include "conditional_expression/conditional_expression.h"
 #include "continue/continue.h"
 #include "declaration/declaration.h"
 #include "delete/delete.h"
@@ -210,6 +211,9 @@ ParsedValueReturn parse_token_full(char *file, DArray *tokens, size_t *index,
     case TOKEN_TEMPLATE_START:
       output = parse_template(file, tokens, index, output.value);
       break;
+    case TOKEN_QUESTION:
+      output = parse_conditional_expression(file, tokens, index, output.value);
+      break;
     case TOKEN_LBRACKET:
       output = parse_item_access(file, tokens, index, output.value);
       break;
@@ -270,6 +274,9 @@ void free_parsed(ParsedValue *ptr) {
   switch (parsed->type) {
   case AST_IDENTIFIER:
     free_identifier(parsed);
+    break;
+  case AST_CONDITIONAL_EXCEPTION:
+    free_expression_conditional(parsed);
     break;
   case AST_NUMBER:
     mpq_clear(*(mpq_t *)parsed->data);
