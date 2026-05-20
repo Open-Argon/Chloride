@@ -6,7 +6,7 @@ SPDX-License-Identifier: GFDL-1.3-or-later
 
 <div align="center">
 <p>
-    <img width="150" src="logo/logo.png">
+    <img width="150" src="assets/logo.png">
 </p>
 <h1>Chloride</h1>
 </div>

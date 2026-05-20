@@ -36,7 +36,8 @@ FREE_SOFTWARE_TEXT = (
     "benefit from your changes. Access to the source code is a precondition "
     "for this.$\\r$\\n$\\r$\\n"
     f"The source code for {APP_NAME} is available at:$\\r$\\n"
-    "https://github.com/wbellxyz/argon$\\r$\\n$\\r$\\n"  # update URL as needed
+    "https://git.wbell.dev/Open-Argon/Chloride$\\r$\\n"
+    "https://github.com/Open-Argon/Chloride (Mirror)$\\r$\\n$\\r$\\n"
     "The next page shows the full license text. You must review it before "
     "continuing the installation."
 )
@@ -54,12 +55,30 @@ lines.append('RequestExecutionLevel admin')
 lines.append('Unicode True')
 lines.append('')
 
+# ── Branding ──────────────────────────────────────────────────────────────────
+lines.append('!define MUI_ICON "assets\\argon.ico"')
+lines.append('!define MUI_UNICON "assets\\argon.ico"')
+lines.append('!define MUI_WELCOMEFINISHPAGE_BITMAP "assets\\installer-sidebar.bmp"')
+lines.append('!define MUI_WELCOMEFINISHPAGE_BITMAP_NOSTRETCH')
+lines.append('')
+
+# ── Welcome splash ────────────────────────────────────────────────────────────
+lines.append('; -- Welcome splash (shown first, before the rights pages) --')
+lines.append('!define MUI_PAGE_CUSTOMFUNCTION_PRE WelcomePagePre')
+lines.append(f'!define MUI_WELCOMEPAGE_TITLE "Welcome to the {APP_NAME} {VERSION} Setup"')
+lines.append(f'!define MUI_WELCOMEPAGE_TEXT "This wizard will guide you through the installation of {APP_NAME} {VERSION}.$\\r$\\n$\\r$\\nBefore the installation begins, you will be shown information about your rights as a user of this free software, followed by the full license text.$\\r$\\n$\\r$\\nClick Next to continue."')
+lines.append('!insertmacro MUI_PAGE_WELCOME')
+lines.append('')
+lines.append('Function WelcomePagePre')
+lines.append('FunctionEnd')
+lines.append('')
+
 # ── Custom "What is free software?" page ─────────────────────────────────────
 # We reuse MUI_PAGE_WELCOME a second time via a custom page function so we can
 # have both a welcome splash and a separate free-software explanation page.
 lines.append('; -- Free software explanation page (custom, before license) --')
 lines.append('!define MUI_PAGE_CUSTOMFUNCTION_PRE FreeSwPagePre')
-lines.append('!define MUI_WELCOMEPAGE_TITLE "Free Software — Your Rights"')
+lines.append('!define MUI_WELCOMEPAGE_TITLE "What is free software?"')
 lines.append(f'!define MUI_WELCOMEPAGE_TEXT "{FREE_SOFTWARE_TEXT}"')
 lines.append('!insertmacro MUI_PAGE_WELCOME')
 lines.append('')
@@ -73,17 +92,6 @@ lines.append('; -- Full GPL-3.0 license text (scrollable) --')
 lines.append('!define MUI_LICENSEPAGE_CHECKBOX')          # user must tick a checkbox
 lines.append('!define MUI_LICENSEPAGE_CHECKBOX_TEXT "I have read and understood the terms of the GNU General Public License."')
 lines.append('!insertmacro MUI_PAGE_LICENSE "LICENSE.txt"')
-lines.append('')
-
-# ── Welcome splash ────────────────────────────────────────────────────────────
-lines.append('; -- Welcome splash (shown first, before the rights pages) --')
-lines.append('!define MUI_PAGE_CUSTOMFUNCTION_PRE WelcomePagePre')
-lines.append(f'!define MUI_WELCOMEPAGE_TITLE "Welcome to the {APP_NAME} {VERSION} Setup"')
-lines.append(f'!define MUI_WELCOMEPAGE_TEXT "This wizard will guide you through the installation of {APP_NAME} {VERSION}.$\\r$\\n$\\r$\\nBefore the installation begins, you will be shown information about your rights as a user of this free software, followed by the full license text.$\\r$\\n$\\r$\\nClick Next to continue."')
-lines.append('!insertmacro MUI_PAGE_WELCOME')
-lines.append('')
-lines.append('Function WelcomePagePre')
-lines.append('FunctionEnd')
 lines.append('')
 
 # ── Remaining pages ───────────────────────────────────────────────────────────
