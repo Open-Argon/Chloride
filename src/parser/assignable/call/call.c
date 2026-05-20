@@ -103,7 +103,8 @@ static ArErr parse_arg_list(char *file, DArray *tokens, size_t *index,
           return ARG_ERR("expected value after **");
         cs->kw_arg = val.value;
         if (cs->assign_mode == ASSIGN_ALLOWED)
-          cs->assign_mode = token->type == TOKEN_IDENTIFIER
+          cs->assign_mode = token->type == TOKEN_IDENTIFIER &&
+                                    val.value->type == AST_IDENTIFIER
                                 ? ASSIGN_ALLOWED
                                 : ASSIGN_NOT_ALLOWED;
         cs->stage = 3;
@@ -117,7 +118,8 @@ static ArErr parse_arg_list(char *file, DArray *tokens, size_t *index,
           return ARG_ERR("expected value after *");
         cs->v_arg = val.value;
         if (cs->assign_mode == ASSIGN_ALLOWED)
-          cs->assign_mode = token->type == TOKEN_IDENTIFIER
+          cs->assign_mode = token->type == TOKEN_IDENTIFIER &&
+                                    val.value->type == AST_IDENTIFIER
                                 ? ASSIGN_ALLOWED
                                 : ASSIGN_NOT_ALLOWED;
         cs->stage = 2;
@@ -251,12 +253,18 @@ static ArErr parse_arg_list(char *file, DArray *tokens, size_t *index,
         if (cs->stage == 3)
           return ARG_ERR("no arguments allowed after **token");
 
+        token = darray_get(tokens, *index);
         ParsedValueReturn val = parse_token(file, tokens, index, true);
         if (is_error(&val.err))
           return val.err;
         if (!val.value)
           return ARG_ERR("expected argument");
 
+        if (cs->assign_mode == ASSIGN_ALLOWED)
+          cs->assign_mode = token->type == TOKEN_IDENTIFIER &&
+                                    val.value->type == AST_IDENTIFIER
+                                ? ASSIGN_ALLOWED
+                                : ASSIGN_NOT_ALLOWED;
         darray_push(&cs->args, val.value);
         free(val.value);
 
@@ -289,9 +297,10 @@ RETURN_CHECKS:
   if (cs->assign_mode != ASSIGN_NOT_ALLOWED) {
     struct hashmap *seen = createHashmap();
     for (size_t i = 0; i < cs->args.size; i++) {
-      ParsedIdentifier *param = ((ParsedValue *)darray_get(&cs->args, i))->data;
-      uint64_t hash =
-          siphash64_bytes(param->name, strlen(param->name), siphash_key_fixed);
+      ParsedValue *param = darray_get(&cs->args, i);
+      ParsedIdentifier *identifier = param->data;
+      uint64_t hash = siphash64_bytes(
+          identifier->name, strlen(identifier->name), siphash_key_fixed);
       if (hashmap_lookup(seen, hash)) {
         cs->assign_mode = ASSIGN_NOT_ALLOWED;
         break;
@@ -300,9 +309,9 @@ RETURN_CHECKS:
     }
 
     if (cs->v_arg) {
-      ParsedIdentifier *param = cs->v_arg->data;
+      ParsedIdentifier *identifier = cs->v_arg->data;
       uint64_t hash =
-          siphash64_bytes(param->name, strlen(param->name), siphash_key_fixed);
+          siphash64_bytes(identifier->name, strlen(identifier->name), siphash_key_fixed);
       if (hashmap_lookup(seen, hash)) {
         cs->assign_mode = ASSIGN_NOT_ALLOWED;
       } else {
@@ -311,9 +320,9 @@ RETURN_CHECKS:
     }
 
     if (cs->kw_arg) {
-      ParsedIdentifier *param = cs->kw_arg->data;
+      ParsedIdentifier *identifier = cs->kw_arg->data;
       uint64_t hash =
-          siphash64_bytes(param->name, strlen(param->name), siphash_key_fixed);
+          siphash64_bytes(identifier->name, strlen(identifier->name), siphash_key_fixed);
       if (hashmap_lookup(seen, hash)) {
         cs->assign_mode = ASSIGN_NOT_ALLOWED;
       } else {
