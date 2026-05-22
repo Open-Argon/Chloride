@@ -1,1 +1,1 @@
-term.log(array(range(-1000000,1000000)).map((val)=val*val).sort((a,b)=a<b?-1:a>b?1:0).filter((val)=val<10000))
+term.log(array(range(-1000000,1000000)).map((val)=val*val).filter((val)=val<10000).sort((a,b)=a<b?-1:a>b?1:0))

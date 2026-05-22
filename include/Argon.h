@@ -136,9 +136,9 @@ struct ArgonNativeAPI {
                          ArgonError *err);
   void (*add_to_hashmap_string_key)(ArgonHashmap *hashmap, char *key,
                                     ArgonObject *value);
-  // void (*get_from_hashmap)(ArgonHashmap *hashmap, ArgonObject *key,
-  //                          ArgonState *state, ArgonError *err);
-  // void (*get_from_hashmap_string_key)(ArgonHashmap *hashmap, char *key);
+  ArgonObject* (*get_from_hashmap)(ArgonHashmap *hashmap, ArgonObject *key,
+                           ArgonState *state, ArgonError *err);
+  ArgonObject* (*get_from_hashmap_string_key)(ArgonHashmap *hashmap, char *key);
   void (*remove_from_hashmap)(ArgonHashmap *hashmap, ArgonObject *key,
                               ArgonState *state, ArgonError *err);
   void (*remove_from_hashmap_string_key)(ArgonHashmap *hashmap, char *key);

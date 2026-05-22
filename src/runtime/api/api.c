@@ -6,12 +6,12 @@
 #include "api.h"
 #include "../../RWLock.h"
 #include "../../err.h"
+#include "../../hash_data/hash_data.h"
 #include "../../memory.h"
 #include "../call/call.h"
 #include "../objects/buffer/buffer.h"
 #include "../objects/dictionary/dictionary.h"
 #include "../objects/exceptions/exceptions.h"
-#include "../../hash_data/hash_data.h"
 #include "../objects/literals/literals.h"
 #include "../objects/number/number.h"
 #include "../objects/object.h"
@@ -200,22 +200,37 @@ bool argon_is_i64(ArgonObject *obj) {
 }
 
 void api_add_to_hashmap(ArgonHashmap *hashmap, ArgonObject *key,
-                              ArgonObject *value, RuntimeState *state,
-                              ArErr *err) {
+                        ArgonObject *value, RuntimeState *state, ArErr *err) {
   int64_t hash = hash_object(key, err, state);
   if (is_error(err))
     return;
   hashmap_insert_GC(hashmap, hash, key, value, 0);
 }
 
-void api_remove_entry_from_hashmap_string_key(struct hashmap_GC *hashmap, char *name) {
+ArgonObject *api_get_from_hashmap(ArgonHashmap *hashmap, ArgonObject *key,
+                                  RuntimeState *state, ArErr *err) {
+  int64_t hash = hash_object(key, err, state);
+  if (is_error(err))
+    return NULL;
+  return hashmap_lookup_GC(hashmap, hash);
+}
+
+ArgonObject *api_get_from_hashmap_string_key(struct hashmap_GC *hashmap,
+                                             char *name) {
+  size_t length = strlen(name);
+  uint64_t hash = siphash64_bytes(name, length, siphash_key_fixed);
+  return hashmap_lookup_GC(hashmap, hash);
+}
+
+void api_remove_entry_from_hashmap_string_key(struct hashmap_GC *hashmap,
+                                              char *name) {
   size_t length = strlen(name);
   uint64_t hash = siphash64_bytes(name, length, siphash_key_fixed);
   hashmap_remove_GC(hashmap, hash);
 }
 
-void api_remove_entry_from_hashmap(ArgonHashmap *hashmap, ArgonObject *key, RuntimeState *state,
-                              ArErr *err) {
+void api_remove_entry_from_hashmap(ArgonHashmap *hashmap, ArgonObject *key,
+                                   RuntimeState *state, ArErr *err) {
   int64_t hash = hash_object(key, err, state);
   if (is_error(err))
     return;
@@ -261,6 +276,8 @@ ArgonNativeAPI native_api = {
     .hashmap_to_dictionary = create_dictionary,
     .add_to_hashmap_string_key = add_to_hashmap,
     .add_to_hashmap = api_add_to_hashmap,
+    .get_from_hashmap = api_get_from_hashmap,
+    .get_from_hashmap_string_key = api_get_from_hashmap_string_key,
     .remove_from_hashmap_string_key = api_remove_entry_from_hashmap_string_key,
     .remove_from_hashmap = api_remove_entry_from_hashmap,
 };
