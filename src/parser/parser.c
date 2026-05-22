@@ -8,6 +8,7 @@
 #include "../dynamic_array/darray.h"
 #include "../err.h"
 #include "../lexer/token.h"
+#include "../runtime/objects/exceptions/exceptions.h"
 #include "array/array.h"
 #include "assignable/access/access.h"
 #include "assignable/assign/assign.h"
@@ -32,7 +33,6 @@
 #include "number/number.h"
 #include "operations/operations.h"
 #include "parentheses-and-anonymous-function/parentheses-and-anonymous-function.h"
-#include "../runtime/objects/exceptions/exceptions.h"
 #include "range/range.h"
 #include "return/return.h"
 #include "string/string.h"
@@ -212,7 +212,12 @@ ParsedValueReturn parse_token_full(char *file, DArray *tokens, size_t *index,
       output = parse_template(file, tokens, index, output.value);
       break;
     case TOKEN_QUESTION:
-      output = parse_conditional_expression(file, tokens, index, output.value);
+      if (process_operations) {
+        output =
+            parse_conditional_expression(file, tokens, index, output.value);
+        break;
+      }
+      passed = true;
       break;
     case TOKEN_LBRACKET:
       output = parse_item_access(file, tokens, index, output.value);

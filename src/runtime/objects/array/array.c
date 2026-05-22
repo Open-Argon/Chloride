@@ -229,8 +229,8 @@ ARGON_METHOD(ARRAY_TYPE, __contains__, {
   for (size_t i = 0; i < arr->size; i++) {
     ArgonObject *result =
         argon_call(object__equal__, 1,
-                   (ArgonObject *[]){*(ArgonObject **)darray_armem_get(arr, i)}, NULL,
-                   err, state);
+                   (ArgonObject *[]){*(ArgonObject **)darray_armem_get(arr, i)},
+                   NULL, err, state);
     if (api->is_error(err))
       return ARGON_NULL;
     if (result == ARGON_TRUE)
@@ -524,6 +524,192 @@ ARGON_METHOD(ARRAY_TYPE, __setitem__, {
   return argv[2];
 })
 
+ARGON_METHOD(ARRAY_TYPE, map, {
+  if (api->fix_to_arg_size(2, argc, err))
+    return api->ARGON_NULL;
+  GET_SELF(TYPE_ARRAY)
+
+  ArgonObject *object = new_instance(ARRAY_TYPE, sizeof(darray_armem));
+  object->type = TYPE_ARRAY;
+
+  object->value.as_array = darray_armem_create();
+
+  darray_armem_init(object->value.as_array, sizeof(ArgonObject *),
+                    self->value.as_array->size);
+
+  for (size_t i = 0; i < object->value.as_array->size; i++) {
+    *(ArgonObject **)darray_armem_get(object->value.as_array, i) = api->call(
+        argv[1], 1, (ArgonObject **)darray_armem_get(self->value.as_array, i),
+        NULL, err, state);
+    if (api->is_error(err))
+      return api->ARGON_NULL;
+  }
+
+  return object;
+})
+
+ARGON_METHOD(ARRAY_TYPE, filter, {
+  if (api->fix_to_arg_size(2, argc, err))
+    return api->ARGON_NULL;
+  GET_SELF(TYPE_ARRAY)
+
+  ArgonObject *object = new_instance(ARRAY_TYPE, sizeof(darray_armem));
+  object->type = TYPE_ARRAY;
+
+  object->value.as_array = darray_armem_create();
+
+  darray_armem_init(object->value.as_array, sizeof(ArgonObject *), 0);
+
+  for (size_t i = 0; i < self->value.as_array->size; i++) {
+    ArgonObject **item =
+        (ArgonObject **)darray_armem_get(self->value.as_array, i);
+    ArgonObject *value = api->call(argv[1], 1, item, NULL, err, state);
+    if (api->is_error(err))
+      return api->ARGON_NULL;
+
+    bool truthiness;
+
+    if (value == ARGON_TRUE)
+      truthiness = true;
+    else if (value == ARGON_FALSE)
+      truthiness = false;
+    else if ((value->type != TYPE_OBJECT)) {
+      truthiness = value->as_bool;
+    } else {
+      ArgonObject *args[] = {ARGON_BOOL_TYPE, value};
+      truthiness = ARGON_BOOL_TYPE___new__(2, args, NULL, err, state, NULL) ==
+                   ARGON_TRUE;
+      if (api->is_error(err))
+        return api->ARGON_NULL;
+    }
+
+    if (truthiness) {
+      darray_armem_insert(object->value.as_array, -1, item);
+    }
+  }
+
+  return object;
+})
+
+static int argon_array_compare(ArgonObject **a, ArgonObject **b,
+                               ArgonObject *callback, ArgonNativeAPI *api,
+                               ArErr *err, void *state) {
+  ArgonObject *args[] = {*a, *b};
+  ArgonObject *result = api->call(callback, 2, args, NULL, err, state);
+  if (api->is_error(err))
+    return 0;
+
+  // Expect the callback to return a number (like JS: negative, 0, positive)
+  // Adjust this depending on how your numeric type works
+  if (result->type == TYPE_NUMBER) {
+    int64_t result_i64 = api->argon_to_i64(result, err);
+    return (result_i64 < 0) ? -1 : (result_i64 > 0) ? 1 : 0;
+  }
+
+  return 0;
+}
+static void argon_insertion_sort(ArgonObject **arr, size_t lo, size_t hi,
+                                  ArgonObject *callback, ArgonNativeAPI *api,
+                                  ArErr *err, void *state) {
+  for (size_t i = lo + 1; i <= hi; i++) {
+    ArgonObject *key = arr[i];
+    size_t j = i;
+    while (j > lo &&
+           argon_array_compare(&arr[j - 1], &key, callback, api, err, state) > 0) {
+      if (api->is_error(err)) return;
+      arr[j] = arr[j - 1];
+      j--;
+    }
+    arr[j] = key;
+  }
+}
+
+static void argon_qsort(ArgonObject **arr, size_t lo, size_t hi,
+                        ArgonObject *callback, ArgonNativeAPI *api, ArErr *err,
+                        void *state) {
+  if (api->is_error(err)) return;
+
+  // Use insertion sort for small subarrays — also sidesteps the n<3 edge case
+  if (hi - lo < 16) {
+    argon_insertion_sort(arr, lo, hi, callback, api, err, state);
+    return;
+  }
+
+  // Median-of-three is now safe since we have at least 16 elements
+  size_t mid = lo + (hi - lo) / 2;
+  if (argon_array_compare(&arr[lo], &arr[mid], callback, api, err, state) > 0)
+    { ArgonObject *tmp = arr[lo]; arr[lo] = arr[mid]; arr[mid] = tmp; }
+  if (argon_array_compare(&arr[lo], &arr[hi], callback, api, err, state) > 0)
+    { ArgonObject *tmp = arr[lo]; arr[lo] = arr[hi]; arr[hi] = tmp; }
+  if (argon_array_compare(&arr[mid], &arr[hi], callback, api, err, state) > 0)
+    { ArgonObject *tmp = arr[mid]; arr[mid] = arr[hi]; arr[hi] = tmp; }
+
+  if (api->is_error(err)) return;
+
+  // Place pivot at hi-1 (safe: hi >= lo+16, so hi-1 > mid > lo)
+  ArgonObject *pivot = arr[mid];
+  { ArgonObject *tmp = arr[mid]; arr[mid] = arr[hi - 1]; arr[hi - 1] = tmp; }
+
+  size_t i = lo;       // will be pre-incremented before first compare
+  size_t j = hi - 1;  // will be pre-decremented before first compare
+
+  for (;;) {
+    while (argon_array_compare(&arr[++i], &pivot, callback, api, err, state) < 0
+           && !api->is_error(err));
+    while (j > lo &&
+           argon_array_compare(&pivot, &arr[--j], callback, api, err, state) < 0
+           && !api->is_error(err));
+    if (api->is_error(err) || i >= j) break;
+    ArgonObject *tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
+  }
+
+  // Restore pivot to its final position
+  { ArgonObject *tmp = arr[i]; arr[i] = arr[hi - 1]; arr[hi - 1] = tmp; }
+
+  if (!api->is_error(err)) {
+    if (i > 0 && i - 1 > lo) argon_qsort(arr, lo, i - 1, callback, api, err, state);
+    if (i + 1 < hi)          argon_qsort(arr, i + 1, hi, callback, api, err, state);
+  }
+}
+
+
+
+ARGON_METHOD(ARRAY_TYPE, sort, {
+  if (api->fix_to_arg_size(2, argc, err))
+    return api->ARGON_NULL;
+  GET_SELF(TYPE_ARRAY)
+
+  size_t n = self->value.as_array->size;
+  if (n <= 1)
+    return self; // nothing to do
+
+  // Build a flat C array of pointers for easy swapping
+  ArgonObject **arr = malloc(n * sizeof(ArgonObject *));
+  if (!arr) {
+    // set OOM error via your api if you have that
+    return api->ARGON_NULL;
+  }
+
+  memcpy(arr, self->value.as_array->data, n * sizeof(ArgonObject *));
+  for (size_t i = 0; i < n; i++)
+    arr[i] = *(ArgonObject **)darray_armem_get(self->value.as_array, i);
+
+  argon_qsort(arr, 0, n - 1, argv[1], api, err, state);
+
+  if (api->is_error(err)) {
+    free(arr);
+    return api->ARGON_NULL;
+  }
+
+  // Write sorted pointers back — sort in place like JS Array.prototype.sort
+  memcpy(self->value.as_array->data, arr, n * sizeof(ArgonObject *));
+  for (size_t i = 0; i < n; i++)
+    *(ArgonObject **)darray_armem_get(self->value.as_array, i) = arr[i];
+
+  free(arr);
+  return self; // JS sort mutates and returns self
+})
+
 ARGON_METHOD(ARRAY_TYPE, __delitem__, {
   (void)state;
   if (argc != 2) {
@@ -654,6 +840,9 @@ void init_array_type() {
   MOUNT_ARGON_METHOD(ARRAY_TYPE, get_length)
   MOUNT_ARGON_METHOD(ARRAY_TYPE, set_length)
   MOUNT_ARGON_METHOD(ARRAY_TYPE, join)
+  MOUNT_ARGON_METHOD(ARRAY_TYPE, map)
+  MOUNT_ARGON_METHOD(ARRAY_TYPE, filter)
+  MOUNT_ARGON_METHOD(ARRAY_TYPE, sort)
   MOUNT_ARGON_METHOD(ARRAY_TYPE, __getitem__)
   MOUNT_ARGON_METHOD(ARRAY_TYPE, __setitem__)
   MOUNT_ARGON_METHOD(ARRAY_TYPE, __delitem__)
@@ -662,9 +851,9 @@ void init_array_type() {
   MOUNT_ARGON_METHOD(ARRAY_TYPE, of_size)
 
   ARRAY_ITERATOR_TYPE = new_class();
-  add_builtin_field(ARRAY_ITERATOR_TYPE, __next__,
-                    create_argon_native_function(
-                        "__next__", ARRAY_ITERATOR_TYPE___next__));
+  add_builtin_field(
+      ARRAY_ITERATOR_TYPE, __next__,
+      create_argon_native_function("__next__", ARRAY_ITERATOR_TYPE___next__));
 
   ARGON_ARRAY_CREATE =
       create_argon_native_function("ARRAY_CREATE", ARRAY_CREATE);

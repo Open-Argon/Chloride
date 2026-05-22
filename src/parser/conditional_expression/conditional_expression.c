@@ -70,4 +70,5 @@ void free_expression_conditional(void *ptr) {
   free(conditionalExpression->true_body);
   free_parsed(conditionalExpression->false_body);
   free(conditionalExpression->false_body);
+  free(conditionalExpression);
 }

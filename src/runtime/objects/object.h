@@ -83,6 +83,13 @@ ArgonObject *new_object(size_t endSize);
 
 #define CLASS_OF(OBJ) get_builtin_field(OBJ, __class__)
 
-#define GET_METHOD_OF_OBJECT(OBJ, FIELD) get_builtin_field_for_class(CLASS_OF(OBJ), FIELD, OBJ)
+#define GET_METHOD_OF_OBJECT(OBJ, FIELD)                                       \
+  get_builtin_field_for_class(CLASS_OF(OBJ), FIELD, OBJ)
+
+#define GET_SELF(TYPE)                                                         \
+  ArgonObject *self = argv[0];                                                 \
+  if (self->type != TYPE)                                                      \
+    return api->throw_argon_error(                                             \
+        err, api->TypeError, "Incorrect type passed into self parameter");
 
 #endif // OBJECT_H

@@ -1,8 +1,9 @@
 # SPDX-FileCopyrightText: 2025, 2026 William Bell
 #
 # SPDX-License-Identifier: LGPL-3.0-or-later
+import "path" as path
 
-let __threading__ = load_native_code(program.file.directory+"native/bin/threading"+platform.lib_ext)
+let __threading__ = load_native_code(path.resolve(program.file.directory,"native","bin","threading"+platform.lib_ext))
 
 
 class Thread do

@@ -7,11 +7,11 @@
 #ifndef AROBJECT_H
 #define AROBJECT_H
 
+#include "../include/Argon.h"
 #include "../include/ArgonTypes.h"
 #include "dynamic_array/darray.h"
 #include "runtime/internals/dynamic_array_armem/darray_armem.h"
 #include "runtime/internals/hashmap/hashmap.h"
-#include "../include/Argon.h"
 #include <gmp.h>
 #include <limits.h>
 #include <stddef.h>
@@ -85,7 +85,10 @@
   X(title)                                                                     \
   X(replace)                                                                   \
   X(strip)                                                                     \
-  X(index_of)
+  X(index_of)                                                                  \
+  X(map)                                                                       \
+  X(filter)                                                                    \
+  X(sort)
 
 typedef enum {
 #define X(name) name,
@@ -104,8 +107,6 @@ struct ArErr {
 };
 
 #undef ArgonError
-
-
 
 typedef struct ArgonNativeAPI ArgonNativeAPI;
 
@@ -234,12 +235,11 @@ struct as_tuple_iterator {
 
 // full definition of ArgonObject (no typedef again!)
 struct ArgonObject {
-  struct hashmap_GC *dict;
-  size_t built_in_slot_length;
-  struct built_in_slot built_in_slot[BUILT_IN_ARRAY_COUNT];
   ArgonType type;
   bool as_bool;
-  // pthread_rwlock_t lock;
+  uint8_t built_in_slot_length;
+  struct built_in_slot built_in_slot[BUILT_IN_ARRAY_COUNT];
+  struct hashmap_GC *dict;
   union {
     ArErr err;
     struct as_number *as_number;

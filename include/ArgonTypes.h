@@ -15,7 +15,7 @@ extern "C" {
 #endif
 
 typedef enum ArgonType {
-  TYPE_NULL,
+  TYPE_NULL=1,
   TYPE_BOOL,
   TYPE_NUMBER,
   TYPE_STRING,

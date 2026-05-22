@@ -18,6 +18,7 @@ extern "C" {
 #include "ArgonTypes.h"
 #include <stdbool.h>
 #include <stdint.h>
+#include <string.h>
 
 #define ARGON_NATIVE_API_VERSION 1
 
@@ -127,7 +128,24 @@ struct ArgonNativeAPI {
   ArgonObject *SignalStopIteration;
 
   ArgonObject *(*throw_argon_signal)(ArgonError *, ArgonObject *);
+
+  ArgonHashmap *(*create_hashmap)();
+  ArgonObject *(*hashmap_to_dictionary)(ArgonHashmap *);
+  void (*add_to_hashmap)(ArgonHashmap *hashmap, ArgonObject *key,
+                         ArgonObject *value, ArgonState *state,
+                         ArgonError *err);
+  void (*add_to_hashmap_string_key)(ArgonHashmap *hashmap, char *key,
+                                    ArgonObject *value);
+  // void (*get_from_hashmap)(ArgonHashmap *hashmap, ArgonObject *key,
+  //                          ArgonState *state, ArgonError *err);
+  // void (*get_from_hashmap_string_key)(ArgonHashmap *hashmap, char *key);
+  void (*remove_from_hashmap)(ArgonHashmap *hashmap, ArgonObject *key,
+                              ArgonState *state, ArgonError *err);
+  void (*remove_from_hashmap_string_key)(ArgonHashmap *hashmap, char *key);
 };
+
+#define ARGON_STRING_FROM_C_STRING(str)                                        \
+  api->string_to_argon((struct string){str, strlen(str)})
 
 __attribute__((visibility("default"))) void
 argon_module_init(ArgonState *vm, ArgonNativeAPI *api, ArgonError *err,

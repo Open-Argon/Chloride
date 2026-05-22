@@ -1,7 +1,9 @@
 # SPDX-FileCopyrightText: 2025, 2026 William Bell
 #
 # SPDX-License-Identifier: LGPL-3.0-or-later
-let __net__ = load_native_code(program.file.directory+"native/bin/network"+platform.lib_ext)
+import "path" as path
+
+let __net__ = load_native_code(path.resolve(program.file.directory,"native","bin","network"+platform.lib_ext))
 
 # Option constants mirroring NET_OPT_* in socket.h
 let NET_OPT_KEEPALIVE = 1

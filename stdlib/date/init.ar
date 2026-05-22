@@ -1,8 +1,9 @@
 # SPDX-FileCopyrightText: 2026 William Bell
 #
 # SPDX-License-Identifier: LGPL-3.0-or-later
+import "path" as path
 
-let _date = load_native_code(program.file.directory+"native/bin/date"+platform.lib_ext)
+let _date = load_native_code(path.resolve(program.file.directory,"native","bin","date"+platform.lib_ext))
 
 class Date do
     this.__init__(self, timestamp_ms = null, timestamp_s = null, date = null, year = null, month = null, day = null, hour = null, minute = null, second = null) = do
