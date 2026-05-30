@@ -69,7 +69,7 @@ void *thread_fn(void *arg) {
   return NULL;
 }
 
-ARGON_FUNCTION(Argon_Thread, {
+ARGON_FUNCTION(Thread, {
   if (api->fix_to_arg_size(2, argc, err)) {
     return api->ARGON_NULL;
   }
@@ -103,7 +103,7 @@ ARGON_FUNCTION(Argon_Thread, {
   return GC_managed_args_object;
 })
 
-ARGON_FUNCTION(Argon_Thread_join, {
+ARGON_FUNCTION(Join, {
   if (api->fix_to_arg_size(2, argc, err)) {
     return api->ARGON_NULL;
   }
@@ -140,7 +140,7 @@ ARGON_FUNCTION(Argon_Thread_join, {
                                 "Thread already joined or detached.");
 })
 
-ARGON_FUNCTION(Argon_Thread_detach, {
+ARGON_FUNCTION(Detach, {
   if (api->fix_to_arg_size(1, argc, err)) {
     return api->ARGON_NULL;
   }
@@ -178,7 +178,7 @@ ARGON_FUNCTION(Argon_Thread_detach, {
                                 "Thread already joined or detached.");
 })
 
-ARGON_FUNCTION(Argon_Err_object, {
+ARGON_FUNCTION(Err_object, {
   if (api->fix_to_arg_size(0, argc, err)) {
     return api->ARGON_NULL;
   }
@@ -186,7 +186,7 @@ ARGON_FUNCTION(Argon_Err_object, {
   return api->create_err_object();
 })
 
-ARGON_FUNCTION(Argon_Get_thread_id, {
+ARGON_FUNCTION(Get_thread_id, {
   if (api->fix_to_arg_size(0, argc, err)) {
     return api->ARGON_NULL;
   }
@@ -194,20 +194,10 @@ ARGON_FUNCTION(Argon_Get_thread_id, {
   return api->i64_to_argon(mt_thread_current_id());
 })
 
-void argon_module_init(ArgonState *vm, ArgonNativeAPI *api, ArgonError *err,
-                       ArgonObjectRegister *reg) {
-  api->register_ArgonObject(
-      reg, "Thread", api->create_argon_native_function("Thread", Argon_Thread));
-  api->register_ArgonObject(
-      reg, "Join",
-      api->create_argon_native_function("Join", Argon_Thread_join));
-  api->register_ArgonObject(
-      reg, "Detach",
-      api->create_argon_native_function("Detach", Argon_Thread_detach));
-  api->register_ArgonObject(
-      reg, "Err_object",
-      api->create_argon_native_function("Err_object", Argon_Err_object));
-  api->register_ArgonObject(
-      reg, "Get_thread_id",
-      api->create_argon_native_function("Get_thread_id", Argon_Get_thread_id));
-}
+INIT_ARGON_MODULE({
+  REGISTER_ARGON_FUNCTION(Thread)
+  REGISTER_ARGON_FUNCTION(Join)
+  REGISTER_ARGON_FUNCTION(Detach)
+  REGISTER_ARGON_FUNCTION(Err_object)
+  REGISTER_ARGON_FUNCTION(Get_thread_id)
+})

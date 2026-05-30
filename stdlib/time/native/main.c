@@ -20,11 +20,6 @@ ARGON_FUNCTION(snooze, {
   return api->ARGON_NULL;
 })
 
-void argon_module_init(ArgonState *vm, ArgonNativeAPI *api, ArgonError *err,
-                       ArgonObjectRegister *reg) {
-  (void)vm;
-  (void)err;
-  api->register_ArgonObject(
-      reg, "snooze",
-      api->create_argon_native_function("snooze", snooze));
-}
+INIT_ARGON_MODULE({
+ REGISTER_ARGON_FUNCTION(snooze)
+})
