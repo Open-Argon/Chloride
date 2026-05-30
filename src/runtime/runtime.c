@@ -568,7 +568,7 @@ ARGON_METHOD(ARGON_TYPE_TYPE, __call__, {
   if (is_error(err))
     return ARGON_NULL;
   ArgonObject *ARGON_TYPE_TYPE___call___args[] = {ARGON_TYPE_TYPE, new_object};
-  ArgonObject *new_object_class = ARGON_TYPE_TYPE___call__(
+  ArgonObject *new_object_class = ARGON_FUNC_ARGON_TYPE_TYPE___call__(
       sizeof(ARGON_TYPE_TYPE___call___args) / sizeof(ArgonObject *),
       ARGON_TYPE_TYPE___call___args, NULL, err, state, &native_api);
   if (new_object_class != ARGON_NULL && new_object_class == cls) {
@@ -1081,10 +1081,10 @@ void bootstrap_types() {
   MOUNT_ARGON_METHOD(BASE_CLASS, __new__)
   add_builtin_field(
       BASE_CLASS, field__address,
-      create_argon_native_function("address", BASE_CLASS_address));
+      create_argon_native_function("address", ARGON_FUNC_BASE_CLASS_address));
   add_builtin_field(
       BASE_CLASS, __init__,
-      create_argon_native_function("__init__", BASE_CLASS___new__));
+      create_argon_native_function("__init__", ARGON_FUNC_BASE_CLASS___new__));
   MOUNT_ARGON_METHOD(BASE_CLASS, __string__)
   MOUNT_ARGON_METHOD(BASE_CLASS, __repr__)
   MOUNT_ARGON_METHOD(ARGON_TYPE_TYPE, __call__)
@@ -1127,32 +1127,32 @@ void bootstrap_types() {
   MOUNT_ARGON_METHOD(ARGON_BOOL_TYPE, __string__)
   MOUNT_ARGON_METHOD(ARGON_BOOL_TYPE, __number__)
   ADDITION_FUNCTION =
-      create_argon_native_function("add", ARGON_ADDITION_FUNCTION);
+      create_argon_native_function("add", ARGON_FUNC_ARGON_ADDITION_FUNCTION);
   SUBTRACTION_FUNCTION =
-      create_argon_native_function("subtract", ARGON_SUBTRACTION_FUNCTION);
+      create_argon_native_function("subtract", ARGON_FUNC_ARGON_SUBTRACTION_FUNCTION);
   MULTIPLY_FUNCTION =
-      create_argon_native_function("multiply", ARGON_MULTIPLY_FUNCTION);
+      create_argon_native_function("multiply", ARGON_FUNC_ARGON_MULTIPLY_FUNCTION);
   EXPONENT_FUNCTION =
-      create_argon_native_function("multiply", ARGON_EXPONENT_FUNCTION);
+      create_argon_native_function("multiply", ARGON_FUNC_ARGON_EXPONENT_FUNCTION);
   DIVIDE_FUNCTION =
-      create_argon_native_function("divide", ARGON_DIVIDE_FUNCTION);
+      create_argon_native_function("divide", ARGON_FUNC_ARGON_DIVIDE_FUNCTION);
   FLOOR_DIVIDE_FUNCTION =
-      create_argon_native_function("floor_divide", ARGON_FLOOR_DIVIDE_FUNCTION);
+      create_argon_native_function("floor_divide", ARGON_FUNC_ARGON_FLOOR_DIVIDE_FUNCTION);
   MODULO_FUNCTION =
-      create_argon_native_function("modulo", ARGON_MODULO_FUNCTION);
-  EQUAL_FUNCTION = create_argon_native_function("equal", ARGON_EQUAL_FUNCTION);
+      create_argon_native_function("modulo", ARGON_FUNC_ARGON_MODULO_FUNCTION);
+  EQUAL_FUNCTION = create_argon_native_function("equal", ARGON_FUNC_ARGON_EQUAL_FUNCTION);
   NOT_EQUAL_FUNCTION =
-      create_argon_native_function("not_equal", ARGON_NOT_EQUAL_FUNCTION);
+      create_argon_native_function("not_equal", ARGON_FUNC_ARGON_NOT_EQUAL_FUNCTION);
   LESS_THAN_FUNCTION =
-      create_argon_native_function("less_than", ARGON_LESS_THAN_FUNCTION);
+      create_argon_native_function("less_than", ARGON_FUNC_ARGON_LESS_THAN_FUNCTION);
   LESS_THAN_EQUAL_FUNCTION = create_argon_native_function(
-      "less_than_equal", ARGON_LESS_THAN_EQUAL_FUNCTION);
+      "less_than_equal", ARGON_FUNC_ARGON_LESS_THAN_EQUAL_FUNCTION);
   GREATER_THAN_FUNCTION =
-      create_argon_native_function("greater_than", ARGON_GREATER_THAN_FUNCTION);
+      create_argon_native_function("greater_than", ARGON_FUNC_ARGON_GREATER_THAN_FUNCTION);
   GREATER_THAN_EQUAL_FUNCTION = create_argon_native_function(
-      "greater_than_equal", ARGON_GREATER_THAN_EQUAL_FUNCTION);
+      "greater_than_equal", ARGON_FUNC_ARGON_GREATER_THAN_EQUAL_FUNCTION);
   ARGON_RENDER_TEMPLATE =
-      create_argon_native_function("RENDER_TEMPLATE", RENDER_TEMPLATE);
+      create_argon_native_function("RENDER_TEMPLATE", ARGON_FUNC_RENDER_TEMPLATE);
   MOUNT_ARGON_METHOD(BASE_CLASS, __getattribute__)
   MOUNT_ARGON_METHOD(BASE_CLASS, __setattr__)
   MOUNT_ARGON_METHOD(BASE_CLASS, __delattr__)
@@ -1218,7 +1218,7 @@ void bootstrap_globals() {
   add_to_scope(Global_Scope, "greater_than", GREATER_THAN_FUNCTION);
   add_to_scope(Global_Scope, "greater_than_equal", GREATER_THAN_EQUAL_FUNCTION);
 
-  IS_INSTANCE = create_argon_native_function("is_instance", ARGON_is_instance);
+  IS_INSTANCE = create_argon_native_function("is_instance", ARGON_FUNC_ARGON_is_instance);
   add_to_scope(Global_Scope, "is_instance", IS_INSTANCE);
 
   // exceptions
@@ -1262,15 +1262,15 @@ void bootstrap_globals() {
 
   struct hashmap_GC *argon_term = createHashmap_GC();
   add_to_hashmap(argon_term, "log",
-                 create_argon_native_function("log", term_log));
+                 create_argon_native_function("log",ARGON_FUNC_term_log));
   add_to_hashmap(argon_term, "error",
-                 create_argon_native_function("error", term_error));
+                 create_argon_native_function("error", ARGON_FUNC_term_error));
   add_to_hashmap(argon_term, "input",
-                 create_argon_native_function("input", term_input));
+                 create_argon_native_function("input", ARGON_FUNC_term_input));
   add_to_scope(Global_Scope, "term", create_dictionary(argon_term));
   add_to_scope(
       Global_Scope, "load_native_code",
-      create_argon_native_function("load_native_code", ARGON_LOAD_NATIVE_CODE));
+      create_argon_native_function("load_native_code", ARGON_FUNC_ARGON_LOAD_NATIVE_CODE));
 
   struct hashmap_GC *environment_variables = createHashmap_GC();
 #if defined(_WIN32)
@@ -1843,19 +1843,19 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
 
       switch (iterator->type) {
       case TYPE_ARRAY_ITERATOR:
-        state->registers[0] = ARRAY_ITERATOR_TYPE___next__(
+        state->registers[0] = ARGON_FUNC_ARRAY_ITERATOR_TYPE___next__(
             1, &iterator, NULL, &err, state, &native_api);
         break;
       case TYPE_RANGE_ITERATOR:
-        state->registers[0] = ARGON_RANGE_ITERATOR_TYPE___next__(
+        state->registers[0] = ARGON_FUNC_ARGON_RANGE_ITERATOR_TYPE___next__(
             1, &iterator, NULL, &err, state, &native_api);
         break;
       case TYPE_STRING_ITERATOR:
-        state->registers[0] = ARGON_STRING_ITERATOR_TYPE___next__(
+        state->registers[0] = ARGON_FUNC_ARGON_STRING_ITERATOR_TYPE___next__(
             1, &iterator, NULL, &err, state, &native_api);
         break;
       case TYPE_DICTIONARY_ITERATOR:
-        state->registers[0] = ARGON_DICTIONARY_ITERATOR_TYPE___next__(
+        state->registers[0] = ARGON_FUNC_ARGON_DICTIONARY_ITERATOR_TYPE___next__(
             1, &iterator, NULL, &err, state, &native_api);
         break;
       default:
@@ -1875,7 +1875,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       }
       ArgonObject *args[] = {ARGON_BOOL_TYPE, state->registers[0]};
       state->registers[0] =
-          ARGON_BOOL_TYPE___new__(2, args, NULL, &err, state, NULL);
+          ARGON_FUNC_ARGON_BOOL_TYPE___new__(2, args, NULL, &err, state, NULL);
       continue;
     }
     DO_JUMP_IF_FALSE: {
@@ -2101,7 +2101,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       ArgonObject *negation_function = get_builtin_field_for_class(
           get_builtin_field(state->registers[0], __class__), __negation__,
           state->registers[0]);
-      if (!state->registers[0]) {
+      if (!negation_function) {
         err = create_err(RuntimeError,
                          "unable to get __negation__ from objects class");
         continue;
@@ -3080,7 +3080,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       ArgonObject *stack_trace_obj = get_builtin_field(err.ptr, stack_trace);
       if (stack_trace_obj && stack_trace_obj->type == TYPE_ARRAY &&
           !quiet_throw) {
-        ArgonObject *frame = TUPLE_CREATE(
+        ArgonObject *frame = ARGON_FUNC_TUPLE_CREATE(
             4,
             (ArgonObject *[]){new_string_object_null_terminated(
                                   currentStackFrame->translated.path),

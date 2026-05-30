@@ -51,7 +51,7 @@ ARGON_METHOD(BaseException, __new__, {
   add_builtin_field(new_obj, message, argv[1]);
 
   add_builtin_field(new_obj, stack_trace,
-                    ARRAY_CREATE(0, NULL, NULL, NULL, NULL, NULL));
+                    ARGON_FUNC_ARRAY_CREATE(0, NULL, NULL, NULL, NULL, NULL));
   return new_obj;
 })
 

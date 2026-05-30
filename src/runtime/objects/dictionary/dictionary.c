@@ -323,7 +323,7 @@ ARGON_METHOD(ARGON_DICTIONARY_ITERATOR_TYPE, __next__, {
       self->value.as_dictionary_iterator
           ->array[self->value.as_dictionary_iterator->current++];
 
-  return TUPLE_CREATE(2, (ArgonObject *[]){node->key, node->val}, NULL, err, state,
+  return ARGON_FUNC_TUPLE_CREATE(2, (ArgonObject *[]){node->key, node->val}, NULL, err, state,
                       api);
 })
 
@@ -334,11 +334,11 @@ void create_ARGON_DICTIONARY_TYPE() {
   MOUNT_ARGON_METHOD(ARGON_DICTIONARY_TYPE, __new__)
 
   ArgonObject *setter = create_argon_native_function(
-      "__setitem__", ARGON_DICTIONARY_TYPE___setitem__);
+      "__setitem__", ARGON_FUNC_ARGON_DICTIONARY_TYPE___setitem__);
   ArgonObject *getter = create_argon_native_function(
-      "__getitem__", ARGON_DICTIONARY_TYPE___getitem__);
+      "__getitem__", ARGON_FUNC_ARGON_DICTIONARY_TYPE___getitem__);
   ArgonObject *deleter = create_argon_native_function(
-      "__delitem__", ARGON_DICTIONARY_TYPE___delitem__);
+      "__delitem__", ARGON_FUNC_ARGON_DICTIONARY_TYPE___delitem__);
 
   add_builtin_field(ARGON_DICTIONARY_TYPE, __setitem__, setter);
   add_builtin_field(ARGON_DICTIONARY_TYPE, __getitem__, getter);

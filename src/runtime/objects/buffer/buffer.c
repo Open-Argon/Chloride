@@ -198,7 +198,7 @@ ARGON_METHOD(ARGON_BUFFER_TYPE, partition, {
     memcpy(after.data, (char *)self.data + after_offset, after_size);
   }
 
-  return TUPLE_CREATE(3, (ArgonObject *[]){before_obj, sep_obj, after_obj},
+  return ARGON_FUNC_TUPLE_CREATE(3, (ArgonObject *[]){before_obj, sep_obj, after_obj},
                       NULL, NULL, NULL, NULL);
 })
 

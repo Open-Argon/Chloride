@@ -12,7 +12,7 @@
       ArgonState *state, ArgonNativeAPI *api
 
 #define ARGON_FUNCTION(NAME, ...)                                              \
-  ArgonObject *NAME(ARGON_FUNCTION_ARGS) {                                     \
+  ArgonObject *ARGON_FUNC_##NAME(ARGON_FUNCTION_ARGS) {                          \
     (void)argc;                                                                \
     (void)argv;                                                                \
     (void)kwargs;                                                              \
@@ -22,11 +22,12 @@
     __VA_ARGS__                                                                \
   }
 
-#define EXPOSE_ARGON_FUNCTION(NAME) ArgonObject *NAME(ARGON_FUNCTION_ARGS);
+#define EXPOSE_ARGON_FUNCTION(NAME)                                            \
+  ArgonObject *ARGON_FUNC_##NAME(ARGON_FUNCTION_ARGS);
 
 #define REGISTER_ARGON_FUNCTION(NAME)                                          \
-  api->register_ArgonObject(reg, #NAME,                                        \
-                            api->create_argon_native_function(#NAME, NAME));
+  api->register_ArgonObject(                                                   \
+      reg, #NAME, api->create_argon_native_function(#NAME, ARGON_FUNC_##NAME));
 
 #define INIT_ARGON_MODULE(...)                                                 \
   void argon_module_init(ArgonState *vm, ArgonNativeAPI *api, ArgonError *err, \

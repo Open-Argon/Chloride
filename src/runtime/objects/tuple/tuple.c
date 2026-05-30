@@ -321,5 +321,5 @@ void init_tuple_type() {
   MOUNT_ARGON_METHOD(ARGON_TUPLE_ITERATOR_TYPE, __next__);
 
   ARGON_TUPLE_CREATE =
-      create_argon_native_function("TUPLE_CREATE", TUPLE_CREATE);
+      create_argon_native_function("TUPLE_CREATE", ARGON_FUNC_TUPLE_CREATE);
 }

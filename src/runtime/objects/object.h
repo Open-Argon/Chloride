@@ -73,7 +73,7 @@ ArgonObject *new_object(size_t endSize);
 #define EXPOSE_ARGON_METHOD(TYPE, NAME) EXPOSE_ARGON_FUNCTION(TYPE##_##NAME)
 
 #define ARGON_METHOD_OBJECT(TYPE, NAME)                                        \
-  create_argon_native_function(#NAME, TYPE##_##NAME)
+  create_argon_native_function(#NAME, ARGON_FUNC_##TYPE##_##NAME)
 
 #define MOUNT_ARGON_METHOD_OBJECT(TYPE, NAME, OBJECT)                          \
   add_builtin_field(TYPE, NAME, OBJECT);

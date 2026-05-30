@@ -211,7 +211,7 @@ int shell() {
          "https://www.gnu.org/philosophy/free-sw.html\n\n",
          VERSION);
 
-  ArgonObject *output_object = create_argon_native_function("log", term_log);
+  ArgonObject *output_object = create_argon_native_function("log", ARGON_FUNC_term_log);
   char *totranslate = NULL;
   size_t totranslatelength = 0;
 

@@ -55,8 +55,8 @@ else
 	CC      := gcc
 	LIB_EXT := so
 
-	SHARED_LDFLAGS := -shared
-	PLATFORM_LDFLAGS := -lraylib
+	SHARED_LDFLAGS := -shared -I../../external/raylib/build/raylib/include
+	PLATFORM_LDFLAGS := ../../external/raylib/build/raylib/libraylib.a -lX11 -lGL -lm -lpthread -ldl
 	PLATFORM_CFLAGS :=
 
 endif

@@ -1,59 +1,165 @@
-# SPDX-FileCopyrightText: 2025, 2026 William Bell
-#
-# SPDX-License-Identifier: GPL-3.0-or-later
-
-import "../stdlib/raylib" expose raylib
-import "../stdlib/random" expose random
-import "../stdlib/maths" as maths
-
-term.log(raylib)
-
-class bouncing_text do
-  this.__init__(self, text, pos, speed) = do
-    self.text = text
-    self.pos = pos
-    self.speed = speed
-    self.color = raylib.Color(random.int(0,255),random.int(0,255),random.int(0,255),255)
-  this.render(self, frame, max) = raylib.DrawText(
-    self.text, maths.round(max[0] - maths.abs(((self.pos[0]+frame * self.speed) % (2 * max[0])) - max[0])),
-    maths.round(max[1] - maths.abs(((self.pos[1]+frame * self.speed) % (2 * max[1])) - max[1])), 20,
-    self.color
-  )
-
+import "../non-stdlib/raylib" expose raylib
+import "maths" as maths
+import "random" expose random
 
 class Game do
-  this.__init__(self, width, height, fps) = do
-    self.frame = 0
+  this.__init__(self, width, height, cell_size) = do
+    raylib.InitWindow(width, height, "Game of Life")
+    raylib.SetTargetFPS(60)
+
     self.width = width
     self.height = height
-    raylib.InitWindow(self.width, self.height, "Hello Raylib")
-    if (fps) raylib.SetTargetFPS(fps)
-    self.bouncing_texts = []
-    for (x in 0 until 20) do
-      for (y in 0 until 20) do
-        self.bouncing_texts.append(bouncing_text(string(x*y), tuple(x*10,y*10), (x+y+1)))
+    self.cell_size = cell_size
+
+    self.cols = width / cell_size
+    self.rows = height / cell_size
+
+    self.grid = self.make_grid()
+    self.next = self.make_grid()
+
+    self.paused = true
+    self.speed = 10        # updates per second
+    self.accumulator = 0
+
+  this.make_grid(self) = do
+    let g = []
+    for (x in 0 until self.cols) do
+      let col = []
+      for (y in 0 until self.rows) do
+        col.append(0)
+      g.append(col)
+    return g
+
+  # New method to randomize the entire grid
+  this.randomize_grid(self) = do
+    for (x in 0 until self.cols) do
+      for (y in 0 until self.rows) do
+        self.grid[x][y] = random.int(0, 2)
+
+  this.count_neighbors(self, x, y) = do
+    let count = 0
+
+    for (dx in (-1) until 2) do
+      for (dy in (-1) until 2) do
+        if (dx == 0 && dy == 0) continue
+
+        let nx = x + dx
+        let ny = y + dy
+
+        if (nx >= 0 && ny >= 0 && nx < self.cols && ny < self.rows) do
+          count += number(self.grid[nx][ny])
+
+    return count
+
+  this.step(self) = do
+    let next_grid = self.make_grid()
+
+    for (x in 0 until self.cols) do
+      for (y in 0 until self.rows) do
+
+        let alive = self.grid[x][y]
+        let n = self.count_neighbors(x, y)
+
+        if (alive == 1 && (n < 2 || n > 3)) do
+          next_grid[x][y] = 0
+        else if (alive == 0 && n == 3) do
+          next_grid[x][y] = 1
+        else do
+          next_grid[x][y] = alive
+
+    self.grid = next_grid
+
+  this.handle_input(self) = do
+
+    # pause/play
+    if (raylib.IsKeyPressed(32)) do  # SPACE
+      self.paused = !self.paused
+
+    # speed up
+    if (raylib.IsKeyPressed(265)) do # UP
+      self.speed += 2
+
+    # slow down
+    if (raylib.IsKeyPressed(264)) do # DOWN
+      self.speed -= 2
+      if (self.speed < 1) self.speed = 1
+
+    # RANDOMIZE GRID (R key = 82)
+    if (raylib.IsKeyPressed(82)) do
+      self.randomize_grid()
+
+    # mouse toggle
+    if (raylib.IsMouseButtonPressed(0)) do
+      let m = raylib.GetMousePosition()
+
+      let x = maths.floor(m.x / self.cell_size)
+      let y = maths.floor(m.y / self.cell_size)
+
+      if (x >= 0 && y >= 0 && x < self.cols && y < self.rows) do
+        if (self.grid[x][y] == 1) do
+          self.grid[x][y] = 0
+        else do
+          self.grid[x][y] = 1
+
+  this.update(self, dt) = do
+    self.handle_input()
+
+    if (!self.paused) do
+      self.accumulator += dt
+
+      let interval = 1.0 / self.speed
+
+      if (self.accumulator >= interval) do
+        self.step()
+        self.accumulator = 0
 
   this.render(self) = do
-      # term.log("frame:",self.frame)
-      let maxX = self.width -10, maxY = self.height-20
-      raylib.ClearBackground(raylib.BLACK)
+    raylib.ClearBackground(raylib.BLACK)
 
-      for (text in self.bouncing_texts) do
-        text.render(self.frame,tuple(maxX, maxY))
+    for (x in 0 until self.cols) do
+      for (y in 0 until self.rows) do
 
-      self.frame+=1
-  
-  this.__string__(self) = "game instance"
+        if (self.grid[x][y] == 1) do
+          raylib.DrawText(
+            "#",
+            x * self.cell_size,
+            y * self.cell_size,
+            self.cell_size,
+            raylib.GREEN
+          )
+        else do
+          raylib.DrawText(
+            "#",
+            x * self.cell_size,
+            y * self.cell_size,
+            self.cell_size,
+            raylib.Color(0,50,0,255)
+          )
+
+    # UI text
+    raylib.DrawText(
+      "SPACE: pause | UP/DOWN: speed | CLICK: toggle | R: randomize",
+      10, 10, 20, raylib.WHITE
+    )
+
+    raylib.DrawText(
+      "Speed: " + string(self.speed),
+      10, 35, 20, raylib.YELLOW
+    )
 
 
-let instance = Game(820, 640, 0)
+# ---------------- MAIN ----------------
+
+let game = Game(800, 600, 10)
 
 while (true) do
   if (raylib.WindowShouldClose()) break
+
   raylib.BeginDrawing()
-  instance.render()
+
+  game.update(raylib.GetFrameTime())
+  game.render()
+
   raylib.EndDrawing()
 
 raylib.CloseWindow()
-
-term.log("bye :)")

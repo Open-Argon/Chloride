@@ -298,7 +298,7 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
       consumed += next_default;
       size_t n_vargs = (argc > consumed) ? argc - consumed : 0;
       ArgonObject *tuple_obj =
-          TUPLE_CREATE(n_vargs, argv + consumed, NULL, err, state, &native_api);
+          ARGON_FUNC_TUPLE_CREATE(n_vargs, argv + consumed, NULL, err, state, &native_api);
 
       struct string_struct vkey = object->value.argon_fn->vargs;
 

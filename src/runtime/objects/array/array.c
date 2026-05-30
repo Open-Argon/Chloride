@@ -577,7 +577,7 @@ ARGON_METHOD(ARRAY_TYPE, filter, {
       truthiness = value->as_bool;
     } else {
       ArgonObject *args[] = {ARGON_BOOL_TYPE, value};
-      truthiness = ARGON_BOOL_TYPE___new__(2, args, NULL, err, state, NULL) ==
+      truthiness = ARGON_FUNC_ARGON_BOOL_TYPE___new__(2, args, NULL, err, state, NULL) ==
                    ARGON_TRUE;
       if (api->is_error(err))
         return api->ARGON_NULL;
@@ -853,8 +853,8 @@ void init_array_type() {
   ARRAY_ITERATOR_TYPE = new_class();
   add_builtin_field(
       ARRAY_ITERATOR_TYPE, __next__,
-      create_argon_native_function("__next__", ARRAY_ITERATOR_TYPE___next__));
+      create_argon_native_function("__next__", ARGON_FUNC_ARRAY_ITERATOR_TYPE___next__));
 
   ARGON_ARRAY_CREATE =
-      create_argon_native_function("ARRAY_CREATE", ARRAY_CREATE);
+      create_argon_native_function("ARRAY_CREATE", ARGON_FUNC_ARRAY_CREATE);
 }

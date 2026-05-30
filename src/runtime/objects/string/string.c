@@ -154,7 +154,7 @@ ARGON_METHOD(ARGON_STRING_TYPE, __not_equal__, {
                       "__not_equal__ expects 2 arguments, got %" PRIu64, argc);
     return ARGON_NULL;
   }
-  return ARGON_STRING_TYPE___equal__(argc, argv, kwargs, err, state, api) ==
+  return ARGON_FUNC_ARGON_STRING_TYPE___equal__(argc, argv, kwargs, err, state, api) ==
                  ARGON_TRUE
              ? ARGON_FALSE
              : ARGON_TRUE;

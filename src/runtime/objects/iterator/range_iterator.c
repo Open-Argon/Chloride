@@ -146,23 +146,23 @@ ARGON_METHOD(ARGON_RANGE_ITERATOR_TYPE, __next__, {
     ArgonObject *stop_val = range_iterator->stop.obj;
     ArgonObject *step_val = range_iterator->step.obj;
 
-    if ((ARGON_NUMBER_TYPE___greater_than__(
+    if ((ARGON_FUNC_ARGON_NUMBER_TYPE___greater_than__(
              2, (ArgonObject *[]){step_val, &small_ints[-small_ints_min].obj}, NULL, err,
              state, api) == ARGON_TRUE &&
-         ARGON_NUMBER_TYPE___greater_than_equal__(
+         ARGON_FUNC_ARGON_NUMBER_TYPE___greater_than_equal__(
              2, (ArgonObject *[]){current_val, stop_val}, NULL, err, state, api) ==
              ARGON_TRUE) ||
-        ((ARGON_NUMBER_TYPE___less_than__(
+        ((ARGON_FUNC_ARGON_NUMBER_TYPE___less_than__(
               2, (ArgonObject *[]){step_val, &small_ints[-small_ints_min].obj}, NULL, err,
               state, api) == ARGON_TRUE &&
-          ARGON_NUMBER_TYPE___less_than_equal__(
+          ARGON_FUNC_ARGON_NUMBER_TYPE___less_than_equal__(
               2, (ArgonObject *[]){current_val, stop_val}, NULL, err, state, api) ==
               ARGON_TRUE))) {
       err->ptr = StopIteration_instance;
       return ARGON_NULL;
     }
 
-    range_iterator->current.obj = ARGON_NUMBER_TYPE___add__(
+    range_iterator->current.obj = ARGON_FUNC_ARGON_NUMBER_TYPE___add__(
         2, (ArgonObject *[]){current_val, step_val}, NULL, err, state, api);
 
     return current_val;
