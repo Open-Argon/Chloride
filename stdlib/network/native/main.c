@@ -10,7 +10,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-ARGON_FUNCTION(argon_net_init, {
+ARGON_FUNCTION(net_init, {
   (void)argv;
   (void)state;
   if (api->fix_to_arg_size(0, argc, err))
@@ -20,7 +20,7 @@ ARGON_FUNCTION(argon_net_init, {
   return api->ARGON_NULL;
 })
 
-ARGON_FUNCTION(argon_net_cleanup, {
+ARGON_FUNCTION(net_cleanup, {
   (void)argv;
   (void)state;
   if (api->fix_to_arg_size(0, argc, err))
@@ -30,7 +30,7 @@ ARGON_FUNCTION(argon_net_cleanup, {
   return api->ARGON_NULL;
 })
 
-ARGON_FUNCTION(argon_net_listen, {
+ARGON_FUNCTION(net_listen, {
   (void)state;
   if (api->fix_to_arg_size(2, argc, err))
     return api->ARGON_NULL;
@@ -58,7 +58,7 @@ ARGON_FUNCTION(argon_net_listen, {
   return server_socket_buffer_object;
 })
 
-ARGON_FUNCTION(argon_net_accept, {
+ARGON_FUNCTION(net_accept, {
   (void)state;
   if (api->fix_to_arg_size(2, argc, err))
     return api->ARGON_NULL;
@@ -91,7 +91,7 @@ ARGON_FUNCTION(argon_net_accept, {
   return connection_socket_buffer_object;
 })
 
-ARGON_FUNCTION(argon_net_send, {
+ARGON_FUNCTION(net_send, {
   (void)state;
   if (api->fix_to_arg_size(2, argc, err))
     return api->ARGON_NULL;
@@ -111,7 +111,7 @@ ARGON_FUNCTION(argon_net_send, {
       net_send(connection_socket, data_buffer.data, data_buffer.size));
 })
 
-ARGON_FUNCTION(argon_net_send_string, {
+ARGON_FUNCTION(net_send_string, {
   (void)state;
   if (api->fix_to_arg_size(2, argc, err))
     return api->ARGON_NULL;
@@ -131,7 +131,7 @@ ARGON_FUNCTION(argon_net_send_string, {
       net_send(connection_socket, data_string.data, data_string.length));
 })
 
-ARGON_FUNCTION(argon_net_recv, {
+ARGON_FUNCTION(net_recv, {
   (void)state;
   if (api->fix_to_arg_size(2, argc, err))
     return api->ARGON_NULL;
@@ -151,7 +151,7 @@ ARGON_FUNCTION(argon_net_recv, {
       net_recv(connection_socket, data_buffer.data, data_buffer.size));
 })
 
-ARGON_FUNCTION(argon_net_recv_string, {
+ARGON_FUNCTION(net_recv_string, {
   (void)state;
   (void)argv;
   if (api->fix_to_arg_size(2, argc, err))
@@ -175,7 +175,7 @@ ARGON_FUNCTION(argon_net_recv_string, {
   return api->string_to_argon((struct string){data, n});
 })
 
-ARGON_FUNCTION(argon_net_close, {
+ARGON_FUNCTION(net_close, {
   (void)state;
   if (api->fix_to_arg_size(1, argc, err))
     return api->ARGON_NULL;
@@ -189,7 +189,7 @@ ARGON_FUNCTION(argon_net_close, {
   return api->ARGON_NULL;
 })
 
-ARGON_FUNCTION(argon_net_connect, {
+ARGON_FUNCTION(net_connect, {
   (void)state;
   if (api->fix_to_arg_size(3, argc, err))
     return api->ARGON_NULL;
@@ -219,7 +219,7 @@ ARGON_FUNCTION(argon_net_connect, {
   return buf_obj;
 })
 
-ARGON_FUNCTION(argon_net_set_nonblocking, {
+ARGON_FUNCTION(net_set_nonblocking, {
   (void)state;
   if (api->fix_to_arg_size(2, argc, err))
     return api->ARGON_NULL;
@@ -236,7 +236,7 @@ ARGON_FUNCTION(argon_net_set_nonblocking, {
   return api->i64_to_argon(net_set_nonblocking(sock, (int)enable));
 })
 
-ARGON_FUNCTION(argon_net_poll, {
+ARGON_FUNCTION(net_poll, {
   (void)state;
   if (api->fix_to_arg_size(4, argc, err))
     return api->ARGON_NULL;
@@ -260,7 +260,7 @@ ARGON_FUNCTION(argon_net_poll, {
       net_poll(sock, (int)want_read, (int)want_write, (int)timeout_ms));
 })
 
-ARGON_FUNCTION(argon_net_peek, {
+ARGON_FUNCTION(net_peek, {
   (void)state;
   if (api->fix_to_arg_size(2, argc, err))
     return api->ARGON_NULL;
@@ -277,7 +277,7 @@ ARGON_FUNCTION(argon_net_peek, {
   return api->i64_to_argon(net_peek(sock, data_buf.data, (int)data_buf.size));
 })
 
-ARGON_FUNCTION(argon_net_set_opt, {
+ARGON_FUNCTION(net_set_opt, {
   (void)state;
   if (api->fix_to_arg_size(3, argc, err))
     return api->ARGON_NULL;
@@ -301,47 +301,18 @@ void argon_module_init(ArgonState *vm, ArgonNativeAPI *api, ArgonError *err,
                        ArgonObjectRegister *reg) {
   (void)vm;
   (void)err;
-  api->register_ArgonObject(
-      reg, "net_init",
-      api->create_argon_native_function("net_init", argon_net_init));
-  api->register_ArgonObject(
-      reg, "net_cleanup",
-      api->create_argon_native_function("net_cleanup", argon_net_cleanup));
-  api->register_ArgonObject(
-      reg, "net_listen",
-      api->create_argon_native_function("net_listen", argon_net_listen));
-  api->register_ArgonObject(
-      reg, "net_accept",
-      api->create_argon_native_function("net_accept", argon_net_accept));
-  api->register_ArgonObject(
-      reg, "net_send",
-      api->create_argon_native_function("net_send", argon_net_send));
-  api->register_ArgonObject(reg, "net_send_string",
-                            api->create_argon_native_function(
-                                "net_send_string", argon_net_send_string));
-  api->register_ArgonObject(
-      reg, "net_recv",
-      api->create_argon_native_function("net_recv", argon_net_recv));
-  api->register_ArgonObject(reg, "net_recv_string",
-                            api->create_argon_native_function(
-                                "net_recv_string", argon_net_recv_string));
-  api->register_ArgonObject(
-      reg, "net_close",
-      api->create_argon_native_function("net_close", argon_net_close));
-  api->register_ArgonObject(
-      reg, "net_connect",
-      api->create_argon_native_function("net_connect", argon_net_connect));
-  api->register_ArgonObject(
-      reg, "net_set_nonblocking",
-      api->create_argon_native_function("net_set_nonblocking",
-                                        argon_net_set_nonblocking));
-  api->register_ArgonObject(
-      reg, "net_poll",
-      api->create_argon_native_function("net_poll", argon_net_poll));
-  api->register_ArgonObject(
-      reg, "net_peek",
-      api->create_argon_native_function("net_peek", argon_net_peek));
-  api->register_ArgonObject(
-      reg, "net_set_opt",
-      api->create_argon_native_function("net_set_opt", argon_net_set_opt));
+  REGISTER_ARGON_FUNCTION(net_init)
+  REGISTER_ARGON_FUNCTION(net_cleanup)
+  REGISTER_ARGON_FUNCTION(net_listen)
+  REGISTER_ARGON_FUNCTION(net_accept)
+  REGISTER_ARGON_FUNCTION(net_send)
+  REGISTER_ARGON_FUNCTION(net_send_string)
+  REGISTER_ARGON_FUNCTION(net_recv)
+  REGISTER_ARGON_FUNCTION(net_recv_string)
+  REGISTER_ARGON_FUNCTION(net_close)
+  REGISTER_ARGON_FUNCTION(net_connect)
+  REGISTER_ARGON_FUNCTION(net_set_nonblocking)
+  REGISTER_ARGON_FUNCTION(net_poll)
+  REGISTER_ARGON_FUNCTION(net_peek)
+  REGISTER_ARGON_FUNCTION(net_set_opt)
 }

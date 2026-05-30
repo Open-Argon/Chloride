@@ -5,7 +5,7 @@
 #include "Argon.h"
 #include "random.h"
 
-ARGON_FUNCTION(argon_random_os_seed, {
+ARGON_FUNCTION(random_os_seed, {
   (void)state;
   (void)argv;
   if (api->fix_to_arg_size(0, argc, err))
@@ -14,7 +14,7 @@ ARGON_FUNCTION(argon_random_os_seed, {
   return api->i64_to_argon(random_os_seed());
 })
 
-ARGON_FUNCTION(argon_random_seed, {
+ARGON_FUNCTION(random_seed, {
   (void)state;
   if (api->fix_to_arg_size(1, argc, err))
     return api->ARGON_NULL;
@@ -36,7 +36,7 @@ ARGON_FUNCTION(argon_random_seed, {
   return random;
 })
 
-ARGON_FUNCTION(argon_random_next_number, {
+ARGON_FUNCTION(random_next_number, {
   (void)state;
   if (api->fix_to_arg_size(1, argc, err))
     return api->ARGON_NULL;
@@ -52,13 +52,7 @@ void argon_module_init(ArgonState *vm, ArgonNativeAPI *api, ArgonError *err,
                        ArgonObjectRegister *reg) {
   (void)vm;
   (void)err;
-  api->register_ArgonObject(
-      reg, "random_os_seed",
-      api->create_argon_native_function("random_os_seed", argon_random_os_seed));
-  api->register_ArgonObject(
-      reg, "random_seed",
-      api->create_argon_native_function("random_seed", argon_random_seed));
-  api->register_ArgonObject(
-      reg, "random_next_number",
-      api->create_argon_native_function("random_next_number", argon_random_next_number));
+  REGISTER_ARGON_FUNCTION(random_os_seed)
+  REGISTER_ARGON_FUNCTION(random_seed)
+  REGISTER_ARGON_FUNCTION(random_next_number)
 }

@@ -360,28 +360,16 @@ ARGON_FUNCTION(file_size, {
   return api->i64_to_argon((int64_t)size);
 })
 
-void argon_module_init(ArgonState *vm, ArgonNativeAPI *api, ArgonError *err,
-                       ArgonObjectRegister *reg) {
+INIT_ARGON_MODULE({
   (void)vm;
   (void)err;
-  api->register_ArgonObject(
-      reg, "open_handle",
-      api->create_argon_native_function("open_handle", open_handle));
-  api->register_ArgonObject(
-      reg, "read_all", api->create_argon_native_function("read_all", read_all));
-  api->register_ArgonObject(reg, "read",
-                            api->create_argon_native_function("read", read));
-  api->register_ArgonObject(reg, "write",
-                            api->create_argon_native_function("write", write));
-  api->register_ArgonObject(reg, "close",
-                            api->create_argon_native_function("close", close));
-  api->register_ArgonObject(reg, "seek",
-                            api->create_argon_native_function("seek", seek));
-  api->register_ArgonObject(reg, "tell",
-                            api->create_argon_native_function("tell", tell));
-  api->register_ArgonObject(reg, "flush",
-                            api->create_argon_native_function("flush", flush));
-  api->register_ArgonObject(
-      reg, "file_size",
-      api->create_argon_native_function("file_size", file_size));
-}
+  REGISTER_ARGON_FUNCTION(open_handle)
+  REGISTER_ARGON_FUNCTION(read_all)
+  REGISTER_ARGON_FUNCTION(read)
+  REGISTER_ARGON_FUNCTION(write)
+  REGISTER_ARGON_FUNCTION(close)
+  REGISTER_ARGON_FUNCTION(seek)
+  REGISTER_ARGON_FUNCTION(tell)
+  REGISTER_ARGON_FUNCTION(flush)
+  REGISTER_ARGON_FUNCTION(file_size)
+})
