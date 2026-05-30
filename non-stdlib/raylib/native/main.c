@@ -15,8 +15,7 @@ typedef struct {
   Color color;
 } NamedColor;
 
-ArgonObject *Argon_InitWindow(size_t argc, ArgonObject **argv, ArgonError *err,
-                              ArgonState *state, ArgonNativeAPI *api) {
+ARGON_FUNCTION(Argon_InitWindow, {
   if (api->fix_to_arg_size(3, argc, err)) {
     return api->ARGON_NULL;
   }
@@ -38,11 +37,9 @@ ArgonObject *Argon_InitWindow(size_t argc, ArgonObject **argv, ArgonError *err,
   InitWindow(width, height, title_c);
   free(title_c);
   return api->ARGON_NULL;
-}
+})
 
-ArgonObject *Argon_SetTargetFPS(size_t argc, ArgonObject **argv,
-                                ArgonError *err, ArgonState *state,
-                                ArgonNativeAPI *api) {
+ARGON_FUNCTION(Argon_SetTargetFPS, {
   if (api->fix_to_arg_size(1, argc, err)) {
     return api->ARGON_NULL;
   }
@@ -52,30 +49,24 @@ ArgonObject *Argon_SetTargetFPS(size_t argc, ArgonObject **argv,
   }
   SetTargetFPS(fps);
   return api->ARGON_NULL;
-}
+})
 
-ArgonObject *Argon_WindowShouldClose(size_t argc, ArgonObject **argv,
-                                     ArgonError *err, ArgonState *state,
-                                     ArgonNativeAPI *api) {
+ARGON_FUNCTION(Argon_WindowShouldClose, {
   if (api->fix_to_arg_size(0, argc, err)) {
     return api->ARGON_NULL;
   }
   return api->i64_to_argon(WindowShouldClose());
-}
+})
 
-ArgonObject *Argon_BeginDrawing(size_t argc, ArgonObject **argv,
-                                ArgonError *err, ArgonState *state,
-                                ArgonNativeAPI *api) {
+ARGON_FUNCTION(Argon_BeginDrawing, {
   if (api->fix_to_arg_size(0, argc, err)) {
     return api->ARGON_NULL;
   }
   BeginDrawing();
   return api->ARGON_NULL;
-}
+})
 
-ArgonObject *Argon_ClearBackground(size_t argc, ArgonObject **argv,
-                                   ArgonError *err, ArgonState *state,
-                                   ArgonNativeAPI *api) {
+ARGON_FUNCTION(Argon_ClearBackground, {
   if (api->fix_to_arg_size(1, argc, err)) {
     return api->ARGON_NULL;
   }
@@ -86,10 +77,9 @@ ArgonObject *Argon_ClearBackground(size_t argc, ArgonObject **argv,
   Color color_ray = *(Color *)color.data;
   ClearBackground(color_ray);
   return api->ARGON_NULL;
-}
+})
 
-ArgonObject *Argon_Color(size_t argc, ArgonObject **argv, ArgonError *err,
-                         ArgonState *state, ArgonNativeAPI *api) {
+ARGON_FUNCTION(Argon_Color, {
   if (api->fix_to_arg_size(4, argc, err)) {
     return api->ARGON_NULL;
   }
@@ -119,10 +109,9 @@ ArgonObject *Argon_Color(size_t argc, ArgonObject **argv, ArgonError *err,
   }
   *(Color *)color_buffer.data = color_struct;
   return color;
-}
+})
 
-ArgonObject *Argon_DrawText(size_t argc, ArgonObject **argv, ArgonError *err,
-                            ArgonState *state, ArgonNativeAPI *api) {
+ARGON_FUNCTION(Argon_DrawText, {
   if (api->fix_to_arg_size(5, argc, err)) {
     return api->ARGON_NULL;
   }
@@ -159,28 +148,25 @@ ArgonObject *Argon_DrawText(size_t argc, ArgonObject **argv, ArgonError *err,
   DrawText(text_c, posX, posY, fontSize, color_ray);
   free(text_c);
   return api->ARGON_NULL;
-}
+})
 
-ArgonObject *Argon_EndDrawing(size_t argc, ArgonObject **argv, ArgonError *err,
-                              ArgonState *state, ArgonNativeAPI *api) {
+ARGON_FUNCTION(Argon_EndDrawing, {
   if (api->fix_to_arg_size(0, argc, err)) {
     return api->ARGON_NULL;
   }
   EndDrawing();
   return api->ARGON_NULL;
-}
+})
 
-ArgonObject *Argon_CloseWindow(size_t argc, ArgonObject **argv, ArgonError *err,
-                               ArgonState *state, ArgonNativeAPI *api) {
+ARGON_FUNCTION(Argon_CloseWindow, {
   if (api->fix_to_arg_size(0, argc, err)) {
     return api->ARGON_NULL;
   }
   CloseWindow();
   return api->ARGON_NULL;
-}
+})
 
-void argon_module_init(ArgonState *vm, ArgonNativeAPI *api, ArgonError *err,
-                       ArgonObjectRegister *reg) {
+INIT_ARGON_MODULE({
   NamedColor colors[] = {{"LIGHTGRAY", LIGHTGRAY}, {"GRAY", GRAY},
                          {"DARKGRAY", DARKGRAY},   {"YELLOW", YELLOW},
                          {"GOLD", GOLD},           {"ORANGE", ORANGE},
@@ -240,4 +226,4 @@ void argon_module_init(ArgonState *vm, ArgonNativeAPI *api, ArgonError *err,
   api->register_ArgonObject(
       reg, "CloseWindow",
       api->create_argon_native_function("CloseWindow", Argon_CloseWindow));
-}
+})
