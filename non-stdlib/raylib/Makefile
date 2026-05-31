@@ -44,10 +44,13 @@ else ifeq ($(UNAME_S),Darwin)
 
 	SHARED_LDFLAGS := \
 		-dynamiclib \
-		-Wl,-install_name,@rpath/$(LIB).dylib
+		-Wl,-install_name,@rpath/$(LIB).dylib, -I../../external/raylib/build/raylib/include
 
-	PLATFORM_LDFLAGS :=$(shell pkg-config --libs raylib)
-	PLATFORM_CFLAGS :=$(shell pkg-config --cflags raylib)
+	PLATFORM_LDFLAGS := ../../external/raylib/build/raylib/libraylib.a \
+        -framework Cocoa \
+        -framework IOKit 
+# 	-lX11 -lGL -lm -lpthread -ldl
+    PLATFORM_CFLAGS :=
 
 else
 
