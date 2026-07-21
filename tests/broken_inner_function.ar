@@ -1,11 +1,5 @@
-let value = "bruh"
-
-let outer()=do
-    let value = 10
+term.log((()=do
+    x=1
     return ()=do
-        return 1
-
-
-let f = outer()
-term.log("bruhhhh")
-term.log(f())
+        return x
+)()())

@@ -1678,7 +1678,15 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       object->value.argon_fn->bytecode =
           arena_get(&translated->constants, bytecode_offset);
       object->value.argon_fn->bytecode_length = bytecode_length;
-      object->value.argon_fn->stack = currentStackFrame->stack;
+      Stack * current = currentStackFrame->stack;
+      object->value.argon_fn->stack = current;
+      
+      // make any fake scopes real
+      for (uint64_t i = 0;i<current->fake_new_scopes;i++) {
+        current->prev = create_scope(current->prev, true);
+      }
+      current->fake_new_scopes = 0;
+      
       state->registers[0] = object;
       continue;
     }

@@ -16,6 +16,33 @@ size_t translate_parsed_function(Translated *translated,
                                  ParsedFunction *parsedFunction, ArErr *err) {
   DArray main_bytecode = translated->bytecode;
   uint8_t old_assignment = translated->registerAssignment;
+
+  // A nested function body is compiled in total isolation from its
+  // enclosing function: it gets its own bytecode buffer (below) and must
+  // also get its own fresh scope/exception/jump-fixup bookkeeping.
+  // Previously only `bytecode` and `registerAssignment` were saved and
+  // restored here. `return_jump`, `break_jump`, `scope_depth`, and
+  // `exception_handler_depth` were left pointing at the enclosing
+  // function's (or enclosing do-block's) state. That meant a `return`
+  // inside a nested function could record its jump-fixup position into
+  // the *enclosing* function's return_jump.positions array. When the
+  // enclosing function's do-block later backpatched those positions, it
+  // wrote into whatever buffer was current at that time (the enclosing
+  // function's own bytecode, since the nested function's buffer had
+  // already been archived into the constant arena and freed) at an
+  // offset that only made sense in the nested function's now-gone
+  // buffer -- silently corrupting an unrelated instruction's operand
+  // bytes in the enclosing function's bytecode.
+  struct break_or_return_jump old_return_jump = translated->return_jump;
+  struct break_or_return_jump old_break_jump = translated->break_jump;
+  uint64_t old_scope_depth = translated->scope_depth;
+  uint64_t old_exception_handler_depth = translated->exception_handler_depth;
+
+  translated->return_jump = (struct break_or_return_jump){0};
+  translated->break_jump = (struct break_or_return_jump){0};
+  translated->scope_depth = 0;
+  translated->exception_handler_depth = 0;
+
   translated->registerAssignment = 1;
   darray_init(&translated->bytecode, sizeof(uint8_t));
   set_registers(translated, 1);
@@ -27,6 +54,11 @@ size_t translate_parsed_function(Translated *translated,
   darray_free(&translated->bytecode, NULL);
   translated->bytecode = main_bytecode;
   translated->registerAssignment = old_assignment;
+
+  translated->return_jump = old_return_jump;
+  translated->break_jump = old_break_jump;
+  translated->scope_depth = old_scope_depth;
+  translated->exception_handler_depth = old_exception_handler_depth;
 
   size_t start = push_instruction_byte(translated, OP_LOAD_FUNCTION);
   size_t offset = arena_push(&translated->constants, parsedFunction->name,

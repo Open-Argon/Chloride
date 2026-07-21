@@ -1,0 +1,7 @@
+let outer()=do 
+    let value = 10 
+    return bruh()=do 
+        return value 
+
+let f = outer() 
+term.log(f())

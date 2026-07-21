@@ -274,6 +274,8 @@ int load_cache(Translated *translated_dest, char *joined_paths, uint64_t hash,
 FAILED:
 #ifdef ARGON_DEBUG
   fprintf(stderr, "cache is invalid... compiling from source.\n");
+  // fclose(bytecode_file);
+  // return 0;
 #endif
   fclose(bytecode_file);
   return 1;
