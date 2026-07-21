@@ -1,0 +1,11 @@
+let value = "bruh"
+
+let outer()=do
+    let value = 10
+    return ()=do
+        return 1
+
+
+let f = outer()
+term.log("bruhhhh")
+term.log(f())
