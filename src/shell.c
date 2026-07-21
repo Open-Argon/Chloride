@@ -178,7 +178,9 @@ char *read_all_stdin(size_t *out_len) {
 
 int shell() {
   signal(SIGINT, handle_sigint);
-  Stack *main_scope = create_scope(Global_Scope, true);
+  Stack *main_scope = create_scope(Global_Scope
+    //, true
+  );
 
   char path[PATH_MAX];
 

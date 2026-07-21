@@ -32,6 +32,6 @@ void runtime_declaration(int64_t length, int64_t offset, int64_t hash,
     key = new_string_object(data, length, hash);
     hashmap_insert_GC(assignable_keys, hash, NULL, key, 0);
   }
-  hashmap_insert_GC(stack->scope, hash, key, state->registers[from_register],
+  hashmap_insert_GC(init_scope(stack)->scope, hash, key, state->registers[from_register],
                     0);
 }

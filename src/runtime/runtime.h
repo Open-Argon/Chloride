@@ -94,7 +94,9 @@ static inline void run_instruction(Translated *translated, RuntimeState *state,
 void init_runtime_state(RuntimeState *runtime, Translated translated,
                         char *path);
 
-Stack *create_scope(Stack *prev, bool force);
+Stack *create_scope(Stack *prev);
+
+Stack *init_scope(Stack*scope);
 
 void add_to_scope(Stack *stack, char *name, ArgonObject *value);
 

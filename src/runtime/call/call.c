@@ -120,7 +120,9 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
     memset(bound, 0, n_params * sizeof(bool));
 
     // ── bind self / binding_object ────────────────────────────────────────
-    Stack *scope = create_scope(object->value.argon_fn->stack, true);
+    Stack *scope = create_scope(object->value.argon_fn->stack
+                                //, true
+    );
     if (binding_object) {
       if (n_params == 0) {
         ArgonObject *type_object_name = get_builtin_field_for_class(
@@ -138,7 +140,7 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
         return;
       }
       struct string_struct key = object->value.argon_fn->parameters[0];
-      hashmap_insert_GC(scope->scope, key.hash,
+      hashmap_insert_GC(init_scope(scope)->scope, key.hash,
                         new_string_object(key.data, key.length, key.hash),
                         binding_object, 0);
       bound[0] = true;
@@ -153,7 +155,7 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
         // bind to a normal parameter slot
         struct string_struct key =
             object->value.argon_fn->parameters[next_positional];
-        hashmap_insert_GC(scope->scope, key.hash,
+        hashmap_insert_GC(init_scope(scope)->scope, key.hash,
                           new_string_object(key.data, key.length, key.hash),
                           argv[i], 0);
         bound[next_positional] = true;
@@ -163,7 +165,7 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
         // bind to a default parameter slot (overrides the default)
         struct string_struct key =
             object->value.argon_fn->default_parameters[next_default].key;
-        hashmap_insert_GC(scope->scope, key.hash,
+        hashmap_insert_GC(init_scope(scope)->scope, key.hash,
                           new_string_object(key.data, key.length, key.hash),
                           argv[i], 0);
         next_default++;
@@ -218,7 +220,7 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
               free(bound);
               return;
             }
-            hashmap_insert_GC(scope->scope, key.hash,
+            hashmap_insert_GC(init_scope(scope)->scope, key.hash,
                               new_string_object(key.data, key.length, key.hash),
                               value, 0);
             bound[j] = true;
@@ -247,7 +249,7 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
                 return;
               }
               hashmap_insert_GC(
-                  scope->scope, key.hash,
+                  init_scope(scope)->scope, key.hash,
                   new_string_object(key.data, key.length, key.hash), value, 0);
               found = true;
               break;
@@ -282,7 +284,7 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
       struct default_value dv = object->value.argon_fn->default_parameters[i];
       if (hashmap_lookup_GC(scope->scope, dv.key.hash) == NULL) {
         hashmap_insert_GC(
-            scope->scope, dv.key.hash,
+            init_scope(scope)->scope, dv.key.hash,
             new_string_object(dv.key.data, dv.key.length, dv.key.hash),
             dv.value, 0);
       }
@@ -297,12 +299,12 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
           consumed++;
       consumed += next_default;
       size_t n_vargs = (argc > consumed) ? argc - consumed : 0;
-      ArgonObject *tuple_obj =
-          ARGON_FUNC_TUPLE_CREATE(n_vargs, argv + consumed, NULL, err, state, &native_api);
+      ArgonObject *tuple_obj = ARGON_FUNC_TUPLE_CREATE(
+          n_vargs, argv + consumed, NULL, err, state, &native_api);
 
       struct string_struct vkey = object->value.argon_fn->vargs;
 
-      hashmap_insert_GC(scope->scope, vkey.hash,
+      hashmap_insert_GC(init_scope(scope)->scope, vkey.hash,
                         new_string_object(vkey.data, vkey.length, vkey.hash),
                         tuple_obj, 0);
     }
@@ -314,7 +316,7 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
       struct string_struct kwkey = object->value.argon_fn->kwargs;
       // leftover_kwargs is your raw hashmap — wrap into dict as needed
       (void)leftover_kwargs; // TODO: wrap into ArgonObject dict
-      hashmap_insert_GC(scope->scope, kwkey.hash,
+      hashmap_insert_GC(init_scope(scope)->scope, kwkey.hash,
                         new_string_object(kwkey.data, kwkey.length, kwkey.hash),
                         create_dictionary(leftover_kwargs), 0);
     }

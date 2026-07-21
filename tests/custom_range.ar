@@ -8,7 +8,7 @@ class custom_range_iterator do
     self.stop = stop
   this.__next__(self) = do
     if (self.stop<=self.current) do
-      return signals.end_iteration
+      throw StopIteration()
     let result = self.current
     self.current = self.current + 1
     return result

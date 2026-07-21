@@ -155,6 +155,7 @@ struct hashmap_GC *createHashmap_GC(void) {
 }
 
 void clear_hashmap_GC(struct hashmap_GC *t) {
+  if (!t) return;
   RWLOCK_WRLOCK(t->lock, {
     t->order = 1;
     t->count = 0;
@@ -202,6 +203,7 @@ struct node_GC **hashmap_GC_to_array(struct hashmap_GC *t,
 }
 
 int hashmap_remove_GC(struct hashmap_GC *t, uint64_t hash) {
+  if (!t) return 0;
   RWBLOCK int result = 0;
 
   RWLOCK_WRLOCK(t->lock, {
@@ -246,6 +248,7 @@ void hashmap_insert_GC(struct hashmap_GC *t, uint64_t hash, void *key,
 }
 
 void *hashmap_lookup_GC(struct hashmap_GC *t, uint64_t hash) {
+  if (!t) return NULL;
   RWBLOCK void *result = NULL;
 
   RWLOCK_RDLOCK(t->lock, {

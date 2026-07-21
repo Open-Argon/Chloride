@@ -677,7 +677,9 @@ Stack *ar_import(char *current_directory, char *path_relative, ArErr *err,
 #endif
   RuntimeState state;
   init_runtime_state(&state, translated, path);
-  Stack *program_scope = create_scope(Global_Scope, true);
+  Stack *program_scope = create_scope(Global_Scope
+    // , true
+  );
   hashmap_GC *program = createHashmap_GC();
   hashmap_GC *file = createHashmap_GC();
   add_to_hashmap(file, "path", new_string_object_null_terminated(path));
@@ -697,7 +699,9 @@ Stack *ar_import(char *current_directory, char *path_relative, ArErr *err,
   add_to_hashmap(program, "exc", EXC_ARGON);
 
   add_to_scope(program_scope, "program", create_dictionary(program));
-  Stack *main_scope = create_scope(program_scope, true);
+  Stack *main_scope = create_scope(program_scope
+    //, true
+  );
   runtime(translated, state, main_scope, err);
   if (is_error(err)) {
     hashmap_insert_GC(importing_hash_table, hash, NULL, (void *)NULL, 0);

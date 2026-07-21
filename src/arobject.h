@@ -151,7 +151,7 @@ struct string_struct {
 };
 
 typedef struct Stack {
-  uint64_t fake_new_scopes;
+  // uint64_t fake_new_scopes;
   struct hashmap_GC *scope;
   struct Stack *prev;
 } Stack;

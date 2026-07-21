@@ -40,5 +40,5 @@ void runtime_import(RuntimeState *state, ArErr *err) {
   Stack *result = ar_import(current_directory, path_c, err, false);
   if (!result)
     return;
-  state->registers[0] = create_dictionary(result->scope);
+  state->registers[0] = create_dictionary(init_scope(result)->scope);
 }
