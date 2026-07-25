@@ -109,7 +109,7 @@ ParsedValueReturn parse_assign(char *file, DArray *tokens,
     return (ParsedValueReturn){
         path_specific_create_err(
             token->line, token->column, token->length, file, SyntaxError,
-            "assigning to something which can't be assigned to"),
+            "cannot assign to literal here. Maybe you meant '==' instead of '='?"),
         NULL};
   }
   (*index)++;

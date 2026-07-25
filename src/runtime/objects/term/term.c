@@ -16,10 +16,32 @@
 #include <string.h>
 
 ARGON_METHOD(term, log, {
-  (void)api;
+  char *sep = " ";
+  uint64_t seplength = 1;
+  char *end = "\n";
+  uint64_t endlength = 1;
+  if (kwargs) {
+    ArgonObject *sepObject = api->get_from_hashmap_string_key(kwargs, "sep");
+    if (sepObject) {
+      struct string string = api->argon_to_string(sepObject, err);
+      if (api->is_error(err))
+        return ARGON_NULL;
+      sep = string.data;
+      seplength = string.length;
+    }
+    ArgonObject *endObject = api->get_from_hashmap_string_key(kwargs, "end");
+    if (endObject) {
+      struct string string = api->argon_to_string(endObject, err);
+      if (api->is_error(err))
+        return ARGON_NULL;
+      end = string.data;
+      endlength = string.length;
+    }
+  }
+
   for (size_t i = 0; i < argc; i++) {
     if (i != 0)
-      printf(" ");
+      fwrite(sep, sizeof(char), seplength, stdout);
     ArgonObject *string_convert_method = get_builtin_field_for_class(
         get_builtin_field(argv[i], __class__), __string__, argv[i]);
 
@@ -32,7 +54,7 @@ ARGON_METHOD(term, log, {
       fwrite(string.data, sizeof(char), string.length, stdout);
     }
   }
-  printf("\n");
+  fwrite(end, sizeof(char), endlength, stdout);
   return ARGON_NULL;
 })
 
