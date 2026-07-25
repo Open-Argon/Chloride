@@ -28,7 +28,7 @@ typedef struct {
   DArray *kwargs;      // struct parsed_kwarg, lazy-allocated
   ParsedValue *v_arg;  // *token or NULL
   ParsedValue *kw_arg; // **token or NULL
-  uint8_t stage;       // 0=positional 1=kwargs 2=*arg 3=**arg
+  uint8_t stage;       // 0=positional 1=*arg 2=kwargs 3=**arg
   AssignMode assign_mode;
 } CallArgState;
 
@@ -109,7 +109,7 @@ static ArErr parse_arg_list(char *file, DArray *tokens, size_t *index,
                                 : ASSIGN_NOT_ALLOWED;
         cs->stage = 3;
       } else {
-        if (cs->stage >= 2)
+        if (cs->v_arg)
           return ARG_ERR("only one *expr argument is allowed");
         ParsedValueReturn val = parse_token(file, tokens, index, true);
         if (is_error(&val.err))
@@ -122,7 +122,7 @@ static ArErr parse_arg_list(char *file, DArray *tokens, size_t *index,
                                     val.value->type == AST_IDENTIFIER
                                 ? ASSIGN_ALLOWED
                                 : ASSIGN_NOT_ALLOWED;
-        cs->stage = 2;
+        cs->stage = 1;
       }
 
       // no (*index)++ here — parse_token already advanced it
@@ -145,7 +145,7 @@ static ArErr parse_arg_list(char *file, DArray *tokens, size_t *index,
     // We need to check if this is `identifier=` without consuming it yet.
     // Only do this if the current token is an identifier.
     bool is_kwarg = false;
-    if (token->type == TOKEN_IDENTIFIER && cs->stage < 2) {
+    if (token->type == TOKEN_IDENTIFIER && cs->stage != 3) {
       size_t saved = *index;
       (*index)++;
       if (*index < tokens->size) {
@@ -161,7 +161,8 @@ static ArErr parse_arg_list(char *file, DArray *tokens, size_t *index,
     if (is_kwarg) {
       if (cs->stage == 3)
         return ARG_ERR("no arguments allowed after **token");
-      cs->stage = 1;
+      if (cs->stage == 0)
+        cs->stage = 2;
 
       // token is still the identifier (index is on the = now)
       Token *name_token = darray_get(tokens, *index - 1);
@@ -230,7 +231,8 @@ static ArErr parse_arg_list(char *file, DArray *tokens, size_t *index,
           free(null_shorthand_name);
           return ARG_ERR("no arguments allowed after **token");
         }
-        cs->stage = 1;
+        if (cs->stage == 0)
+          cs->stage = 2;
 
         if (!cs->kwargs) {
           cs->kwargs = checked_malloc(sizeof(DArray));
@@ -248,7 +250,7 @@ static ArErr parse_arg_list(char *file, DArray *tokens, size_t *index,
 
       } else {
         // ── normal positional arg ─────────────────────────────────────
-        if (cs->stage == 1)
+        if (cs->stage == 2)
           return ARG_ERR("positional argument follows keyword argument");
         if (cs->stage == 3)
           return ARG_ERR("no arguments allowed after **token");
@@ -310,8 +312,8 @@ RETURN_CHECKS:
 
     if (cs->v_arg) {
       ParsedIdentifier *identifier = cs->v_arg->data;
-      uint64_t hash =
-          siphash64_bytes(identifier->name, strlen(identifier->name), siphash_key_fixed);
+      uint64_t hash = siphash64_bytes(
+          identifier->name, strlen(identifier->name), siphash_key_fixed);
       if (hashmap_lookup(seen, hash)) {
         cs->assign_mode = ASSIGN_NOT_ALLOWED;
       } else {
@@ -321,8 +323,8 @@ RETURN_CHECKS:
 
     if (cs->kw_arg) {
       ParsedIdentifier *identifier = cs->kw_arg->data;
-      uint64_t hash =
-          siphash64_bytes(identifier->name, strlen(identifier->name), siphash_key_fixed);
+      uint64_t hash = siphash64_bytes(
+          identifier->name, strlen(identifier->name), siphash_key_fixed);
       if (hashmap_lookup(seen, hash)) {
         cs->assign_mode = ASSIGN_NOT_ALLOWED;
       } else {
