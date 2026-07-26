@@ -29,6 +29,8 @@ ArgonObject *new_instance(ArgonObject *of, size_t endSize);
 
 void init_built_in_field_hashes();
 
+void init_build_in_field_string_objects();
+
 int64_t hash_object(ArgonObject *object, ArErr *err, RuntimeState *state);
 
 void add_builtin_field(ArgonObject *target, built_in_fields field,

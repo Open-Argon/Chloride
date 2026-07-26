@@ -184,6 +184,25 @@ ARGON_METHOD(BASE_CLASS, __getattribute__, {
   return ARGON_NULL;
 })
 
+ARGON_METHOD(BASE_CLASS, get___dict__, {
+  if (api->fix_to_arg_size(1, argc, err)) return api->ARGON_NULL;
+  return api->hashmap_to_dictionary(argv[0]->dict?argv[0]->dict:api->create_hashmap());
+})
+
+ARGON_METHOD(BASE_CLASS, set___dict__, {
+  (void)api;
+  (void)state;
+  (void)argv;
+  if (argc != 2) {
+    *err = create_err(RuntimeError,
+                      "set___dict__ expects 2 arguments, got %" PRIu64, argc);
+    return ARGON_NULL;
+  }
+
+  *err = create_err(RuntimeError, "attribute '__dict__' is immutable");
+  return ARGON_NULL;
+})
+
 ARGON_FUNCTION(ARGON_ADDITION_FUNCTION, {
   (void)api;
   if (argc < 1) {
@@ -1071,7 +1090,7 @@ void bootstrap_types() {
   add_builtin_field(ARGON_FUNCTION_TYPE, __base__, BASE_CLASS);
   add_builtin_field(ARGON_FUNCTION_TYPE, __name__,
                     new_string_object_null_terminated("function"));
-  add_builtin_field(ARGON_FUNCTION_TYPE, __new__, NULL);
+  add_builtin_field(ARGON_FUNCTION_TYPE, __new__, ARGON_NULL);
 
   ARGON_METHOD_TYPE = new_class();
   add_builtin_field(ARGON_METHOD_TYPE, __base__, BASE_CLASS);
@@ -1086,6 +1105,9 @@ void bootstrap_types() {
       BASE_CLASS, __init__,
       create_argon_native_function("__init__", ARGON_FUNC_BASE_CLASS___new__));
   MOUNT_ARGON_METHOD(BASE_CLASS, __string__)
+  MOUNT_ARGON_METHOD(BASE_CLASS, __repr__)
+  MOUNT_ARGON_METHOD(BASE_CLASS, get___dict__)
+  MOUNT_ARGON_METHOD(BASE_CLASS, set___dict__)
   MOUNT_ARGON_METHOD(BASE_CLASS, __repr__)
   MOUNT_ARGON_METHOD(ARGON_TYPE_TYPE, __call__)
   MOUNT_ARGON_METHOD(ARGON_STRING_TYPE, __new__)

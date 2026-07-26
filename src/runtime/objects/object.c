@@ -10,6 +10,7 @@
 #include "../../memory.h"
 #include "../call/call.h"
 #include "exceptions/exceptions.h"
+#include "string/string.h"
 #include "type/type.h"
 #include <gc/gc.h>
 #include <pthread.h>
@@ -42,15 +43,15 @@ const char *built_in_field_names[BUILT_IN_FIELDS_COUNT] = {
     BUILT_IN_FIELDS(X)
 #undef X
 
-    [field__address] = "address",
+        [field__address] = "address",
 };
 
-_Static_assert(
-    sizeof(built_in_field_names) / sizeof(built_in_field_names[0]) == BUILT_IN_FIELDS_COUNT,
-    "built_in_field_names size mismatch"
-);
+_Static_assert(sizeof(built_in_field_names) / sizeof(built_in_field_names[0]) ==
+                   BUILT_IN_FIELDS_COUNT,
+               "built_in_field_names size mismatch");
 
 uint64_t built_in_field_hashes[BUILT_IN_FIELDS_COUNT];
+ArgonObject built_in_field_objects[BUILT_IN_FIELDS_COUNT];
 
 #define SMALL_OBJECT_ASSIGNMENT_AMOUNT 512
 
@@ -151,13 +152,21 @@ void init_built_in_field_hashes() {
   }
 }
 
+void init_build_in_field_string_objects() {
+  for (int i = 0; i < BUILT_IN_FIELDS_COUNT; i++) {
+    built_in_field_objects[i] =
+        *new_string_object_null_terminated((char *)built_in_field_names[i]);
+  }
+}
+
 int64_t hash_object(ArgonObject *object, ArErr *err, RuntimeState *state) {
   ArgonObject *hash_function = get_builtin_field_for_class(
       get_builtin_field(object, __class__), __hash__, object);
   if (!hash_function) {
     return (int64_t)object;
   }
-  ArgonObject *hash_result = argon_call(hash_function, 0, NULL, NULL, err, state);
+  ArgonObject *hash_result =
+      argon_call(hash_function, 0, NULL, NULL, err, state);
   if (hash_result->type != TYPE_NUMBER ||
       !hash_result->value.as_number->is_int64) {
     *err =
@@ -204,7 +213,7 @@ inline void add_builtin_field(ArgonObject *target, built_in_fields field,
     }
     // pthread_rwlock_unlock(&target->lock);
     hashmap_insert_GC(target->dict, built_in_field_hashes[field],
-                      (char *)built_in_field_names[field], object, 0);
+                      &built_in_field_objects[field], object, 0);
     return;
   }
   // pthread_rwlock_unlock(&target->lock);
@@ -232,10 +241,8 @@ void add_field_l(ArgonObject *target, char *name, uint64_t hash, size_t length,
     target->dict = createHashmap_GC();
   }
   // pthread_rwlock_unlock(&target->lock);
-  char *name_copy = ar_alloc_atomic(length);
-  memcpy(name_copy, name, length);
-  name_copy[length] = '\0';
-  hashmap_insert_GC(target->dict, hash, name_copy, object, 0);
+  hashmap_insert_GC(target->dict, hash, new_string_object(name, length, hash),
+                    object, 0);
 }
 
 ArgonObject *bind_object_to_function(ArgonObject *object,
