@@ -194,8 +194,8 @@ void append_objects_fields_recursively(darray_armem *array, hashmap_GC *used,
 
   for (size_t i = 0; i < obj->built_in_slot_length; i++) {
     if (obj->built_in_slot[i].value) {
-      ArgonObject *key = &built_in_field_objects[i];
       if (!hashmap_lookup_GC(used, built_in_field_hashes[i])) {
+        ArgonObject* key = new_string_object_without_memcpy((char*)built_in_field_names[i], strlen(built_in_field_names[i]), built_in_field_hashes[i]);
         darray_armem_insert(array, array->size, &key);
         hashmap_insert_GC(used, built_in_field_hashes[i], NULL, (void*)true, 0);
       }
@@ -207,7 +207,8 @@ void append_objects_fields_recursively(darray_armem *array, hashmap_GC *used,
   struct node_GC **nodes = hashmap_GC_to_array(obj->dict, &array_length);
   for (size_t i = 0; i < array_length; i++) {
     if (!hashmap_lookup_GC(used, nodes[i]->hash)) {
-      darray_armem_insert(array, array->size, &nodes[i]->key);
+      ArgonObject* key = new_string_object_without_memcpy(nodes[i]->key, strlen(nodes[i]->key), nodes[i]->hash);
+      darray_armem_insert(array, array->size, &key);
       hashmap_insert_GC(used, nodes[i]->hash, NULL, (void*)true, 0);
     }
   }

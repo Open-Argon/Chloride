@@ -154,8 +154,8 @@ ARGON_METHOD(ARGON_STRING_TYPE, __not_equal__, {
                       "__not_equal__ expects 2 arguments, got %" PRIu64, argc);
     return ARGON_NULL;
   }
-  return ARGON_FUNC_ARGON_STRING_TYPE___equal__(argc, argv, kwargs, err, state, api) ==
-                 ARGON_TRUE
+  return ARGON_FUNC_ARGON_STRING_TYPE___equal__(argc, argv, kwargs, err, state,
+                                                api) == ARGON_TRUE
              ? ARGON_FALSE
              : ARGON_TRUE;
 })
@@ -840,7 +840,7 @@ ARGON_METHOD(ARGON_STRING_TYPE, ord, {
 
 struct {
   struct string_struct as_str;
-  char chr;
+  char chr[2];
   ArgonObject obj;
 } small_chars[CHAR_MAX - CHAR_MIN + 1];
 
@@ -854,7 +854,7 @@ void init_small_chars() {
   empty_str.obj.dict = NULL;
   empty_str.obj.value.as_str = &empty_str.as_str;
   add_builtin_field(&empty_str.obj, __class__, ARGON_STRING_TYPE);
-  empty_str.obj.value.as_str->data = NULL;
+  empty_str.obj.value.as_str->data = "\0";
   empty_str.obj.value.as_str->length = 0;
   empty_str.obj.as_bool = false;
 
@@ -864,8 +864,9 @@ void init_small_chars() {
     small_chars[i].obj.dict = NULL;
     small_chars[i].obj.value.as_str = &small_chars[i].as_str;
     add_builtin_field(&small_chars[i].obj, __class__, ARGON_STRING_TYPE);
-    small_chars[i].chr = n;
-    small_chars[i].obj.value.as_str->data = &small_chars[i].chr;
+    small_chars[i].chr[0] = n;
+    small_chars[i].chr[1] = '\0';
+    small_chars[i].obj.value.as_str->data = small_chars[i].chr;
     small_chars[i].obj.value.as_str->length = 1;
     small_chars[i].obj.as_bool = true;
   }
@@ -895,8 +896,9 @@ ArgonObject *new_string_object(char *data, size_t length, uint64_t hash) {
     return &empty_str.obj;
   if (length == 1)
     return &small_chars[data[0] - CHAR_MIN].obj;
-  char *data_copy = ar_alloc_atomic(length);
+  char *data_copy = ar_alloc_atomic(length + 1);
   memcpy(data_copy, data, length);
+  data_copy[length] = '\0';
   return new_string_object_without_memcpy(data_copy, length, hash);
 }
 

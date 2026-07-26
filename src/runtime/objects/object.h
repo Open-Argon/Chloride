@@ -19,8 +19,6 @@ extern const char *built_in_field_names[BUILT_IN_FIELDS_COUNT];
 
 extern uint64_t built_in_field_hashes[BUILT_IN_FIELDS_COUNT];
 
-extern ArgonObject built_in_field_objects[BUILT_IN_FIELDS_COUNT];
-
 typedef struct ArgonObject ArgonObject;
 
 // extern RWLock small_objects_lock;
@@ -32,8 +30,6 @@ ArgonObject *new_small_instance(ArgonObject *of, size_t endSize);
 ArgonObject *new_instance(ArgonObject *of, size_t endSize);
 
 void init_built_in_field_hashes();
-
-void init_build_in_field_string_objects();
 
 int64_t hash_object(ArgonObject *object, ArErr *err, RuntimeState *state);
 

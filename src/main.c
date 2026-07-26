@@ -62,7 +62,6 @@ int main(int argc, char *argv[]) {
   init_built_in_field_hashes();
   bootstrap_types();
   bootstrap_globals();
-  init_build_in_field_string_objects();
 
   imported_hash_table = createHashmap_GC();
   importing_hash_table = createHashmap_GC();

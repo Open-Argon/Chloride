@@ -10,7 +10,6 @@
 #include "../../memory.h"
 #include "../call/call.h"
 #include "exceptions/exceptions.h"
-#include "string/string.h"
 #include "type/type.h"
 #include <gc/gc.h>
 #include <pthread.h>
@@ -51,7 +50,6 @@ _Static_assert(sizeof(built_in_field_names) / sizeof(built_in_field_names[0]) ==
                "built_in_field_names size mismatch");
 
 uint64_t built_in_field_hashes[BUILT_IN_FIELDS_COUNT];
-ArgonObject built_in_field_objects[BUILT_IN_FIELDS_COUNT];
 
 #define SMALL_OBJECT_ASSIGNMENT_AMOUNT 512
 
@@ -152,13 +150,6 @@ void init_built_in_field_hashes() {
   }
 }
 
-void init_build_in_field_string_objects() {
-  for (int i = 0; i < BUILT_IN_FIELDS_COUNT; i++) {
-    built_in_field_objects[i] =
-        *new_string_object_null_terminated((char *)built_in_field_names[i]);
-  }
-}
-
 int64_t hash_object(ArgonObject *object, ArErr *err, RuntimeState *state) {
   ArgonObject *hash_function = get_builtin_field_for_class(
       get_builtin_field(object, __class__), __hash__, object);
@@ -213,15 +204,8 @@ inline void add_builtin_field(ArgonObject *target, built_in_fields field,
       target->dict = createHashmap_GC();
     }
     // pthread_rwlock_unlock(&target->lock);
-    struct node_GC *looked_up_node =
-        hashmap_lookup_node_GC(target->dict, built_in_field_hashes[field]);
-
-    if (looked_up_node) {
-      looked_up_node->val = object;
-    } else {
-      hashmap_insert_GC(target->dict, built_in_field_hashes[field],
-                        &built_in_field_objects[field], object, 0);
-    }
+    hashmap_insert_GC(target->dict, built_in_field_hashes[field],
+                      (char *)built_in_field_names[field], object, 0);
     return;
   }
   // pthread_rwlock_unlock(&target->lock);
@@ -249,14 +233,7 @@ void add_field_l(ArgonObject *target, char *name, uint64_t hash, size_t length,
     target->dict = createHashmap_GC();
   }
   // pthread_rwlock_unlock(&target->lock);
-  struct node_GC *looked_up_node = hashmap_lookup_node_GC(target->dict, hash);
-
-  if (looked_up_node) {
-    looked_up_node->val = object;
-  } else {
-    hashmap_insert_GC(target->dict, hash, new_string_object(name, length, hash),
-                      object, 0);
-  }
+  hashmap_insert_GC(target->dict, hash, name, object, 0);
 }
 
 ArgonObject *bind_object_to_function(ArgonObject *object,
