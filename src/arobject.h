@@ -61,8 +61,7 @@
   X(value_get)                                                                 \
   X(__hash__)                                                                  \
   X(__repr__)                                                                  \
-  X(get___dict__)                                                              \
-  X(set___dict__)                                                              \
+  X(__dir__)                                                                   \
   X(append)                                                                    \
   X(insert)                                                                    \
   X(pop)                                                                       \

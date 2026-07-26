@@ -180,6 +180,7 @@ ArgonObject *new_class() {
   ArgonObject *object = new_object(0);
   add_builtin_field(object, __class__, ARGON_TYPE_TYPE);
   add_builtin_field(object, __base__, BASE_CLASS);
+  add_builtin_field(object, __dir__, &FUNC___dir__);
   return object;
 }
 
@@ -212,8 +213,15 @@ inline void add_builtin_field(ArgonObject *target, built_in_fields field,
       target->dict = createHashmap_GC();
     }
     // pthread_rwlock_unlock(&target->lock);
-    hashmap_insert_GC(target->dict, built_in_field_hashes[field],
-                      &built_in_field_objects[field], object, 0);
+    struct node_GC *looked_up_node =
+        hashmap_lookup_node_GC(target->dict, built_in_field_hashes[field]);
+
+    if (looked_up_node) {
+      looked_up_node->val = object;
+    } else {
+      hashmap_insert_GC(target->dict, built_in_field_hashes[field],
+                        &built_in_field_objects[field], object, 0);
+    }
     return;
   }
   // pthread_rwlock_unlock(&target->lock);
@@ -241,8 +249,14 @@ void add_field_l(ArgonObject *target, char *name, uint64_t hash, size_t length,
     target->dict = createHashmap_GC();
   }
   // pthread_rwlock_unlock(&target->lock);
-  hashmap_insert_GC(target->dict, hash, new_string_object(name, length, hash),
-                    object, 0);
+  struct node_GC *looked_up_node = hashmap_lookup_node_GC(target->dict, hash);
+
+  if (looked_up_node) {
+    looked_up_node->val = object;
+  } else {
+    hashmap_insert_GC(target->dict, hash, new_string_object(name, length, hash),
+                      object, 0);
+  }
 }
 
 ArgonObject *bind_object_to_function(ArgonObject *object,

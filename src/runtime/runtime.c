@@ -106,6 +106,7 @@ extern char **environ;
   } while (0)
 
 ArgonObject *ARGON_METHOD_TYPE;
+ArgonObject FUNC___dir__;
 Stack *Global_Scope = NULL;
 ArgonObject *ADDITION_FUNCTION;
 ArgonObject *SUBTRACTION_FUNCTION;
@@ -184,23 +185,53 @@ ARGON_METHOD(BASE_CLASS, __getattribute__, {
   return ARGON_NULL;
 })
 
-ARGON_METHOD(BASE_CLASS, get___dict__, {
-  if (api->fix_to_arg_size(1, argc, err)) return api->ARGON_NULL;
-  return api->hashmap_to_dictionary(argv[0]->dict?argv[0]->dict:api->create_hashmap());
-})
+void append_objects_fields_recursively(darray_armem *array, hashmap_GC *used,
+                                       ArgonObject *obj) {
+  if (!obj)
+    return;
+  append_objects_fields_recursively(array, used,
+                                    get_builtin_field(obj, __base__));
 
-ARGON_METHOD(BASE_CLASS, set___dict__, {
-  (void)api;
-  (void)state;
-  (void)argv;
-  if (argc != 2) {
-    *err = create_err(RuntimeError,
-                      "set___dict__ expects 2 arguments, got %" PRIu64, argc);
-    return ARGON_NULL;
+  for (size_t i = 0; i < obj->built_in_slot_length; i++) {
+    if (obj->built_in_slot[i].value) {
+      ArgonObject *key = &built_in_field_objects[i];
+      if (!hashmap_lookup_GC(used, built_in_field_hashes[i])) {
+        darray_armem_insert(array, array->size, &key);
+        hashmap_insert_GC(used, built_in_field_hashes[i], NULL, (void*)true, 0);
+      }
+    }
   }
+  if (!obj->dict)
+    return;
+  size_t array_length = 0;
+  struct node_GC **nodes = hashmap_GC_to_array(obj->dict, &array_length);
+  for (size_t i = 0; i < array_length; i++) {
+    if (!hashmap_lookup_GC(used, nodes[i]->hash)) {
+      darray_armem_insert(array, array->size, &nodes[i]->key);
+      hashmap_insert_GC(used, nodes[i]->hash, NULL, (void*)true, 0);
+    }
+  }
+}
 
-  *err = create_err(RuntimeError, "attribute '__dict__' is immutable");
-  return ARGON_NULL;
+ARGON_FUNCTION(__dir__, {
+  if (api->fix_to_arg_size(1, argc, err))
+    return api->ARGON_NULL;
+
+  ArgonObject *self = argv[0];
+
+  ArgonObject *class = get_builtin_field_for_class(self, __class__, self);
+
+  ArgonObject *output_array = new_instance(ARRAY_TYPE, sizeof(darray_armem));
+  output_array->type = TYPE_ARRAY;
+
+  output_array->value.as_array = darray_armem_create();
+
+  darray_armem_init(output_array->value.as_array, sizeof(ArgonObject *), 0);
+
+  append_objects_fields_recursively(output_array->value.as_array,
+                                    createHashmap_GC(), class);
+
+  return output_array;
 })
 
 ARGON_FUNCTION(ARGON_ADDITION_FUNCTION, {
@@ -1090,7 +1121,6 @@ void bootstrap_types() {
   add_builtin_field(ARGON_FUNCTION_TYPE, __base__, BASE_CLASS);
   add_builtin_field(ARGON_FUNCTION_TYPE, __name__,
                     new_string_object_null_terminated("function"));
-  add_builtin_field(ARGON_FUNCTION_TYPE, __new__, ARGON_NULL);
 
   ARGON_METHOD_TYPE = new_class();
   add_builtin_field(ARGON_METHOD_TYPE, __base__, BASE_CLASS);
@@ -1106,8 +1136,6 @@ void bootstrap_types() {
       create_argon_native_function("__init__", ARGON_FUNC_BASE_CLASS___new__));
   MOUNT_ARGON_METHOD(BASE_CLASS, __string__)
   MOUNT_ARGON_METHOD(BASE_CLASS, __repr__)
-  MOUNT_ARGON_METHOD(BASE_CLASS, get___dict__)
-  MOUNT_ARGON_METHOD(BASE_CLASS, set___dict__)
   MOUNT_ARGON_METHOD(BASE_CLASS, __repr__)
   MOUNT_ARGON_METHOD(ARGON_TYPE_TYPE, __call__)
   MOUNT_ARGON_METHOD(ARGON_STRING_TYPE, __new__)
@@ -1148,6 +1176,7 @@ void bootstrap_types() {
   MOUNT_ARGON_METHOD(BASE_CLASS, __not_equal__)
   MOUNT_ARGON_METHOD(ARGON_BOOL_TYPE, __string__)
   MOUNT_ARGON_METHOD(ARGON_BOOL_TYPE, __number__)
+  FUNC___dir__ = *create_argon_native_function("__dir__", ARGON_FUNC___dir__);
   ADDITION_FUNCTION =
       create_argon_native_function("add", ARGON_FUNC_ARGON_ADDITION_FUNCTION);
   SUBTRACTION_FUNCTION = create_argon_native_function(
@@ -1215,7 +1244,8 @@ void bootstrap_globals() {
   Global_Scope = create_scope(NULL
                               //, true
   );
-  add_to_scope(Global_Scope, "global", create_dictionary(init_scope(Global_Scope)->scope));
+  add_to_scope(Global_Scope, "global",
+               create_dictionary(init_scope(Global_Scope)->scope));
   add_to_scope(Global_Scope, "object", BASE_CLASS);
   add_to_scope(Global_Scope, "string", ARGON_STRING_TYPE);
   add_to_scope(Global_Scope, "type", ARGON_TYPE_TYPE);

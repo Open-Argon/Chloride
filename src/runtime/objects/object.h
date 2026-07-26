@@ -17,6 +17,10 @@ extern __thread struct hashmap *is_being_repr;
 
 extern const char *built_in_field_names[BUILT_IN_FIELDS_COUNT];
 
+extern uint64_t built_in_field_hashes[BUILT_IN_FIELDS_COUNT];
+
+extern ArgonObject built_in_field_objects[BUILT_IN_FIELDS_COUNT];
+
 typedef struct ArgonObject ArgonObject;
 
 // extern RWLock small_objects_lock;

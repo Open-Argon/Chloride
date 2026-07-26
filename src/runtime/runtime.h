@@ -22,6 +22,8 @@
 extern ArgonObject *ARGON_METHOD_TYPE;
 extern Stack *Global_Scope;
 
+extern ArgonObject FUNC___dir__;
+
 typedef struct StackFrame StackFrame;
 typedef struct RuntimeState RuntimeState;
 

@@ -247,6 +247,37 @@ void hashmap_insert_GC(struct hashmap_GC *t, uint64_t hash, void *key,
                 { hashmap_insert_GC_nolock(t, hash, key, val, order); });
 }
 
+
+void *hashmap_lookup_node_GC(struct hashmap_GC *t, uint64_t hash) {
+  if (!t) return NULL;
+  RWBLOCK struct node_GC *result = NULL;
+
+  RWLOCK_RDLOCK(t->lock, {
+    for (size_t i = 0; i < t->inline_count; i++) {
+      if (t->inline_values[i].hash == hash) {
+        result = &t->inline_values[i];
+        break;
+      }
+    }
+
+    if (!result && t->list) {
+      int pos = hashCode_GC_nolock(t, hash);
+      struct node_GC *n = t->list[pos];
+
+      while (n) {
+        if (n->hash == hash) {
+          result = n;
+          break;
+        }
+        n = n->next;
+      }
+    }
+  });
+
+  return result;
+}
+
+
 void *hashmap_lookup_GC(struct hashmap_GC *t, uint64_t hash) {
   if (!t) return NULL;
   RWBLOCK void *result = NULL;

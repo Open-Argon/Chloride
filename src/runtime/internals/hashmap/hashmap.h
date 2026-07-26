@@ -55,6 +55,8 @@ void hashmap_insert_GC(
     size_t order
 );
 
+void *hashmap_lookup_node_GC(struct hashmap_GC *t, uint64_t hash);
+
 void *hashmap_lookup_GC(struct hashmap_GC *t, uint64_t hash);
 
 #endif /* HASHMAP_GC_H */
