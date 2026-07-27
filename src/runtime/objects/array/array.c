@@ -41,8 +41,6 @@ ArgonObject *create_array(ArgonObject **argv, size_t argc) {
 ARGON_FUNCTION(ARRAY_CREATE, { return create_array(argv, argc); })
 
 ARGON_METHOD(ARRAY_TYPE, __new__, {
-  (void)api;
-  (void)state;
   if (argc != 2) {
     *err = create_err(RuntimeError, "__new__ expects 2 arguments, got %" PRIu64,
                       argc);
@@ -83,8 +81,6 @@ ARGON_METHOD(ARRAY_TYPE, __new__, {
 })
 
 ARGON_METHOD(ARRAY_TYPE, __string__, {
-  (void)api;
-
   if (argc != 1) {
     *err = create_err(RuntimeError,
                       "__string__ expects 1 argument, got %" PRIu64, argc);
@@ -169,24 +165,22 @@ ARGON_METHOD(ARRAY_TYPE, __string__, {
 })
 
 ARGON_METHOD(ARRAY_TYPE, append, {
-  (void)state;
-  (void)api;
-  if (argc < 2) {
-    *err =
-        create_err(RuntimeError,
-                   "append expects at least 2 arguments, got %" PRIu64, argc);
+  if (argc < 1) {
+    *err = create_err(RuntimeError,
+                      "append expects at least 1 argument, got %" PRIu64, argc);
     return ARGON_NULL;
   }
-  size_t start = argv[0]->value.as_array->size;
-  darray_armem_resize(argv[0]->value.as_array, start + argc - 1);
-  memcpy(argv[0]->value.as_array->data + (start * sizeof(ArgonObject *)),
-         argv + 1, (argc - 1) * sizeof(ArgonObject *));
-  return ARGON_NULL;
+  GET_SELF(TYPE_ARRAY);
+  if (argc == 1)
+    return self;
+  size_t start = self->value.as_array->size;
+  darray_armem_resize(self->value.as_array, start + argc - 1);
+  memcpy(self->value.as_array->data + (start * sizeof(ArgonObject *)), argv + 1,
+         (argc - 1) * sizeof(ArgonObject *));
+  return self;
 })
 
 ARGON_METHOD(ARRAY_TYPE, of_size, {
-  (void)state;
-  (void)api;
   if (argc != 1) {
     *err = create_err(RuntimeError, "of_size expects 1 argument, got %" PRIu64,
                       argc);
@@ -210,8 +204,6 @@ ARGON_METHOD(ARRAY_TYPE, of_size, {
 })
 
 ARGON_METHOD(ARRAY_TYPE, __contains__, {
-  (void)state;
-  (void)api;
   if (argc != 2) {
     *err = create_err(RuntimeError,
                       "__contains__ expects 2 arguments, got %" PRIu64, argc);
@@ -243,8 +235,6 @@ ARGON_METHOD(ARRAY_TYPE, __contains__, {
 })
 
 ARGON_METHOD(ARRAY_TYPE, get_length, {
-  (void)api;
-  (void)state;
   if (argc != 1) {
     *err = create_err(RuntimeError,
                       "get_length expects 1 argument, got %" PRIu64, argc);
@@ -254,9 +244,6 @@ ARGON_METHOD(ARRAY_TYPE, get_length, {
 })
 
 ARGON_METHOD(ARRAY_TYPE, set_length, {
-  (void)api;
-  (void)state;
-  (void)argv;
   if (argc != 2) {
     *err = create_err(RuntimeError,
                       "set_length expects 2 arguments, got %" PRIu64, argc);
@@ -268,9 +255,6 @@ ARGON_METHOD(ARRAY_TYPE, set_length, {
 })
 
 ARGON_METHOD(ARRAY_TYPE, join, {
-  (void)api;
-  (void)state;
-  (void)argv;
   if (argc != 2) {
     *err = create_err(RuntimeError, "join expects 2 arguments, got %" PRIu64,
                       argc);
@@ -312,21 +296,31 @@ ARGON_METHOD(ARRAY_TYPE, join, {
 })
 
 ARGON_METHOD(ARRAY_TYPE, insert, {
-  (void)state;
-  if (argc != 3) {
-    *err = create_err(RuntimeError, "insert expects 3 arguments, got %" PRIu64,
-                      argc);
+  if (argc < 2) {
+    *err =
+        create_err(RuntimeError,
+                   "insert expects at least 2 arguments, got %" PRIu64, argc);
     return ARGON_NULL;
   }
-  size_t pos = api->argon_to_i64(argv[1], err);
+  GET_SELF(TYPE_ARRAY);
+  int64_t pos = api->argon_to_i64(argv[1], err);
   if (api->is_error(err))
     return ARGON_NULL;
-  darray_armem_insert(argv[0]->value.as_array, pos, &argv[2]);
-  return ARGON_NULL;
+  if (pos > (int64_t)self->value.as_array->size && 0 < pos)
+    return self;
+  if (argc == 2)
+    return self;
+  size_t size = argc - 2;
+  size_t move_size = self->value.as_array->size - pos;
+  size_t old_size = self->value.as_array->size;
+  darray_armem_resize(self->value.as_array, old_size + size);
+  ArgonObject **data = self->value.as_array->data;
+  memmove(data + pos + size, data + pos, move_size * sizeof(ArgonObject *));
+  memcpy(data + pos, argv + 2, size * sizeof(ArgonObject *));
+  return self;
 })
 
 ARGON_METHOD(ARRAY_TYPE, pop, {
-  (void)state;
   if (argc > 2 || argc < 1) {
     *err = create_err(RuntimeError,
                       "pop expects 1 or 2 arguments, got %" PRIu64, argc);
@@ -345,7 +339,6 @@ ARGON_METHOD(ARRAY_TYPE, pop, {
 })
 
 ARGON_METHOD(ARRAY_TYPE, __getitem__, {
-  (void)state;
   if (argc != 2) {
     *err = create_err(RuntimeError,
                       "__getitem__ expects 2 arguments, got %" PRIu64, argc);
@@ -393,7 +386,6 @@ ARGON_METHOD(ARRAY_TYPE, __getitem__, {
 })
 
 ARGON_METHOD(ARRAY_TYPE, __setitem__, {
-  (void)state;
   darray_armem *arr = argv[0]->value.as_array;
   if (argc != 3) {
     *err = create_err(RuntimeError,
@@ -741,7 +733,6 @@ ARGON_METHOD(ARRAY_TYPE, sort, {
 })
 
 ARGON_METHOD(ARRAY_TYPE, __delitem__, {
-  (void)state;
   if (argc != 2) {
     *err = create_err(RuntimeError,
                       "__delitem__ expects 2 arguments, got %" PRIu64, argc);
@@ -818,8 +809,6 @@ ARGON_METHOD(ARRAY_TYPE, __delitem__, {
 })
 
 ARGON_METHOD(ARRAY_TYPE, __iter__, {
-  (void)api;
-  (void)state;
   if (argc != 1) {
     *err = create_err(RuntimeError, "__iter__ expects 1 argument, got %" PRIu64,
                       argc);
@@ -837,8 +826,6 @@ ARGON_METHOD(ARRAY_TYPE, __iter__, {
 })
 
 ARGON_METHOD(ARRAY_ITERATOR_TYPE, __next__, {
-  (void)api;
-  (void)state;
   if (argc != 1) {
     *err = create_err(RuntimeError, "__next__ expects 1 argument, got %" PRIu64,
                       argc);
