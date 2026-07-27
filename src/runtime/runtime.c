@@ -7,6 +7,7 @@
 #include "runtime.h"
 #include "../err.h"
 #include "../hash_data/hash_data.h"
+#include "../import.h"
 #include "../memory.h"
 #include "../parser/number/number.h"
 #include "../translator/translator.h"
@@ -195,9 +196,12 @@ void append_objects_fields_recursively(darray_armem *array, hashmap_GC *used,
   for (size_t i = 0; i < obj->built_in_slot_length; i++) {
     if (obj->built_in_slot[i].value) {
       if (!hashmap_lookup_GC(used, built_in_field_hashes[i])) {
-        ArgonObject* key = new_string_object_without_memcpy((char*)built_in_field_names[i], strlen(built_in_field_names[i]), built_in_field_hashes[i]);
+        ArgonObject *key = new_string_object_without_memcpy(
+            (char *)built_in_field_names[i], strlen(built_in_field_names[i]),
+            built_in_field_hashes[i]);
         darray_armem_insert(array, array->size, &key);
-        hashmap_insert_GC(used, built_in_field_hashes[i], NULL, (void*)true, 0);
+        hashmap_insert_GC(used, built_in_field_hashes[i], NULL, (void *)true,
+                          0);
       }
     }
   }
@@ -207,9 +211,10 @@ void append_objects_fields_recursively(darray_armem *array, hashmap_GC *used,
   struct node_GC **nodes = hashmap_GC_to_array(obj->dict, &array_length);
   for (size_t i = 0; i < array_length; i++) {
     if (!hashmap_lookup_GC(used, nodes[i]->hash)) {
-      ArgonObject* key = new_string_object_without_memcpy(nodes[i]->key, strlen(nodes[i]->key), nodes[i]->hash);
+      ArgonObject *key = new_string_object_without_memcpy(
+          nodes[i]->key, strlen(nodes[i]->key), nodes[i]->hash);
       darray_armem_insert(array, array->size, &key);
-      hashmap_insert_GC(used, nodes[i]->hash, NULL, (void*)true, 0);
+      hashmap_insert_GC(used, nodes[i]->hash, NULL, (void *)true, 0);
     }
   }
 }
@@ -1305,8 +1310,6 @@ void bootstrap_globals() {
   add_to_scope(Global_Scope, "StopIteration", StopIteration);
 
   // create platform
-  hashmap_GC *signals = createHashmap_GC();
-  add_to_scope(Global_Scope, "signals", create_dictionary(signals));
 
   hashmap_GC *platform = createHashmap_GC();
   add_to_hashmap(platform, "os",
@@ -1315,6 +1318,12 @@ void bootstrap_globals() {
                  new_string_object_null_terminated(PLATFORM_LIB_PREFIX));
   add_to_hashmap(platform, "lib_ext",
                  new_string_object_null_terminated(PLATFORM_LIB_EXT));
+  ArgonObject **argon_args_array = malloc(g_argc * sizeof(ArgonObject *));
+  for (int i = 0; i < g_argc; i++) {
+    argon_args_array[i] = new_string_object_null_terminated(g_argv[i]);
+  }
+  add_to_hashmap(platform, "args", create_array(argon_args_array, g_argc));
+  free(argon_args_array);
   add_to_scope(Global_Scope, "platform", create_dictionary(platform));
 
   struct hashmap_GC *argon_term = createHashmap_GC();

@@ -51,7 +51,12 @@ volatile sig_atomic_t KeyboardInterrupted = 0;
 
 void sigint_handler(int signum) { KeyboardInterrupted = signum; }
 
+int g_argc;
+char **g_argv;
+
 int main(int argc, char *argv[]) {
+  g_argc = argc;
+  g_argv = argv;
   if (argc >= 2 && strcmp(argv[1], "--version") == 0) {
     printf("%s\n", VERSION);
     return 0;

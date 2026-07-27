@@ -13,6 +13,8 @@ extern ArgonObject *ARGON_ARRAY_CREATE;
 
 void init_array_type();
 
+ArgonObject *create_array(ArgonObject **argv, size_t argc);
+
 EXPOSE_ARGON_FUNCTION(ARRAY_CREATE)
 
 EXPOSE_ARGON_METHOD(ARRAY_ITERATOR_TYPE, __next__)

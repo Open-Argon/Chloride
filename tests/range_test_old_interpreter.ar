@@ -2,4 +2,4 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-for (i from 0 to 1e8) do
+for (i from 0 to 1e7) do

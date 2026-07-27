@@ -1,0 +1,73 @@
+let find_matching_forward(program, pc) = do
+    let depth = 1
+
+    while (depth > 0) do
+        pc += 1
+
+        if (program[pc] == '[') do
+            depth += 1
+        else if (program[pc] == ']') do
+            depth -= 1
+
+    return pc
+
+
+let find_matching_backward(program, pc) = do
+    let depth = 1
+
+    while (depth > 0) do
+        pc -= 1
+
+        if (program[pc] == ']') do
+            depth += 1
+        else if (program[pc] == '[') do
+            depth -= 1
+
+    return pc
+
+
+let run(program) = do
+    let tape = [0]
+    let pointer = 0
+    let pc = 0
+
+    while (pc < program.length) do
+        let op = program[pc]
+
+        if (op == '+') do
+            tape[pointer] += 1
+
+        else if (op == '-') do
+            tape[pointer] -= 1
+
+        else if (op == '>') do
+            pointer += 1
+
+            if (pointer >= tape.length) do
+                tape.append(0)
+
+        else if (op == '<') do
+            pointer -= 1
+
+            if (pointer < 0) do
+                # optional: grow left side
+                tape.insert(0, 0)
+                pointer = 0
+
+        else if (op == '.') do
+            term.log(string.chr(tape[pointer]), end="")
+
+        else if (op == ',') do
+            tape[pointer] = number(term.input())
+
+        else if (op == '[') do
+            if (tape[pointer] == 0) do
+                pc = find_matching_forward(program, pc)
+
+        else if (op == ']') do
+            if (tape[pointer] != 0) do
+                pc = find_matching_backward(program, pc)
+
+        pc += 1
+
+run(platform.args[2])

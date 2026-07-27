@@ -13,8 +13,10 @@ extern char EXC[PATH_MAX];
 extern char EXC_DIR[PATH_MAX];
 extern ArgonObject *CWD_ARGON;
 extern ArgonObject *EXC_ARGON;
+extern int g_argc;
+extern char **g_argv;
 
-int get_executable_path(char*path, size_t size);
+int get_executable_path(char *path, size_t size);
 
 extern struct hashmap_GC *importing_hash_table;
 extern struct hashmap_GC *imported_hash_table;

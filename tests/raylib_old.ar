@@ -1,0 +1,59 @@
+# SPDX-FileCopyrightText: 2025, 2026 William Bell
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+import "../non-stdlib/raylib" expose raylib
+import "../stdlib/random" expose random
+import "../stdlib/maths" as maths
+
+term.log(raylib)
+
+class bouncing_text do
+  this.__init__(self, text, pos, speed) = do
+    self.text = text
+    self.pos = pos
+    self.speed = speed
+    self.color = raylib.Color(random.int(0,255),random.int(0,255),random.int(0,255),255)
+  this.render(self, frame, max) = raylib.DrawText(
+    self.text, maths.round(max[0] - maths.abs(((self.pos[0]+frame * self.speed) % (2 * max[0])) - max[0])),
+    maths.round(max[1] - maths.abs(((self.pos[1]+frame * self.speed) % (2 * max[1])) - max[1])), 20,
+    self.color
+  )
+
+
+class Game do
+  this.__init__(self, width, height, fps) = do
+    self.frame = 0
+    self.width = width
+    self.height = height
+    raylib.InitWindow(self.width, self.height, "Hello Raylib")
+    if (fps) raylib.SetTargetFPS(fps)
+    self.bouncing_texts = []
+    for (x in 0 until 20) do
+      for (y in 0 until 20) do
+        self.bouncing_texts.append(bouncing_text(string(x*y), tuple(x*10,y*10), (x+y+1)))
+
+  this.render(self) = do
+      # term.log("frame:",self.frame)
+      let maxX = self.width -10, maxY = self.height-20
+      raylib.ClearBackground(raylib.BLACK)
+
+      for (text in self.bouncing_texts) do
+        text.render(self.frame,tuple(maxX, maxY))
+
+      self.frame+=1
+  
+  this.__string__(self) = "game instance"
+
+
+let instance = Game(820, 640, 0)
+
+while (true) do
+  if (raylib.WindowShouldClose()) break
+  raylib.BeginDrawing()
+  instance.render()
+  raylib.EndDrawing()
+
+raylib.CloseWindow()
+
+term.log("bye :)")
