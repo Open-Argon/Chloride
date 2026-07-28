@@ -8,7 +8,7 @@ let stringify(value, pretty=false, parents=null) = do
     if (is_instance(value, string) || is_instance(value, number) || value==null || value==true || value==false) do
         return value.__repr__()
     else if (is_instance(value, dictionary)) do
-        output = ["{"]
+        let output = ["{"]
         let is_first = true
         parents.append(value)
         for (keyval in value) do
@@ -21,7 +21,7 @@ let stringify(value, pretty=false, parents=null) = do
         output.append("}")
         return output.join("")
     else if (is_instance(value, array)) do
-        output = ["["]
+        let output = ["["]
         let is_first = true
         parents.append(value)
         for (item in value) do
@@ -31,6 +31,12 @@ let stringify(value, pretty=false, parents=null) = do
         parents.pop()
         output.append("]")
         return output.join("")
+    else if ("__json__" in value.__dir__()) do
+        let is_first = true
+        parents.append(value)
+        let output = value.__json__(pretty=pretty, parents=parents)
+        parents.pop()
+        return output
     throw TypeError(`Object of type $(type(value).__name__) is not JSON serialisable`)
 
 let parse_string(s) = do
