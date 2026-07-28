@@ -34,7 +34,7 @@ let stringify(value, pretty=false, parents=null) = do
     else if ("__json__" in value.__dir__()) do
         let is_first = true
         parents.append(value)
-        let output = value.__json__(pretty=pretty, parents=parents)
+        let output = value.__json__(pretty, parents)
         parents.pop()
         return output
     throw TypeError(`Object of type $(type(value).__name__) is not JSON serialisable`)
