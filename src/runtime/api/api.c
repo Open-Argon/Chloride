@@ -10,6 +10,7 @@
 #include "../../memory.h"
 #include "../call/call.h"
 #include "../objects/buffer/buffer.h"
+#include "../objects/array/array.h"
 #include "../objects/dictionary/dictionary.h"
 #include "../objects/exceptions/exceptions.h"
 #include "../objects/literals/literals.h"
@@ -280,4 +281,6 @@ ArgonNativeAPI native_api = {
     .get_from_hashmap_string_key = api_get_from_hashmap_string_key,
     .remove_from_hashmap_string_key = api_remove_entry_from_hashmap_string_key,
     .remove_from_hashmap = api_remove_entry_from_hashmap,
+
+    .create_argon_array = create_array
 };

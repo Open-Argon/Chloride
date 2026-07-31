@@ -110,7 +110,7 @@ ArErr parse_param_list(char *file, DArray *tokens, size_t *index,
         token = darray_get(tokens, *index);
         if (token->type != TOKEN_IDENTIFIER)
           return PARAM_ERR("expected identifier after **");
-        
+
         // duplicate check
         uint64_t hash =
             siphash64_bytes(token->value, token->length, siphash_key_fixed);
@@ -194,8 +194,10 @@ ArErr parse_param_list(char *file, DArray *tokens, size_t *index,
       (*index)++;
       token = darray_get(tokens, *index); // ← this was missing
     } else if (token->type == TOKEN_ASSIGN) {
-      if (ps->stage == 2)
+      if (ps->stage == 2) {
+        free(name);
         return PARAM_ERR("*args parameter cannot have a default value");
+      }
       ps->stage = 1;
 
       (*index)++;

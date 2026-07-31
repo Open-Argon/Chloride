@@ -2,6 +2,7 @@
 //
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
+#include "./handle.h"
 #include "Argon.h"
 #include "ArgonFunction.h"
 #include <errno.h>
@@ -13,11 +14,6 @@
 #if defined(__linux__) || defined(__APPLE__) || defined(__unix__)
 #include <sys/stat.h>
 #endif
-
-typedef struct {
-  FILE *fp;
-  int is_open;
-} FileHandle;
 
 ARGON_FUNCTION(open_handle, {
   if (api->fix_to_arg_size(6, argc, err))
@@ -50,6 +46,7 @@ ARGON_FUNCTION(open_handle, {
   FileHandle *handle = handle_buffer.data;
   handle->fp = fopen(path, mode);
   handle->is_open = true;
+  handle->type = FILE_NORMAL;
 
   if (!handle->fp) {
 
@@ -248,7 +245,7 @@ ARGON_FUNCTION(close, {
   if (!handle->is_open)
     return api->ARGON_NULL;
 
-  if (fclose(handle->fp) != 0)
+  if (handle->type == FILE_NORMAL && fclose(handle->fp) != 0)
     return api->throw_argon_error(err, argv[1], "%s", strerror(errno));
 
   handle->fp = NULL;
@@ -401,6 +398,78 @@ ARGON_FUNCTION(path_type, {
 #endif
 })
 
+ARGON_FUNCTION(open_stdout, {
+  if (api->fix_to_arg_size(0, argc, err))
+    return api->ARGON_NULL;
+
+  ArgonObject *handle_obj = api->create_argon_buffer(sizeof(FileHandle));
+  struct buffer handle_buffer = api->argon_buffer_to_buffer(handle_obj, err);
+  if (api->is_error(err))
+    return api->ARGON_NULL;
+
+  FileHandle *handle = handle_buffer.data;
+  handle->fp = stdout;
+  handle->is_open = true;
+  handle->type = FILE_STD;
+
+  return handle_obj;
+})
+
+ARGON_FUNCTION(open_stdin, {
+  if (api->fix_to_arg_size(0, argc, err))
+    return api->ARGON_NULL;
+
+  ArgonObject *handle_obj = api->create_argon_buffer(sizeof(FileHandle));
+  struct buffer handle_buffer = api->argon_buffer_to_buffer(handle_obj, err);
+  if (api->is_error(err))
+    return api->ARGON_NULL;
+
+  FileHandle *handle = handle_buffer.data;
+  handle->fp = stdin;
+  handle->is_open = true;
+  handle->type = FILE_STD;
+
+  return handle_obj;
+})
+
+ARGON_FUNCTION(open_stderr, {
+  if (api->fix_to_arg_size(0, argc, err))
+    return api->ARGON_NULL;
+
+  ArgonObject *handle_obj = api->create_argon_buffer(sizeof(FileHandle));
+  struct buffer handle_buffer = api->argon_buffer_to_buffer(handle_obj, err);
+  if (api->is_error(err))
+    return api->ARGON_NULL;
+
+  FileHandle *handle = handle_buffer.data;
+  handle->fp = stderr;
+  handle->is_open = true;
+  handle->type = FILE_STD;
+
+  return handle_obj;
+})
+
+ARGON_FUNCTION(open_stdnull, {
+  if (api->fix_to_arg_size(0, argc, err))
+    return api->ARGON_NULL;
+
+  ArgonObject *handle_obj = api->create_argon_buffer(sizeof(FileHandle));
+  struct buffer handle_buffer = api->argon_buffer_to_buffer(handle_obj, err);
+  if (api->is_error(err))
+    return api->ARGON_NULL;
+
+  FileHandle *handle = handle_buffer.data;
+  #ifdef _WIN32
+    handle->fp = fopen("NUL", "w");
+  #else
+    handle->fp = fopen("/dev/null", "w");
+  #endif
+  handle->is_open = true;
+  handle->type = FILE_NULL;
+
+  return handle_obj;
+})
+
 INIT_ARGON_MODULE({
   (void)vm;
   (void)err;
@@ -414,4 +483,8 @@ INIT_ARGON_MODULE({
   REGISTER_ARGON_FUNCTION(flush)
   REGISTER_ARGON_FUNCTION(file_size)
   REGISTER_ARGON_FUNCTION(path_type)
+  REGISTER_ARGON_FUNCTION(open_stdout)
+  REGISTER_ARGON_FUNCTION(open_stdin)
+  REGISTER_ARGON_FUNCTION(open_stderr)
+  REGISTER_ARGON_FUNCTION(open_stdnull)
 })

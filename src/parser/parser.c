@@ -186,6 +186,12 @@ ParsedValueReturn parse_token_full(char *file, DArray *tokens, size_t *index,
     if (is_error(&output.err)) {
       return output;
     }
+    size_t temp_index = *index;
+    skip_newlines_and_indents(tokens, index);
+    if ((*index)>=tokens->size) {
+      *index = temp_index;
+      break;
+    }
     token = darray_get(tokens, *index);
     switch (token->type) {
     case TOKEN_CARET_ASSIGN:
@@ -213,8 +219,8 @@ ParsedValueReturn parse_token_full(char *file, DArray *tokens, size_t *index,
       break;
     case TOKEN_QUESTION:
       if (process_operations) {
-        output =
-            parse_conditional_expression(file, tokens, index, output.value);
+        output = parse_conditional_expression(file, tokens, index,
+                                              output.value);
         break;
       }
       passed = true;
@@ -227,8 +233,10 @@ ParsedValueReturn parse_token_full(char *file, DArray *tokens, size_t *index,
         output = parse_operations(file, tokens, index, output.value);
         break;
       }
-      /* fall through */
+      passed = true;
+      break;
     default:
+      *index = temp_index;
       passed = true;
     }
   }

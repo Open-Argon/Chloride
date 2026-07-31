@@ -142,6 +142,8 @@ struct ArgonNativeAPI {
   void (*remove_from_hashmap)(ArgonHashmap *hashmap, ArgonObject *key,
                               ArgonState *state, ArgonError *err);
   void (*remove_from_hashmap_string_key)(ArgonHashmap *hashmap, char *key);
+
+  ArgonObject *(*create_argon_array)(ArgonObject ** array, size_t size);
 };
 
 #define ARGON_STRING_FROM_C_STRING(str)                                        \

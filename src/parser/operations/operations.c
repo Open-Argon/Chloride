@@ -90,6 +90,7 @@ ParsedValueReturn parse_operations(char *file, DArray *tokens, size_t *index,
       break;
     darray_push(&operations, token);
     (*index)++;
+    skip_newlines_and_indents(tokens, index);
     ArErr err = error_if_finished(file, tokens, index);
     if (is_error(&err)) {
       darray_free(&to_operate_on, (void (*)(void *))free_parsed);

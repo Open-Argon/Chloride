@@ -59,7 +59,8 @@ vcpkg_installed/
 .venv
 
 bin
-build
+./build
+stdlib/regex/native/pcre2/build
 
 *.yy.c
 *.yy.h

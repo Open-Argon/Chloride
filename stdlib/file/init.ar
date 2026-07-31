@@ -66,18 +66,18 @@ class File do
         return _file.file_size(self._handle, FileError)
     
 
+let _File_from_handle(name, file, handle, mode) = do
+    file.__name__ = path
+    file.mode = mode
+    file.closed = false
+    file._binary  = "b" in mode
+    file._handle = handle
+    return file
+
 let open(path, mode="r") = do
     let file = File()
     file._validate_mode(mode)
-
-    file.name = path
-    file.mode = mode
-    file.closed = false
-
-    file._binary  = "b" in mode
-
-    file._handle = _file.open_handle(path, mode, FileNotFoundError, FilePermissionError, FileExistsError, FileError)
-    return file
+    return _File_from_handle(path, file, _file.open_handle(path, mode, FileNotFoundError, FilePermissionError, FileExistsError, FileError), mode)
 
 class Path_type do
     this.__init__(self, name) = do
@@ -95,3 +95,7 @@ let path_type(path) = do
 let is_file(path) = path_type(path) == file_path
 
 let is_directory(path) = path_type(path) == directory_path
+
+let stdout = _File_from_handle("stdout", File(), _file.open_stdout(), "wb")
+let stderr = _File_from_handle("stderr", File(), _file.open_stderr(), "wb")
+let stdin = _File_from_handle("stdin", File(), _file.open_stdin(), "rb")
