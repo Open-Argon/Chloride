@@ -10,6 +10,7 @@
 #include <string.h>
 #ifdef _WIN32
 #include <windows.h>
+#include <io.h>
 #else
 #include <sys/wait.h>
 #include <unistd.h>
