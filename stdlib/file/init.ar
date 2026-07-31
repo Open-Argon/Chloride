@@ -78,3 +78,20 @@ let open(path, mode="r") = do
 
     file._handle = _file.open_handle(path, mode, FileNotFoundError, FilePermissionError, FileExistsError, FileError)
     return file
+
+class Path_type do
+    this.__init__(self, name) = do
+        self.__name__ = name
+
+let file_path = Path_type("file")
+let directory_path = Path_type("directory")
+
+let path_type(path) = do
+    let type = _file.path_type(path)
+    if (type == 1) return file_path
+    else if (type == 2) return directory_path
+    return null
+
+let is_file(path) = path_type(path) == file_path
+
+let is_directory(path) = path_type(path) == directory_path

@@ -360,6 +360,47 @@ ARGON_FUNCTION(file_size, {
   return api->i64_to_argon((int64_t)size);
 })
 
+ARGON_FUNCTION(path_type, {
+  if (api->fix_to_arg_size(1, argc, err))
+    return api->ARGON_NULL;
+
+  struct string path_str = api->argon_to_string(argv[0], err);
+  if (api->is_error(err))
+    return api->ARGON_NULL;
+
+  char *path = malloc(path_str.length + 1);
+  if (!path)
+    return api->throw_argon_error(err, api->RuntimeError, "out of memory");
+
+  memcpy(path, path_str.data, path_str.length);
+  path[path_str.length] = '\0';
+
+#if defined(__linux__) || defined(__APPLE__) || defined(__unix__)
+  struct stat st;
+  int result = 0;
+
+  if (stat(path, &st) == 0) {
+    if (S_ISREG(st.st_mode))
+      result = 1;
+    else if (S_ISDIR(st.st_mode))
+      result = 2;
+  }
+
+  free(path);
+  return api->i64_to_argon(result);
+#else
+  FILE *fp = fopen(path, "rb");
+  free(path);
+
+  if (fp) {
+    fclose(fp);
+    return api->i64_to_argon(1);
+  }
+
+  return api->i64_to_argon(0);
+#endif
+})
+
 INIT_ARGON_MODULE({
   (void)vm;
   (void)err;
@@ -372,4 +413,5 @@ INIT_ARGON_MODULE({
   REGISTER_ARGON_FUNCTION(tell)
   REGISTER_ARGON_FUNCTION(flush)
   REGISTER_ARGON_FUNCTION(file_size)
+  REGISTER_ARGON_FUNCTION(path_type)
 })
