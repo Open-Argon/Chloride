@@ -659,6 +659,74 @@ ARGON_METHOD(ARGON_STRING_TYPE, __contains__, {
   return ARGON_FALSE;
 })
 
+ARGON_METHOD(ARGON_STRING_TYPE, starts_with, {
+  if (argc != 2) {
+    *err = create_err(RuntimeError,
+                      "starts_with expects 2 arguments, got %" PRIu64, argc);
+    return ARGON_NULL;
+  }
+
+  struct string self = api->argon_to_string(argv[0], err);
+  if (api->is_error(err))
+    return ARGON_NULL;
+
+  if (argv[1]->type != TYPE_STRING)
+    return ARGON_FALSE;
+
+  struct string prefix = api->argon_to_string(argv[1], err);
+  if (api->is_error(err))
+    return ARGON_NULL;
+
+  if (self.length < prefix.length)
+    return ARGON_FALSE;
+
+  // Every string starts with the empty string.
+  if (prefix.length == 0)
+    return ARGON_TRUE;
+
+  for (size_t i = 0; i < prefix.length; i++) {
+    if (self.data[i] != prefix.data[i])
+      return ARGON_FALSE;
+  }
+
+  return ARGON_TRUE;
+})
+
+ARGON_METHOD(ARGON_STRING_TYPE, ends_with, {
+  if (argc != 2) {
+    *err = create_err(RuntimeError,
+                      "ends_with expects 2 arguments, got %" PRIu64, argc);
+    return ARGON_NULL;
+  }
+
+  struct string self = api->argon_to_string(argv[0], err);
+  if (api->is_error(err))
+    return ARGON_NULL;
+
+  if (argv[1]->type != TYPE_STRING)
+    return ARGON_FALSE;
+
+  struct string suffix = api->argon_to_string(argv[1], err);
+  if (api->is_error(err))
+    return ARGON_NULL;
+
+  if (self.length < suffix.length)
+    return ARGON_FALSE;
+
+  // Every string ends with the empty string.
+  if (suffix.length == 0)
+    return ARGON_TRUE;
+
+  size_t start = self.length - suffix.length;
+
+  for (size_t i = 0; i < suffix.length; i++) {
+    if (self.data[start + i] != suffix.data[i])
+      return ARGON_FALSE;
+  }
+
+  return ARGON_TRUE;
+})
+
 ARGON_METHOD(ARGON_STRING_TYPE, index_of, {
   if (argc != 2 && argc != 3) {
     *err = create_err(RuntimeError,

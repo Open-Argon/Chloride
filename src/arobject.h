@@ -89,7 +89,9 @@
   X(index_of)                                                                  \
   X(map)                                                                       \
   X(filter)                                                                    \
-  X(sort)
+  X(sort)                                                                      \
+  X(starts_with)                                                               \
+  X(ends_with)
 
 typedef enum {
 #define X(name) name,
