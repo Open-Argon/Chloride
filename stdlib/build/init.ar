@@ -9,6 +9,8 @@ let __build__ = load_native_code(path.resolve(program.file.directory, "native", 
 
 let __compilers__ = __build__.build_detect_compilers().sort((a, b) = b.priority - a.priority)
 
+class CompilerError(Exception) null
+
 class Compiler do
   this.__init__(self, language) = do
     let compiler_filter = __compilers__.filter((compiler) = language in compiler.languages)
@@ -124,4 +126,5 @@ class Compiler do
 
 
   this.build(self) = do
-    return subprocess.run(self.args())
+    let exit_code = subprocess.run(self.args())
+    if (exit_code) throw CompilerError(`Compiler failed with exit code $(exit_code)`)

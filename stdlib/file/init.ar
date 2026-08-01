@@ -99,3 +99,6 @@ let is_directory(path) = path_type(path) == directory_path
 let stdout = _File_from_handle("stdout", File(), _file.open_stdout(), "wb")
 let stderr = _File_from_handle("stderr", File(), _file.open_stderr(), "wb")
 let stdin = _File_from_handle("stdin", File(), _file.open_stdin(), "rb")
+
+let mkdir(path) = _file.mkdir(path)
+let makedirs(path) = _file.mkdir_p(path)

@@ -11,8 +11,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-#if defined(__linux__) || defined(__APPLE__) || defined(__unix__)
+#if defined(_WIN32) || defined(_WIN64)
+#include <windows.h>
+#else
 #include <sys/stat.h>
+#include <sys/types.h>
 #endif
 
 ARGON_FUNCTION(open_handle, {
@@ -396,6 +399,163 @@ ARGON_FUNCTION(path_type, {
 
   return api->i64_to_argon(0);
 #endif
+})
+
+ARGON_FUNCTION(mkdir, {
+  if (api->fix_to_arg_size(1, argc, err))
+    return api->ARGON_NULL;
+
+  struct string path_str = api->argon_to_string(argv[0], err);
+  if (api->is_error(err))
+    return api->ARGON_NULL;
+
+  char *path = malloc(path_str.length + 1);
+  if (!path)
+    return api->throw_argon_error(err, api->RuntimeError, "out of memory");
+
+  memcpy(path, path_str.data, path_str.length);
+  path[path_str.length] = '\0';
+
+  bool result = false;
+
+#if defined(_WIN32) || defined(_WIN64)
+
+  if (CreateDirectoryA(path, NULL)) {
+    result = true;
+  } else {
+    DWORD error = GetLastError();
+
+    // Directory already exists
+    if (error == ERROR_ALREADY_EXISTS)
+      result = true;
+  }
+
+#else
+
+  if (mkdir(path, 0755) == 0) {
+    result = true;
+  } else {
+    // Directory already exists
+    struct stat st;
+    if (stat(path, &st) == 0 && S_ISDIR(st.st_mode))
+      result = true;
+  }
+
+#endif
+
+  free(path);
+  return result?api->ARGON_TRUE:api->ARGON_FALSE;
+})
+
+ARGON_FUNCTION(mkdir_p, {
+  if (api->fix_to_arg_size(1, argc, err))
+    return api->ARGON_NULL;
+
+  struct string path_str = api->argon_to_string(argv[0], err);
+  if (api->is_error(err))
+    return api->ARGON_NULL;
+
+  char *path = malloc(path_str.length + 1);
+  if (!path)
+    return api->throw_argon_error(err, api->RuntimeError, "out of memory");
+
+  memcpy(path, path_str.data, path_str.length);
+  path[path_str.length] = '\0';
+
+  int result = 1;
+
+  size_t len = strlen(path);
+
+  // Remove trailing separators (but preserve roots like "/" and "C:\")
+  while (len > 1 &&
+         (path[len - 1] == '/' || path[len - 1] == '\\')) {
+#if defined(_WIN32) || defined(_WIN64)
+    if (len == 3 && path[1] == ':')
+      break;
+#endif
+    path[len - 1] = '\0';
+    len--;
+  }
+
+  char *start = path + 1;
+
+#if defined(_WIN32) || defined(_WIN64)
+  // Skip drive prefix (C:\)
+  if (len >= 2 && path[1] == ':')
+    start = path + 2;
+
+  // Skip initial slash after drive
+  if (*start == '/' || *start == '\\')
+    start++;
+#endif
+
+  for (char *p = start; *p; p++) {
+    if (*p == '/' || *p == '\\') {
+      char old = *p;
+      *p = '\0';
+
+      if (strlen(path) > 0) {
+
+#if defined(_WIN32) || defined(_WIN64)
+
+        if (!CreateDirectoryA(path, NULL)) {
+          DWORD error = GetLastError();
+
+          if (error != ERROR_ALREADY_EXISTS) {
+            result = 0;
+            *p = old;
+            break;
+          }
+        }
+
+#else
+
+        if (mkdir(path, 0755) != 0) {
+          struct stat st;
+
+          if (stat(path, &st) != 0 || !S_ISDIR(st.st_mode)) {
+            result = 0;
+            *p = old;
+            break;
+          }
+        }
+
+#endif
+
+      }
+
+      *p = old;
+    }
+  }
+
+  // Create the final directory
+  if (result) {
+
+#if defined(_WIN32) || defined(_WIN64)
+
+    if (!CreateDirectoryA(path, NULL)) {
+      DWORD error = GetLastError();
+
+      if (error != ERROR_ALREADY_EXISTS)
+        result = 0;
+    }
+
+#else
+
+    if (mkdir(path, 0755) != 0) {
+      struct stat st;
+
+      if (stat(path, &st) != 0 || !S_ISDIR(st.st_mode))
+        result = 0;
+    }
+
+#endif
+
+  }
+
+  free(path);
+
+  return result ? api->ARGON_TRUE : api->ARGON_FALSE;
 })
 
 ARGON_FUNCTION(open_stdout, {
