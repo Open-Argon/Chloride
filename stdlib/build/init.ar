@@ -29,6 +29,7 @@ class Compiler do
 
     self.is_shared = false
     self.output_file = null
+    self.output_is_basename = false
 
   this.shared(self) = do
     self.is_shared = true
@@ -50,6 +51,15 @@ class Compiler do
     self.library_paths.append(*paths)
     return self
 
+  # Platform-specific libraries that don't map to a real -lname on every
+  # platform (e.g. pthread/dl are implicit on Windows). Pass a dict like
+  # {"linux": ["pthread", "dl"], "darwin": ["pthread"], "windows": []}
+  # or just call .library(...) directly if you already know it's portable.
+  this.library_if(self, table) = do
+    let libs = table.value_get(platform.os, [])
+    if (libs.length) self.libraries.append(*libs)
+    return self
+
   this.library(self, *libraries) = do
     self.libraries.append(*libraries)
     return self
@@ -58,16 +68,45 @@ class Compiler do
     self.flags.append(*flags)
     return self
 
-  this.output(self, output) = do
-    self.output_file = output
+  # Same idea as library_if, but for raw compiler flags that only make
+  # sense on certain families/platforms (e.g. -fPIC is meaningless/invalid
+  # to MSVC).
+  this.flag_if(self, table) = do
+    let flags = table.value_get(platform.os, [])
+    if (flags.length) self.flags.append(*flags)
     return self
 
-  this.args(self) = do
+  # Accepts a *basename* (no prefix, no extension) and lets the platform
+  # decide the rest when building a shared library, e.g. "sqlite" becomes
+  # "libsqlite.so" on Linux, "libsqlite.dylib" on macOS, "sqlite.dll" on
+  # Windows. Call .output_exact(...) instead if you want full control.
+  this.output(self, output) = do
+    self.output_file = output
+    self.output_is_basename = true
+    return self
+
+  this.output_exact(self, output) = do
+    self.output_file = output
+    self.output_is_basename = false
+    return self
+
+  this.resolved_output(self) = do
     if (self.output_file == null) do
       throw RuntimeError("No output file specified")
 
+    if (!self.output_is_basename) return self.output_file
+
+    if (self.is_shared) do
+      let name = path.basename(self.output_file)
+      return path.with_name(self.output_file, platform.lib_prefix + name + platform.lib_ext)
+
+    return self.output_file
+
+  this.args(self) = do
     if (!self.sources.length) do
       throw RuntimeError("No source files specified")
+
+    let output_file = self.resolved_output()
 
     let args = [self.compiler.path]
 
@@ -91,7 +130,7 @@ class Compiler do
 
       args.append(*self.sources)
 
-      args.append("/Fe:" + self.output_file)
+      args.append("/Fe:" + output_file)
 
     else if (self.compiler.family == "gcc") do
       if (self.is_shared) do
@@ -113,12 +152,17 @@ class Compiler do
         args.append("-l")
         args.append(library)
 
+      # PIC is implied/required on POSIX for shared libs; harmless to
+      # add explicitly, and this is the one flag safe to infer here.
+      if (self.is_shared && platform.os != "windows") do
+        args.append("-fPIC")
+
       args.append(*self.flags)
 
       args.append(*self.sources)
 
       args.append("-o")
-      args.append(self.output_file)
+      args.append(output_file)
     else do
       throw RuntimeError(`Compiler family '$(self.compiler.family)' argument creation logic not implimented.`)
 
