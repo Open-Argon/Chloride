@@ -70,7 +70,6 @@
   X(of)                                                                        \
   X(__next__)                                                                  \
   X(__template__)                                                              \
-  X(__dictionary__)                                                            \
   X(message)                                                                   \
   X(stack_trace)                                                               \
   X(indices)                                                                   \

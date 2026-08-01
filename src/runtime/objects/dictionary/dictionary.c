@@ -9,6 +9,7 @@
 #include "../exceptions/exceptions.h"
 
 #include "../literals/literals.h"
+#include "../number/number.h"
 #include "../string/string.h"
 #include "../tuple/tuple.h"
 #include <inttypes.h>
@@ -22,31 +23,68 @@ ArgonObject *ARGON_DICTIONARY_TYPE;
 ArgonObject *ARGON_DICTIONARY_ITERATOR_TYPE;
 
 ARGON_METHOD(ARGON_DICTIONARY_TYPE, __new__, {
-
-  (void)api;
-  (void)state;
   if (argc != 2) {
     *err = create_err(RuntimeError, "__new__ expects 2 arguments, got %" PRIu64,
                       argc);
     return ARGON_NULL;
   }
-  ArgonObject *get_dictionary = get_builtin_field_for_class(
-      get_builtin_field(argv[1], __class__), __dictionary__, argv[1]);
-  if (!get_dictionary)
-    return api->throw_argon_error(err, RuntimeError,
-                                  "Object doesn't have __dictionary__ method");
-  ArgonObject *object = argon_call(get_dictionary, 0, NULL, NULL, err, state);
-  if (object->type != TYPE_DICTIONARY)
-    return api->throw_argon_error(
-        err, RuntimeError,
-        "Objects __dictionary__ method didn't return a dictionary");
-  return object;
+  ArgonHashmap *hashmap = api->create_hashmap();
+  ArgonObject *object = argv[1];
+  ArgonObject *iterator_method =
+      get_builtin_field_for_class(CLASS_OF(object), __iter__, object);
+  if (!iterator_method) {
+    *err =
+        create_err(RuntimeError, "unable to get __iter__ from objects class");
+    return api->ARGON_NULL;
+  }
+  ArgonObject *iterator =
+      argon_call(iterator_method, 0, NULL, NULL, err, state);
+  if (is_error(err)) {
+    return api->ARGON_NULL;
+  }
+  ArgonObject *next =
+      get_builtin_field_for_class(CLASS_OF(iterator), __next__, iterator);
+  if (!next) {
+    *err = create_err(RuntimeError,
+                      "unable to get __next__ from objects iterator class");
+    return api->ARGON_NULL;
+  }
+  while (true) {
+    ArgonObject *item = argon_call(next, 0, NULL, NULL, err, state);
+    if (is_error(err)) {
+      if (err->ptr == StopIteration_instance) {
+        err->ptr = ARGON_NULL;
+      }
+      break;
+    }
+    ArgonObject *getter = GET_METHOD_OF_OBJECT(item, __getitem__);
+    if (!getter) {
+      *err = create_err(RuntimeError,
+                        "unable to get __getitem__ from item in object");
+      return api->ARGON_NULL;
+    }
+
+    ArgonObject *key = argon_call(
+        getter, 1, (ArgonObject *[]){SMALL_INTS_OBJ_PTR(0)}, NULL, err, state);
+    if (is_error(err)) {
+      return api->ARGON_NULL;
+    }
+
+    ArgonObject *value = argon_call(
+        getter, 1, (ArgonObject *[]){SMALL_INTS_OBJ_PTR(1)}, NULL, err, state);
+    if (is_error(err)) {
+      break;
+    }
+
+    api->add_to_hashmap(hashmap, key, value, state, err);
+    if (is_error(err)) {
+      return api->ARGON_NULL;
+    }
+  }
+  return api->hashmap_to_dictionary(hashmap);
 })
 
 ARGON_METHOD(ARGON_DICTIONARY_TYPE, __string__, {
-
-  (void)api;
-  (void)state;
   if (argc != 1) {
     *err = create_err(RuntimeError,
                       "__string__ expects 1 argument, got %" PRIu64, argc);
@@ -151,20 +189,7 @@ ARGON_METHOD(ARGON_DICTIONARY_TYPE, __string__, {
   return result;
 })
 
-ARGON_METHOD(ARGON_DICTIONARY_TYPE, __dictionary__, {
-
-  (void)api;
-  (void)state;
-  if (argc != 1) {
-    *err = create_err(RuntimeError,
-                      "__dictionary__ expects 1 argument, got %" PRIu64, argc);
-    return ARGON_NULL;
-  }
-  return argv[0];
-})
-
 ARGON_METHOD(ARGON_DICTIONARY_TYPE, __contains__, {
-
   (void)api;
   (void)state;
   if (argc != 2) {
@@ -181,7 +206,6 @@ ARGON_METHOD(ARGON_DICTIONARY_TYPE, __contains__, {
 })
 
 ARGON_METHOD(ARGON_DICTIONARY_TYPE, __getitem__, {
-
   (void)api;
   (void)state;
   if (argc != 2) {
@@ -197,8 +221,7 @@ ARGON_METHOD(ARGON_DICTIONARY_TYPE, __getitem__, {
   }
   ArgonObject *result = hashmap_lookup_GC(object->value.as_hashmap, hash);
   if (!result) {
-    char *object_str =
-        argon_object_to_null_terminated_string(key, err, state);
+    char *object_str = argon_object_to_null_terminated_string(key, err, state);
     if (api->is_error(err))
       return ARGON_NULL;
 
@@ -209,7 +232,6 @@ ARGON_METHOD(ARGON_DICTIONARY_TYPE, __getitem__, {
 })
 
 ARGON_METHOD(ARGON_DICTIONARY_TYPE, __setitem__, {
-
   (void)api;
   (void)state;
   if (argc != 3) {
@@ -229,7 +251,6 @@ ARGON_METHOD(ARGON_DICTIONARY_TYPE, __setitem__, {
 })
 
 ARGON_METHOD(ARGON_DICTIONARY_TYPE, __delitem__, {
-
   (void)api;
   (void)state;
   if (argc != 2) {
@@ -244,8 +265,7 @@ ARGON_METHOD(ARGON_DICTIONARY_TYPE, __delitem__, {
     return ARGON_NULL;
   }
   if (!hashmap_remove_GC(object->value.as_hashmap, hash)) {
-    char *object_str =
-        argon_object_to_null_terminated_string(key, err, state);
+    char *object_str = argon_object_to_null_terminated_string(key, err, state);
     if (api->is_error(err))
       return ARGON_NULL;
 
@@ -256,10 +276,9 @@ ARGON_METHOD(ARGON_DICTIONARY_TYPE, __delitem__, {
 })
 
 ARGON_METHOD(ARGON_DICTIONARY_TYPE, value_get, {
-
   (void)api;
   (void)state;
-  if (argc <2 || argc>3) {
+  if (argc < 2 || argc > 3) {
     *err = create_err(RuntimeError,
                       "value_get expects 2 or 3 arguments, got %" PRIu64, argc);
     return ARGON_NULL;
@@ -272,13 +291,12 @@ ARGON_METHOD(ARGON_DICTIONARY_TYPE, value_get, {
   }
   ArgonObject *result = hashmap_lookup_GC(object->value.as_hashmap, hash);
   if (!result) {
-    return argc==3?argv[2]:ARGON_NULL;
+    return argc == 3 ? argv[2] : ARGON_NULL;
   }
   return result;
 })
 
 ARGON_METHOD(ARGON_DICTIONARY_TYPE, __iter__, {
-
   (void)api;
   (void)state;
   if (argc != 1) {
@@ -303,7 +321,6 @@ ARGON_METHOD(ARGON_DICTIONARY_TYPE, __iter__, {
 })
 
 ARGON_METHOD(ARGON_DICTIONARY_ITERATOR_TYPE, __next__, {
-
   (void)api;
   (void)state;
   if (argc != 1) {
@@ -315,16 +332,16 @@ ARGON_METHOD(ARGON_DICTIONARY_ITERATOR_TYPE, __next__, {
 
   if (self->value.as_dictionary_iterator->size <=
       self->value.as_dictionary_iterator->current) {
-      err->ptr = StopIteration_instance;
-      return ARGON_NULL;
+    err->ptr = StopIteration_instance;
+    return ARGON_NULL;
   }
 
   struct node_GC *node =
       self->value.as_dictionary_iterator
           ->array[self->value.as_dictionary_iterator->current++];
 
-  return ARGON_FUNC_TUPLE_CREATE(2, (ArgonObject *[]){node->key, node->val}, NULL, err, state,
-                      api);
+  return ARGON_FUNC_TUPLE_CREATE(2, (ArgonObject *[]){node->key, node->val},
+                                 NULL, err, state, api);
 })
 
 void create_ARGON_DICTIONARY_TYPE() {
@@ -350,7 +367,6 @@ void create_ARGON_DICTIONARY_TYPE() {
   MOUNT_ARGON_METHOD(ARGON_DICTIONARY_TYPE, value_get)
   MOUNT_ARGON_METHOD(ARGON_DICTIONARY_TYPE, __contains__)
   MOUNT_ARGON_METHOD(ARGON_DICTIONARY_TYPE, __iter__)
-  MOUNT_ARGON_METHOD(ARGON_DICTIONARY_TYPE, __dictionary__)
 
   ARGON_DICTIONARY_ITERATOR_TYPE = new_class();
   add_builtin_field(ARGON_DICTIONARY_ITERATOR_TYPE, __name__,
