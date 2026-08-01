@@ -102,6 +102,9 @@ class Date do
     this.to_local_string(self, fmt = "%Y-%m-%d %H:%M:%S") = do
         return _date.time_format(self.year, self.month, self.day, self.hour, self.minute, self.second, fmt)
 
+    this.to_iso_string(self) = do
+        return _date.time_format_utc(self.unix(), "%Y-%m-%dT%H:%M:%S") + ".000Z"
+
     this.monotonic() = do
         return _date.time_monotonic()
         
