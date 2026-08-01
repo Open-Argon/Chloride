@@ -223,6 +223,9 @@ pipeline {
                         > "$PACKAGE_ROOT/usr/bin/argon"
                     chmod +x "$PACKAGE_ROOT/usr/bin/argon"
 
+                    mkdir -p "$PACKAGE_ROOT/usr/include"
+                    cp -R include/* "$PACKAGE_ROOT/usr/include/"
+
                     mkdir -p "$PACKAGE_ROOT/DEBIAN"
                     printf 'Package: argon\nVersion: %s\nArchitecture: amd64\nMaintainer: Ugric\nDescription: Interpreter written in C for the argon programming language\n' \
                         "$DEB_VERSION" > "$PACKAGE_ROOT/DEBIAN/control"
@@ -276,6 +279,9 @@ EOF
                         > "$PACKAGE_ROOT/usr/bin/argon"
                     chmod +x "$PACKAGE_ROOT/usr/bin/argon"
 
+                    mkdir -p "$PACKAGE_ROOT/usr/include"
+                    cp -R include/* "$PACKAGE_ROOT/usr/include/"
+
                     CHANGELOG_DATE=$(date \'+%a %b %d %Y\')
 
                     cat > "$RPM_BUILD_ROOT/SPECS/argon.spec" << SPEC
@@ -295,6 +301,7 @@ cp -r ${PACKAGE_ROOT}/* %{buildroot}/
 
 %files
 /usr/bin/argon
+/usr/include/
 ${INSTALL_INTERNAL}/bin/argon
 ${INSTALL_INTERNAL}/stdlib/
 
