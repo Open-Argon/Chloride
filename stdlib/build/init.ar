@@ -3,7 +3,10 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 
 import "path" as path
+import "file" as file
 import "subprocess" as subprocess
+
+let includeFolder = path.resolve(path.dirname(program.exc), "..", "include")
 
 let __build__ = load_native_code(path.resolve(program.file.directory, "native", "bin", "build" + platform.lib_ext))
 
@@ -117,6 +120,9 @@ class Compiler do
       for (include in self.includes) do
         args.append("/I" + include)
 
+      if (file.is_directory(includeFolder)) do
+        args.append("/I" + includeFolder)
+
       for (define in self.defines) do
         args.append("/D" + define)
 
@@ -139,6 +145,10 @@ class Compiler do
       for (include in self.includes) do
         args.append("-I")
         args.append(include)
+
+      if (file.is_directory(includeFolder)) do
+        args.append("-I")
+        args.append(includeFolder)
 
       for (define in self.defines) do
         args.append("-D")
