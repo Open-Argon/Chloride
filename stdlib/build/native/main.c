@@ -85,7 +85,7 @@ static BuildToolCandidate candidates[] = {
 
     {"clang++", "clang++", "LLVM", "gcc", {"cpp"}, 1, 100},
 
-    {"clang-cl", "clang-cl", "LLVM", "msvc", {"c", "cpp"}, 2, 90},
+    {"clang-cl", "clang-cl", "LLVM", "msvc", {"c", "cpp"}, 2, 5},
 
     {"gcc", "gcc", "GNU", "gcc", {"c", "cpp", "fortran"}, 3, 95},
 
@@ -99,7 +99,7 @@ static BuildToolCandidate candidates[] = {
 
     // Microsoft
 
-    {"msvc", "cl", "Microsoft", "msvc", {"c", "cpp"}, 2, 75},
+    {"msvc", "cl", "Microsoft", "msvc", {"c", "cpp"}, 2, 0},
 
     // Zig
 
