@@ -10,11 +10,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 
 #if defined(_WIN32) || defined(_WIN64)
 #include <windows.h>
 #else
-#include <sys/stat.h>
 #include <sys/types.h>
 #endif
 
@@ -375,29 +375,36 @@ ARGON_FUNCTION(path_type, {
   memcpy(path, path_str.data, path_str.length);
   path[path_str.length] = '\0';
 
-#if defined(__linux__) || defined(__APPLE__) || defined(__unix__)
-  struct stat st;
+#ifdef _WIN32
+
+  struct _stat st;
   int result = 0;
 
-  if (stat(path, &st) == 0) {
-    if (S_ISREG(st.st_mode))
+  if (_stat(path, &st) == 0) {
+    if ((st.st_mode & _S_IFMT) == _S_IFREG)
       result = 1;
-    else if (S_ISDIR(st.st_mode))
+    else if ((st.st_mode & _S_IFMT) == _S_IFDIR)
       result = 2;
   }
 
   free(path);
   return api->i64_to_argon(result);
+
 #else
-  FILE *fp = fopen(path, "rb");
-  free(path);
 
-  if (fp) {
-    fclose(fp);
-    return api->i64_to_argon(1);
-  }
+struct stat st;
+int result = 0;
 
-  return api->i64_to_argon(0);
+if (stat(path, &st) == 0) {
+    if (S_ISREG(st.st_mode))
+        result = 1;
+    else if (S_ISDIR(st.st_mode))
+        result = 2;
+}
+
+free(path);
+return api->i64_to_argon(result);
+
 #endif
 })
 
@@ -444,7 +451,7 @@ ARGON_FUNCTION(mkdir, {
 #endif
 
   free(path);
-  return result?api->ARGON_TRUE:api->ARGON_FALSE;
+  return result ? api->ARGON_TRUE : api->ARGON_FALSE;
 })
 
 ARGON_FUNCTION(mkdir_p, {
@@ -467,8 +474,7 @@ ARGON_FUNCTION(mkdir_p, {
   size_t len = strlen(path);
 
   // Remove trailing separators (but preserve roots like "/" and "C:\")
-  while (len > 1 &&
-         (path[len - 1] == '/' || path[len - 1] == '\\')) {
+  while (len > 1 && (path[len - 1] == '/' || path[len - 1] == '\\')) {
 #if defined(_WIN32) || defined(_WIN64)
     if (len == 3 && path[1] == ':')
       break;
@@ -521,7 +527,6 @@ ARGON_FUNCTION(mkdir_p, {
         }
 
 #endif
-
       }
 
       *p = old;
@@ -550,7 +555,6 @@ ARGON_FUNCTION(mkdir_p, {
     }
 
 #endif
-
   }
 
   free(path);
@@ -619,11 +623,11 @@ ARGON_FUNCTION(open_stdnull, {
     return api->ARGON_NULL;
 
   FileHandle *handle = handle_buffer.data;
-  #ifdef _WIN32
-    handle->fp = fopen("NUL", "w");
-  #else
+#ifdef _WIN32
+  handle->fp = fopen("NUL", "w");
+#else
     handle->fp = fopen("/dev/null", "w");
-  #endif
+#endif
   handle->is_open = true;
   handle->type = FILE_NULL;
 
