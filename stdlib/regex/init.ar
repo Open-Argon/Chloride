@@ -45,6 +45,8 @@ class Regex do
     __regex__.find_all(self.__re__, subject, results.append, results, () = [], (arr)=arr.append)
     return results
 
+  this.group(self, subject, index) = __regex__.group(self.__re__, subject, index)
+
   this.replace(self, subject, replacement) = __regex__.replace(self.__re__, subject, replacement)
 
   this.replace_all(self, subject, replacement) = __regex__.replace_all(self.__re__, subject, replacement)
