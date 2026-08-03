@@ -906,6 +906,91 @@ ARGON_METHOD(ARGON_STRING_TYPE, ord, {
   return api->i64_to_argon(codepoint);
 })
 
+char *char_from_byte(uint8_t byte, size_t *len_out) {
+    char *out = malloc(1);
+    if (!out) {
+        if (len_out)
+            *len_out = 0;
+        return NULL;
+    }
+
+    out[0] = (char)byte;
+
+    if (len_out)
+        *len_out = 1;
+
+    return out;
+}
+
+uint8_t char_to_byte(const char *s, size_t len, bool *valid) {
+    *valid = false;
+
+    if (len != 1)
+        return 0;
+
+    *valid = true;
+    return (uint8_t)s[0];
+}
+
+ARGON_METHOD(ARGON_STRING_TYPE, from_byte, {
+    (void)state;
+
+    if (argc != 1) {
+        *err = create_err(RuntimeError,
+            "from_byte expects 1 argument, got %" PRIu64, argc);
+        return ARGON_NULL;
+    }
+
+    int64_t byte = api->argon_to_i64(argv[0], err);
+    if (api->is_error(err))
+        return ARGON_NULL;
+
+    if (byte < 0 || byte > 255) {
+        return api->throw_argon_error(
+            err,
+            ValueError,
+            "byte must be between 0 and 255"
+        );
+    }
+
+    size_t len;
+    char *data = char_from_byte((uint8_t)byte, &len);
+
+    ArgonObject *result =
+        api->string_to_argon((struct string){data, len});
+
+    free(data);
+    return result;
+})
+
+ARGON_METHOD(ARGON_STRING_TYPE, to_byte, {
+    (void)state;
+
+    if (argc != 1) {
+        *err = create_err(RuntimeError,
+            "to_byte expects 1 argument, got %" PRIu64, argc);
+        return ARGON_NULL;
+    }
+
+    struct string str = api->argon_to_string(argv[0], err);
+
+    if (api->is_error(err))
+        return ARGON_NULL;
+
+    bool valid;
+    uint8_t byte = char_to_byte(str.data, str.length, &valid);
+
+    if (!valid) {
+        return api->throw_argon_error(
+            err,
+            ValueError,
+            "to_byte expects exactly one byte"
+        );
+    }
+
+    return api->i64_to_argon(byte);
+})
+
 struct {
   struct string_struct as_str;
   char chr[2];

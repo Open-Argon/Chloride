@@ -90,7 +90,9 @@
   X(filter)                                                                    \
   X(sort)                                                                      \
   X(starts_with)                                                               \
-  X(ends_with)
+  X(ends_with)                                                                 \
+  X(from_byte)                                                                 \
+  X(to_byte)
 
 typedef enum {
 #define X(name) name,
