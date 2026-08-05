@@ -73,7 +73,7 @@ pipeline {
 
                     # Add Microsoft package feed for dotnet
 
-                    apt install -y cmake flex python3 python3-pip python3-venv make gcc-mingw-w64 mingw-w64 ninja-build zip jq gh dpkg-dev rpm gpg nsis
+                    apt install -y cmake flex python3 python3-pip python3-venv make gcc-mingw-w64 mingw-w64 ninja-build zip jq gh dpkg-dev rpm gpg nsis golang-go
                     python3 -m venv /tmp/venv
                     . /tmp/venv/bin/activate
                     pip install --upgrade pip
@@ -81,6 +81,16 @@ pipeline {
 
                     mkdir -p archives macos-artifacts
                     rm -rf archives/* macos-artifacts/* *.zip *.tar.gz
+                '''
+            }
+        }
+
+        stage('Checkout Isotope') {
+            steps {
+                sh '''
+                    set -e
+                    rm -rf isotope-src
+                    git clone --depth 1 https://git.wbell.dev/Open-Argon/Isotope.git isotope-src
                 '''
             }
         }
@@ -96,14 +106,26 @@ pipeline {
                         stage('Build') {
                             steps {
                                 sh '''
+                                    set -e
                                     . /tmp/venv/bin/activate
+
                                     rm -rf out/linux $CONAN_HOME
+                                    mkdir -p out/linux/build/dist
+
                                     conan profile detect
                                     conan install . --build=missing -of "out/linux"
                                     conan build . -of "out/linux"
 
                                     cp -r stdlib out/linux/build/dist/
                                     ./build-stdlib.sh out/linux/build/dist/stdlib -j ARGON_INCLUDE="$(realpath include)"
+
+                                    echo "Building Isotope for Linux..."
+                                    cd isotope-src
+                                    go build \
+                                        -trimpath \
+                                        -ldflags="-s -w" \
+                                        -o ../out/linux/build/dist/bin/isotope \
+                                        ./src
                                 '''
                             }
                         }
@@ -118,17 +140,36 @@ pipeline {
                         stage('Build') {
                             steps {
                                 sh '''
+                                    set -e
                                     . /tmp/venv/bin/activate
+
                                     rm -rf out/windows $CONAN_HOME
+                                    mkdir -p out/windows/build/dist
+
                                     conan profile detect
                                     conan install . \
                                         --profile:host=mingw-x86_64.txt \
                                         --build=missing -of "out/windows"
+
                                     conan build . \
                                         --profile:host=mingw-x86_64.txt -of "out/windows"
 
                                     cp -r stdlib out/windows/build/dist/
-                                    ./build-stdlib.sh out/windows/build/dist/stdlib -j TARGET_OS=windows ARGON_INCLUDE="$(realpath include)"
+                                    ./build-stdlib.sh out/windows/build/dist/stdlib \
+                                        -j TARGET_OS=windows \
+                                        ARGON_INCLUDE="$(realpath include)"
+
+                                    echo "Building Isotope for Windows..."
+
+                                    cd isotope-src
+                                    GOOS=windows \
+                                    GOARCH=amd64 \
+                                    CGO_ENABLED=0 \
+                                    go build \
+                                        -trimpath \
+                                        -ldflags="-s -w" \
+                                        -o ../out/windows/build/dist/bin/isotope.exe \
+                                        ./src
                                 '''
                             }
                         }
@@ -202,33 +243,61 @@ pipeline {
             steps {
                 script {
                     def version = env.TAG_NAME ?: "0.0.0-1"
-                    env.DEB_VERSION = version.replaceFirst('^v', '')  // strip leading 'v'
+                    env.DEB_VERSION = version.replaceFirst('^v', '')
                     env.OUTPUT_FILE = "archives/argon-${env.DEB_VERSION}-x86_64.deb"
                     env.PACKAGE_ROOT = "${env.WORKSPACE}/argon-${env.DEB_VERSION}-x86_64"
                 }
                 withCredentials([string(credentialsId: 'gitea-pat', variable: 'GITEA_TOKEN')]) {
                 sh '''
                     set -e
+
                     INSTALL_INTERNAL="/usr/local/lib/chloride"
 
                     rm -rf "$PACKAGE_ROOT"
 
+                    # Install Argon
                     DESTDIR="$PACKAGE_ROOT" cmake --install out/linux/build --prefix "$INSTALL_INTERNAL"
 
+                    # Install stdlib
                     mkdir -p "$PACKAGE_ROOT$INSTALL_INTERNAL/stdlib"
-                    cp -R out/linux/build/dist/stdlib/* "$PACKAGE_ROOT$INSTALL_INTERNAL/stdlib/"
+                    cp -R out/linux/build/dist/stdlib/* \
+                        "$PACKAGE_ROOT$INSTALL_INTERNAL/stdlib/"
 
+                    # Install Argon + Isotope binaries
+                    mkdir -p "$PACKAGE_ROOT$INSTALL_INTERNAL/bin"
+
+                    cp out/linux/build/dist/bin/argon \
+                        "$PACKAGE_ROOT$INSTALL_INTERNAL/bin/argon"
+
+                    cp out/linux/build/dist/bin/isotope \
+                        "$PACKAGE_ROOT$INSTALL_INTERNAL/bin/isotope"
+
+                    chmod +x \
+                        "$PACKAGE_ROOT$INSTALL_INTERNAL/bin/argon" \
+                        "$PACKAGE_ROOT$INSTALL_INTERNAL/bin/isotope"
+
+                    # Public commands
                     mkdir -p "$PACKAGE_ROOT/usr/bin"
-                    printf '#!/bin/bash\nexec "%s/bin/argon" "$@"\n' "$INSTALL_INTERNAL" \
-                        > "$PACKAGE_ROOT/usr/bin/argon"
-                    chmod +x "$PACKAGE_ROOT/usr/bin/argon"
 
+                    printf '#!/bin/bash\\nexec "%s/bin/argon" "$@"\\n' "$INSTALL_INTERNAL" \
+                        > "$PACKAGE_ROOT/usr/bin/argon"
+
+                    printf '#!/bin/bash\\nexec "%s/bin/isotope" "$@"\\n' "$INSTALL_INTERNAL" \
+                        > "$PACKAGE_ROOT/usr/bin/isotope"
+
+                    chmod +x \
+                        "$PACKAGE_ROOT/usr/bin/argon" \
+                        "$PACKAGE_ROOT/usr/bin/isotope"
+                    # Headers
                     mkdir -p "$PACKAGE_ROOT/usr/include"
                     cp -R include/* "$PACKAGE_ROOT/usr/include/"
 
+                    # Debian metadata
                     mkdir -p "$PACKAGE_ROOT/DEBIAN"
-                    printf 'Package: argon\nVersion: %s\nArchitecture: amd64\nMaintainer: Ugric\nDescription: Interpreter written in C for the argon programming language\n' \
-                        "$DEB_VERSION" > "$PACKAGE_ROOT/DEBIAN/control"
+
+                    printf 'Package: argon\\nVersion: %s\\nArchitecture: amd64\\nMaintainer: Ugric\\nDescription: Interpreter written in C for the argon programming language\\n' \
+                        "$DEB_VERSION" \
+                        > "$PACKAGE_ROOT/DEBIAN/control"
 
                     cat > "$PACKAGE_ROOT/DEBIAN/postrm" << 'EOF'
 #!/bin/bash
@@ -236,16 +305,22 @@ if [ "$1" = "remove" ] || [ "$1" = "purge" ]; then
     rm -rf /usr/local/lib/chloride
 fi
 EOF
+
                     chmod +x "$PACKAGE_ROOT/DEBIAN/postrm"
 
+                    # Build package
                     dpkg-deb --build "$PACKAGE_ROOT" "$OUTPUT_FILE"
 
+                    # Upload
                     curl --fail --user Jenkins:$GITEA_TOKEN \
-                        --upload-file $OUTPUT_FILE \
+                        --upload-file "$OUTPUT_FILE" \
                         https://git.wbell.dev/api/packages/Open-Argon/debian/pool/trixie/main/upload
                 '''
                 }
-                archiveArtifacts artifacts: "${env.OUTPUT_FILE}", allowEmptyArchive: false, fingerprint: true
+
+                archiveArtifacts artifacts: "${env.OUTPUT_FILE}",
+                    allowEmptyArchive: false,
+                    fingerprint: true
             }
         }
         
@@ -257,34 +332,69 @@ EOF
                     env.OUTPUT_FILE = "archives/argon-${env.RPM_VERSION}-x86_64.rpm"
                     env.RPM_BUILD_ROOT = "${env.WORKSPACE}/rpmbuild"
                 }
-                withCredentials([string(credentialsId: 'gitea-pat', variable: 'GITEA_TOKEN'), file(credentialsId: 'rpm-signing-key', variable: 'GPG_KEY_FILE')]) {
-                sh '''
-                    set -e
-                    INSTALL_INTERNAL="/usr/local/lib/chloride"
 
-                    rm -rf "$RPM_BUILD_ROOT"
+                withCredentials([
+                    string(credentialsId: 'gitea-pat', variable: 'GITEA_TOKEN'),
+                    file(credentialsId: 'rpm-signing-key', variable: 'GPG_KEY_FILE')
+                ]) {
+                    sh '''
+                        set -e
 
-                    mkdir -p "$RPM_BUILD_ROOT/BUILD" "$RPM_BUILD_ROOT/RPMS" \
-                            "$RPM_BUILD_ROOT/SOURCES" "$RPM_BUILD_ROOT/SPECS" "$RPM_BUILD_ROOT/SRPMS"
+                        INSTALL_INTERNAL="/usr/local/lib/chloride"
 
-                    PACKAGE_ROOT="$RPM_BUILD_ROOT/BUILDROOT"
+                        rm -rf "$RPM_BUILD_ROOT"
 
-                    DESTDIR="$PACKAGE_ROOT" cmake --install out/linux/build --prefix "$INSTALL_INTERNAL"
+                        mkdir -p \
+                            "$RPM_BUILD_ROOT/BUILD" \
+                            "$RPM_BUILD_ROOT/RPMS" \
+                            "$RPM_BUILD_ROOT/SOURCES" \
+                            "$RPM_BUILD_ROOT/SPECS" \
+                            "$RPM_BUILD_ROOT/SRPMS"
 
-                    mkdir -p "$PACKAGE_ROOT$INSTALL_INTERNAL/stdlib"
-                    cp -R out/linux/build/dist/stdlib/* "$PACKAGE_ROOT$INSTALL_INTERNAL/stdlib/"
+                        PACKAGE_ROOT="$RPM_BUILD_ROOT/BUILDROOT"
 
-                    mkdir -p "$PACKAGE_ROOT/usr/bin"
-                    printf \'#!/bin/bash\\nexec "%s/bin/argon" "$@"\\n\' "$INSTALL_INTERNAL" \
-                        > "$PACKAGE_ROOT/usr/bin/argon"
-                    chmod +x "$PACKAGE_ROOT/usr/bin/argon"
+                        # Install Argon
+                        DESTDIR="$PACKAGE_ROOT" cmake --install out/linux/build \
+                            --prefix "$INSTALL_INTERNAL"
 
-                    mkdir -p "$PACKAGE_ROOT/usr/include"
-                    cp -R include/* "$PACKAGE_ROOT/usr/include/"
+                        # Install stdlib
+                        mkdir -p "$PACKAGE_ROOT$INSTALL_INTERNAL/stdlib"
+                        cp -R out/linux/build/dist/stdlib/* \
+                            "$PACKAGE_ROOT$INSTALL_INTERNAL/stdlib/"
 
-                    CHANGELOG_DATE=$(date \'+%a %b %d %Y\')
+                        # Install Argon + Isotope
+                        mkdir -p "$PACKAGE_ROOT$INSTALL_INTERNAL/bin"
 
-                    cat > "$RPM_BUILD_ROOT/SPECS/argon.spec" << SPEC
+                        cp out/linux/build/dist/bin/argon \
+                            "$PACKAGE_ROOT$INSTALL_INTERNAL/bin/argon"
+
+                        cp out/linux/build/dist/bin/isotope \
+                            "$PACKAGE_ROOT$INSTALL_INTERNAL/bin/isotope"
+
+                        chmod +x \
+                            "$PACKAGE_ROOT$INSTALL_INTERNAL/bin/argon" \
+                            "$PACKAGE_ROOT$INSTALL_INTERNAL/bin/isotope"
+
+                        # Public commands
+                        mkdir -p "$PACKAGE_ROOT/usr/bin"
+
+                        printf '#!/bin/bash\\nexec "%s/bin/argon" "$@"\\n' "$INSTALL_INTERNAL" \
+                            > "$PACKAGE_ROOT/usr/bin/argon"
+
+                        printf '#!/bin/bash\\nexec "%s/bin/isotope" "$@"\\n' "$INSTALL_INTERNAL" \
+                            > "$PACKAGE_ROOT/usr/bin/isotope"
+
+                        chmod +x \
+                            "$PACKAGE_ROOT/usr/bin/argon" \
+                            "$PACKAGE_ROOT/usr/bin/isotope"
+
+                        # Headers
+                        mkdir -p "$PACKAGE_ROOT/usr/include"
+                        cp -R include/* "$PACKAGE_ROOT/usr/include/"
+
+                        CHANGELOG_DATE=$(date '+%a %b %d %Y')
+
+                        cat > "$RPM_BUILD_ROOT/SPECS/argon.spec" << SPEC
 Name:           argon
 Version:        ${RPM_VERSION}
 Release:        1%{?dist}
@@ -301,32 +411,44 @@ cp -r ${PACKAGE_ROOT}/* %{buildroot}/
 
 %files
 /usr/bin/argon
+/usr/bin/isotope
 /usr/include/
-${INSTALL_INTERNAL}/bin/argon
-${INSTALL_INTERNAL}/stdlib/
+/usr/local/lib/chloride/bin/argon
+/usr/local/lib/chloride/bin/isotope
+/usr/local/lib/chloride/stdlib/
 
 %changelog
 * ${CHANGELOG_DATE} Jenkins <jenkins@wbell.dev> - ${RPM_VERSION}-1
 - Automated build from tag ${TAG_NAME}
 SPEC
 
-                    rpmbuild --define "_topdir $RPM_BUILD_ROOT" \
+                        rpmbuild --define "_topdir $RPM_BUILD_ROOT" \
                             -bb "$RPM_BUILD_ROOT/SPECS/argon.spec"
 
-                    BUILT_RPM=$(find "$RPM_BUILD_ROOT/RPMS" -name "argon-*.rpm" | head -1)
-                    mkdir -p archives
-                    cp "$BUILT_RPM" "$OUTPUT_FILE"
-                    
-                    gpg --batch --import "$GPG_KEY_FILE"
-                    echo "%_gpg_name William Bell <william@wbell.dev>" > ~/.rpmmacros
-                    rpm --addsign "$OUTPUT_FILE"
+                        BUILT_RPM=$(find "$RPM_BUILD_ROOT/RPMS" \
+                            -name "argon-*.rpm" | head -1)
 
-                    curl --fail --user Jenkins:$GITEA_TOKEN \
-                        --upload-file "$OUTPUT_FILE" \
-                        https://git.wbell.dev/api/packages/Open-Argon/rpm/upload
-                '''
+                        mkdir -p archives
+                        cp "$BUILT_RPM" "$OUTPUT_FILE"
+
+                        # Sign RPM
+                        gpg --batch --import "$GPG_KEY_FILE"
+
+                        echo "%_gpg_name William Bell <william@wbell.dev>" \
+                            > ~/.rpmmacros
+
+                        rpm --addsign "$OUTPUT_FILE"
+
+                        # Upload
+                        curl --fail --user Jenkins:$GITEA_TOKEN \
+                            --upload-file "$OUTPUT_FILE" \
+                            https://git.wbell.dev/api/packages/Open-Argon/rpm/upload
+                    '''
                 }
-                archiveArtifacts artifacts: "${env.OUTPUT_FILE}", allowEmptyArchive: false, fingerprint: true
+
+                archiveArtifacts artifacts: "${env.OUTPUT_FILE}",
+                    allowEmptyArchive: false,
+                    fingerprint: true
             }
         }
 
