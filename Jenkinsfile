@@ -74,6 +74,27 @@ pipeline {
                     # Add Microsoft package feed for dotnet
 
                     apt install -y cmake flex python3 python3-pip python3-venv make gcc-mingw-w64 mingw-w64 ninja-build zip jq gh dpkg-dev rpm gpg nsis golang-go
+
+                    echo "Checking Docker..."
+
+                    if ! command -v docker >/dev/null 2>&1; then
+                        echo "ERROR: Docker CLI was not installed"
+                        exit 1
+                    fi
+
+                    docker --version
+
+                    echo "Checking Docker daemon..."
+
+                    if ! docker info >/dev/null 2>&1; then
+                        echo "ERROR: Docker daemon is not accessible"
+                        echo "Make sure /var/run/docker.sock is mounted into the Jenkins agent."
+                        exit 1
+                    fi
+
+                    echo "Docker is available:"
+                    docker version
+
                     python3 -m venv /tmp/venv
                     . /tmp/venv/bin/activate
                     pip install --upgrade pip
@@ -253,7 +274,7 @@ pipeline {
                 }
 
                 withCredentials([usernamePassword(
-                    credentialsId: 'gitea-docker',
+                    credentialsId: 'gitea-pat',
                     usernameVariable: 'GITEA_USER',
                     passwordVariable: 'GITEA_TOKEN'
                 )]) {
