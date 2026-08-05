@@ -73,7 +73,7 @@ pipeline {
 
                     # Add Microsoft package feed for dotnet
 
-                    apt install -y cmake flex python3 python3-pip python3-venv make gcc-mingw-w64 mingw-w64 ninja-build zip jq gh dpkg-dev rpm gpg nsis golang-go docker.io
+                    apt install -y cmake flex python3 python3-pip python3-venv make gcc-mingw-w64 mingw-w64 ninja-build zip jq gh dpkg-dev rpm gpg nsis golang-go
                     python3 -m venv /tmp/venv
                     . /tmp/venv/bin/activate
                     pip install --upgrade pip
