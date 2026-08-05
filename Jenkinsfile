@@ -73,7 +73,7 @@ pipeline {
 
                     # Add Microsoft package feed for dotnet
 
-                    apt install -y cmake flex python3 python3-pip python3-venv make gcc-mingw-w64 mingw-w64 ninja-build zip jq gh dpkg-dev rpm gpg nsis golang-go
+                    apt install -y cmake flex python3 python3-pip python3-venv make gcc-mingw-w64 mingw-w64 ninja-build zip jq gh dpkg-dev rpm gpg nsis golang-go docker
                     python3 -m venv /tmp/venv
                     . /tmp/venv/bin/activate
                     pip install --upgrade pip
@@ -238,7 +238,75 @@ pipeline {
                 archiveArtifacts artifacts: "${env.OUTPUT_FILE}", allowEmptyArchive: false, fingerprint: true
             }
         }
+        stage('Docker Images') {
+            steps {
+                script {
+                    def version = env.TAG_NAME ?: "dev"
 
+                    // Docker tags cannot contain some characters that Git tags may have.
+                    def dockerVersion = version
+                        .replaceFirst('^v', '')
+                        .replaceAll(/[^a-zA-Z0-9_.-]/, '-')
+                        .toLowerCase()
+
+                    env.DOCKER_VERSION = dockerVersion
+                }
+
+                withCredentials([usernamePassword(
+                    credentialsId: 'gitea-docker',
+                    usernameVariable: 'GITEA_USER',
+                    passwordVariable: 'GITEA_TOKEN'
+                )]) {
+                    sh '''
+                        set -e
+
+                        echo "$GITEA_TOKEN" | docker login git.wbell.dev \
+                            --username "$GITEA_USER" \
+                            --password-stdin
+
+                        echo "Building Debian image..."
+                        docker build \
+                            -f docker/debian/Dockerfile \
+                            -t "git.wbell.dev/open-argon/argon:${DOCKER_VERSION}" \
+                            .
+
+                        echo "Building Alpine image..."
+                        docker build \
+                            -f docker/alpine/Dockerfile \
+                            -t "git.wbell.dev/open-argon/argon:${DOCKER_VERSION}-alpine" \
+                            .
+
+                        echo "Pushing Debian image..."
+                        docker push \
+                            "git.wbell.dev/open-argon/argon:${DOCKER_VERSION}"
+
+                        echo "Pushing Alpine image..."
+                        docker push \
+                            "git.wbell.dev/open-argon/argon:${DOCKER_VERSION}-alpine"
+
+                        if ! echo "$DOCKER_VERSION" | grep -qi unstable; then
+                            echo "Stable release detected; publishing latest tags"
+
+                            docker tag \
+                                "git.wbell.dev/open-argon/argon:${DOCKER_VERSION}" \
+                                "git.wbell.dev/open-argon/argon:latest"
+
+                            docker tag \
+                                "git.wbell.dev/open-argon/argon:${DOCKER_VERSION}-alpine" \
+                                "git.wbell.dev/open-argon/argon:latest-alpine"
+
+                            docker push \
+                                "git.wbell.dev/open-argon/argon:latest"
+
+                            docker push \
+                                "git.wbell.dev/open-argon/argon:latest-alpine"
+                        fi
+
+                        docker logout git.wbell.dev
+                    '''
+                }
+            }
+        }
         stage('Debian Package Build') {
             steps {
                 script {
