@@ -291,19 +291,19 @@ pipeline {
                             -t "git.wbell.dev/open-argon/argon:${DOCKER_VERSION}" \
                             .
 
-                        echo "Building Alpine image..."
-                        docker build \
-                            -f docker/alpine/Dockerfile \
-                            -t "git.wbell.dev/open-argon/argon:${DOCKER_VERSION}-alpine" \
-                            .
+                        # echo "Building Alpine image..."
+                        # docker build \
+                        #     -f docker/alpine/Dockerfile \
+                        #     -t "git.wbell.dev/open-argon/argon:${DOCKER_VERSION}-alpine" \
+                        #     .
 
                         echo "Pushing Debian image..."
                         docker push \
                             "git.wbell.dev/open-argon/argon:${DOCKER_VERSION}"
 
-                        echo "Pushing Alpine image..."
-                        docker push \
-                            "git.wbell.dev/open-argon/argon:${DOCKER_VERSION}-alpine"
+                        # echo "Pushing Alpine image..."
+                        # docker push \
+                        #     "git.wbell.dev/open-argon/argon:${DOCKER_VERSION}-alpine"
 
                         if ! echo "$DOCKER_VERSION" | grep -qi unstable; then
                             echo "Stable release detected; publishing latest tags"
@@ -312,15 +312,15 @@ pipeline {
                                 "git.wbell.dev/open-argon/argon:${DOCKER_VERSION}" \
                                 "git.wbell.dev/open-argon/argon:latest"
 
-                            docker tag \
-                                "git.wbell.dev/open-argon/argon:${DOCKER_VERSION}-alpine" \
-                                "git.wbell.dev/open-argon/argon:latest-alpine"
+                            # docker tag \
+                            #     "git.wbell.dev/open-argon/argon:${DOCKER_VERSION}-alpine" \
+                            #     "git.wbell.dev/open-argon/argon:latest-alpine"
 
                             docker push \
                                 "git.wbell.dev/open-argon/argon:latest"
 
-                            docker push \
-                                "git.wbell.dev/open-argon/argon:latest-alpine"
+                            # docker push \
+                            #     "git.wbell.dev/open-argon/argon:latest-alpine"
                         fi
 
                         docker logout git.wbell.dev
