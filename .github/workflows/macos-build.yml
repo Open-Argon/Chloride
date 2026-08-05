@@ -29,16 +29,30 @@ jobs:
           submodules: recursive
 
       # -------------------
+      # Checkout Isotope
+      # -------------------
+      - name: Checkout Isotope
+        run: |
+          set -e
+          rm -rf isotope-src
+          git clone --depth 1 https://git.wbell.dev/Open-Argon/Isotope.git isotope-src
+
+      # -------------------
       # Install dependencies
       # -------------------
       - name: Install dependencies
         run: |
+          set -e
+
           brew update
-          brew install cmake python ninja flex
+          brew install cmake python ninja flex go
+
           python3 -m venv /tmp/venv
           source /tmp/venv/bin/activate
+
           pip install --upgrade pip
           pip install conan
+
           mkdir -p archives
           rm -rf archives/* *.zip *.tar.gz
 
@@ -47,34 +61,73 @@ jobs:
       # -------------------
       - name: Setup Conan profile
         run: |
+          set -e
+
           source /tmp/venv/bin/activate
+
           rm -rf ~/.conan2
           conan profile detect
 
       # -------------------
-      # Build
+      # Build Argon
       # -------------------
-      - name: Build
+      - name: Build Argon
         run: |
+          set -e
+
           source /tmp/venv/bin/activate
+
           rm -rf out/macos
-          conan install . --build=missing -of "out/macos"
-          conan build . -of "out/macos"
+
+          conan install . \
+            --build=missing \
+            -of "out/macos"
+
+          conan build . \
+            -of "out/macos"
+
           cp -r stdlib out/macos/build/dist/
-          ./build-stdlib.sh out/macos/build/dist/stdlib -j ARGON_INCLUDE="$(realpath include)"
+
+          ./build-stdlib.sh \
+            out/macos/build/dist/stdlib \
+            -j ARGON_INCLUDE="$(realpath include)"
 
       # -------------------
-      # Package
+      # Build Isotope
+      # -------------------
+      - name: Build Isotope
+        run: |
+          set -e
+
+          mkdir -p out/macos/build/dist/bin
+
+          cd isotope-src
+
+          go build \
+            -trimpath \
+            -ldflags="-s -w" \
+            -o ../out/macos/build/dist/bin/isotope \
+            ./src
+
+          file ../out/macos/build/dist/bin/isotope
+
+      # -------------------
+      # Package artifact
       # -------------------
       - name: Package artifact
         run: |
+          set -e
+
           BUILD_NAME="${{ inputs.build_name }}"
           OUTPUT_FILE="archives/argon-${BUILD_NAME}-macos-arm64.tar.gz"
+
           cp LICENSE.txt out/macos/build/dist/
           cp -r LICENSES out/macos/build/dist/
           cp -r include out/macos/build/dist/
-          
-          tar -czf "$OUTPUT_FILE" -C out/macos/build/dist .
+
+          tar -czf "$OUTPUT_FILE" \
+            -C out/macos/build/dist .
+
           echo "Packaged $OUTPUT_FILE"
 
       # -------------------
