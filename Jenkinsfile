@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 pipeline {
-    agent any
+    agent { label 'debian11' }
     environment {
         GITEA_URL = 'https://git.wbell.dev'
         GITEA_REPO = 'Open-Argon/Chloride'
