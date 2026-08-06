@@ -804,7 +804,7 @@ SPEC
                     env.RPM_ARM64_VERSION =
                         version.replaceFirst('^v', '').replaceAll('-', '.')
 
-                    env.OUTPUT_FILE =
+                    env.RPM_ARM64_OUTPUT =
                         "archives/argon-${env.RPM_ARM64_VERSION}-arm64.rpm"
 
                     env.RPM_ARM64_BUILD_ROOT =
@@ -827,68 +827,89 @@ SPEC
                         INSTALL_INTERNAL="/usr/local/lib/chloride"
 
                         rm -rf "$RPM_ARM64_BUILD_ROOT"
+                        mkdir -p "$RPM_ARM64_BUILD_ROOT"
 
-                        mkdir -p \
-                            "$RPM_ARM64_BUILD_ROOT/BUILD" \
-                            "$RPM_ARM64_BUILD_ROOT/RPMS" \
-                            "$RPM_ARM64_BUILD_ROOT/SOURCES" \
-                            "$RPM_ARM64_BUILD_ROOT/SPECS" \
-                            "$RPM_ARM64_BUILD_ROOT/SRPMS"
+                        echo "Building ARM64 RPM inside ARM64 container..."
 
-                        PACKAGE_ROOT="$RPM_ARM64_BUILD_ROOT/BUILDROOT"
+                        docker run --rm \
+                            --platform linux/arm64 \
+                            -v "$WORKSPACE:/workspace" \
+                            -w /workspace \
+                            -e RPM_ARM64_VERSION="$RPM_ARM64_VERSION" \
+                            -e RPM_ARM64_BUILD_ROOT="/workspace/rpmbuild-arm64" \
+                            debian:trixie \
+                            bash -euxc '
+                                apt-get update
+                                apt-get install -y --no-install-recommends rpm ca-certificates
+                                rm -rf /var/lib/apt/lists/*
 
-                        # Install Argon
-                        DESTDIR="$PACKAGE_ROOT" \
-                            cmake --install out/linux-arm64/build \
-                            --prefix "$INSTALL_INTERNAL"
+                                INSTALL_INTERNAL="/usr/local/lib/chloride"
 
-                        # Install stdlib
-                        mkdir -p "$PACKAGE_ROOT$INSTALL_INTERNAL/stdlib"
+                                rm -rf "$RPM_ARM64_BUILD_ROOT"
 
-                        cp -R \
-                            out/linux-arm64/build/dist/stdlib/* \
-                            "$PACKAGE_ROOT$INSTALL_INTERNAL/stdlib/"
+                                mkdir -p \
+                                    "$RPM_ARM64_BUILD_ROOT/BUILD" \
+                                    "$RPM_ARM64_BUILD_ROOT/RPMS" \
+                                    "$RPM_ARM64_BUILD_ROOT/SOURCES" \
+                                    "$RPM_ARM64_BUILD_ROOT/SPECS" \
+                                    "$RPM_ARM64_BUILD_ROOT/SRPMS"
 
-                        # Install Argon + Isotope
-                        mkdir -p "$PACKAGE_ROOT$INSTALL_INTERNAL/bin"
+                                PACKAGE_ROOT="$RPM_ARM64_BUILD_ROOT/BUILDROOT"
 
-                        cp \
-                            out/linux-arm64/build/dist/bin/argon \
-                            "$PACKAGE_ROOT$INSTALL_INTERNAL/bin/argon"
+                                # Install Argon
+                                DESTDIR="$PACKAGE_ROOT" \
+                                    cmake --install out/linux-arm64/build \
+                                    --prefix "$INSTALL_INTERNAL"
 
-                        cp \
-                            out/linux-arm64/build/dist/bin/isotope \
-                            "$PACKAGE_ROOT$INSTALL_INTERNAL/bin/isotope"
+                                # Install stdlib
+                                mkdir -p \
+                                    "$PACKAGE_ROOT$INSTALL_INTERNAL/stdlib"
 
-                        chmod +x \
-                            "$PACKAGE_ROOT$INSTALL_INTERNAL/bin/argon" \
-                            "$PACKAGE_ROOT$INSTALL_INTERNAL/bin/isotope"
+                                cp -R \
+                                    out/linux-arm64/build/dist/stdlib/* \
+                                    "$PACKAGE_ROOT$INSTALL_INTERNAL/stdlib/"
 
-                        # Public commands
-                        mkdir -p "$PACKAGE_ROOT/usr/bin"
+                                # Install Argon + Isotope
+                                mkdir -p \
+                                    "$PACKAGE_ROOT$INSTALL_INTERNAL/bin"
 
-                        printf '#!/bin/bash\\nexec "%s/bin/argon" "$@"\\n' \
-                            "$INSTALL_INTERNAL" \
-                            > "$PACKAGE_ROOT/usr/bin/argon"
+                                cp \
+                                    out/linux-arm64/build/dist/bin/argon \
+                                    "$PACKAGE_ROOT$INSTALL_INTERNAL/bin/argon"
 
-                        printf '#!/bin/bash\\nexec "%s/bin/isotope" "$@"\\n' \
-                            "$INSTALL_INTERNAL" \
-                            > "$PACKAGE_ROOT/usr/bin/isotope"
+                                cp \
+                                    out/linux-arm64/build/dist/bin/isotope \
+                                    "$PACKAGE_ROOT$INSTALL_INTERNAL/bin/isotope"
 
-                        chmod +x \
-                            "$PACKAGE_ROOT/usr/bin/argon" \
-                            "$PACKAGE_ROOT/usr/bin/isotope"
+                                chmod +x \
+                                    "$PACKAGE_ROOT$INSTALL_INTERNAL/bin/argon" \
+                                    "$PACKAGE_ROOT$INSTALL_INTERNAL/bin/isotope"
 
-                        # Headers
-                        mkdir -p "$PACKAGE_ROOT/usr/include"
+                                # Public commands
+                                mkdir -p "$PACKAGE_ROOT/usr/bin"
 
-                        cp -R \
-                            include/* \
-                            "$PACKAGE_ROOT/usr/include/"
+                                printf "#!/bin/bash\\nexec \\"%s/bin/argon\\" \\"\\$@\\"\\n" \
+                                    "$INSTALL_INTERNAL" \
+                                    > "$PACKAGE_ROOT/usr/bin/argon"
 
-                        CHANGELOG_DATE=$(date '+%a %b %d %Y')
+                                printf "#!/bin/bash\\nexec \\"%s/bin/isotope\\" \\"\\$@\\"\\n" \
+                                    "$INSTALL_INTERNAL" \
+                                    > "$PACKAGE_ROOT/usr/bin/isotope"
 
-                        cat > "$RPM_ARM64_BUILD_ROOT/SPECS/argon.spec" << SPEC
+                                chmod +x \
+                                    "$PACKAGE_ROOT/usr/bin/argon" \
+                                    "$PACKAGE_ROOT/usr/bin/isotope"
+
+                                # Headers
+                                mkdir -p "$PACKAGE_ROOT/usr/include"
+
+                                cp -R \
+                                    include/* \
+                                    "$PACKAGE_ROOT/usr/include/"
+
+                                CHANGELOG_DATE=$(date "+%a %b %d %Y")
+
+                                cat > "$RPM_ARM64_BUILD_ROOT/SPECS/argon.spec" << SPEC
 Name:           argon
 Version:        ${RPM_ARM64_VERSION}
 Release:        1%{?dist}
@@ -916,43 +937,61 @@ cp -r ${PACKAGE_ROOT}/* %{buildroot}/
 - Automated ARM64 build from tag ${TAG_NAME}
 SPEC
 
-                        rpmbuild \
-                            --target aarch64 \
-                            --define "_topdir $RPM_ARM64_BUILD_ROOT" \
-                            -bb "$RPM_ARM64_BUILD_ROOT/SPECS/argon.spec"
+                                echo "Building RPM..."
+
+                                rpmbuild \
+                                    --define "_topdir $RPM_ARM64_BUILD_ROOT" \
+                                    -bb "$RPM_ARM64_BUILD_ROOT/SPECS/argon.spec"
+
+                                echo "Built RPMs:"
+                                find "$RPM_ARM64_BUILD_ROOT/RPMS" \
+                                    -type f \
+                                    -print
+                            '
+
+                        echo "Locating ARM64 RPM..."
 
                         BUILT_RPM=$(find "$RPM_ARM64_BUILD_ROOT/RPMS" \
-                            -name "argon-*.rpm" | head -1)
+                            -type f \
+                            -name "argon-*.aarch64.rpm" \
+                            | head -1)
 
                         if [ -z "$BUILT_RPM" ]; then
                             echo "ERROR: ARM64 RPM was not produced"
                             find "$RPM_ARM64_BUILD_ROOT/RPMS" -type f -print
                             exit 1
                         fi
-                        
+
                         mkdir -p archives
 
                         cp \
                             "$BUILT_RPM" \
-                            "$OUTPUT_FILE"
+                            "$RPM_ARM64_OUTPUT"
 
-                        # Sign RPM
+                        echo "ARM64 RPM:"
+                        ls -lh "$RPM_ARM64_OUTPUT"
+
+                        echo "RPM architecture:"
+                        rpm --queryformat '%{ARCH}\\n' \
+                            -qp "$RPM_ARM64_OUTPUT"
+
+                        # Sign RPM on the normal Jenkins environment
                         gpg --batch --import "$GPG_KEY_FILE"
 
                         echo "%_gpg_name William Bell <william@wbell.dev>" \
                             > ~/.rpmmacros
 
-                        rpm --addsign "$OUTPUT_FILE"
+                        rpm --addsign "$RPM_ARM64_OUTPUT"
 
                         # Upload
                         curl --fail \
                             --user Jenkins:$GITEA_TOKEN \
-                            --upload-file "$OUTPUT_FILE" \
+                            --upload-file "$RPM_ARM64_OUTPUT" \
                             https://git.wbell.dev/api/packages/Open-Argon/rpm/upload
                     '''
                 }
 
-                archiveArtifacts artifacts: "${env.OUTPUT_FILE}",
+                archiveArtifacts artifacts: "${env.RPM_ARM64_OUTPUT}",
                     allowEmptyArchive: false,
                     fingerprint: true
             }
