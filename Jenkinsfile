@@ -1017,6 +1017,16 @@ SPEC
                     currentBuild.description = "Stable"
                     currentBuild.result = "SUCCESS"
                 }
+
+                echo "Cleaning up argon-* directories..."
+
+                sh '''
+                    find "$WORKSPACE" \
+                        -type d \
+                        -name 'argon-*' \
+                        -prune \
+                        -exec rm -rf {} +
+                '''
             }
         }
     }
