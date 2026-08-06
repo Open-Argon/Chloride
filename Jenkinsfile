@@ -114,6 +114,7 @@ pipeline {
 
                     echo "Docker is available:"
                     docker version
+                    docker buildx inspect --bootstrap
 
                     echo "Checking ARM64 Linux compiler..."
 
@@ -412,47 +413,61 @@ pipeline {
                     sh '''
                         set -e
 
+                        IMAGE="git.wbell.dev/open-argon/argon:${DOCKER_VERSION}"
+
+                        echo "Logging into Gitea container registry..."
+
                         echo "$GITEA_TOKEN" | docker login git.wbell.dev \
                             --username "$GITEA_USER" \
                             --password-stdin
 
-                        echo "Building Debian image..."
-                        docker build \
+                        echo "Checking Docker Buildx..."
+
+                        docker buildx version
+
+                        # Create our builder if it does not already exist.
+                        if ! docker buildx inspect argon-builder >/dev/null 2>&1; then
+                            echo "Creating Buildx builder..."
+
+                            docker buildx create \
+                                --name argon-builder \
+                                --use
+                        else
+                            echo "Using existing Buildx builder..."
+
+                            docker buildx use argon-builder
+                        fi
+
+                        echo "Bootstrapping Buildx..."
+
+                        docker buildx inspect --bootstrap
+
+                        echo "Building multi-architecture Debian image..."
+
+                        docker buildx build \
+                            --platform linux/amd64,linux/arm64 \
                             -f docker/debian/Dockerfile \
-                            -t "git.wbell.dev/open-argon/argon:${DOCKER_VERSION}" \
+                            -t "$IMAGE" \
+                            --push \
                             .
 
-                        # echo "Building Alpine image..."
-                        # docker build \
-                        #     -f docker/alpine/Dockerfile \
-                        #     -t "git.wbell.dev/open-argon/argon:${DOCKER_VERSION}-alpine" \
-                        #     .
-
-                        echo "Pushing Debian image..."
-                        docker push \
-                            "git.wbell.dev/open-argon/argon:${DOCKER_VERSION}"
-
-                        # echo "Pushing Alpine image..."
-                        # docker push \
-                        #     "git.wbell.dev/open-argon/argon:${DOCKER_VERSION}-alpine"
+                        echo "Successfully pushed:"
+                        echo "  $IMAGE"
 
                         if ! echo "$DOCKER_VERSION" | grep -qi unstable; then
-                            echo "Stable release detected; publishing latest tags"
+                            echo "Stable release detected; publishing latest..."
 
-                            docker tag \
-                                "git.wbell.dev/open-argon/argon:${DOCKER_VERSION}" \
-                                "git.wbell.dev/open-argon/argon:latest"
+                            docker buildx imagetools create \
+                                -t "git.wbell.dev/open-argon/argon:latest" \
+                                "$IMAGE"
 
-                            # docker tag \
-                            #     "git.wbell.dev/open-argon/argon:${DOCKER_VERSION}-alpine" \
-                            #     "git.wbell.dev/open-argon/argon:latest-alpine"
-
-                            docker push \
-                                "git.wbell.dev/open-argon/argon:latest"
-
-                            # docker push \
-                            #     "git.wbell.dev/open-argon/argon:latest-alpine"
+                            echo "Successfully pushed:"
+                            echo "  git.wbell.dev/open-argon/argon:latest"
+                        else
+                            echo "Unstable release; not updating latest."
                         fi
+
+                        echo "Logging out of Gitea..."
 
                         docker logout git.wbell.dev
                     '''
@@ -626,12 +641,12 @@ EOF
                             > "$PACKAGE_ROOT/DEBIAN/control"
 
                         cat > "$PACKAGE_ROOT/DEBIAN/postrm" << 'EOF'
-        #!/bin/bash
+#!/bin/bash
 
-        if [ "$1" = "remove" ] || [ "$1" = "purge" ]; then
-            rm -rf /usr/local/lib/chloride
-        fi
-        EOF
+if [ "$1" = "remove" ] || [ "$1" = "purge" ]; then
+    rm -rf /usr/local/lib/chloride
+fi
+EOF
 
                         chmod +x "$PACKAGE_ROOT/DEBIAN/postrm"
 

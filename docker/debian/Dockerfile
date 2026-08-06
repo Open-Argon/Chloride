@@ -1,3 +1,30 @@
+# syntax=docker/dockerfile:1
+
+FROM debian:trixie-slim AS binaries
+
+ARG TARGETARCH
+
+COPY out/linux/build/dist/ \
+     /tmp/amd64/
+
+COPY out/linux-arm64/build/dist/ \
+     /tmp/arm64/
+
+RUN set -eux; \
+    case "$TARGETARCH" in \
+        amd64) \
+            cp -a /tmp/amd64 /selected; \
+            ;; \
+        arm64) \
+            cp -a /tmp/arm64 /selected; \
+            ;; \
+        *) \
+            echo "Unsupported architecture: $TARGETARCH" >&2; \
+            exit 1; \
+            ;; \
+    esac
+
+
 FROM debian:trixie-slim
 
 LABEL org.opencontainers.image.title="Argon"
@@ -14,23 +41,20 @@ RUN apt-get update \
         libc6-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Argon
-COPY out/linux/build/dist/bin/argon \
+# Install architecture-specific Argon, Isotope and stdlib.
+COPY --from=binaries /selected/bin/argon \
      ${CHLORIDE_HOME}/bin/argon
 
-# Install Isotope
-COPY out/linux/build/dist/bin/isotope \
+COPY --from=binaries /selected/bin/isotope \
      ${CHLORIDE_HOME}/bin/isotope
 
-# Install Argon standard library
-COPY out/linux/build/dist/stdlib/ \
+COPY --from=binaries /selected/stdlib/ \
      ${CHLORIDE_HOME}/stdlib/
 
-# Install Argon C headers
+# Install Argon C headers.
 COPY include/ \
      /usr/include/
 
-# Make executables available on PATH
 RUN chmod +x \
         ${CHLORIDE_HOME}/bin/argon \
         ${CHLORIDE_HOME}/bin/isotope \
@@ -39,5 +63,3 @@ RUN chmod +x \
     && ln -s ${CHLORIDE_HOME}/bin/isotope /usr/local/bin/isotope
 
 WORKDIR /workspace
-
-CMD ["argon"]
