@@ -917,12 +917,19 @@ cp -r ${PACKAGE_ROOT}/* %{buildroot}/
 SPEC
 
                         rpmbuild \
+                            --target aarch64 \
                             --define "_topdir $RPM_ARM64_BUILD_ROOT" \
                             -bb "$RPM_ARM64_BUILD_ROOT/SPECS/argon.spec"
 
                         BUILT_RPM=$(find "$RPM_ARM64_BUILD_ROOT/RPMS" \
                             -name "argon-*.rpm" | head -1)
 
+                        if [ -z "$BUILT_RPM" ]; then
+                            echo "ERROR: ARM64 RPM was not produced"
+                            find "$RPM_ARM64_BUILD_ROOT/RPMS" -type f -print
+                            exit 1
+                        fi
+                        
                         mkdir -p archives
 
                         cp \
