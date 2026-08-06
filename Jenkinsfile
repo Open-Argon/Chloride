@@ -315,45 +315,45 @@ pipeline {
                     }
                 }
 
-                stage('macOS Build (GitHub Actions)') {
-                    environment {
-                        GH_TOKEN = credentials('github-pat')
-                        GH_REPO  = 'open-argon/chloride'
-                        WORKFLOW = 'macOS Build (Jenkins-triggered)'
-                        BUILD_NAME_ARG = "${env.TAG_NAME ?: 'dev'}"
-                    }
-                    steps {
-                        sh '''
-                            set -e
+                // stage('macOS Build (GitHub Actions)') {
+                //     environment {
+                //         GH_TOKEN = credentials('github-pat')
+                //         GH_REPO  = 'open-argon/chloride'
+                //         WORKFLOW = 'macOS Build (Jenkins-triggered)'
+                //         BUILD_NAME_ARG = "${env.TAG_NAME ?: 'dev'}"
+                //     }
+                //     steps {
+                //         sh '''
+                //             set -e
 
-                            REF=$(git describe --tags --exact-match 2>/dev/null || git rev-parse HEAD)
-                            echo "Triggering macOS build for ref: $REF"
+                //             REF=$(git describe --tags --exact-match 2>/dev/null || git rev-parse HEAD)
+                //             echo "Triggering macOS build for ref: $REF"
 
-                            gh workflow run "$WORKFLOW" \
-                                --repo "$GH_REPO" \
-                                --ref main \
-                                -f ref="$REF" \
-                                -f build_name="$BUILD_NAME_ARG"
+                //             gh workflow run "$WORKFLOW" \
+                //                 --repo "$GH_REPO" \
+                //                 --ref main \
+                //                 -f ref="$REF" \
+                //                 -f build_name="$BUILD_NAME_ARG"
 
-                            RUN_ID=$(gh run list \
-                                --repo "$GH_REPO" \
-                                --workflow "$WORKFLOW" \
-                                --limit 1 \
-                                --json databaseId \
-                                -q '.[0].databaseId')
+                //             RUN_ID=$(gh run list \
+                //                 --repo "$GH_REPO" \
+                //                 --workflow "$WORKFLOW" \
+                //                 --limit 1 \
+                //                 --json databaseId \
+                //                 -q '.[0].databaseId')
 
-                            echo "Waiting for GitHub Actions run $RUN_ID"
+                //             echo "Waiting for GitHub Actions run $RUN_ID"
 
-                            gh run watch "$RUN_ID" \
-                                --repo "$GH_REPO"
+                //             gh run watch "$RUN_ID" \
+                //                 --repo "$GH_REPO"
 
-                            gh run download "$RUN_ID" \
-                                --repo "$GH_REPO" \
-                                --name macos-build \
-                                --dir macos-artifacts
-                        '''
-                    }
-                }
+                //             gh run download "$RUN_ID" \
+                //                 --repo "$GH_REPO" \
+                //                 --name macos-build \
+                //                 --dir macos-artifacts
+                //         '''
+                //     }
+                // }
             }
         }
 
@@ -997,11 +997,11 @@ SPEC
             }
         }
 
-        stage('Archive macOS') {
-            steps {
-                archiveArtifacts artifacts: 'macos-artifacts/**/*.tar.gz', fingerprint: true
-            }
-        }
+        // stage('Archive macOS') {
+        //     steps {
+        //         archiveArtifacts artifacts: 'macos-artifacts/**/*.tar.gz', fingerprint: true
+        //     }
+        // }
     }
 
     post {
