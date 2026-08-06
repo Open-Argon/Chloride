@@ -918,7 +918,7 @@ cp -r ${PACKAGE_ROOT}/* %{buildroot}/
 SPEC
 
                         rpmbuild \
-                            --target aarch64 \
+                            --buildarch aarch64 \
                             --define "_topdir $RPM_ARM64_BUILD_ROOT" \
                             -bb "$RPM_ARM64_BUILD_ROOT/SPECS/argon.spec"
 
