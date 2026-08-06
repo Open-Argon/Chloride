@@ -840,7 +840,10 @@ SPEC
                             debian:trixie \
                             bash -euxc '
                                 apt-get update
-                                apt-get install -y --no-install-recommends rpm ca-certificates
+                                apt-get install -y --no-install-recommends \
+                                    rpm \
+                                    cmake \
+                                    ca-certificates
                                 rm -rf /var/lib/apt/lists/*
 
                                 INSTALL_INTERNAL="/usr/local/lib/chloride"
