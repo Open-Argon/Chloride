@@ -356,7 +356,7 @@ pipeline {
         }
 
 
-        stage('Archive Linux') {
+        stage('Archive arm64 Linux') {
             steps {
                 script {
                     def version = env.TAG_NAME ?: "dev"
@@ -373,7 +373,7 @@ pipeline {
                 archiveArtifacts artifacts: "${env.OUTPUT_FILE}", allowEmptyArchive: false, fingerprint: true
             }
         }
-        stage('Archive arm64 Linux') {
+        stage('Archive Linux') {
             steps {
                 script {
                     def version = env.TAG_NAME ?: "dev"
@@ -543,7 +543,117 @@ EOF
                     fingerprint: true
             }
         }
-        
+        stage('Debian Package Build ARM64') {
+            steps {
+                script {
+                    def version = env.TAG_NAME ?: "0.0.0-1"
+
+                    env.DEB_ARM64_VERSION = version.replaceFirst('^v', '')
+                    env.OUTPUT_FILE =
+                        "archives/argon-${env.DEB_ARM64_VERSION}-arm64.deb"
+
+                    env.PACKAGE_ROOT =
+                        "${env.WORKSPACE}/argon-${env.DEB_ARM64_VERSION}-arm64"
+                }
+
+                withCredentials([
+                    string(
+                        credentialsId: 'gitea-pat',
+                        variable: 'GITEA_TOKEN'
+                    )
+                ]) {
+                    sh '''
+                        set -e
+
+                        INSTALL_INTERNAL="/usr/local/lib/chloride"
+
+                        rm -rf "$PACKAGE_ROOT"
+
+                        # Install Argon
+                        DESTDIR="$PACKAGE_ROOT" \
+                            cmake --install out/linux-arm64/build \
+                            --prefix "$INSTALL_INTERNAL"
+
+                        # Install stdlib
+                        mkdir -p "$PACKAGE_ROOT$INSTALL_INTERNAL/stdlib"
+
+                        cp -R \
+                            out/linux-arm64/build/dist/stdlib/* \
+                            "$PACKAGE_ROOT$INSTALL_INTERNAL/stdlib/"
+
+                        # Install Argon + Isotope
+                        mkdir -p "$PACKAGE_ROOT$INSTALL_INTERNAL/bin"
+
+                        cp \
+                            out/linux-arm64/build/dist/bin/argon \
+                            "$PACKAGE_ROOT$INSTALL_INTERNAL/bin/argon"
+
+                        cp \
+                            out/linux-arm64/build/dist/bin/isotope \
+                            "$PACKAGE_ROOT$INSTALL_INTERNAL/bin/isotope"
+
+                        chmod +x \
+                            "$PACKAGE_ROOT$INSTALL_INTERNAL/bin/argon" \
+                            "$PACKAGE_ROOT$INSTALL_INTERNAL/bin/isotope"
+
+                        # Public commands
+                        mkdir -p "$PACKAGE_ROOT/usr/bin"
+
+                        printf '#!/bin/bash\\nexec "%s/bin/argon" "$@"\\n' \
+                            "$INSTALL_INTERNAL" \
+                            > "$PACKAGE_ROOT/usr/bin/argon"
+
+                        printf '#!/bin/bash\\nexec "%s/bin/isotope" "$@"\\n' \
+                            "$INSTALL_INTERNAL" \
+                            > "$PACKAGE_ROOT/usr/bin/isotope"
+
+                        chmod +x \
+                            "$PACKAGE_ROOT/usr/bin/argon" \
+                            "$PACKAGE_ROOT/usr/bin/isotope"
+
+                        # Headers
+                        mkdir -p "$PACKAGE_ROOT/usr/include"
+
+                        cp -R \
+                            include/* \
+                            "$PACKAGE_ROOT/usr/include/"
+
+                        # Debian metadata
+                        mkdir -p "$PACKAGE_ROOT/DEBIAN"
+
+                        printf 'Package: argon\\nVersion: %s\\nArchitecture: arm64\\nMaintainer: Ugric\\nDescription: Interpreter written in C for the argon programming language\\n' \
+                            "$DEB_ARM64_VERSION" \
+                            > "$PACKAGE_ROOT/DEBIAN/control"
+
+                        cat > "$PACKAGE_ROOT/DEBIAN/postrm" << 'EOF'
+        #!/bin/bash
+
+        if [ "$1" = "remove" ] || [ "$1" = "purge" ]; then
+            rm -rf /usr/local/lib/chloride
+        fi
+        EOF
+
+                        chmod +x "$PACKAGE_ROOT/DEBIAN/postrm"
+
+                        # Build package
+                        dpkg-deb \
+                            --build \
+                            "$PACKAGE_ROOT" \
+                            "$OUTPUT_FILE"
+
+                        # Upload
+                        curl --fail \
+                            --user Jenkins:$GITEA_TOKEN \
+                            --upload-file "$OUTPUT_FILE" \
+                            https://git.wbell.dev/api/packages/Open-Argon/debian/pool/trixie/main/upload
+                    '''
+                }
+
+                archiveArtifacts artifacts: "${env.OUTPUT_FILE}",
+                    allowEmptyArchive: false,
+                    fingerprint: true
+            }
+        }
         stage('RPM Package Build') {
             steps {
                 script {
@@ -671,7 +781,160 @@ SPEC
                     fingerprint: true
             }
         }
+        stage('RPM Package Build ARM64') {
+            steps {
+                script {
+                    def version = env.TAG_NAME ?: "0.0.0-1"
 
+                    env.RPM_ARM64_VERSION =
+                        version.replaceFirst('^v', '').replaceAll('-', '.')
+
+                    env.OUTPUT_FILE =
+                        "archives/argon-${env.RPM_ARM64_VERSION}-arm64.rpm"
+
+                    env.RPM_ARM64_BUILD_ROOT =
+                        "${env.WORKSPACE}/rpmbuild-arm64"
+                }
+
+                withCredentials([
+                    string(
+                        credentialsId: 'gitea-pat',
+                        variable: 'GITEA_TOKEN'
+                    ),
+                    file(
+                        credentialsId: 'rpm-signing-key',
+                        variable: 'GPG_KEY_FILE'
+                    )
+                ]) {
+                    sh '''
+                        set -e
+
+                        INSTALL_INTERNAL="/usr/local/lib/chloride"
+
+                        rm -rf "$RPM_ARM64_BUILD_ROOT"
+
+                        mkdir -p \
+                            "$RPM_ARM64_BUILD_ROOT/BUILD" \
+                            "$RPM_ARM64_BUILD_ROOT/RPMS" \
+                            "$RPM_ARM64_BUILD_ROOT/SOURCES" \
+                            "$RPM_ARM64_BUILD_ROOT/SPECS" \
+                            "$RPM_ARM64_BUILD_ROOT/SRPMS"
+
+                        PACKAGE_ROOT="$RPM_ARM64_BUILD_ROOT/BUILDROOT"
+
+                        # Install Argon
+                        DESTDIR="$PACKAGE_ROOT" \
+                            cmake --install out/linux-arm64/build \
+                            --prefix "$INSTALL_INTERNAL"
+
+                        # Install stdlib
+                        mkdir -p "$PACKAGE_ROOT$INSTALL_INTERNAL/stdlib"
+
+                        cp -R \
+                            out/linux-arm64/build/dist/stdlib/* \
+                            "$PACKAGE_ROOT$INSTALL_INTERNAL/stdlib/"
+
+                        # Install Argon + Isotope
+                        mkdir -p "$PACKAGE_ROOT$INSTALL_INTERNAL/bin"
+
+                        cp \
+                            out/linux-arm64/build/dist/bin/argon \
+                            "$PACKAGE_ROOT$INSTALL_INTERNAL/bin/argon"
+
+                        cp \
+                            out/linux-arm64/build/dist/bin/isotope \
+                            "$PACKAGE_ROOT$INSTALL_INTERNAL/bin/isotope"
+
+                        chmod +x \
+                            "$PACKAGE_ROOT$INSTALL_INTERNAL/bin/argon" \
+                            "$PACKAGE_ROOT$INSTALL_INTERNAL/bin/isotope"
+
+                        # Public commands
+                        mkdir -p "$PACKAGE_ROOT/usr/bin"
+
+                        printf '#!/bin/bash\\nexec "%s/bin/argon" "$@"\\n' \
+                            "$INSTALL_INTERNAL" \
+                            > "$PACKAGE_ROOT/usr/bin/argon"
+
+                        printf '#!/bin/bash\\nexec "%s/bin/isotope" "$@"\\n' \
+                            "$INSTALL_INTERNAL" \
+                            > "$PACKAGE_ROOT/usr/bin/isotope"
+
+                        chmod +x \
+                            "$PACKAGE_ROOT/usr/bin/argon" \
+                            "$PACKAGE_ROOT/usr/bin/isotope"
+
+                        # Headers
+                        mkdir -p "$PACKAGE_ROOT/usr/include"
+
+                        cp -R \
+                            include/* \
+                            "$PACKAGE_ROOT/usr/include/"
+
+                        CHANGELOG_DATE=$(date '+%a %b %d %Y')
+
+                        cat > "$RPM_ARM64_BUILD_ROOT/SPECS/argon.spec" << SPEC
+Name:           argon
+Version:        ${RPM_ARM64_VERSION}
+Release:        1%{?dist}
+Summary:        Interpreter written in C for the Argon Programming Language
+License:        GPL-3.0-or-later
+URL:            https://git.wbell.dev/Open-Argon/Chloride
+BuildArch:      aarch64
+
+%description
+Interpreter written in C for the Argon Programming Language
+
+%install
+cp -r ${PACKAGE_ROOT}/* %{buildroot}/
+
+%files
+/usr/bin/argon
+/usr/bin/isotope
+/usr/include/
+/usr/local/lib/chloride/bin/argon
+/usr/local/lib/chloride/bin/isotope
+/usr/local/lib/chloride/stdlib/
+
+%changelog
+* ${CHANGELOG_DATE} Jenkins <jenkins@wbell.dev> - ${RPM_ARM64_VERSION}-1
+- Automated ARM64 build from tag ${TAG_NAME}
+SPEC
+
+                        rpmbuild \
+                            --define "_topdir $RPM_ARM64_BUILD_ROOT" \
+                            -bb "$RPM_ARM64_BUILD_ROOT/SPECS/argon.spec"
+
+                        BUILT_RPM=$(find "$RPM_ARM64_BUILD_ROOT/RPMS" \
+                            -name "argon-*.rpm" | head -1)
+
+                        mkdir -p archives
+
+                        cp \
+                            "$BUILT_RPM" \
+                            "$OUTPUT_FILE"
+
+                        # Sign RPM
+                        gpg --batch --import "$GPG_KEY_FILE"
+
+                        echo "%_gpg_name William Bell <william@wbell.dev>" \
+                            > ~/.rpmmacros
+
+                        rpm --addsign "$OUTPUT_FILE"
+
+                        # Upload
+                        curl --fail \
+                            --user Jenkins:$GITEA_TOKEN \
+                            --upload-file "$OUTPUT_FILE" \
+                            https://git.wbell.dev/api/packages/Open-Argon/rpm/upload
+                    '''
+                }
+
+                archiveArtifacts artifacts: "${env.OUTPUT_FILE}",
+                    allowEmptyArchive: false,
+                    fingerprint: true
+            }
+        }
         stage('Archive Windows') {
             steps {
                 script {
