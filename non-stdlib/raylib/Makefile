@@ -22,7 +22,7 @@ UNAME_S   := $(shell uname -s)
 # ------------------------------------------------------------
 ifeq ($(TARGET_OS),windows)
 
-	CC      := x86_64-w64-mingw32-gcc
+	CC      ?= x86_64-w64-mingw32-gcc
 	LIB_EXT := dll
 
 	SHARED_LDFLAGS := -shared -Iraylib-5.5_win64_mingw-w64/include
@@ -39,7 +39,7 @@ ifeq ($(TARGET_OS),windows)
 
 else ifeq ($(UNAME_S),Darwin)
 
-	CC      := gcc
+	CC      ?= gcc
 	LIB_EXT := dylib
 
 	SHARED_LDFLAGS := \
@@ -52,7 +52,7 @@ else ifeq ($(UNAME_S),Darwin)
 else
 
 	# Linux / FreeBSD
-	CC      := gcc
+	CC      ?= gcc
 	LIB_EXT := so
 
 	SHARED_LDFLAGS := -shared -I../../external/raylib/build/raylib/include

@@ -29,15 +29,9 @@ for lib in "$STDLIB_DIR"/*/; do
     if [ -f "$lib/build.sh" ]; then
         echo ">>> Building $(basename "$lib") (via build.sh)..."
         bash "$lib/build.sh" "${MAKE_ARGS[@]}"
-        if [ $? -ne 0 ]; then
-            echo "!!! Failed to build $(basename "$lib")" >&2
-        fi
     elif [ -f "$lib/Makefile" ]; then
         echo ">>> Building $(basename "$lib")..."
         make -C "$lib" clean && \
         make -C "$lib" "${MAKE_ARGS[@]}"
-        if [ $? -ne 0 ]; then
-            echo "!!! Failed to build $(basename "$lib")" >&2
-        fi
     fi
 done
