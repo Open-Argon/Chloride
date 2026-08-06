@@ -94,8 +94,7 @@ pipeline {
                         gpg \
                         nsis \
                         golang-go \
-                        util-linux \
-                        docker.io
+                        util-linux
 
                     echo "Checking Docker..."
 
