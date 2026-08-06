@@ -12,6 +12,7 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
+                cleanWs()
                 script {
                     if (env.GIT_TAG) {
                         echo "Checking out tag: ${env.GIT_TAG}"
@@ -28,7 +29,6 @@ pipeline {
                         echo "Checking out normal branch"
                         checkout scm
                     }
-
                     sh 'git submodule update --init --recursive'
                 }
             }
