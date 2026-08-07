@@ -16,31 +16,9 @@ on:
 
 jobs:
   build-macos:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - arch: arm64
-            conan_arch: armv8
-            runner: macos-latest
-
-          - arch: x86_64
-            conan_arch: x86_64
-            runner: macos-13
-
-    runs-on: ${{ matrix.runner }}
+    runs-on: macos-latest
 
     steps:
-      # -------------------
-      # Show build environment
-      # -------------------
-      - name: Show build environment
-        run: |
-          set -e
-
-          echo "Runner: $(uname -m)"
-          echo "Target: ${{ matrix.arch }}"
-
       # -------------------
       # Checkout requested ref
       # -------------------
@@ -90,9 +68,6 @@ jobs:
           rm -rf ~/.conan2
           conan profile detect
 
-          echo "Detected Conan profile:"
-          conan profile show
-
       # -------------------
       # Build Argon
       # -------------------
@@ -106,12 +81,10 @@ jobs:
 
           conan install . \
             --build=missing \
-            -of "out/macos" \
-            -s:h arch=${{ matrix.conan_arch }}
+            -of "out/macos"
 
           conan build . \
-            -of "out/macos" \
-            -s:h arch=${{ matrix.conan_arch }}
+            -of "out/macos"
 
           cp -r stdlib out/macos/build/dist/
 
@@ -130,32 +103,13 @@ jobs:
 
           cd isotope-src
 
-          GOARCH=${{ matrix.arch == 'arm64' && 'arm64' || 'amd64' }} \
-            go build \
-              -trimpath \
-              -ldflags="-s -w" \
-              -o ../out/macos/build/dist/bin/isotope \
-              ./src
+          go build \
+            -trimpath \
+            -ldflags="-s -w" \
+            -o ../out/macos/build/dist/bin/isotope \
+            ./src
 
           file ../out/macos/build/dist/bin/isotope
-
-      # -------------------
-      # Verify binaries
-      # -------------------
-      - name: Verify architecture
-        run: |
-          set -e
-
-          echo "Argon:"
-          file out/macos/build/dist/* || true
-
-          echo
-          echo "Isotope:"
-          file out/macos/build/dist/bin/isotope
-
-          echo
-          echo "Runner:"
-          uname -m
 
       # -------------------
       # Package artifact
@@ -165,7 +119,7 @@ jobs:
           set -e
 
           BUILD_NAME="${{ inputs.build_name }}"
-          OUTPUT_FILE="archives/argon-${BUILD_NAME}-macos-${{ matrix.arch }}.tar.gz"
+          OUTPUT_FILE="archives/argon-${BUILD_NAME}-macos-arm64.tar.gz"
 
           cp LICENSE.txt out/macos/build/dist/
           cp -r LICENSES out/macos/build/dist/
@@ -177,10 +131,10 @@ jobs:
           echo "Packaged $OUTPUT_FILE"
 
       # -------------------
-      # Upload artifact
+      # Upload
       # -------------------
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: macos-build-${{ matrix.arch }}
-          path: archives/argon-*-macos-${{ matrix.arch }}.tar.gz
+          name: macos-build
+          path: archives/argon-*-macos-arm64.tar.gz

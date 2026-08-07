@@ -13,28 +13,8 @@ MANUFACTURER = "William Bell"
 raw_version = os.environ.get("ARGON_VERSION", "0.0.0")
 VERSION = re.sub(r'^v', '', raw_version)
 VERSION = re.sub(r'-\d+-g[0-9a-f]+$', '', VERSION)
-
-# ARCH selects which build output tree to package and which NSIS target
-# arch/registry view to generate for. Defaults to x86_64 to preserve
-# existing behaviour when the env var isn't set.
-ARCH = os.environ.get("ARGON_ARCH", "x86_64")
-if ARCH not in ("x86_64", "arm64"):
-    sys.exit(f"Unsupported ARGON_ARCH: {ARCH!r} (expected 'x86_64' or 'arm64')")
-
-DIST_DIR_BY_ARCH = {
-    "x86_64": "out/windows/build/dist",
-    "arm64": "out/windows-arm64/build/dist",
-}
-DIST_DIR = DIST_DIR_BY_ARCH[ARCH]
-OUT_FILE = os.environ.get("OUTPUT_FILE", f"argon-setup-{ARCH}.exe")
-
-# NSIS target architecture: controls whether the installer runs natively as
-# a 64-bit process (needed so $PROGRAMFILES64 / HKLM 64-bit registry view
-# resolve correctly on both x86_64 and ARM64 Windows — ARM64 Windows has no
-# separate "native ARM64" NSIS target constant, but running as an amd64
-# process under emulation still gets you the 64-bit Program Files/registry
-# view, so amd64-unicode is used for both).
-NSIS_TARGET = "amd64-unicode"
+DIST_DIR = "out/windows/build/dist"
+OUT_FILE = os.environ.get("OUTPUT_FILE", "argon-setup.exe")
 
 # FSF-faithful explanation of GPL-3.0 and free software, shown on a custom
 # page before the scrollable LICENSE.txt. Wording follows the FSF's own
@@ -65,19 +45,13 @@ FREE_SOFTWARE_TEXT = (
 lines = []
 
 # ── MUI2 includes & settings ─────────────────────────────────────────────────
-lines.append(f'!define ARCH "{ARCH}"')
-lines.append(f'; target arch: {ARCH} (NSIS built as {NSIS_TARGET})')
 lines.append('!include "MUI2.nsh"')
 lines.append('')
 lines.append('Unicode True')
-# Distinct display name per arch avoids two "Argon" entries silently
-# clobbering each other's Program Files dir / uninstall registry key if a
-# user ends up with both installed side by side (e.g. testing).
-INSTALL_NAME = APP_NAME if ARCH == "x86_64" else f"{APP_NAME} (ARM64)"
-lines.append(f'Name "{INSTALL_NAME}"')
+lines.append(f'Name "{APP_NAME}"')
 lines.append(f'OutFile "{OUT_FILE}"')
-lines.append(f'InstallDir "$PROGRAMFILES64\\{INSTALL_NAME}"')
-lines.append(f'InstallDirRegKey HKLM "Software\\{INSTALL_NAME}" "Install_Dir"')
+lines.append(f'InstallDir "$PROGRAMFILES64\\{APP_NAME}"')
+lines.append(f'InstallDirRegKey HKLM "Software\\{APP_NAME}" "Install_Dir"')
 lines.append('RequestExecutionLevel admin')
 lines.append('')
 
@@ -164,18 +138,18 @@ lines.append('')
 lines.append('  WriteUninstaller "$INSTDIR\\uninstall.exe"')
 lines.append('')
 lines.append('  ; Add/Remove Programs entry')
-lines.append(f'  WriteRegStr HKLM "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{INSTALL_NAME}" "DisplayName" "{INSTALL_NAME}"')
-lines.append(f'  WriteRegStr HKLM "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{INSTALL_NAME}" "DisplayVersion" "{VERSION}"')
-lines.append(f'  WriteRegStr HKLM "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{INSTALL_NAME}" "Publisher" "{MANUFACTURER}"')
-lines.append(f'  WriteRegStr HKLM "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{INSTALL_NAME}" "UninstallString" "$INSTDIR\\uninstall.exe"')
+lines.append(f'  WriteRegStr HKLM "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{APP_NAME}" "DisplayName" "{APP_NAME}"')
+lines.append(f'  WriteRegStr HKLM "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{APP_NAME}" "DisplayVersion" "{VERSION}"')
+lines.append(f'  WriteRegStr HKLM "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{APP_NAME}" "Publisher" "{MANUFACTURER}"')
+lines.append(f'  WriteRegStr HKLM "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{APP_NAME}" "UninstallString" "$INSTDIR\\uninstall.exe"')
 lines.append('SectionEnd')
 lines.append('')
 
 # ── Uninstall section ─────────────────────────────────────────────────────────
 lines.append('Section "Uninstall"')
 lines.append('  ; Note: PATH entry at $INSTDIR\\bin should be removed manually or via a custom action')
-lines.append(f'  DeleteRegKey HKLM "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{INSTALL_NAME}"')
-lines.append(f'  DeleteRegKey HKLM "Software\\{INSTALL_NAME}"')
+lines.append(f'  DeleteRegKey HKLM "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{APP_NAME}"')
+lines.append(f'  DeleteRegKey HKLM "Software\\{APP_NAME}"')
 lines.append('  RMDir /r "$INSTDIR"')
 lines.append('SectionEnd')
 
