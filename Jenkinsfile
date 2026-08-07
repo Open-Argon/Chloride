@@ -110,23 +110,6 @@ pipeline {
                     echo "ARM64 C++ compiler:"
                     aarch64-linux-gnu-g++ --version
 
-                    echo "Checking ARM64 Windows (llvm-mingw) compiler..."
-
-                    if ! command -v aarch64-w64-mingw32-clang >/dev/null 2>&1; then
-                        echo "ERROR: llvm-mingw aarch64-w64-mingw32-clang was not installed"
-                        echo "Regular mingw-w64 does not target Windows ARM64 -- install llvm-mingw"
-                        echo "(https://github.com/mstorsjo/llvm-mingw) and ensure its bin/ is on PATH."
-                        exit 1
-                    fi
-
-                    if ! command -v aarch64-w64-mingw32-clang++ >/dev/null 2>&1; then
-                        echo "ERROR: llvm-mingw aarch64-w64-mingw32-clang++ was not installed"
-                        exit 1
-                    fi
-
-                    echo "ARM64 Windows compiler:"
-                    aarch64-w64-mingw32-clang --version
-
                     python3 -m venv /tmp/venv
 
                     . /tmp/venv/bin/activate
@@ -312,107 +295,45 @@ pipeline {
                     }
                 }
 
-                stage('Windows ARM64 Build') {
+                stage('macOS Build (GitHub Actions)') {
                     environment {
-                        CONAN_HOME = "${WORKSPACE}/.conan-windows-arm64"
+                        GH_TOKEN = credentials('github-pat')
+                        GH_REPO  = 'open-argon/chloride'
+                        WORKFLOW = 'macOS Build (Jenkins-triggered)'
+                        BUILD_NAME_ARG = "${env.TAG_NAME ?: 'dev'}"
                     }
-                    stages {
-                        stage('Build') {
-                            steps {
-                                sh '''
-                                    set -e
-                                    . /tmp/venv/bin/activate
+                    steps {
+                        sh '''
+                            set -e
 
-                                    rm -rf out/windows-arm64 $CONAN_HOME
-                                    mkdir -p out/windows-arm64/build/dist/bin
+                            REF=$(git describe --tags --exact-match 2>/dev/null || git rev-parse HEAD)
+                            echo "Triggering macOS build for ref: $REF"
 
-                                    conan profile detect
+                            gh workflow run "$WORKFLOW" \
+                                --repo "$GH_REPO" \
+                                --ref main \
+                                -f ref="$REF" \
+                                -f build_name="$BUILD_NAME_ARG"
 
-                                    conan install . \
-                                        --profile:host=mingw-arm64.txt \
-                                        --build=missing \
-                                        -of "out/windows-arm64"
+                            RUN_ID=$(gh run list \
+                                --repo "$GH_REPO" \
+                                --workflow "$WORKFLOW" \
+                                --limit 1 \
+                                --json databaseId \
+                                -q '.[0].databaseId')
 
-                                    conan build . \
-                                        --profile:host=mingw-arm64.txt \
-                                        -of "out/windows-arm64"
+                            echo "Waiting for GitHub Actions run $RUN_ID"
 
-                                    cp -r stdlib out/windows-arm64/build/dist/
+                            gh run watch "$RUN_ID" \
+                                --repo "$GH_REPO"
 
-                                    export CC=aarch64-w64-mingw32-clang
-                                    export CXX=aarch64-w64-mingw32-clang++
-                                    export AR=aarch64-w64-mingw32-ar
-                                    export RANLIB=aarch64-w64-mingw32-ranlib
-                                    export STRIP=aarch64-w64-mingw32-strip
-
-                                    ./build-stdlib.sh \
-                                        out/windows-arm64/build/dist/stdlib \
-                                        -j \
-                                        TARGET_OS=windows \
-                                        ARGON_INCLUDE="$(realpath include)" \
-                                         CC=aarch64-w64-mingw32-clang \
-                                         CXX=aarch64-w64-mingw32-clang++ \
-                                         AR=aarch64-w64-mingw32-ar \
-                                         RANLIB=aarch64-w64-mingw32-ranlib \
-                                         STRIP=aarch64-w64-mingw32-strip
-
-                                    echo "Building Isotope for Windows ARM64..."
-
-                                    cd isotope-src
-
-                                    GOOS=windows \
-                                    GOARCH=arm64 \
-                                    CGO_ENABLED=0 \
-                                    go build \
-                                        -trimpath \
-                                        -ldflags="-s -w" \
-                                        -o ../out/windows-arm64/build/dist/bin/isotope.exe \
-                                        ./src
-                                '''
-                            }
-                        }
+                            gh run download "$RUN_ID" \
+                                --repo "$GH_REPO" \
+                                --name macos-build \
+                                --dir macos-artifacts
+                        '''
                     }
                 }
-
-                // stage('macOS Build (GitHub Actions)') {
-                //     environment {
-                //         GH_TOKEN = credentials('github-pat')
-                //         GH_REPO  = 'open-argon/chloride'
-                //         WORKFLOW = 'macOS Build (Jenkins-triggered)'
-                //         BUILD_NAME_ARG = "${env.TAG_NAME ?: 'dev'}"
-                //     }
-                //     steps {
-                //         sh '''
-                //             set -e
-
-                //             REF=$(git describe --tags --exact-match 2>/dev/null || git rev-parse HEAD)
-                //             echo "Triggering macOS build for ref: $REF"
-
-                //             gh workflow run "$WORKFLOW" \
-                //                 --repo "$GH_REPO" \
-                //                 --ref main \
-                //                 -f ref="$REF" \
-                //                 -f build_name="$BUILD_NAME_ARG"
-
-                //             RUN_ID=$(gh run list \
-                //                 --repo "$GH_REPO" \
-                //                 --workflow "$WORKFLOW" \
-                //                 --limit 1 \
-                //                 --json databaseId \
-                //                 -q '.[0].databaseId')
-
-                //             echo "Waiting for GitHub Actions run $RUN_ID"
-
-                //             gh run watch "$RUN_ID" \
-                //                 --repo "$GH_REPO"
-
-                //             gh run download "$RUN_ID" \
-                //                 --repo "$GH_REPO" \
-                //                 --name macos-build \
-                //                 --dir macos-artifacts
-                //         '''
-                //     }
-                // }
             }
         }
 
@@ -1057,54 +978,29 @@ SPEC
             }
         }
 
-        stage('Archive Windows ARM64') {
-            steps {
-                script {
-                    def version = env.TAG_NAME ?: "dev"
-                    env.OUTPUT_FILE = "archives/argon-${version}-windows-arm64.zip"
-                    echo "Packaging Windows ARM64 as: ${env.OUTPUT_FILE}"
-                }
-                sh '''
-                    set -e
-                    cp LICENSE.txt out/windows-arm64/build/dist/
-                    cp -r LICENSES out/windows-arm64/build/dist/
-                    cp -r include out/windows-arm64/build/dist/
-                    
-                    (
-                    cd "out/windows-arm64/build/dist" && zip -r "../../../../$OUTPUT_FILE" .
-                    )
-                '''
-                archiveArtifacts artifacts: "${env.OUTPUT_FILE}", allowEmptyArchive: false, fingerprint: true
-            }
-        }
-
         stage('Windows Installer build') {
             steps {
                 script {
                     def version = env.TAG_NAME ?: "dev"
                     env.ARGON_VERSION = "${version}"
-                    env.OUTPUT_FILE_X86_64 = "archives/argon-${version}-windows-installer-x86_64.exe"
-                    env.OUTPUT_FILE_ARM64 = "archives/argon-${version}-windows-installer-arm64.exe"
-                    echo "Packaging Windows installers as: ${env.OUTPUT_FILE_X86_64}, ${env.OUTPUT_FILE_ARM64}"
+                    env.OUTPUT_FILE = "archives/argon-${version}-windows-installer-x86_64.exe"
+                    echo "Packaging Windows as: ${env.OUTPUT_FILE}"
                 }
                 sh '''
                     set -e
-
-                    ARGON_ARCH=x86_64 OUTPUT_FILE="$OUTPUT_FILE_X86_64" python3 build-windows-installer.py installer-x86_64.nsi
-                    makensis -DOUTFILE="$OUTPUT_FILE_X86_64" installer-x86_64.nsi
-
-                    ARGON_ARCH=arm64 OUTPUT_FILE="$OUTPUT_FILE_ARM64" python3 build-windows-installer.py installer-arm64.nsi
-                    makensis -DOUTFILE="$OUTPUT_FILE_ARM64" installer-arm64.nsi
+                    
+                    python3 build-windows-installer.py
+                    makensis -DOUTFILE="$OUTPUT_FILE" installer.nsi
                 '''
-                archiveArtifacts artifacts: "${env.OUTPUT_FILE_X86_64},${env.OUTPUT_FILE_ARM64}", allowEmptyArchive: false, fingerprint: true
+                archiveArtifacts artifacts: "${env.OUTPUT_FILE}", allowEmptyArchive: false, fingerprint: true
             }
         }
 
-        // stage('Archive macOS') {
-        //     steps {
-        //         archiveArtifacts artifacts: 'macos-artifacts/**/*.tar.gz', fingerprint: true
-        //     }
-        // }
+        stage('Archive macOS') {
+            steps {
+                archiveArtifacts artifacts: 'macos-artifacts/**/*.tar.gz', fingerprint: true
+            }
+        }
     }
 
     post {
