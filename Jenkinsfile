@@ -728,7 +728,6 @@ BuildArch:      x86_64
 Interpreter written in C for the Argon Programming Language
 
 %install
-cp -r ${PACKAGE_ROOT}/* %{buildroot}/
 
 %files
 /usr/bin/argon
@@ -744,6 +743,7 @@ cp -r ${PACKAGE_ROOT}/* %{buildroot}/
 SPEC
 
                         rpmbuild --define "_topdir $RPM_BUILD_ROOT" \
+                            --buildroot "$PACKAGE_ROOT" \
                             -bb "$RPM_BUILD_ROOT/SPECS/argon.spec"
 
                         BUILT_RPM=$(find "$RPM_BUILD_ROOT/RPMS" \
@@ -876,7 +876,6 @@ URL:            https://git.wbell.dev/Open-Argon/Chloride
 Interpreter written in C for the Argon Programming Language
 
 %install
-cp -r ${PACKAGE_ROOT}/* %{buildroot}/
 
 %files
 /usr/bin/argon
@@ -894,6 +893,7 @@ SPEC
                         rpmbuild \
                             --target aarch64 \
                             --define "_topdir $RPM_ARM64_BUILD_ROOT" \
+                            --buildroot "$PACKAGE_ROOT" \
                             -bb "$RPM_ARM64_BUILD_ROOT/SPECS/argon.spec"
 
                         BUILT_RPM=$(find "$RPM_ARM64_BUILD_ROOT/RPMS" \
