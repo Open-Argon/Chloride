@@ -52,12 +52,24 @@ jobs:
         run: |
           set -e
 
-          # Install an x86_64 Homebrew under Rosetta, separate from the
-          # native arm64 Homebrew that already exists on the runner.
+          # Some GitHub macOS images ship stale/partial Intel Homebrew
+          # remnants at /usr/local even on arm64 runners. Clear them so
+          # the fresh x86_64 Homebrew install doesn't collide.
+          if [ -d /usr/local/Homebrew ] || [ -e /usr/local/bin/brew ]; then
+            sudo rm -rf /usr/local/Homebrew /usr/local/bin/brew
+          fi
+          sudo rm -rf /usr/local/bin/python3* /usr/local/bin/pip3* \
+                      /usr/local/bin/idle3* /usr/local/bin/pydoc3* \
+                      /usr/local/bin/wheel3* 2>/dev/null || true
+
           arch -x86_64 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" </dev/null
 
           arch -x86_64 /usr/local/bin/brew update
-          arch -x86_64 /usr/local/bin/brew install cmake python ninja flex go
+
+          # Install, and if linking fails due to leftover conflicts,
+          # force-overwrite rather than aborting the whole job.
+          arch -x86_64 /usr/local/bin/brew install cmake python ninja flex go \
+            || arch -x86_64 /usr/local/bin/brew link --overwrite python cmake ninja go
 
           arch -x86_64 /usr/local/bin/python3 -m venv /tmp/venv
           source /tmp/venv/bin/activate
