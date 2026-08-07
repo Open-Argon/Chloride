@@ -686,6 +686,11 @@ EOF
                         DESTDIR="$STAGE_ROOT" cmake --install out/linux/build \
                             --prefix "$INSTALL_INTERNAL"
 
+                        # Strip CMake's own internal scratch/test artifacts (e.g.
+                        # compiler-detection binaries left behind in submodule build
+                        # dirs) so they don't get packaged or trip up brp-strip.
+                        find out/linux/build/dist/stdlib -depth -type d -name CMakeFiles -exec rm -rf {} +
+
                         # Install stdlib
                         mkdir -p "$STAGE_ROOT$INSTALL_INTERNAL/stdlib"
                         cp -R out/linux/build/dist/stdlib/* \
@@ -765,6 +770,8 @@ SPEC
 
                         echo "%_gpg_name William Bell <william@wbell.dev>" \
                             > ~/.rpmmacros
+                        echo "%__gpg /usr/bin/gpg" \
+                            >> ~/.rpmmacros
 
                         rpm --addsign "$OUTPUT_FILE"
 
@@ -826,6 +833,11 @@ SPEC
                         DESTDIR="$STAGE_ROOT" \
                             cmake --install out/linux-arm64/build \
                             --prefix "$INSTALL_INTERNAL"
+
+                        # Strip CMake's own internal scratch/test artifacts before
+                        # packaging — these are wrong-architecture binaries that
+                        # brp-strip can't (and shouldn't) touch.
+                        find out/linux-arm64/build/dist/stdlib -depth -type d -name CMakeFiles -exec rm -rf {} +
 
                         # Install stdlib
                         mkdir -p "$STAGE_ROOT$INSTALL_INTERNAL/stdlib"
@@ -903,6 +915,8 @@ SPEC
                         rpmbuild \
                             --target aarch64 \
                             --define "_topdir $RPM_ARM64_BUILD_ROOT" \
+                            --define "__strip /usr/bin/aarch64-linux-gnu-strip" \
+                            --define "__objdump /usr/bin/aarch64-linux-gnu-objdump" \
                             -bb "$RPM_ARM64_BUILD_ROOT/SPECS/argon.spec"
 
                         BUILT_RPM=$(find "$RPM_ARM64_BUILD_ROOT/RPMS" \
@@ -925,6 +939,8 @@ SPEC
 
                         echo "%_gpg_name William Bell <william@wbell.dev>" \
                             > ~/.rpmmacros
+                        echo "%__gpg /usr/bin/gpg" \
+                            >> ~/.rpmmacros
 
                         rpm --addsign "$OUTPUT_FILE"
 
