@@ -672,46 +672,49 @@ EOF
                             "$RPM_BUILD_ROOT/SPECS" \
                             "$RPM_BUILD_ROOT/SRPMS"
 
-                        PACKAGE_ROOT="$RPM_BUILD_ROOT/BUILDROOT"
+                        # Staging dir — NOT the same as rpmbuild's own BUILDROOT,
+                        # which rpmbuild wipes/recreates itself before %install runs.
+                        STAGE_ROOT="$RPM_BUILD_ROOT/STAGE"
+                        rm -rf "$STAGE_ROOT"
 
                         # Install Argon
-                        DESTDIR="$PACKAGE_ROOT" cmake --install out/linux/build \
+                        DESTDIR="$STAGE_ROOT" cmake --install out/linux/build \
                             --prefix "$INSTALL_INTERNAL"
 
                         # Install stdlib
-                        mkdir -p "$PACKAGE_ROOT$INSTALL_INTERNAL/stdlib"
+                        mkdir -p "$STAGE_ROOT$INSTALL_INTERNAL/stdlib"
                         cp -R out/linux/build/dist/stdlib/* \
-                            "$PACKAGE_ROOT$INSTALL_INTERNAL/stdlib/"
+                            "$STAGE_ROOT$INSTALL_INTERNAL/stdlib/"
 
                         # Install Argon + Isotope
-                        mkdir -p "$PACKAGE_ROOT$INSTALL_INTERNAL/bin"
+                        mkdir -p "$STAGE_ROOT$INSTALL_INTERNAL/bin"
 
                         cp out/linux/build/dist/bin/argon \
-                            "$PACKAGE_ROOT$INSTALL_INTERNAL/bin/argon"
+                            "$STAGE_ROOT$INSTALL_INTERNAL/bin/argon"
 
                         cp out/linux/build/dist/bin/isotope \
-                            "$PACKAGE_ROOT$INSTALL_INTERNAL/bin/isotope"
+                            "$STAGE_ROOT$INSTALL_INTERNAL/bin/isotope"
 
                         chmod +x \
-                            "$PACKAGE_ROOT$INSTALL_INTERNAL/bin/argon" \
-                            "$PACKAGE_ROOT$INSTALL_INTERNAL/bin/isotope"
+                            "$STAGE_ROOT$INSTALL_INTERNAL/bin/argon" \
+                            "$STAGE_ROOT$INSTALL_INTERNAL/bin/isotope"
 
                         # Public commands
-                        mkdir -p "$PACKAGE_ROOT/usr/bin"
+                        mkdir -p "$STAGE_ROOT/usr/bin"
 
                         printf '#!/bin/bash\\nexec "%s/bin/argon" "$@"\\n' "$INSTALL_INTERNAL" \
-                            > "$PACKAGE_ROOT/usr/bin/argon"
+                            > "$STAGE_ROOT/usr/bin/argon"
 
                         printf '#!/bin/bash\\nexec "%s/bin/isotope" "$@"\\n' "$INSTALL_INTERNAL" \
-                            > "$PACKAGE_ROOT/usr/bin/isotope"
+                            > "$STAGE_ROOT/usr/bin/isotope"
 
                         chmod +x \
-                            "$PACKAGE_ROOT/usr/bin/argon" \
-                            "$PACKAGE_ROOT/usr/bin/isotope"
+                            "$STAGE_ROOT/usr/bin/argon" \
+                            "$STAGE_ROOT/usr/bin/isotope"
 
                         # Headers
-                        mkdir -p "$PACKAGE_ROOT/usr/include"
-                        cp -R include/* "$PACKAGE_ROOT/usr/include/"
+                        mkdir -p "$STAGE_ROOT/usr/include"
+                        cp -R include/* "$STAGE_ROOT/usr/include/"
 
                         CHANGELOG_DATE=$(date '+%a %b %d %Y')
 
@@ -728,6 +731,7 @@ BuildArch:      x86_64
 Interpreter written in C for the Argon Programming Language
 
 %install
+cp -r ${STAGE_ROOT}/* %{buildroot}/
 
 %files
 /usr/bin/argon
@@ -743,7 +747,6 @@ Interpreter written in C for the Argon Programming Language
 SPEC
 
                         rpmbuild --define "_topdir $RPM_BUILD_ROOT" \
-                            --buildroot "$PACKAGE_ROOT" \
                             -bb "$RPM_BUILD_ROOT/SPECS/argon.spec"
 
                         BUILT_RPM=$(find "$RPM_BUILD_ROOT/RPMS" \
@@ -811,56 +814,57 @@ SPEC
                             "$RPM_ARM64_BUILD_ROOT/SPECS" \
                             "$RPM_ARM64_BUILD_ROOT/SRPMS"
 
-                        PACKAGE_ROOT="$RPM_ARM64_BUILD_ROOT/BUILDROOT"
+                        STAGE_ROOT="$RPM_ARM64_BUILD_ROOT/STAGE"
+                        rm -rf "$STAGE_ROOT"
 
                         # Install Argon
-                        DESTDIR="$PACKAGE_ROOT" \
+                        DESTDIR="$STAGE_ROOT" \
                             cmake --install out/linux-arm64/build \
                             --prefix "$INSTALL_INTERNAL"
 
                         # Install stdlib
-                        mkdir -p "$PACKAGE_ROOT$INSTALL_INTERNAL/stdlib"
+                        mkdir -p "$STAGE_ROOT$INSTALL_INTERNAL/stdlib"
 
                         cp -R \
                             out/linux-arm64/build/dist/stdlib/* \
-                            "$PACKAGE_ROOT$INSTALL_INTERNAL/stdlib/"
+                            "$STAGE_ROOT$INSTALL_INTERNAL/stdlib/"
 
                         # Install Argon + Isotope
-                        mkdir -p "$PACKAGE_ROOT$INSTALL_INTERNAL/bin"
+                        mkdir -p "$STAGE_ROOT$INSTALL_INTERNAL/bin"
 
                         cp \
                             out/linux-arm64/build/dist/bin/argon \
-                            "$PACKAGE_ROOT$INSTALL_INTERNAL/bin/argon"
+                            "$STAGE_ROOT$INSTALL_INTERNAL/bin/argon"
 
                         cp \
                             out/linux-arm64/build/dist/bin/isotope \
-                            "$PACKAGE_ROOT$INSTALL_INTERNAL/bin/isotope"
+                            "$STAGE_ROOT$INSTALL_INTERNAL/bin/isotope"
 
                         chmod +x \
-                            "$PACKAGE_ROOT$INSTALL_INTERNAL/bin/argon" \
-                            "$PACKAGE_ROOT$INSTALL_INTERNAL/bin/isotope"
+                            "$STAGE_ROOT$INSTALL_INTERNAL/bin/argon" \
+                            "$STAGE_ROOT$INSTALL_INTERNAL/bin/isotope"
 
                         # Public commands
-                        mkdir -p "$PACKAGE_ROOT/usr/bin"
+                        mkdir -p "$STAGE_ROOT/usr/bin"
 
                         printf '#!/bin/bash\\nexec "%s/bin/argon" "$@"\\n' \
                             "$INSTALL_INTERNAL" \
-                            > "$PACKAGE_ROOT/usr/bin/argon"
+                            > "$STAGE_ROOT/usr/bin/argon"
 
                         printf '#!/bin/bash\\nexec "%s/bin/isotope" "$@"\\n' \
                             "$INSTALL_INTERNAL" \
-                            > "$PACKAGE_ROOT/usr/bin/isotope"
+                            > "$STAGE_ROOT/usr/bin/isotope"
 
                         chmod +x \
-                            "$PACKAGE_ROOT/usr/bin/argon" \
-                            "$PACKAGE_ROOT/usr/bin/isotope"
+                            "$STAGE_ROOT/usr/bin/argon" \
+                            "$STAGE_ROOT/usr/bin/isotope"
 
                         # Headers
-                        mkdir -p "$PACKAGE_ROOT/usr/include"
+                        mkdir -p "$STAGE_ROOT/usr/include"
 
                         cp -R \
                             include/* \
-                            "$PACKAGE_ROOT/usr/include/"
+                            "$STAGE_ROOT/usr/include/"
 
                         CHANGELOG_DATE=$(date '+%a %b %d %Y')
 
@@ -876,6 +880,7 @@ URL:            https://git.wbell.dev/Open-Argon/Chloride
 Interpreter written in C for the Argon Programming Language
 
 %install
+cp -r ${STAGE_ROOT}/* %{buildroot}/
 
 %files
 /usr/bin/argon
@@ -893,7 +898,6 @@ SPEC
                         rpmbuild \
                             --target aarch64 \
                             --define "_topdir $RPM_ARM64_BUILD_ROOT" \
-                            --buildroot "$PACKAGE_ROOT" \
                             -bb "$RPM_ARM64_BUILD_ROOT/SPECS/argon.spec"
 
                         BUILT_RPM=$(find "$RPM_ARM64_BUILD_ROOT/RPMS" \
