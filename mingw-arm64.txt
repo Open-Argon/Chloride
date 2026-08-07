@@ -1,0 +1,20 @@
+[settings]
+os=Windows
+arch=armv8
+compiler=clang
+compiler.version=17
+compiler.libcxx=libstdc++11
+build_type=Release
+
+[buildenv]
+CC=aarch64-w64-mingw32-clang
+CXX=aarch64-w64-mingw32-clang++
+RC=aarch64-w64-mingw32-windres
+AR=aarch64-w64-mingw32-ar
+RANLIB=aarch64-w64-mingw32-ranlib
+STRIP=aarch64-w64-mingw32-strip
+
+[conf]
+tools.build:compiler_executables={"c": "aarch64-w64-mingw32-clang", "cpp": "aarch64-w64-mingw32-clang++"}
+tools.cmake.cmaketoolchain:generator=Ninja
+tools.build:skip_test=True

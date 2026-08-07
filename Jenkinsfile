@@ -110,6 +110,23 @@ pipeline {
                     echo "ARM64 C++ compiler:"
                     aarch64-linux-gnu-g++ --version
 
+                    echo "Checking ARM64 Windows (llvm-mingw) compiler..."
+
+                    if ! command -v aarch64-w64-mingw32-clang >/dev/null 2>&1; then
+                        echo "ERROR: llvm-mingw aarch64-w64-mingw32-clang was not installed"
+                        echo "Regular mingw-w64 does not target Windows ARM64 -- install llvm-mingw"
+                        echo "(https://github.com/mstorsjo/llvm-mingw) and ensure its bin/ is on PATH."
+                        exit 1
+                    fi
+
+                    if ! command -v aarch64-w64-mingw32-clang++ >/dev/null 2>&1; then
+                        echo "ERROR: llvm-mingw aarch64-w64-mingw32-clang++ was not installed"
+                        exit 1
+                    fi
+
+                    echo "ARM64 Windows compiler:"
+                    aarch64-w64-mingw32-clang --version
+
                     python3 -m venv /tmp/venv
 
                     . /tmp/venv/bin/activate
@@ -288,6 +305,68 @@ pipeline {
                                         -trimpath \
                                         -ldflags="-s -w" \
                                         -o ../out/windows/build/dist/bin/isotope.exe \
+                                        ./src
+                                '''
+                            }
+                        }
+                    }
+                }
+
+                stage('Windows ARM64 Build') {
+                    environment {
+                        CONAN_HOME = "${WORKSPACE}/.conan-windows-arm64"
+                    }
+                    stages {
+                        stage('Build') {
+                            steps {
+                                sh '''
+                                    set -e
+                                    . /tmp/venv/bin/activate
+
+                                    rm -rf out/windows-arm64 $CONAN_HOME
+                                    mkdir -p out/windows-arm64/build/dist/bin
+
+                                    conan profile detect
+
+                                    conan install . \
+                                        --profile:host=mingw-arm64.txt \
+                                        --build=missing \
+                                        -of "out/windows-arm64"
+
+                                    conan build . \
+                                        --profile:host=mingw-arm64.txt \
+                                        -of "out/windows-arm64"
+
+                                    cp -r stdlib out/windows-arm64/build/dist/
+
+                                    export CC=aarch64-w64-mingw32-clang
+                                    export CXX=aarch64-w64-mingw32-clang++
+                                    export AR=aarch64-w64-mingw32-ar
+                                    export RANLIB=aarch64-w64-mingw32-ranlib
+                                    export STRIP=aarch64-w64-mingw32-strip
+
+                                    ./build-stdlib.sh \
+                                        out/windows-arm64/build/dist/stdlib \
+                                        -j \
+                                        TARGET_OS=windows \
+                                        ARGON_INCLUDE="$(realpath include)" \
+                                         CC=aarch64-w64-mingw32-clang \
+                                         CXX=aarch64-w64-mingw32-clang++ \
+                                         AR=aarch64-w64-mingw32-ar \
+                                         RANLIB=aarch64-w64-mingw32-ranlib \
+                                         STRIP=aarch64-w64-mingw32-strip
+
+                                    echo "Building Isotope for Windows ARM64..."
+
+                                    cd isotope-src
+
+                                    GOOS=windows \
+                                    GOARCH=arm64 \
+                                    CGO_ENABLED=0 \
+                                    go build \
+                                        -trimpath \
+                                        -ldflags="-s -w" \
+                                        -o ../out/windows-arm64/build/dist/bin/isotope.exe \
                                         ./src
                                 '''
                             }
@@ -978,21 +1057,46 @@ SPEC
             }
         }
 
+        stage('Archive Windows ARM64') {
+            steps {
+                script {
+                    def version = env.TAG_NAME ?: "dev"
+                    env.OUTPUT_FILE = "archives/argon-${version}-windows-arm64.zip"
+                    echo "Packaging Windows ARM64 as: ${env.OUTPUT_FILE}"
+                }
+                sh '''
+                    set -e
+                    cp LICENSE.txt out/windows-arm64/build/dist/
+                    cp -r LICENSES out/windows-arm64/build/dist/
+                    cp -r include out/windows-arm64/build/dist/
+                    
+                    (
+                    cd "out/windows-arm64/build/dist" && zip -r "../../../../$OUTPUT_FILE" .
+                    )
+                '''
+                archiveArtifacts artifacts: "${env.OUTPUT_FILE}", allowEmptyArchive: false, fingerprint: true
+            }
+        }
+
         stage('Windows Installer build') {
             steps {
                 script {
                     def version = env.TAG_NAME ?: "dev"
                     env.ARGON_VERSION = "${version}"
-                    env.OUTPUT_FILE = "archives/argon-${version}-windows-installer-x86_64.exe"
-                    echo "Packaging Windows as: ${env.OUTPUT_FILE}"
+                    env.OUTPUT_FILE_X86_64 = "archives/argon-${version}-windows-installer-x86_64.exe"
+                    env.OUTPUT_FILE_ARM64 = "archives/argon-${version}-windows-installer-arm64.exe"
+                    echo "Packaging Windows installers as: ${env.OUTPUT_FILE_X86_64}, ${env.OUTPUT_FILE_ARM64}"
                 }
                 sh '''
                     set -e
-                    
-                    python3 build-windows-installer.py
-                    makensis -DOUTFILE="$OUTPUT_FILE" installer.nsi
+
+                    ARGON_ARCH=x86_64 OUTPUT_FILE="$OUTPUT_FILE_X86_64" python3 build-windows-installer.py installer-x86_64.nsi
+                    makensis -DOUTFILE="$OUTPUT_FILE_X86_64" installer-x86_64.nsi
+
+                    ARGON_ARCH=arm64 OUTPUT_FILE="$OUTPUT_FILE_ARM64" python3 build-windows-installer.py installer-arm64.nsi
+                    makensis -DOUTFILE="$OUTPUT_FILE_ARM64" installer-arm64.nsi
                 '''
-                archiveArtifacts artifacts: "${env.OUTPUT_FILE}", allowEmptyArchive: false, fingerprint: true
+                archiveArtifacts artifacts: "${env.OUTPUT_FILE_X86_64},${env.OUTPUT_FILE_ARM64}", allowEmptyArchive: false, fingerprint: true
             }
         }
 

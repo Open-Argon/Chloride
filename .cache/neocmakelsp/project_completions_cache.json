@@ -1,0 +1,157 @@
+{
+  "date": "2026-08-07T03:02:17.733773784+01:00",
+  "data": {
+    "/home/william/Documents/Git/chloride/CMakeLists.txt": [
+      {
+        "label": "LEXER_SRC",
+        "kind": 12,
+        "detail": "Value",
+        "documentation": "defined variable\nfrom: /home/william/Documents/Git/chloride/CMakeLists.txt\n\nSet source and output files"
+      },
+      {
+        "label": "LEXER_C",
+        "kind": 12,
+        "detail": "Value",
+        "documentation": "defined variable\nfrom: /home/william/Documents/Git/chloride/CMakeLists.txt"
+      },
+      {
+        "label": "LEXER_H",
+        "kind": 12,
+        "detail": "Value",
+        "documentation": "defined variable\nfrom: /home/william/Documents/Git/chloride/CMakeLists.txt"
+      },
+      {
+        "label": "SOURCES",
+        "kind": 12,
+        "detail": "Value",
+        "documentation": "defined variable\nfrom: /home/william/Documents/Git/chloride/CMakeLists.txt"
+      },
+      {
+        "label": "GIT_VERSION",
+        "kind": 12,
+        "detail": "Value",
+        "documentation": "defined variable\nfrom: /home/william/Documents/Git/chloride/CMakeLists.txt"
+      },
+      {
+        "label": "CMAKE_INTERPROCEDURAL_OPTIMIZATION",
+        "kind": 12,
+        "detail": "Value",
+        "documentation": "defined variable\nfrom: /home/william/Documents/Git/chloride/CMakeLists.txt"
+      },
+      {
+        "label": "THREADS_PREFER_PTHREAD_FLAG",
+        "kind": 12,
+        "detail": "Value",
+        "documentation": "defined variable\nfrom: /home/william/Documents/Git/chloride/CMakeLists.txt"
+      },
+      {
+        "label": "CMAKE_FIND_LIBRARY_SUFFIXES",
+        "kind": 12,
+        "detail": "Value",
+        "documentation": "defined variable\nfrom: /home/william/Documents/Git/chloride/CMakeLists.txt"
+      },
+      {
+        "label": "Threads_LIBRARIES",
+        "kind": 6,
+        "detail": "Variable",
+        "documentation": "package: Threads"
+      },
+      {
+        "label": "Threads_INCLUDE_DIRS",
+        "kind": 6,
+        "detail": "Variable",
+        "documentation": "package: Threads"
+      },
+      {
+        "label": "CMAKE_FIND_LIBRARY_SUFFIXES",
+        "kind": 12,
+        "detail": "Value",
+        "documentation": "defined variable\nfrom: /home/william/Documents/Git/chloride/CMakeLists.txt\n\nConan build"
+      },
+      {
+        "label": "BDWgc_LIBRARIES",
+        "kind": 6,
+        "detail": "Variable",
+        "documentation": "package: BDWgc"
+      },
+      {
+        "label": "BDWgc_INCLUDE_DIRS",
+        "kind": 6,
+        "detail": "Variable",
+        "documentation": "package: BDWgc"
+      },
+      {
+        "label": "gmp_LIBRARIES",
+        "kind": 6,
+        "detail": "Variable",
+        "documentation": "package: gmp"
+      },
+      {
+        "label": "gmp_INCLUDE_DIRS",
+        "kind": 6,
+        "detail": "Variable",
+        "documentation": "package: gmp"
+      },
+      {
+        "label": "mpfr_LIBRARIES",
+        "kind": 6,
+        "detail": "Variable",
+        "documentation": "package: mpfr"
+      },
+      {
+        "label": "mpfr_INCLUDE_DIRS",
+        "kind": 6,
+        "detail": "Variable",
+        "documentation": "package: mpfr"
+      },
+      {
+        "label": "PkgConfig_LIBRARIES",
+        "kind": 6,
+        "detail": "Variable",
+        "documentation": "package: PkgConfig"
+      },
+      {
+        "label": "PkgConfig_INCLUDE_DIRS",
+        "kind": 6,
+        "detail": "Variable",
+        "documentation": "package: PkgConfig"
+      },
+      {
+        "label": "GMP_LIBRARIES",
+        "kind": 6,
+        "detail": "Package",
+        "documentation": "package: GMP"
+      },
+      {
+        "label": "GMP_INCLUDE_DIRS",
+        "kind": 6,
+        "detail": "Package",
+        "documentation": "package: GMP"
+      },
+      {
+        "label": "MPFR_LIBRARIES",
+        "kind": 6,
+        "detail": "Package",
+        "documentation": "package: MPFR"
+      },
+      {
+        "label": "MPFR_INCLUDE_DIRS",
+        "kind": 6,
+        "detail": "Package",
+        "documentation": "package: MPFR"
+      },
+      {
+        "label": "BDWGC_LIBRARIES",
+        "kind": 6,
+        "detail": "Package",
+        "documentation": "package: BDWGC"
+      },
+      {
+        "label": "BDWGC_INCLUDE_DIRS",
+        "kind": 6,
+        "detail": "Package",
+        "documentation": "package: BDWGC"
+      }
+    ]
+  }
+}
