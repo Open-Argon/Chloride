@@ -210,6 +210,11 @@ pipeline {
 
                                     cp -r stdlib out/linux-arm64/build/dist/
 
+                                    export CC=aarch64-linux-gnu-gcc
+                                    export CXX=aarch64-linux-gnu-g++
+                                    export AR=aarch64-linux-gnu-ar
+                                    export RANLIB=aarch64-linux-gnu-ranlib
+                                    export STRIP=aarch64-linux-gnu-strip
 
                                     ./build-stdlib.sh \
                                         out/linux-arm64/build/dist/stdlib \

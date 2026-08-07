@@ -21,9 +21,9 @@ done
 
 # Set compiler based on target
 if [ "$TARGET_OS" = "windows" ]; then
-    CC="x86_64-w64-mingw32-gcc"
+    CC="${CC:-x86_64-w64-mingw32-gcc}"
 else
-    CC="gcc"
+    CC="${CC:-gcc}"
 fi
 
 echo "Building for $TARGET_OS using $CC..."
