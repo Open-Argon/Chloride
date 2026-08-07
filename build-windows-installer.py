@@ -47,12 +47,12 @@ lines = []
 # ── MUI2 includes & settings ─────────────────────────────────────────────────
 lines.append('!include "MUI2.nsh"')
 lines.append('')
+lines.append('Unicode True')
 lines.append(f'Name "{APP_NAME}"')
 lines.append(f'OutFile "{OUT_FILE}"')
 lines.append(f'InstallDir "$PROGRAMFILES64\\{APP_NAME}"')
 lines.append(f'InstallDirRegKey HKLM "Software\\{APP_NAME}" "Install_Dir"')
 lines.append('RequestExecutionLevel admin')
-lines.append('Unicode True')
 lines.append('')
 
 # ── Branding ──────────────────────────────────────────────────────────────────
