@@ -71,31 +71,6 @@ pipeline {
                 sh '''
                     set -e
 
-                    apt update
-
-                    apt install -y \
-                        cmake \
-                        flex \
-                        python3 \
-                        python3-pip \
-                        python3-venv \
-                        make \
-                        gcc-mingw-w64 \
-                        mingw-w64 \
-                        gcc-aarch64-linux-gnu \
-                        g++-aarch64-linux-gnu \
-                        binutils-aarch64-linux-gnu \
-                        ninja-build \
-                        zip \
-                        jq \
-                        gh \
-                        dpkg-dev \
-                        rpm \
-                        gpg \
-                        nsis \
-                        golang-go \
-                        util-linux
-
                     echo "Checking Docker..."
 
                     if ! command -v docker >/dev/null 2>&1; then

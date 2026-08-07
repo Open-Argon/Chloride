@@ -103,6 +103,7 @@ if(CONAN_EXPORTED OR EXISTS "${CMAKE_BINARY_DIR}/conan_toolchain.cmake")
         Threads::Threads
         m
         $<$<PLATFORM_ID:Windows>:bcrypt>
+        $<$<PLATFORM_ID:Windows>:psapi>
     )
 else()
     # Non-Conan build (Homebrew, manual CMake, Linux distros, etc.)
