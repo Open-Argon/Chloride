@@ -17,6 +17,14 @@ on:
 jobs:
   build-macos:
     runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: arm64
+            conan_arch: armv8
+          - arch: x86_64
+            conan_arch: x86_64
 
     steps:
       # -------------------
@@ -38,17 +46,39 @@ jobs:
           git clone --depth 1 https://git.wbell.dev/Open-Argon/Isotope.git isotope-src
 
       # -------------------
-      # Install Rosetta 2
+      # Install Rosetta 2 (only needed for x86_64 on arm64 runners)
       # -------------------
       - name: Install Rosetta 2
+        if: matrix.arch == 'x86_64'
         run: |
           set -e
           softwareupdate --install-rosetta --agree-to-license || true
 
       # -------------------
+      # Install dependencies (arm64 - native)
+      # -------------------
+      - name: Install dependencies (arm64)
+        if: matrix.arch == 'arm64'
+        run: |
+          set -e
+
+          brew update
+          brew install cmake python ninja flex go
+
+          python3 -m venv /tmp/venv
+          source /tmp/venv/bin/activate
+
+          pip install --upgrade pip
+          pip install conan
+
+          mkdir -p archives
+          rm -rf archives/* *.zip *.tar.gz
+
+      # -------------------
       # Install dependencies (x86_64 via Rosetta)
       # -------------------
-      - name: Install dependencies
+      - name: Install dependencies (x86_64)
+        if: matrix.arch == 'x86_64'
         run: |
           set -e
 
@@ -81,9 +111,23 @@ jobs:
           rm -rf archives/* *.zip *.tar.gz
 
       # -------------------
-      # Setup Conan
+      # Setup Conan (arm64)
       # -------------------
-      - name: Setup Conan profile
+      - name: Setup Conan profile (arm64)
+        if: matrix.arch == 'arm64'
+        run: |
+          set -e
+
+          source /tmp/venv/bin/activate
+
+          rm -rf ~/.conan2
+          conan profile detect
+
+      # -------------------
+      # Setup Conan (x86_64)
+      # -------------------
+      - name: Setup Conan profile (x86_64)
+        if: matrix.arch == 'x86_64'
         run: |
           set -e
 
@@ -97,9 +141,35 @@ jobs:
           sed -i '' 's/^arch=.*/arch=x86_64/' ~/.conan2/profiles/default
 
       # -------------------
-      # Build Argon
+      # Build Argon (arm64)
       # -------------------
-      - name: Build Argon
+      - name: Build Argon (arm64)
+        if: matrix.arch == 'arm64'
+        run: |
+          set -e
+
+          source /tmp/venv/bin/activate
+
+          rm -rf out/macos-arm64
+
+          conan install . \
+            --build=missing \
+            -of "out/macos-arm64"
+
+          conan build . \
+            -of "out/macos-arm64"
+
+          cp -r stdlib out/macos-arm64/build/dist/
+
+          ./build-stdlib.sh \
+            out/macos-arm64/build/dist/stdlib \
+            -j ARGON_INCLUDE="$(realpath include)"
+
+      # -------------------
+      # Build Argon (x86_64)
+      # -------------------
+      - name: Build Argon (x86_64)
+        if: matrix.arch == 'x86_64'
         run: |
           set -e
 
@@ -129,18 +199,17 @@ jobs:
         run: |
           set -e
 
-          mkdir -p out/macos-x86_64/build/dist/bin
+          mkdir -p "out/macos-${{ matrix.arch }}/build/dist/bin"
 
           cd isotope-src
 
-          # Go cross-compiles natively via GOARCH, no Rosetta needed here.
-          GOOS=darwin GOARCH=amd64 go build \
+          GOOS=darwin GOARCH=${{ matrix.arch == 'arm64' && 'arm64' || 'amd64' }} go build \
             -trimpath \
             -ldflags="-s -w" \
-            -o ../out/macos-x86_64/build/dist/bin/isotope \
+            -o "../out/macos-${{ matrix.arch }}/build/dist/bin/isotope" \
             ./src
 
-          file ../out/macos-x86_64/build/dist/bin/isotope
+          file "../out/macos-${{ matrix.arch }}/build/dist/bin/isotope"
 
       # -------------------
       # Package artifact
@@ -150,14 +219,15 @@ jobs:
           set -e
 
           BUILD_NAME="${{ inputs.build_name }}"
-          OUTPUT_FILE="archives/argon-${BUILD_NAME}-macos-x86_64.tar.gz"
+          ARCH="${{ matrix.arch }}"
+          OUTPUT_FILE="archives/argon-${BUILD_NAME}-macos-${ARCH}.tar.gz"
 
-          cp LICENSE.txt out/macos-x86_64/build/dist/
-          cp -r LICENSES out/macos-x86_64/build/dist/
-          cp -r include out/macos-x86_64/build/dist/
+          cp LICENSE.txt "out/macos-${ARCH}/build/dist/"
+          cp -r LICENSES "out/macos-${ARCH}/build/dist/"
+          cp -r include "out/macos-${ARCH}/build/dist/"
 
           tar -czf "$OUTPUT_FILE" \
-            -C out/macos-x86_64/build/dist .
+            -C "out/macos-${ARCH}/build/dist" .
 
           echo "Packaged $OUTPUT_FILE"
 
@@ -167,5 +237,5 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: macos-build-x86_64
-          path: archives/argon-*-macos-x86_64.tar.gz
+          name: macos-build-${{ matrix.arch }}
+          path: archives/argon-*-macos-${{ matrix.arch }}.tar.gz
