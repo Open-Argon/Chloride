@@ -3,7 +3,6 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
 #include "Argon.h"
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -11,6 +10,7 @@
 #ifdef _WIN32
 #include <windows.h>
 #else
+#include <sys/utsname.h>
 #include <unistd.h>
 #endif
 
@@ -61,6 +61,79 @@ static int compiler_exists(const char *name, char *path, size_t path_size) {
 #endif
 }
 
+/*
+ * Returns the host architecture in the same names used by the
+ * cross compiler metadata:
+ *
+ *   x86_64
+ *   x86
+ *   arm64
+ *   arm
+ *
+ * Returns NULL when the architecture is unknown.
+ */
+static const char *host_arch(void) {
+#ifdef _WIN32
+
+#if defined(_M_X64) || defined(__x86_64__)
+  return "x86_64";
+#elif defined(_M_IX86) || defined(__i386__)
+  return "x86";
+#elif defined(_M_ARM64) || defined(__aarch64__)
+  return "arm64";
+#elif defined(_M_ARM) || defined(__arm__)
+  return "arm";
+#else
+  return NULL;
+#endif
+
+#else
+
+  struct utsname info;
+
+  if (uname(&info) != 0)
+    return NULL;
+
+  if (strcmp(info.machine, "x86_64") == 0)
+    return "x86_64";
+
+  if (strcmp(info.machine, "amd64") == 0)
+    return "x86_64";
+
+  if (strcmp(info.machine, "i386") == 0 || strcmp(info.machine, "i486") == 0 ||
+      strcmp(info.machine, "i586") == 0 || strcmp(info.machine, "i686") == 0)
+    return "x86";
+
+  if (strcmp(info.machine, "aarch64") == 0 ||
+      strcmp(info.machine, "arm64") == 0)
+    return "arm64";
+
+  if (strcmp(info.machine, "armv7l") == 0 ||
+      strcmp(info.machine, "armv8l") == 0 || strcmp(info.machine, "arm") == 0)
+    return "arm";
+
+  return NULL;
+
+#endif
+}
+
+static const char *host_os(void) {
+#ifdef _WIN32
+  return "windows";
+#else
+  struct utsname info;
+  if (uname(&info) != 0)
+    return NULL;
+  if (strcmp(info.sysname, "Linux") == 0)
+    return "linux";
+  if (strcmp(info.sysname, "Darwin") == 0)
+    return "darwin";
+  if (strcmp(info.sysname, "FreeBSD") == 0)
+    return "freebsd";
+  return NULL;
+#endif
+}
+
 typedef struct {
   const char *name;
   const char *executable;
@@ -71,20 +144,19 @@ typedef struct {
   size_t language_count;
   int priority;
 
-  // Which OS this specific executable produces binaries for, or NULL
-  // if it targets whatever the host is (the common case). Sets apart
-  // e.g. a mingw-w64 cross compiler ("windows") from a native "gcc"
-  // (host-only) so the .ar layer can pick a compiler by target OS
-  // rather than guessing from its name.
+  /*
+   * Which OS this specific executable produces binaries for, or NULL
+   * if it targets whatever the host is (the common case).
+   */
   const char *cross_target;
 
-  // Which architecture this executable produces binaries for, or
-  // NULL if it targets whatever the host's architecture is. Only
-  // meaningful alongside cross_target -- e.g. "x86_64-w64-mingw32-gcc"
-  // is cross_target "windows" + cross_arch "x86_64", while
-  // "i686-w64-mingw32-gcc" is "windows" + "x86".
+  /*
+   * Which architecture this executable produces binaries for, or NULL
+   * if it targets whatever the host's architecture is.
+   */
   const char *cross_arch;
 } BuildToolCandidate;
+
 static BuildToolCandidate candidates[] = {
 
     // C / C++
@@ -107,11 +179,67 @@ static BuildToolCandidate candidates[] = {
 
     {"g++", "g++", "GNU", "gcc", {"cpp"}, 1, 85, NULL, NULL},
 
-    // mingw-w64 cross compilers: build Windows binaries from a
-    // Linux/macOS host. Distinct candidates from plain "gcc" since
-    // they're separate executables with their own PATH entries, and
-    // tagged with cross_target/cross_arch so the .ar layer knows what
-    // they're for without having to pattern-match the binary name.
+    /*
+     * Linux x86_64 -> Linux ARM64
+     *
+     * Executable:
+     *   aarch64-linux-gnu-gcc
+     *
+     * Target:
+     *   Linux ARM64
+     */
+    {"aarch64-linux-gnu-gcc",
+     "aarch64-linux-gnu-gcc",
+     "GNU",
+     "gcc",
+     {"c", "cpp"},
+     2,
+     95,
+     "linux",
+     "arm64"},
+
+    {"aarch64-linux-gnu-g++",
+     "aarch64-linux-gnu-g++",
+     "GNU",
+     "gcc",
+     {"cpp"},
+     1,
+     85,
+     "linux",
+     "arm64"},
+
+    /*
+     * Linux ARM64 -> Linux x86_64
+     *
+     * Executable:
+     *   x86_64-linux-gnu-gcc
+     *
+     * Target:
+     *   Linux x86_64
+     */
+    {"x86_64-linux-gnu-gcc",
+     "x86_64-linux-gnu-gcc",
+     "GNU",
+     "gcc",
+     {"c", "cpp"},
+     2,
+     95,
+     "linux",
+     "x86_64"},
+
+    {"x86_64-linux-gnu-g++",
+     "x86_64-linux-gnu-g++",
+     "GNU",
+     "gcc",
+     {"cpp"},
+     1,
+     85,
+     "linux",
+     "x86_64"},
+
+    /*
+     * Linux -> Windows via mingw-w64
+     */
     {"x86_64-w64-mingw32-gcc",
      "x86_64-w64-mingw32-gcc",
      "GNU (mingw-w64)",
@@ -170,7 +298,15 @@ static BuildToolCandidate candidates[] = {
 
     // Kotlin
 
-    {"kotlinc", "kotlinc", "JetBrains", "kotlin", {"kotlin"}, 1, 50, NULL, NULL},
+    {"kotlinc",
+     "kotlinc",
+     "JetBrains",
+     "kotlin",
+     {"kotlin"},
+     1,
+     50,
+     NULL,
+     NULL},
 
     // Java
 
@@ -230,13 +366,29 @@ static BuildToolCandidate candidates[] = {
 
     // WebAssembly
 
-    {"emcc", "emcc", "Emscripten", "gcc", {"c", "cpp", "wasm"}, 3, 50, NULL, NULL},
+    {"emcc",
+     "emcc",
+     "Emscripten",
+     "gcc",
+     {"c", "cpp", "wasm"},
+     3,
+     50,
+     NULL,
+     NULL},
 
     // JavaScript / TypeScript
 
     {"node", "node", "Node.js", "node", {"javascript"}, 1, 50, NULL, NULL},
 
-    {"tsc", "tsc", "Microsoft", "typescript", {"typescript"}, 1, 50, NULL, NULL},
+    {"tsc",
+     "tsc",
+     "Microsoft",
+     "typescript",
+     {"typescript"},
+     1,
+     50,
+     NULL,
+     NULL},
 
     // V
 
@@ -244,7 +396,15 @@ static BuildToolCandidate candidates[] = {
 
     // Crystal
 
-    {"crystal", "crystal", "Crystal", "crystal", {"crystal"}, 1, 50, NULL, NULL},
+    {"crystal",
+     "crystal",
+     "Crystal",
+     "crystal",
+     {"crystal"},
+     1,
+     50,
+     NULL,
+     NULL},
 
     // Julia
 
@@ -252,9 +412,7 @@ static BuildToolCandidate candidates[] = {
 
     // LaTeX
 
-    {"latex", "latex", "TeX", "latex", {"latex"}, 1, 50, NULL, NULL}
-
-};
+    {"latex", "latex", "TeX", "latex", {"latex"}, 1, 50, NULL, NULL}};
 
 static ArgonObject *create_compiler(ArgonNativeAPI *api, const char *name,
                                     const char *vendor, const char *path,
@@ -262,6 +420,7 @@ static ArgonObject *create_compiler(ArgonNativeAPI *api, const char *name,
                                     size_t language_count, int priority,
                                     const char *cross_target,
                                     const char *cross_arch) {
+
   ArgonHashmap *compiler = api->create_hashmap();
 
   api->add_to_hashmap_string_key(compiler, "name",
@@ -289,27 +448,26 @@ static ArgonObject *create_compiler(ArgonNativeAPI *api, const char *name,
   api->add_to_hashmap_string_key(compiler, "priority",
                                  api->i64_to_argon(priority));
 
-  // "cross_target" is the OS this executable produces binaries for
-  // when that's fixed and different from the host (e.g. a mingw-w64
-  // cross compiler always targets "windows"). null means this
-  // compiler targets whatever the host platform is, i.e. the normal
-  // native-compiler case.
+  /*
+   * "cross_target" is the OS this executable produces binaries for
+   * when that's fixed and different from the host.
+   *
+   * NULL means this compiler targets the host OS.
+   */
   api->add_to_hashmap_string_key(
       compiler, "cross_target",
-      cross_target == NULL
-          ? api->ARGON_NULL
-          : ARGON_STRING_FROM_C_STRING((char *)cross_target));
+      cross_target == NULL ? api->ARGON_NULL
+                           : ARGON_STRING_FROM_C_STRING((char *)cross_target));
 
-  // "cross_arch" is the architecture this executable produces
-  // binaries for, mirroring cross_target but for arch instead of OS
-  // (e.g. "x86_64-w64-mingw32-gcc" is cross_arch "x86_64" while
-  // "i686-w64-mingw32-gcc" is "x86"). null means this compiler
-  // targets whatever the host's architecture is.
+  /*
+   * "cross_arch" is the architecture this executable produces.
+   *
+   * NULL means this compiler targets the host architecture.
+   */
   api->add_to_hashmap_string_key(
       compiler, "cross_arch",
-      cross_arch == NULL
-          ? api->ARGON_NULL
-          : ARGON_STRING_FROM_C_STRING((char *)cross_arch));
+      cross_arch == NULL ? api->ARGON_NULL
+                         : ARGON_STRING_FROM_C_STRING((char *)cross_arch));
 
   return api->hashmap_to_dictionary(compiler);
 }
@@ -321,19 +479,34 @@ ARGON_FUNCTION(build_detect_compilers, {
   if (api->fix_to_arg_size(0, argc, err))
     return api->ARGON_NULL;
 
+  const char *host = host_arch();
+  const char *os = host_os();
   ArgonObject *items[64];
   size_t count = 0;
-
-  for (size_t i = 0; i < sizeof(candidates) / sizeof(candidates[0]); i++) {
+  for (size_t i = 0; i < sizeof(candidates) / sizeof(candidates[0]);
+       i++) { /* * A candidate with cross_target/cross_arch metadata is only *
+                 actually "cross" when its target differs from the host. * * For
+                 example, on x86_64 Linux: * * x86_64-w64-mingw32-gcc * target:
+                 windows/x86_64 * host: linux/x86_64 * -> KEEP * *
+                 x86_64-linux-gnu-gcc * target: linux/x86_64 * host:
+                 linux/x86_64 * -> skip as redundant/native * *
+                 aarch64-linux-gnu-gcc * target: linux/arm64 * host:
+                 linux/x86_64 * -> KEEP */
+    if (candidates[i].cross_target != NULL ||
+        candidates[i].cross_arch != NULL) {
+      int same_os = candidates[i].cross_target != NULL && os != NULL &&
+                    strcmp(candidates[i].cross_target, os) == 0;
+      int same_arch = candidates[i].cross_arch != NULL && host != NULL &&
+                      strcmp(candidates[i].cross_arch, host) == 0;
+      if (same_os && same_arch)
+        continue;
+    }
     char path[1024];
-
     if (!compiler_exists(candidates[i].executable, path, sizeof(path))) {
       continue;
     }
-
     if (count >= sizeof(items) / sizeof(items[0]))
       break;
-
     items[count++] =
         create_compiler(api, candidates[i].name, candidates[i].vendor, path,
                         candidates[i].family, candidates[i].languages,
@@ -346,6 +519,7 @@ ARGON_FUNCTION(build_detect_compilers, {
 
 void argon_module_init(ArgonState *vm, ArgonNativeAPI *api, ArgonError *err,
                        ArgonObjectRegister *reg) {
+
   (void)vm;
   (void)err;
 

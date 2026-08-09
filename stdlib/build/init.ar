@@ -360,12 +360,15 @@ class Compiler do
     let results = {}
 
     for (target in targets) do
-      let target_os = target[0]
-      let target_arch = target[1]
+      try do
+        let target_os = target[0]
+        let target_arch = target[1]
 
-      self.target_os = target_os
-      self.target_arch = target_arch
-      results[`$(target_os)/$(target_arch)`] = self.build()
+        self.target_os = target_os
+        self.target_arch = target_arch
+        results[`$(target_os)/$(target_arch)`] = self.build()
+      catch (CompilerError as e) do
+        term.error(e)
 
     self.target_os = original_target_os
     self.target_arch = original_target_arch
