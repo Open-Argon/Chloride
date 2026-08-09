@@ -4,6 +4,7 @@
 
 import "path" as path
 import "file" as file
+import "lib_path" expose lib_path
 import "subprocess" as subprocess
 
 let includeFolder = path.resolve(path.dirname(program.exc), "..", "include")
@@ -12,10 +13,69 @@ let __build__ = load_native_code(path.resolve(program.file.directory, "native", 
 
 let __compilers__ = __build__.build_detect_compilers().sort((a, b) = b.priority - a.priority)
 
+
+# Describes how to coax each known compiler family into producing a
+# binary for a target OS other than the host. Each entry is a function
+# (compiler, target_os) -> list of extra args to prepend/insert, or
+# null if that compiler cannot cross compile to that target at all.
+#
+# This is intentionally conservative: it only claims cross-compile
+# support where it reliably works out of the box (clang/zig with an
+# explicit target triple, and mingw-w64 gcc for windows). Anything
+# else falls through to "can't cross compile" so we never silently
+# produce a broken binary.
+let __cross_targets__ = {
+  "gcc": (compiler, target_os) = do
+    # Only the mingw-w64 windows-hosted gcc executables can target
+    # windows from a posix host; a plain "gcc"/"cc" binary can't.
+    if (target_os == "windows" && "mingw" in compiler.name) return []
+    return null
+  ,
+  "clang": (compiler, target_os) = do
+    let triples = {
+      "linux": "x86_64-linux-gnu",
+      "darwin": "x86_64-apple-darwin",
+      "windows": "x86_64-w64-windows-gnu",
+      "freebsd": "x86_64-unknown-freebsd"
+    }
+
+    let triple = triples.value_get(target_os, null)
+    if (triple == null) return null
+
+    return ["--target=" + triple]
+  ,
+  "zigcc": (compiler, target_os) = do
+    let triples = {
+      "linux": "x86_64-linux-gnu",
+      "darwin": "x86_64-macos",
+      "windows": "x86_64-windows-gnu",
+      "freebsd": "x86_64-freebsd"
+    }
+
+    let triple = triples.value_get(target_os, null)
+    if (triple == null) return null
+
+    return ["-target", triple]
+}
+
 class CompilerError(Exception) null
+
+# Resolves the path to a compiled shared library laid out in the
+# convention this build system uses for prebuilt binaries:
+#   <directory>/<os>/<lib_prefix><name><lib_ext>
+# e.g. lib_path("src/native/bin", "sqlite") on Linux resolves to
+# "src/native/bin/linux/libsqlite.so".
+#
+# Defaults `os` to the current platform, so an application loading its
+# own native dependency at runtime can just call:
+#   let dll = build.lib_path("bin", "sqlite")
+# and get the right file for whatever platform it's running on, using
+# the exact same path convention Compiler.output() builds into.
 
 class Compiler do
   this.__init__(self, language) = do
+    self.language = language
+
     let compiler_filter = __compilers__.filter((compiler) = language in compiler.languages)
 
     if (compiler_filter.length) do
@@ -31,8 +91,34 @@ class Compiler do
     self.flags = []
 
     self.is_shared = false
+    self.output_directory = null
+    self.output_name = null
     self.output_file = null
-    self.output_is_basename = false
+
+    # Defaults to the host platform, i.e. a normal same-platform build.
+    # Call .target(os) to ask for a specific target ("linux", "darwin",
+    # "windows", "freebsd"), e.g. when producing a bin/ folder with
+    # precompiled binaries for every OS the package supports.
+    self.target_os = platform.os
+
+  this.target(self, os) = do
+    self.target_os = os
+    return self
+
+  # True once .target() has asked for something other than the host
+  # platform, i.e. we're actually attempting to cross compile.
+  this.is_cross_compiling(self) = self.target_os != platform.os
+
+  # Returns the extra compiler args needed to cross compile to
+  # self.target_os with the currently selected compiler, or null if
+  # this compiler/host combination can't reach that target at all.
+  this.cross_compile_args(self) = do
+    if (!self.is_cross_compiling()) return []
+
+    let resolver = __cross_targets__.value_get(self.compiler.family, null)
+    if (resolver == null) return null
+
+    return resolver(self.compiler, self.target_os)
 
   this.shared(self) = do
     self.is_shared = true
@@ -79,31 +165,40 @@ class Compiler do
     if (flags.length) self.flags.append(*flags)
     return self
 
-  # Accepts a *basename* (no prefix, no extension) and lets the platform
-  # decide the rest when building a shared library, e.g. "sqlite" becomes
-  # "libsqlite.so" on Linux, "libsqlite.dylib" on macOS, "sqlite.dll" on
-  # Windows. Call .output_exact(...) instead if you want full control.
-  this.output(self, output) = do
-    self.output_file = output
-    self.output_is_basename = true
+  # Accepts a directory and a *basename* (no prefix, no extension) and
+  # lays the compiled shared library out under a per-OS subdirectory,
+  # using the same convention as the module-level lib_path() function:
+  #   <directory>/<target_os>/<lib_prefix><name><lib_ext>
+  # e.g. .output("src/native/bin", "sqlite") on Linux produces
+  # "src/native/bin/linux/libsqlite.so", and on a windows build/target
+  # "src/native/bin/windows/sqlite.dll".
+  #
+  # An application can later find the right binary for whatever
+  # platform it's running on with build.lib_path(directory, name) --
+  # no need to know the naming convention itself.
+  #
+  # Call .output_exact(...) instead if you want full control over the
+  # output path (e.g. for a non-shared executable, or a layout that
+  # doesn't follow the per-OS convention).
+  this.output(self, directory, name) = do
+    self.output_directory = directory
+    self.output_name = name
+    self.output_file = null
     return self
 
   this.output_exact(self, output) = do
+    self.output_directory = null
+    self.output_name = null
     self.output_file = output
-    self.output_is_basename = false
     return self
 
   this.resolved_output(self) = do
-    if (self.output_file == null) do
-      throw RuntimeError("No output file specified")
+    if (self.output_file != null) return self.output_file
 
-    if (!self.output_is_basename) return self.output_file
+    if (self.output_directory != null) do
+      return lib_path(self.output_directory, self.output_name, self.target_os)
 
-    if (self.is_shared) do
-      let name = path.basename(self.output_file)
-      return path.with_name(self.output_file, platform.lib_prefix + name + platform.lib_ext)
-
-    return self.output_file
+    throw RuntimeError("No output file specified")
 
   this.args(self) = do
     if (!self.sources.length) do
@@ -112,6 +207,17 @@ class Compiler do
     let output_file = self.resolved_output()
 
     let args = [self.compiler.path]
+
+    if (self.is_cross_compiling()) do
+      let cross_args = self.cross_compile_args()
+
+      # null means this compiler has no known way to reach the
+      # requested target; the caller (build()) is responsible for
+      # checking this before ever getting here, but guard anyway.
+      if (cross_args == null) do
+        throw CompilerError(`Compiler '$(self.compiler.name)' cannot cross compile to target '$(self.target_os)'`)
+
+      args.append(*cross_args)
 
     if (self.compiler.family == "msvc") do
       if (self.is_shared) do
@@ -164,7 +270,9 @@ class Compiler do
 
       # PIC is implied/required on POSIX for shared libs; harmless to
       # add explicitly, and this is the one flag safe to infer here.
-      if (self.is_shared && platform.os != "windows") do
+      # Uses target_os (not the host) since this also applies when
+      # cross compiling to a non-Windows target.
+      if (self.is_shared && self.target_os != "windows") do
         args.append("-fPIC")
 
       args.append(*self.flags)
@@ -179,6 +287,50 @@ class Compiler do
     return args
 
 
+  # Builds for self.target_os. Returns true if a binary was produced,
+  # false if it was skipped because no compiler here can reach the
+  # requested target (in which case a term.log message explains why,
+  # and the developer will need to either provide that platform's
+  # binary manually or build it at install time on that platform).
   this.build(self) = do
-    let exit_code = subprocess.run(self.args())
+    if (self.is_cross_compiling() && self.cross_compile_args() == null) do
+      term.log(`[build] No compiler available to cross compile '$(self.language)' from '$(platform.os)' to '$(self.target_os)'. ` +
+               `You'll need to provide the '$(self.target_os)' binary manually, or build it at install time on a '$(self.target_os)' host.`)
+      return false
+
+    let args = self.args()
+
+    let output_file = self.resolved_output()
+    file.makedirs(path.dirname(output_file))
+
+    term.log(`[build] $(args.join(" "))`)
+
+    let exit_code = subprocess.run(args)
     if (exit_code) throw CompilerError(`Compiler failed with exit code $(exit_code)`)
+
+    return true
+
+  # Convenience for the common "ship prebuilt binaries for every OS"
+  # pattern: build for each of targets, skipping (with a term.log
+  # explanation) any it can't reach. Doesn't mutate self.target_os
+  # afterwards -- it's restored once done.
+  #
+  #   build.Compiler("c")
+  #     .shared()
+  #     .source(...)
+  #     .output("src/native/bin", "sqlite")
+  #     .build_for_targets(["linux", "darwin", "windows"])
+  #
+  # Since .output() lays each target out under its own <directory>/<os>/
+  # subfolder automatically, builds for different targets never collide
+  # or overwrite one another.
+  this.build_for_targets(self, targets) = do
+    let original_target = self.target_os
+    let results = {}
+
+    for (target in targets) do
+      self.target_os = target
+      results[target] = self.build()
+
+    self.target_os = original_target
+    return results
