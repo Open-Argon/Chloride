@@ -10,6 +10,6 @@ let __platform_lib_info__ = {
   "windows": {"prefix": "", "ext": ".dll"}
 }
 
-let lib_path(directory, name, os = platform.os) = do
+let lib_path(directory, name, os = platform.os, arch = platform.arch) = do
   let lib_info = __platform_lib_info__.value_get(os, {"prefix": platform.lib_prefix, "ext": platform.lib_ext})
-  return path.resolve(directory, os, lib_info.prefix + name + lib_info.ext)
+  return path.resolve(directory, os, arch, lib_info.prefix + name + lib_info.ext)

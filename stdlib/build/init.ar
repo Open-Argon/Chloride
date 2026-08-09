@@ -57,6 +57,13 @@ class Compiler do
     # precompiled binaries for every OS the package supports.
     self.target_os = platform.os
 
+    # Defaults to the host architecture. Call .arch(name) to ask for a
+    # specific architecture ("x86_64", "x86", "arm64", "arm", etc.),
+    # e.g. when producing separate arm64/x86_64 binaries for the same
+    # OS. Combined with target_os to pick a compiler and to lay out
+    # output under <directory>/<os>/<arch>/...
+    self.target_arch = platform.arch
+
     # Optional preferred compiler name (e.g. "gcc"), set via .prefer().
     # null means "just take the highest-priority candidate that can
     # reach the target."
@@ -64,6 +71,10 @@ class Compiler do
 
   this.target(self, os) = do
     self.target_os = os
+    return self
+
+  this.arch(self, arch) = do
+    self.target_arch = arch
     return self
 
   # Prefer a specific detected compiler by its short name (the same
@@ -76,23 +87,26 @@ class Compiler do
     self.preferred_compiler_name = name
     return self
 
-  # True once .target() has asked for something other than the host
-  # platform, i.e. we're actually attempting to cross compile.
-  this.is_cross_compiling(self) = self.target_os != platform.os
+  # True once .target()/.arch() has asked for something other than
+  # the host platform/architecture, i.e. we're actually attempting to
+  # cross compile.
+  this.is_cross_compiling(self) = self.target_os != platform.os || self.target_arch != platform.arch
 
-  # Picks the best detected compiler for self.target_os:
-  #   - native build (target_os == host): any compiler whose
-  #     cross_target is null (i.e. it's a normal host compiler).
-  #   - cross build (target_os != host): a compiler whose cross_target
-  #     equals the requested target_os (e.g. a mingw-w64 gcc reports
-  #     cross_target == "windows").
+  # Picks the best detected compiler for self.target_os/self.target_arch:
+  #   - native build (target matches host exactly): any compiler whose
+  #     cross_target and cross_arch are both null (i.e. it's a normal
+  #     host compiler).
+  #   - cross build: a compiler whose cross_target equals the
+  #     requested target_os AND whose cross_arch equals the requested
+  #     target_arch (e.g. "x86_64-w64-mingw32-gcc" reports
+  #     cross_target == "windows", cross_arch == "x86_64").
   # Respects .prefer() when the preferred compiler is present and
   # eligible; otherwise picks the highest-priority eligible candidate.
-  # Returns null if nothing detected can reach this target at all.
+  # Returns null if nothing detected can reach this exact target at all.
   this.resolve_compiler(self) = do
     let eligible = self.candidates.filter((compiler) = do
-      if (self.is_cross_compiling()) return compiler.cross_target == self.target_os
-      return compiler.cross_target == null
+      if (self.is_cross_compiling()) return compiler.cross_target == self.target_os && compiler.cross_arch == self.target_arch
+      return compiler.cross_target == null && compiler.cross_arch == null
     )
 
     if (!eligible.length) return null
@@ -159,32 +173,35 @@ class Compiler do
   # even when target_os changes after these were registered (e.g. in
   # .build_for_targets()'s loop).
   this.resolved_libraries(self) = do
-    let libs = [].append(*self.libraries)
+    let libs = array(self.libraries)
     for (table in self.conditional_libraries) do
       libs.append(*table.value_get(self.target_os, []))
     return libs
 
   this.resolved_flags(self) = do
-    let flags = [].append(*self.flags)
+    let flags = array(self.flags)
     for (table in self.conditional_flags) do
       flags.append(*table.value_get(self.target_os, []))
     return flags
 
   # Accepts a directory and a *basename* (no prefix, no extension) and
-  # lays the compiled shared library out under a per-OS subdirectory,
-  # using the same convention as the module-level lib_path() function:
-  #   <directory>/<target_os>/<lib_prefix><name><lib_ext>
-  # e.g. .output("src/native/bin", "sqlite") on Linux produces
-  # "src/native/bin/linux/libsqlite.so", and on a windows build/target
-  # "src/native/bin/windows/sqlite.dll".
+  # lays the compiled shared library out under a per-OS, per-arch
+  # subdirectory, using the same convention as the module-level
+  # lib_path() function:
+  #   <directory>/<target_os>/<target_arch>/<lib_prefix><name><lib_ext>
+  # e.g. .output("src/native/bin", "sqlite") on a Linux x86_64 build
+  # produces "src/native/bin/linux/x86_64/libsqlite.so", and when
+  # cross compiling with .target("windows").arch("x86_64") it produces
+  # "src/native/bin/windows/x86_64/sqlite.dll".
   #
   # An application can later find the right binary for whatever
-  # platform it's running on with build.lib_path(directory, name) --
-  # no need to know the naming convention itself.
+  # platform/architecture it's running on with
+  # build.lib_path(directory, name) -- no need to know the naming
+  # convention itself.
   #
   # Call .output_exact(...) instead if you want full control over the
   # output path (e.g. for a non-shared executable, or a layout that
-  # doesn't follow the per-OS convention).
+  # doesn't follow the per-OS/per-arch convention).
   this.output(self, directory, name) = do
     self.output_directory = directory
     self.output_name = name
@@ -201,7 +218,7 @@ class Compiler do
     if (self.output_file != null) return self.output_file
 
     if (self.output_directory != null) do
-      return lib_path(self.output_directory, self.output_name, self.target_os)
+      return lib_path(self.output_directory, self.output_name, self.target_os, self.target_arch)
 
     throw RuntimeError("No output file specified")
 
@@ -211,7 +228,7 @@ class Compiler do
 
     let compiler = self.resolve_compiler()
     if (compiler == null) do
-      throw CompilerError(`No compiler detected that can build '$(self.language)' for target '$(self.target_os)'`)
+      throw CompilerError(`No compiler detected that can build '$(self.language)' for target '$(self.target_os)/$(self.target_arch)'`)
 
     let output_file = self.resolved_output()
 
@@ -288,16 +305,16 @@ class Compiler do
     return args
 
 
-  # Builds for self.target_os. Returns true if a binary was produced,
-  # false if it was skipped because no detected compiler can reach
-  # the requested target (in which case a term.log message explains
-  # why, and the developer will need to either provide that
-  # platform's binary manually or build it at install time on that
-  # platform).
+  # Builds for self.target_os/self.target_arch. Returns true if a
+  # binary was produced, false if it was skipped because no detected
+  # compiler can reach the requested target (in which case a
+  # term.log message explains why, and the developer will need to
+  # either provide that platform's binary manually or build it at
+  # install time on a matching host).
   this.build(self) = do
     if (self.resolve_compiler() == null) do
-      term.log(`[build] No compiler available to build '$(self.language)' for target '$(self.target_os)' on host '$(platform.os)'. ` +
-               `You'll need to provide the '$(self.target_os)' binary manually, or build it at install time on a '$(self.target_os)' host.`)
+      term.log(`[build] No compiler available to build '$(self.language)' for target '$(self.target_os)/$(self.target_arch)' on host '$(platform.os)/$(platform.arch)'. ` +
+               `You'll need to provide the '$(self.target_os)/$(self.target_arch)' binary manually, or build it at install time on a matching host.`)
       return false
 
     let args = self.args()
@@ -312,27 +329,44 @@ class Compiler do
 
     return true
 
-  # Convenience for the common "ship prebuilt binaries for every OS"
-  # pattern: build for each of targets, skipping (with a term.log
-  # explanation) any it can't reach. Doesn't mutate self.target_os
-  # afterwards -- it's restored once done.
+  # Convenience for the common "ship prebuilt binaries for every
+  # OS/arch" pattern: build for each (os, arch) pair in targets,
+  # skipping (with a term.log explanation) any it can't reach.
+  # Doesn't mutate self.target_os/self.target_arch afterwards --
+  # they're restored once done.
+  #
+  # Each entry in targets is a two-element list/tuple [os, arch]:
   #
   #   build.Compiler("c")
   #     .shared()
   #     .source(...)
   #     .output("src/native/bin", "sqlite")
-  #     .build_for_targets(["linux", "darwin", "windows"])
+  #     .build_for_targets([
+  #       ["linux", "x86_64"],
+  #       ["darwin", "x86_64"],
+  #       ["darwin", "arm64"],
+  #       ["windows", "x86_64"]
+  #     ])
   #
-  # Since .output() lays each target out under its own <directory>/<os>/
-  # subfolder automatically, builds for different targets never collide
-  # or overwrite one another.
+  # Since .output() lays each (os, arch) pair out under its own
+  # <directory>/<os>/<arch>/ subfolder automatically, builds for
+  # different targets never collide or overwrite one another.
+  #
+  # Returns a dict keyed by "<os>/<arch>" -> true/false (whether that
+  # target actually built).
   this.build_for_targets(self, targets) = do
-    let original_target = self.target_os
+    let original_target_os = self.target_os
+    let original_target_arch = self.target_arch
     let results = {}
 
     for (target in targets) do
-      self.target_os = target
-      results[target] = self.build()
+      let target_os = target[0]
+      let target_arch = target[1]
 
-    self.target_os = original_target
+      self.target_os = target_os
+      self.target_arch = target_arch
+      results[`$(target_os)/$(target_arch)`] = self.build()
+
+    self.target_os = original_target_os
+    self.target_arch = original_target_arch
     return results

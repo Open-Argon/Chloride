@@ -77,6 +77,13 @@ typedef struct {
   // (host-only) so the .ar layer can pick a compiler by target OS
   // rather than guessing from its name.
   const char *cross_target;
+
+  // Which architecture this executable produces binaries for, or
+  // NULL if it targets whatever the host's architecture is. Only
+  // meaningful alongside cross_target -- e.g. "x86_64-w64-mingw32-gcc"
+  // is cross_target "windows" + cross_arch "x86_64", while
+  // "i686-w64-mingw32-gcc" is "windows" + "x86".
+  const char *cross_arch;
 } BuildToolCandidate;
 static BuildToolCandidate candidates[] = {
 
@@ -89,21 +96,22 @@ static BuildToolCandidate candidates[] = {
      {"c", "cpp", "objective-c", "objective-cpp"},
      4,
      90,
+     NULL,
      NULL},
 
-    {"clang++", "clang++", "LLVM", "gcc", {"cpp"}, 1, 90, NULL},
+    {"clang++", "clang++", "LLVM", "gcc", {"cpp"}, 1, 90, NULL, NULL},
 
-    {"clang-cl", "clang-cl", "LLVM", "msvc", {"c", "cpp"}, 2, 5, NULL},
+    {"clang-cl", "clang-cl", "LLVM", "msvc", {"c", "cpp"}, 2, 5, NULL, NULL},
 
-    {"gcc", "gcc", "GNU", "gcc", {"c", "cpp", "fortran"}, 3, 95, NULL},
+    {"gcc", "gcc", "GNU", "gcc", {"c", "cpp", "fortran"}, 3, 95, NULL, NULL},
 
-    {"g++", "g++", "GNU", "gcc", {"cpp"}, 1, 85, NULL},
+    {"g++", "g++", "GNU", "gcc", {"cpp"}, 1, 85, NULL, NULL},
 
     // mingw-w64 cross compilers: build Windows binaries from a
     // Linux/macOS host. Distinct candidates from plain "gcc" since
     // they're separate executables with their own PATH entries, and
-    // tagged with cross_target so the .ar layer knows what they're
-    // for without having to pattern-match the binary name.
+    // tagged with cross_target/cross_arch so the .ar layer knows what
+    // they're for without having to pattern-match the binary name.
     {"x86_64-w64-mingw32-gcc",
      "x86_64-w64-mingw32-gcc",
      "GNU (mingw-w64)",
@@ -111,7 +119,8 @@ static BuildToolCandidate candidates[] = {
      {"c", "cpp"},
      2,
      95,
-     "windows"},
+     "windows",
+     "x86_64"},
 
     {"i686-w64-mingw32-gcc",
      "i686-w64-mingw32-gcc",
@@ -120,7 +129,8 @@ static BuildToolCandidate candidates[] = {
      {"c", "cpp"},
      2,
      90,
-     "windows"},
+     "windows",
+     "x86"},
 
     {"x86_64-w64-mingw32-g++",
      "x86_64-w64-mingw32-g++",
@@ -129,41 +139,42 @@ static BuildToolCandidate candidates[] = {
      {"cpp"},
      1,
      85,
-     "windows"},
+     "windows",
+     "x86_64"},
 
-    {"tcc", "tcc", "TinyCC", "gcc", {"c"}, 1, 30, NULL},
+    {"tcc", "tcc", "TinyCC", "gcc", {"c"}, 1, 30, NULL, NULL},
 
-    {"icc", "icc", "Intel", "gcc", {"c", "cpp"}, 2, 40, NULL},
+    {"icc", "icc", "Intel", "gcc", {"c", "cpp"}, 2, 40, NULL, NULL},
 
-    {"icx", "icx", "Intel", "gcc", {"c", "cpp"}, 2, 35, NULL},
+    {"icx", "icx", "Intel", "gcc", {"c", "cpp"}, 2, 35, NULL, NULL},
 
     // Microsoft
 
-    {"msvc", "cl", "Microsoft", "msvc", {"c", "cpp"}, 2, 0, NULL},
+    {"msvc", "cl", "Microsoft", "msvc", {"c", "cpp"}, 2, 0, NULL, NULL},
 
     // Zig
 
-    {"zig", "zig", "Zig", "zigcc", {"zig", "c", "cpp"}, 3, 50, NULL},
+    {"zig", "zig", "Zig", "zigcc", {"zig", "c", "cpp"}, 3, 50, NULL, NULL},
 
     // Rust
 
-    {"rustc", "rustc", "Rust Foundation", "rust", {"rust"}, 1, 50, NULL},
+    {"rustc", "rustc", "Rust Foundation", "rust", {"rust"}, 1, 50, NULL, NULL},
 
     // Go
 
-    {"go", "go", "Google", "go", {"go"}, 1, 50, NULL},
+    {"go", "go", "Google", "go", {"go"}, 1, 50, NULL, NULL},
 
     // Swift
 
-    {"swiftc", "swiftc", "Apple", "swift", {"swift"}, 1, 50, NULL},
+    {"swiftc", "swiftc", "Apple", "swift", {"swift"}, 1, 50, NULL, NULL},
 
     // Kotlin
 
-    {"kotlinc", "kotlinc", "JetBrains", "kotlin", {"kotlin"}, 1, 50, NULL},
+    {"kotlinc", "kotlinc", "JetBrains", "kotlin", {"kotlin"}, 1, 50, NULL, NULL},
 
     // Java
 
-    {"javac", "javac", "Oracle", "java", {"java"}, 1, 50, NULL},
+    {"javac", "javac", "Oracle", "java", {"java"}, 1, 50, NULL, NULL},
 
     // C#
 
@@ -174,73 +185,74 @@ static BuildToolCandidate candidates[] = {
      {"csharp", "fsharp", "vb"},
      3,
      50,
+     NULL,
      NULL},
 
     // D
 
-    {"dmd", "dmd", "D Language Foundation", "d", {"d"}, 1, 75, NULL},
+    {"dmd", "dmd", "D Language Foundation", "d", {"d"}, 1, 75, NULL, NULL},
 
-    {"ldc", "ldc2", "LLVM D Compiler", "d", {"d"}, 1, 50, NULL},
+    {"ldc", "ldc2", "LLVM D Compiler", "d", {"d"}, 1, 50, NULL, NULL},
 
     // Nim
 
-    {"nim", "nim", "Nim", "nim", {"nim"}, 1, 50, NULL},
+    {"nim", "nim", "Nim", "nim", {"nim"}, 1, 50, NULL, NULL},
 
     // Haskell
 
-    {"ghc", "ghc", "Haskell", "ghc", {"haskell"}, 1, 50, NULL},
+    {"ghc", "ghc", "Haskell", "ghc", {"haskell"}, 1, 50, NULL, NULL},
 
     // OCaml
 
-    {"ocamlopt", "ocamlopt", "OCaml", "ocaml", {"ocaml"}, 1, 50, NULL},
+    {"ocamlopt", "ocamlopt", "OCaml", "ocaml", {"ocaml"}, 1, 50, NULL, NULL},
 
     // Fortran
 
-    {"gfortran", "gfortran", "GNU", "gcc", {"fortran"}, 1, 50, NULL},
+    {"gfortran", "gfortran", "GNU", "gcc", {"fortran"}, 1, 50, NULL, NULL},
 
     // Pascal
 
-    {"fpc", "fpc", "FreePascal", "pascal", {"pascal"}, 1, 50, NULL},
+    {"fpc", "fpc", "FreePascal", "pascal", {"pascal"}, 1, 50, NULL, NULL},
 
     // Ada
 
-    {"gnat", "gnat", "GNU", "gnat", {"ada"}, 1, 50, NULL},
+    {"gnat", "gnat", "GNU", "gnat", {"ada"}, 1, 50, NULL, NULL},
 
     // Assembly
 
-    {"nasm", "nasm", "Netwide", "nasm", {"asm"}, 1, 75, NULL},
+    {"nasm", "nasm", "Netwide", "nasm", {"asm"}, 1, 75, NULL, NULL},
 
-    {"yasm", "yasm", "Yasm", "nasm", {"asm"}, 1, 50, NULL},
+    {"yasm", "yasm", "Yasm", "nasm", {"asm"}, 1, 50, NULL, NULL},
 
     // CUDA
 
-    {"nvcc", "nvcc", "NVIDIA", "cuda", {"cuda", "cpp"}, 2, 50, NULL},
+    {"nvcc", "nvcc", "NVIDIA", "cuda", {"cuda", "cpp"}, 2, 50, NULL, NULL},
 
     // WebAssembly
 
-    {"emcc", "emcc", "Emscripten", "gcc", {"c", "cpp", "wasm"}, 3, 50, NULL},
+    {"emcc", "emcc", "Emscripten", "gcc", {"c", "cpp", "wasm"}, 3, 50, NULL, NULL},
 
     // JavaScript / TypeScript
 
-    {"node", "node", "Node.js", "node", {"javascript"}, 1, 50, NULL},
+    {"node", "node", "Node.js", "node", {"javascript"}, 1, 50, NULL, NULL},
 
-    {"tsc", "tsc", "Microsoft", "typescript", {"typescript"}, 1, 50, NULL},
+    {"tsc", "tsc", "Microsoft", "typescript", {"typescript"}, 1, 50, NULL, NULL},
 
     // V
 
-    {"v", "v", "V Language", "v", {"v"}, 1, 50, NULL},
+    {"v", "v", "V Language", "v", {"v"}, 1, 50, NULL, NULL},
 
     // Crystal
 
-    {"crystal", "crystal", "Crystal", "crystal", {"crystal"}, 1, 50, NULL},
+    {"crystal", "crystal", "Crystal", "crystal", {"crystal"}, 1, 50, NULL, NULL},
 
     // Julia
 
-    {"julia", "julia", "Julia", "julia", {"julia"}, 1, 50, NULL},
+    {"julia", "julia", "Julia", "julia", {"julia"}, 1, 50, NULL, NULL},
 
     // LaTeX
 
-    {"latex", "latex", "TeX", "latex", {"latex"}, 1, 50, NULL}
+    {"latex", "latex", "TeX", "latex", {"latex"}, 1, 50, NULL, NULL}
 
 };
 
@@ -248,7 +260,8 @@ static ArgonObject *create_compiler(ArgonNativeAPI *api, const char *name,
                                     const char *vendor, const char *path,
                                     const char *family, const char **languages,
                                     size_t language_count, int priority,
-                                    const char *cross_target) {
+                                    const char *cross_target,
+                                    const char *cross_arch) {
   ArgonHashmap *compiler = api->create_hashmap();
 
   api->add_to_hashmap_string_key(compiler, "name",
@@ -287,6 +300,17 @@ static ArgonObject *create_compiler(ArgonNativeAPI *api, const char *name,
           ? api->ARGON_NULL
           : ARGON_STRING_FROM_C_STRING((char *)cross_target));
 
+  // "cross_arch" is the architecture this executable produces
+  // binaries for, mirroring cross_target but for arch instead of OS
+  // (e.g. "x86_64-w64-mingw32-gcc" is cross_arch "x86_64" while
+  // "i686-w64-mingw32-gcc" is "x86"). null means this compiler
+  // targets whatever the host's architecture is.
+  api->add_to_hashmap_string_key(
+      compiler, "cross_arch",
+      cross_arch == NULL
+          ? api->ARGON_NULL
+          : ARGON_STRING_FROM_C_STRING((char *)cross_arch));
+
   return api->hashmap_to_dictionary(compiler);
 }
 
@@ -314,7 +338,7 @@ ARGON_FUNCTION(build_detect_compilers, {
         create_compiler(api, candidates[i].name, candidates[i].vendor, path,
                         candidates[i].family, candidates[i].languages,
                         candidates[i].language_count, candidates[i].priority,
-                        candidates[i].cross_target);
+                        candidates[i].cross_target, candidates[i].cross_arch);
   }
 
   return api->create_argon_array(items, count);

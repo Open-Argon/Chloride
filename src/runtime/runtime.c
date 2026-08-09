@@ -99,6 +99,48 @@ extern char **environ;
 
 #endif
 
+#if defined(__x86_64__) || defined(_M_X64) || defined(__amd64__)
+
+#define PLATFORM_ARCH "x86_64"
+
+#elif defined(__i386__) || defined(_M_IX86)
+
+#define PLATFORM_ARCH "x86"
+
+#elif defined(__aarch64__) || defined(_M_ARM64)
+
+#define PLATFORM_ARCH "arm64"
+
+#elif defined(__arm__) || defined(_M_ARM)
+
+#define PLATFORM_ARCH "arm"
+
+#elif defined(__riscv) && __riscv_xlen == 64
+
+#define PLATFORM_ARCH "riscv64"
+
+#elif defined(__riscv) && __riscv_xlen == 32
+
+#define PLATFORM_ARCH "riscv32"
+
+#elif defined(__powerpc64__)
+
+#define PLATFORM_ARCH "ppc64"
+
+#elif defined(__powerpc__)
+
+#define PLATFORM_ARCH "ppc"
+
+#elif defined(__s390x__)
+
+#define PLATFORM_ARCH "s390x"
+
+#else
+
+#define PLATFORM_ARCH "unknown"
+
+#endif
+
 #define POP_BYTE() bc[ip++]
 #define POP_U64(dst)                                                           \
   do {                                                                         \
@@ -1318,6 +1360,8 @@ void bootstrap_globals() {
   hashmap_GC *platform = createHashmap_GC();
   add_to_hashmap(platform, "os",
                  new_string_object_null_terminated(PLATFORM_OS));
+  add_to_hashmap(platform, "arch",
+                 new_string_object_null_terminated(PLATFORM_ARCH));
   add_to_hashmap(platform, "lib_prefix",
                  new_string_object_null_terminated(PLATFORM_LIB_PREFIX));
   add_to_hashmap(platform, "lib_ext",
