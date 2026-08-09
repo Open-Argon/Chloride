@@ -13,74 +13,21 @@ let __build__ = load_native_code(path.resolve(program.file.directory, "native", 
 
 let __compilers__ = __build__.build_detect_compilers().sort((a, b) = b.priority - a.priority)
 
-
-# Describes how to coax each known compiler family into producing a
-# binary for a target OS other than the host. Each entry is a function
-# (compiler, target_os) -> list of extra args to prepend/insert, or
-# null if that compiler cannot cross compile to that target at all.
-#
-# This is intentionally conservative: it only claims cross-compile
-# support where it reliably works out of the box (clang/zig with an
-# explicit target triple, and mingw-w64 gcc for windows). Anything
-# else falls through to "can't cross compile" so we never silently
-# produce a broken binary.
-let __cross_targets__ = {
-  "gcc": (compiler, target_os) = do
-    # Only the mingw-w64 windows-hosted gcc executables can target
-    # windows from a posix host; a plain "gcc"/"cc" binary can't.
-    if (target_os == "windows" && "mingw" in compiler.name) return []
-    return null
-  ,
-  "clang": (compiler, target_os) = do
-    let triples = {
-      "linux": "x86_64-linux-gnu",
-      "darwin": "x86_64-apple-darwin",
-      "windows": "x86_64-w64-windows-gnu",
-      "freebsd": "x86_64-unknown-freebsd"
-    }
-
-    let triple = triples.value_get(target_os, null)
-    if (triple == null) return null
-
-    return ["--target=" + triple]
-  ,
-  "zigcc": (compiler, target_os) = do
-    let triples = {
-      "linux": "x86_64-linux-gnu",
-      "darwin": "x86_64-macos",
-      "windows": "x86_64-windows-gnu",
-      "freebsd": "x86_64-freebsd"
-    }
-
-    let triple = triples.value_get(target_os, null)
-    if (triple == null) return null
-
-    return ["-target", triple]
-}
-
 class CompilerError(Exception) null
 
-# Resolves the path to a compiled shared library laid out in the
-# convention this build system uses for prebuilt binaries:
-#   <directory>/<os>/<lib_prefix><name><lib_ext>
-# e.g. lib_path("src/native/bin", "sqlite") on Linux resolves to
-# "src/native/bin/linux/libsqlite.so".
-#
-# Defaults `os` to the current platform, so an application loading its
-# own native dependency at runtime can just call:
-#   let dll = build.lib_path("bin", "sqlite")
-# and get the right file for whatever platform it's running on, using
-# the exact same path convention Compiler.output() builds into.
 
 class Compiler do
   this.__init__(self, language) = do
     self.language = language
 
-    let compiler_filter = __compilers__.filter((compiler) = language in compiler.languages)
+    # All detected compilers (of any target) that support this
+    # language, highest priority first. Which specific one gets used
+    # for a given build is resolved lazily in resolve_compiler(),
+    # since that depends on self.target_os, which can change later
+    # via .target()/.build_for_targets().
+    self.candidates = __compilers__.filter((compiler) = language in compiler.languages)
 
-    if (compiler_filter.length) do
-      self.compiler = compiler_filter[0]
-    else do
+    if (!self.candidates.length) do
       throw RuntimeError(`No compiler detected for language '$(language)'`)
 
     self.sources = []
@@ -89,6 +36,15 @@ class Compiler do
     self.library_paths = []
     self.libraries = []
     self.flags = []
+
+    # Tables passed to .library_if()/.flag_if(), kept as-is (not
+    # resolved yet) so they can be re-evaluated against whichever
+    # self.target_os is active each time args() runs -- this matters
+    # for .build_for_targets(), which changes self.target_os in a loop
+    # after the fluent chain (and .library_if()/.flag_if() calls in
+    # it) have already run once.
+    self.conditional_libraries = []
+    self.conditional_flags = []
 
     self.is_shared = false
     self.output_directory = null
@@ -101,24 +57,53 @@ class Compiler do
     # precompiled binaries for every OS the package supports.
     self.target_os = platform.os
 
+    # Optional preferred compiler name (e.g. "gcc"), set via .prefer().
+    # null means "just take the highest-priority candidate that can
+    # reach the target."
+    self.preferred_compiler_name = null
+
   this.target(self, os) = do
     self.target_os = os
+    return self
+
+  # Prefer a specific detected compiler by its short name (the same
+  # names build_detect_compilers() reports, e.g. "gcc", "clang",
+  # "x86_64-w64-mingw32-gcc"). Still falls back to the normal
+  # priority-ordered search if the preferred one isn't detected or
+  # can't reach the current target -- this is a preference, not a
+  # hard requirement.
+  this.prefer(self, name) = do
+    self.preferred_compiler_name = name
     return self
 
   # True once .target() has asked for something other than the host
   # platform, i.e. we're actually attempting to cross compile.
   this.is_cross_compiling(self) = self.target_os != platform.os
 
-  # Returns the extra compiler args needed to cross compile to
-  # self.target_os with the currently selected compiler, or null if
-  # this compiler/host combination can't reach that target at all.
-  this.cross_compile_args(self) = do
-    if (!self.is_cross_compiling()) return []
+  # Picks the best detected compiler for self.target_os:
+  #   - native build (target_os == host): any compiler whose
+  #     cross_target is null (i.e. it's a normal host compiler).
+  #   - cross build (target_os != host): a compiler whose cross_target
+  #     equals the requested target_os (e.g. a mingw-w64 gcc reports
+  #     cross_target == "windows").
+  # Respects .prefer() when the preferred compiler is present and
+  # eligible; otherwise picks the highest-priority eligible candidate.
+  # Returns null if nothing detected can reach this target at all.
+  this.resolve_compiler(self) = do
+    let eligible = self.candidates.filter((compiler) = do
+      if (self.is_cross_compiling()) return compiler.cross_target == self.target_os
+      return compiler.cross_target == null
+    )
 
-    let resolver = __cross_targets__.value_get(self.compiler.family, null)
-    if (resolver == null) return null
+    if (!eligible.length) return null
 
-    return resolver(self.compiler, self.target_os)
+    if (self.preferred_compiler_name != null) do
+      let preferred = eligible.filter((compiler) = compiler.name == self.preferred_compiler_name)
+      if (preferred.length) return preferred[0]
+
+    # self.candidates is already priority-sorted (inherited from
+    # __compilers__), so the first eligible entry is the best pick.
+    return eligible[0]
 
   this.shared(self) = do
     self.is_shared = true
@@ -144,9 +129,13 @@ class Compiler do
   # platform (e.g. pthread/dl are implicit on Windows). Pass a dict like
   # {"linux": ["pthread", "dl"], "darwin": ["pthread"], "windows": []}
   # or just call .library(...) directly if you already know it's portable.
+  #
+  # Resolved against self.target_os lazily, at args()/build() time --
+  # not right here -- so this works correctly inside
+  # .build_for_targets(), where target_os changes after the fluent
+  # chain has already run once.
   this.library_if(self, table) = do
-    let libs = table.value_get(platform.os, [])
-    if (libs.length) self.libraries.append(*libs)
+    self.conditional_libraries.append(table)
     return self
 
   this.library(self, *libraries) = do
@@ -159,11 +148,27 @@ class Compiler do
 
   # Same idea as library_if, but for raw compiler flags that only make
   # sense on certain families/platforms (e.g. -fPIC is meaningless/invalid
-  # to MSVC).
+  # to MSVC). Also resolved lazily against self.target_os, same reason
+  # as library_if.
   this.flag_if(self, table) = do
-    let flags = table.value_get(platform.os, [])
-    if (flags.length) self.flags.append(*flags)
+    self.conditional_flags.append(table)
     return self
+
+  # Resolves .library_if()/.flag_if() tables against the current
+  # self.target_os. Called fresh inside args() so it's always correct
+  # even when target_os changes after these were registered (e.g. in
+  # .build_for_targets()'s loop).
+  this.resolved_libraries(self) = do
+    let libs = [].append(*self.libraries)
+    for (table in self.conditional_libraries) do
+      libs.append(*table.value_get(self.target_os, []))
+    return libs
+
+  this.resolved_flags(self) = do
+    let flags = [].append(*self.flags)
+    for (table in self.conditional_flags) do
+      flags.append(*table.value_get(self.target_os, []))
+    return flags
 
   # Accepts a directory and a *basename* (no prefix, no extension) and
   # lays the compiled shared library out under a per-OS subdirectory,
@@ -204,22 +209,18 @@ class Compiler do
     if (!self.sources.length) do
       throw RuntimeError("No source files specified")
 
+    let compiler = self.resolve_compiler()
+    if (compiler == null) do
+      throw CompilerError(`No compiler detected that can build '$(self.language)' for target '$(self.target_os)'`)
+
     let output_file = self.resolved_output()
 
-    let args = [self.compiler.path]
+    let libraries = self.resolved_libraries()
+    let flags = self.resolved_flags()
 
-    if (self.is_cross_compiling()) do
-      let cross_args = self.cross_compile_args()
+    let args = [compiler.path]
 
-      # null means this compiler has no known way to reach the
-      # requested target; the caller (build()) is responsible for
-      # checking this before ever getting here, but guard anyway.
-      if (cross_args == null) do
-        throw CompilerError(`Compiler '$(self.compiler.name)' cannot cross compile to target '$(self.target_os)'`)
-
-      args.append(*cross_args)
-
-    if (self.compiler.family == "msvc") do
+    if (compiler.family == "msvc") do
       if (self.is_shared) do
         args.append("/LD")
 
@@ -235,16 +236,16 @@ class Compiler do
       for (path in self.library_paths) do
         args.append("/LIBPATH:" + path)
 
-      for (library in self.libraries) do
+      for (library in libraries) do
         args.append(library + ".lib")
 
-      args.append(*self.flags)
+      args.append(*flags)
 
       args.append(*self.sources)
 
       args.append("/Fe:" + output_file)
 
-    else if (self.compiler.family == "gcc") do
+    else if (compiler.family == "gcc") do
       if (self.is_shared) do
         args.append("-shared")
 
@@ -264,7 +265,7 @@ class Compiler do
         args.append("-L")
         args.append(path)
 
-      for (library in self.libraries) do
+      for (library in libraries) do
         args.append("-l")
         args.append(library)
 
@@ -275,26 +276,27 @@ class Compiler do
       if (self.is_shared && self.target_os != "windows") do
         args.append("-fPIC")
 
-      args.append(*self.flags)
+      args.append(*flags)
 
       args.append(*self.sources)
 
       args.append("-o")
       args.append(output_file)
     else do
-      throw RuntimeError(`Compiler family '$(self.compiler.family)' argument creation logic not implimented.`)
+      throw RuntimeError(`Compiler family '$(compiler.family)' argument creation logic not implimented.`)
 
     return args
 
 
   # Builds for self.target_os. Returns true if a binary was produced,
-  # false if it was skipped because no compiler here can reach the
-  # requested target (in which case a term.log message explains why,
-  # and the developer will need to either provide that platform's
-  # binary manually or build it at install time on that platform).
+  # false if it was skipped because no detected compiler can reach
+  # the requested target (in which case a term.log message explains
+  # why, and the developer will need to either provide that
+  # platform's binary manually or build it at install time on that
+  # platform).
   this.build(self) = do
-    if (self.is_cross_compiling() && self.cross_compile_args() == null) do
-      term.log(`[build] No compiler available to cross compile '$(self.language)' from '$(platform.os)' to '$(self.target_os)'. ` +
+    if (self.resolve_compiler() == null) do
+      term.log(`[build] No compiler available to build '$(self.language)' for target '$(self.target_os)' on host '$(platform.os)'. ` +
                `You'll need to provide the '$(self.target_os)' binary manually, or build it at install time on a '$(self.target_os)' host.`)
       return false
 
