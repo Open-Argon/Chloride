@@ -60,6 +60,7 @@ vcpkg_installed/
 
 bin
 build/
+!stdlib/build
 stdlib/regex/native/pcre2/build
 
 *.yy.c

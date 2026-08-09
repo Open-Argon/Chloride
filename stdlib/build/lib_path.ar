@@ -1,0 +1,15 @@
+import "path" as path
+
+# Per-target-OS shared-library naming, keyed off the *target* platform
+# rather than the host platform, since cross compiling means those can
+# differ.
+let __platform_lib_info__ = {
+  "linux": {"prefix": "lib", "ext": ".so"},
+  "darwin": {"prefix": "lib", "ext": ".dylib"},
+  "freebsd": {"prefix": "lib", "ext": ".so"},
+  "windows": {"prefix": "", "ext": ".dll"}
+}
+
+let lib_path(directory, name, os = platform.os) = do
+  let lib_info = __platform_lib_info__.value_get(os, {"prefix": platform.lib_prefix, "ext": platform.lib_ext})
+  return path.resolve(directory, os, lib_info.prefix + name + lib_info.ext)
