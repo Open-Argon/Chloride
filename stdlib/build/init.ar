@@ -35,16 +35,21 @@ class Compiler do
     self.defines = []
     self.library_paths = []
     self.libraries = []
+    self.link_items = []
     self.flags = []
 
-    # Tables passed to .library_if()/.flag_if(), kept as-is (not
-    # resolved yet) so they can be re-evaluated against whichever
-    # self.target_os is active each time args() runs -- this matters
-    # for .build_for_targets(), which changes self.target_os in a loop
-    # after the fluent chain (and .library_if()/.flag_if() calls in
-    # it) have already run once.
+    # Tables passed to .library_if()/.flag_if()/.link_if()/
+    # .include_if()/.library_path_if(), kept as-is (not resolved yet)
+    # so they can be re-evaluated against whichever self.target_os is
+    # active each time args() runs -- this matters for
+    # .build_for_targets(), which changes self.target_os in a loop
+    # after the fluent chain (and these *_if() calls in it) have
+    # already run once.
     self.conditional_libraries = []
     self.conditional_flags = []
+    self.conditional_link_items = []
+    self.conditional_includes = []
+    self.conditional_library_paths = []
 
     self.is_shared = false
     self.output_directory = null
@@ -131,12 +136,27 @@ class Compiler do
     self.includes.append(*includes)
     return self
 
+  # Same idea as library_if, but for -I / include-path entries that
+  # only apply on certain target platforms (e.g. a vendored source
+  # tree on Linux vs a prebuilt SDK's include dir on Windows).
+  # Resolved lazily against self.target_os, same reason as the other
+  # *_if() methods.
+  this.include_if(self, table) = do
+    self.conditional_includes.append(table)
+    return self
+
   this.define(self, *defines) = do
     self.defines.append(*defines)
     return self
 
   this.library_path(self, *paths) = do
     self.library_paths.append(*paths)
+    return self
+
+  # Same idea as library_if, but for -L / library-search-path entries
+  # that only apply on certain target platforms.
+  this.library_path_if(self, table) = do
+    self.conditional_library_paths.append(table)
     return self
 
   # Platform-specific libraries that don't map to a real -lname on every
@@ -154,6 +174,22 @@ class Compiler do
 
   this.library(self, *libraries) = do
     self.libraries.append(*libraries)
+    return self
+
+  # Raw, verbatim tokens appended to the link line after everything
+  # else (after sources, before nothing) -- for things that don't fit
+  # -lname (a bare static archive path like "libraylib.a", or a
+  # pkg-config --libs blob you've already split into tokens). Order
+  # relative to other .link() calls is preserved.
+  this.link(self, *items) = do
+    self.link_items.append(*items)
+    return self
+
+  # Same idea as library_if, but for raw link-line tokens (see
+  # .link()). Resolved lazily against self.target_os, same reason as
+  # library_if/flag_if.
+  this.link_if(self, table) = do
+    self.conditional_link_items.append(table)
     return self
 
   this.flag(self, *flags) = do
@@ -183,6 +219,24 @@ class Compiler do
     for (table in self.conditional_flags) do
       flags.append(*table.value_get(self.target_os, []))
     return flags
+
+  this.resolved_link_items(self) = do
+    let items = array(self.link_items)
+    for (table in self.conditional_link_items) do
+      items.append(*table.value_get(self.target_os, []))
+    return items
+
+  this.resolved_includes(self) = do
+    let includes = array(self.includes)
+    for (table in self.conditional_includes) do
+      includes.append(*table.value_get(self.target_os, []))
+    return includes
+
+  this.resolved_library_paths(self) = do
+    let paths = array(self.library_paths)
+    for (table in self.conditional_library_paths) do
+      paths.append(*table.value_get(self.target_os, []))
+    return paths
 
   # Accepts a directory and a *basename* (no prefix, no extension) and
   # lays the compiled shared library out under a per-OS, per-arch
@@ -234,6 +288,9 @@ class Compiler do
 
     let libraries = self.resolved_libraries()
     let flags = self.resolved_flags()
+    let link_items = self.resolved_link_items()
+    let includes = self.resolved_includes()
+    let library_paths = self.resolved_library_paths()
 
     let args = [compiler.path]
 
@@ -241,7 +298,7 @@ class Compiler do
       if (self.is_shared) do
         args.append("/LD")
 
-      for (include in self.includes) do
+      for (include in includes) do
         args.append("/I" + include)
 
       if (file.is_directory(includeFolder)) do
@@ -250,7 +307,7 @@ class Compiler do
       for (define in self.defines) do
         args.append("/D" + define)
 
-      for (path in self.library_paths) do
+      for (path in library_paths) do
         args.append("/LIBPATH:" + path)
 
       for (library in libraries) do
@@ -262,11 +319,17 @@ class Compiler do
 
       args.append("/Fe:" + output_file)
 
+      args.append(*link_items)
+
     else if (compiler.family == "gcc") do
       if (self.is_shared) do
-        args.append("-shared")
+        if (self.target_os == "darwin") do
+          args.append("-dynamiclib")
+          args.append("-Wl,-install_name,@rpath/" + path.basename(output_file))
+        else do
+          args.append("-shared")
 
-      for (include in self.includes) do
+      for (include in includes) do
         args.append("-I")
         args.append(include)
 
@@ -278,24 +341,25 @@ class Compiler do
         args.append("-D")
         args.append(define)
 
-      for (path in self.library_paths) do
+      for (path in library_paths) do
         args.append("-L")
         args.append(path)
 
-      for (library in libraries) do
-        args.append("-l")
-        args.append(library)
-
-      # PIC is implied/required on POSIX for shared libs; harmless to
-      # add explicitly, and this is the one flag safe to infer here.
-      # Uses target_os (not the host) since this also applies when
-      # cross compiling to a non-Windows target.
       if (self.is_shared && self.target_os != "windows") do
         args.append("-fPIC")
 
       args.append(*flags)
 
+      # Objects/source files first
       args.append(*self.sources)
+
+      # Static libraries / other explicit link items
+      args.append(*link_items)
+
+      # Libraries that satisfy dependencies of the above
+      for (library in libraries) do
+        args.append("-l")
+        args.append(library)
 
       args.append("-o")
       args.append(output_file)

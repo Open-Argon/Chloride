@@ -4,7 +4,7 @@
 
 #ifdef _WIN32
 #define timegm _mkgmtime
-#define WIN_PTHREADS_TIME_H  // block pthread_time.h's clock_gettime declaration
+#define WIN_PTHREADS_TIME_H // block pthread_time.h's clock_gettime declaration
 #include <windows.h>
 #endif
 
@@ -14,31 +14,33 @@
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 #include <time.h>
+#include <unistd.h>
 
 #ifdef _WIN32
 #include "win32_strptime.h"
 typedef int clockid_t;
-#define CLOCK_REALTIME  0
+#define CLOCK_REALTIME 0
 #define CLOCK_MONOTONIC 1
 
 static int clock_gettime(clockid_t clk_id, struct timespec *tp) {
-    if (clk_id == CLOCK_MONOTONIC) {
-        LARGE_INTEGER freq, count;
-        QueryPerformanceFrequency(&freq);
-        QueryPerformanceCounter(&count);
-        tp->tv_sec  = count.QuadPart / freq.QuadPart;
-        tp->tv_nsec = (long)((count.QuadPart % freq.QuadPart) * 1000000000LL / freq.QuadPart);
-    } else {
-        FILETIME ft;
-        GetSystemTimeAsFileTime(&ft);
-        unsigned long long t = ((unsigned long long)ft.dwHighDateTime << 32) | ft.dwLowDateTime;
-        t -= 116444736000000000ULL;
-        tp->tv_sec  = t / 10000000;
-        tp->tv_nsec = (long)((t % 10000000) * 100);
-    }
-    return 0;
+  if (clk_id == CLOCK_MONOTONIC) {
+    LARGE_INTEGER freq, count;
+    QueryPerformanceFrequency(&freq);
+    QueryPerformanceCounter(&count);
+    tp->tv_sec = count.QuadPart / freq.QuadPart;
+    tp->tv_nsec =
+        (long)((count.QuadPart % freq.QuadPart) * 1000000000LL / freq.QuadPart);
+  } else {
+    FILETIME ft;
+    GetSystemTimeAsFileTime(&ft);
+    unsigned long long t =
+        ((unsigned long long)ft.dwHighDateTime << 32) | ft.dwLowDateTime;
+    t -= 116444736000000000ULL;
+    tp->tv_sec = t / 10000000;
+    tp->tv_nsec = (long)((t % 10000000) * 100);
+  }
+  return 0;
 }
 #endif
 
@@ -190,25 +192,22 @@ ARGON_FUNCTION(time_parse, {
   return parts;
 })
 
-void argon_module_init(ArgonState *vm, ArgonNativeAPI *api, ArgonError *err,
-                       ArgonObjectRegister *reg) {
-  (void)vm;
-  (void)err;
-  REGISTER_ARGON_FUNCTION(time_now)
-  REGISTER_ARGON_FUNCTION(time_get_seconds)
-  REGISTER_ARGON_FUNCTION(time_get_subsecond)
-  REGISTER_ARGON_FUNCTION(time_monotonic)
-  REGISTER_ARGON_FUNCTION(time_to_parts_utc)
-  REGISTER_ARGON_FUNCTION(time_parts_get_year)
-  REGISTER_ARGON_FUNCTION(time_parts_get_month)
-  REGISTER_ARGON_FUNCTION(time_parts_get_day)
-  REGISTER_ARGON_FUNCTION(time_parts_get_hour)
-  REGISTER_ARGON_FUNCTION(time_parts_get_minute)
+INIT_ARGON_MODULE({
+  REGISTER_ARGON_FUNCTION(time_now);
+  REGISTER_ARGON_FUNCTION(time_get_seconds);
+  REGISTER_ARGON_FUNCTION(time_get_subsecond);
+  REGISTER_ARGON_FUNCTION(time_monotonic);
+  REGISTER_ARGON_FUNCTION(time_to_parts_utc);
+  REGISTER_ARGON_FUNCTION(time_parts_get_year);
+  REGISTER_ARGON_FUNCTION(time_parts_get_month);
+  REGISTER_ARGON_FUNCTION(time_parts_get_day);
+  REGISTER_ARGON_FUNCTION(time_parts_get_hour);
+  REGISTER_ARGON_FUNCTION(time_parts_get_minute);
   REGISTER_ARGON_FUNCTION(time_parts_get_second)
-  REGISTER_ARGON_FUNCTION(time_parts_get_wday)
-  REGISTER_ARGON_FUNCTION(time_parts_get_yday)
-  REGISTER_ARGON_FUNCTION(time_from_parts)
-  REGISTER_ARGON_FUNCTION(time_from_parts_utc)
-  REGISTER_ARGON_FUNCTION(time_format_utc)
-  REGISTER_ARGON_FUNCTION(time_parse)
-}
+  REGISTER_ARGON_FUNCTION(time_parts_get_wday);
+  REGISTER_ARGON_FUNCTION(time_parts_get_yday);
+  REGISTER_ARGON_FUNCTION(time_from_parts);
+  REGISTER_ARGON_FUNCTION(time_from_parts_utc);
+  REGISTER_ARGON_FUNCTION(time_format_utc);
+  REGISTER_ARGON_FUNCTION(time_parse);
+})

@@ -517,11 +517,4 @@ ARGON_FUNCTION(build_detect_compilers, {
   return api->create_argon_array(items, count);
 })
 
-void argon_module_init(ArgonState *vm, ArgonNativeAPI *api, ArgonError *err,
-                       ArgonObjectRegister *reg) {
-
-  (void)vm;
-  (void)err;
-
-  REGISTER_ARGON_FUNCTION(build_detect_compilers)
-}
+INIT_ARGON_MODULE({ REGISTER_ARGON_FUNCTION(build_detect_compilers); })
