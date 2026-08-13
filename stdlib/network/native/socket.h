@@ -46,3 +46,39 @@ int net_peek(socket_t s, void *buf, int len);
 #define NET_OPT_RCVTIMEO   4   // SO_RCVTIMEO  (value = ms)
 #define NET_OPT_SNDTIMEO   5   // SO_SNDTIMEO  (value = ms)
 int net_set_opt(socket_t s, int opt, int value);
+
+// ---------------------------------------------------------------------
+// Optional TLS support (client-side only), backed by OpenSSL.
+// Compiled in only when NET_WITH_TLS is defined by the build system.
+// ---------------------------------------------------------------------
+#ifdef NET_WITH_TLS
+
+typedef struct tls_conn tls_conn_t;
+
+// tls_connect: opens a TCP connection to host:port and performs a TLS
+// handshake, with SNI set to `host`.
+//   verify_peer   - non-zero to verify the server certificate/hostname
+//                    (recommended); zero disables verification entirely.
+//   ca_path       - optional path to a CA bundle (PEM) file. NULL uses the
+//                    system default trust store.
+// Returns a heap-allocated tls_conn_t* on success, NULL on failure.
+tls_conn_t *tls_connect(const char *host, int port, int verify_peer,
+                        const char *ca_path);
+
+// tls_send / tls_recv: like net_send/net_recv but over the TLS session.
+// Return >0 bytes transferred, 0 on clean shutdown, <0 on error.
+int tls_send(tls_conn_t *conn, const void *buf, int len);
+int tls_recv(tls_conn_t *conn, void *buf, int len);
+
+// tls_poll: wait up to timeout_ms for the underlying socket to become
+// readable/writable. Same bitmask semantics as net_poll.
+int tls_poll(tls_conn_t *conn, int want_read, int want_write, int timeout_ms);
+
+// tls_close: shuts down the TLS session, closes the socket, and frees conn.
+void tls_close(tls_conn_t *conn);
+
+// tls_last_error: returns a static, human-readable description of the most
+// recent OpenSSL error on the calling thread (best-effort, not conn-scoped).
+const char *tls_last_error(void);
+
+#endif // NET_WITH_TLS

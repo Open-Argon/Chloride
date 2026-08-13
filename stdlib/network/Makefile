@@ -75,6 +75,30 @@ COMMON_CFLAGS := \
 ARGON_INCLUDE ?= ../../include
 
 # ------------------------------------------------------------
+# Optional TLS support (client-side), backed by OpenSSL.
+#   WITH_TLS=1 (default) - build with TLS if pkg-config finds openssl
+#   WITH_TLS=0            - force-disable TLS support
+# ------------------------------------------------------------
+WITH_TLS ?= 1
+
+ifeq ($(WITH_TLS),1)
+	OPENSSL_CFLAGS := $(shell pkg-config --cflags openssl 2>/dev/null)
+	OPENSSL_LIBS   := $(shell pkg-config --libs openssl 2>/dev/null)
+
+	ifeq ($(OPENSSL_LIBS),)
+		# pkg-config couldn't find it; fall back to plain -lssl -lcrypto and
+		# hope it's on the default include/lib path.
+		OPENSSL_LIBS := -lssl -lcrypto
+	endif
+
+	TLS_CFLAGS := -DNET_WITH_TLS $(OPENSSL_CFLAGS)
+	TLS_LDFLAGS := $(OPENSSL_LIBS)
+else
+	TLS_CFLAGS :=
+	TLS_LDFLAGS :=
+endif
+
+# ------------------------------------------------------------
 # Sources
 # ------------------------------------------------------------
 SRC := $(wildcard $(SRC_DIR)/*.c)
@@ -99,12 +123,14 @@ $(OUT): $(SRC)
 	$(CC) \
 		$(COMMON_CFLAGS) \
 		$(PLATFORM_CFLAGS) \
+		$(TLS_CFLAGS) \
 		$(CFLAGS) \
 		-I$(ARGON_INCLUDE) \
 		$(SHARED_LDFLAGS) \
 		-o $@ \
 		$^ \
-		$(PLATFORM_LDFLAGS)
+		$(PLATFORM_LDFLAGS) \
+		$(TLS_LDFLAGS)
 
 # ------------------------------------------------------------
 # Build variants

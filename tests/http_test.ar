@@ -1,0 +1,9 @@
+import "network" expose http
+import "file" expose open
+
+let req = http.get("https://isotope.wbell.dev/isotope-download?name=sqlite\u0026version=1.0.0")
+
+let file = open("test.tar.gz", "wb")
+
+req.pipe(file.write)
+file.close()
