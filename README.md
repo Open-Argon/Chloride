@@ -17,7 +17,7 @@ Chloride is designed as a **drop-in replacement** for the older Go implementatio
 
 ## Installation
 
-Installation instructions can be found [here](installation.md).
+Installation instructions can be found [here](https://git.wbell.dev/Open-Argon/Chloride/wiki/Installation).
 
 ## Overview
 
