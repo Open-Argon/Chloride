@@ -76,7 +76,7 @@ ARGON_INCLUDE ?= ../../include
 #   By default we build/link against the vendored copy at
 #   ../../external/libarchive, same pattern regex uses for pcre2.
 # ------------------------------------------------------------
-LIBARCHIVE_DIR      ?= ../../external/libarchive
+LIBARCHIVE_DIR      ?= $(ARGON_INCLUDE)/../external/libarchive
 LIBARCHIVE_BUILD_DIR ?= $(SRC_DIR)/libarchive/build
 LIBARCHIVE_INCLUDE  ?= $(LIBARCHIVE_DIR)/libarchive
 
