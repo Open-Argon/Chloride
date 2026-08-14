@@ -52,7 +52,8 @@ else ifeq ($(UNAME_S),Darwin)
 		-I$(BREW_PREFIX)/opt/bzip2/include \
 		-I$(BREW_PREFIX)/opt/lz4/include \
 		-I$(BREW_PREFIX)/opt/openssl@3/include \
-		-I$(BREW_PREFIX)/opt/libxml2/include
+		-I$(BREW_PREFIX)/opt/libxml2/include \
+		-I$(BREW_PREFIX)/opt/libiconv/include
 
 	PLATFORM_LDFLAGS := \
 		-L$(BREW_PREFIX)/opt/zstd/lib \
@@ -61,13 +62,15 @@ else ifeq ($(UNAME_S),Darwin)
 		-L$(BREW_PREFIX)/opt/lz4/lib \
 		-L$(BREW_PREFIX)/opt/openssl@3/lib \
 		-L$(BREW_PREFIX)/opt/libxml2/lib \
+		-L$(BREW_PREFIX)/opt/libiconv/lib \
 		-lzstd \
 		-llzma \
 		-lbz2 \
 		-llz4 \
 		-lz \
 		-lcrypto \
-		-lxml2
+		-lxml2 \
+		-liconv
 
 else
 

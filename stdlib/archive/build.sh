@@ -68,8 +68,10 @@ case "$TARGET_OS" in
         ZSTD_PREFIX="$(brew --prefix zstd)"
         XZ_PREFIX="$(brew --prefix xz)"
         BZIP2_PREFIX="$(brew --prefix bzip2)"
+        LZ4_PREFIX="$(brew --prefix lz4)"
         OPENSSL_PREFIX="$(brew --prefix openssl@3)"
         LIBXML2_PREFIX="$(brew --prefix libxml2)"
+        LIBICONV_PREFIX="$(brew --prefix libiconv)"
 
         echo "Using compiler: $CC"
         echo "Homebrew prefix: $BREW_PREFIX"
@@ -79,8 +81,10 @@ case "$TARGET_OS" in
             "$ZSTD_PREFIX" \
             "$XZ_PREFIX" \
             "$BZIP2_PREFIX" \
+            "$LZ4_PREFIX" \
             "$OPENSSL_PREFIX" \
-            "$LIBXML2_PREFIX"
+            "$LIBXML2_PREFIX" \
+            "$LIBICONV_PREFIX"
         do
             if [ ! -d "$prefix" ]; then
                 echo "ERROR: Required Homebrew dependency not found:"
@@ -96,8 +100,12 @@ case "$TARGET_OS" in
 
             "-DCMAKE_PREFIX_PATH=$BREW_PREFIX"
 
-            "-DCMAKE_INCLUDE_PATH=$ZSTD_PREFIX/include;$XZ_PREFIX/include;$BZIP2_PREFIX/include;$OPENSSL_PREFIX/include;$LIBXML2_PREFIX/include"
-            "-DCMAKE_LIBRARY_PATH=$ZSTD_PREFIX/lib;$XZ_PREFIX/lib;$BZIP2_PREFIX/lib;$OPENSSL_PREFIX/lib;$LIBXML2_PREFIX/lib"
+            "-DCMAKE_INCLUDE_PATH=$ZSTD_PREFIX/include;$XZ_PREFIX/include;$BZIP2_PREFIX/include;$LZ4_PREFIX/include;$OPENSSL_PREFIX/include;$LIBXML2_PREFIX/include;$LIBICONV_PREFIX/include"
+
+            "-DCMAKE_LIBRARY_PATH=$ZSTD_PREFIX/lib;$XZ_PREFIX/lib;$BZIP2_PREFIX/lib;$LZ4_PREFIX/lib;$OPENSSL_PREFIX/lib;$LIBXML2_PREFIX/lib;$LIBICONV_PREFIX/lib"
+
+            "-DIconv_INCLUDE_DIR=$LIBICONV_PREFIX/include"
+            "-DIconv_LIBRARY=$LIBICONV_PREFIX/lib/libiconv.dylib"
 
             "-DENABLE_WERROR=OFF"
 
@@ -105,6 +113,7 @@ case "$TARGET_OS" in
             "-DENABLE_ZSTD=ON"
             "-DENABLE_LZMA=ON"
             "-DENABLE_BZIP2=ON"
+            "-DENABLE_LZ4=ON"
             "-DENABLE_OPENSSL=ON"
             "-DENABLE_LIBXML2=ON"
         )
@@ -114,68 +123,26 @@ case "$TARGET_OS" in
         CC="${CC:-x86_64-w64-mingw32-gcc}"
 
         MINGW_TARGET="$("$CC" -dumpmachine)"
+        MINGW_PREFIX="/usr/$MINGW_TARGET"
 
         echo "Using compiler: $CC"
         echo "MinGW target:  $MINGW_TARGET"
+        echo "MinGW prefix:  $MINGW_PREFIX"
 
-        # Ask GCC where its target sysroot/prefix actually is.
-        MINGW_SYSROOT="$("$CC" -print-sysroot)"
+        ZLIB_INCLUDE_DIR="$MINGW_PREFIX/include"
+        ZLIB_LIBRARY="$MINGW_PREFIX/lib/libz.a"
 
-        if [ -z "$MINGW_SYSROOT" ] || [ "$MINGW_SYSROOT" = "/" ]; then
-            # Debian-style MinGW installations generally don't expose a
-            # useful sysroot through -print-sysroot.
-            MINGW_PREFIX="/usr/$MINGW_TARGET"
-        else
-            if [ -d "$MINGW_SYSROOT/mingw" ]; then
-                MINGW_PREFIX="$MINGW_SYSROOT/mingw"
-            else
-                MINGW_PREFIX="$MINGW_SYSROOT"
-            fi
-        fi
-
-        echo "MinGW prefix: $MINGW_PREFIX"
-
-        # Locate zlib using the compiler's own search paths rather than
-        # assuming a particular distro layout.
-        ZLIB_INCLUDE_DIR=""
-        ZLIB_LIBRARY=""
-
-        for dir in \
-            "$MINGW_PREFIX/include" \
-            "/usr/$MINGW_TARGET/include" \
-            "/usr/lib/gcc-cross/$MINGW_TARGET/include"
-        do
-            if [ -f "$dir/zlib.h" ]; then
-                ZLIB_INCLUDE_DIR="$dir"
-                break
-            fi
-        done
-
-        for lib in \
-            "$MINGW_PREFIX/lib/libz.dll.a" \
-            "$MINGW_PREFIX/lib/libz.a" \
-            "/usr/$MINGW_TARGET/lib/libz.dll.a" \
-            "/usr/$MINGW_TARGET/lib/libz.a"
-        do
-            if [ -f "$lib" ]; then
-                ZLIB_LIBRARY="$lib"
-                break
-            fi
-        done
-
-        if [ -z "$ZLIB_INCLUDE_DIR" ]; then
-            echo "ERROR: MinGW zlib headers not found"
-            echo "  compiler: $CC"
-            echo "  target:   $MINGW_TARGET"
-            echo "  prefix:   $MINGW_PREFIX"
+        if [ ! -f "$ZLIB_INCLUDE_DIR/zlib.h" ]; then
+            echo "ERROR: MinGW zlib development headers not found"
+            echo "  expected: $ZLIB_INCLUDE_DIR/zlib.h"
+            echo "  install:  libz-mingw-w64-dev"
             exit 1
         fi
 
-        if [ -z "$ZLIB_LIBRARY" ]; then
+        if [ ! -f "$ZLIB_LIBRARY" ]; then
             echo "ERROR: MinGW zlib library not found"
-            echo "  compiler: $CC"
-            echo "  target:   $MINGW_TARGET"
-            echo "  prefix:   $MINGW_PREFIX"
+            echo "  expected: $ZLIB_LIBRARY"
+            echo "  install:  libz-mingw-w64-dev"
             exit 1
         fi
 
