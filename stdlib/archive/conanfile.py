@@ -51,7 +51,6 @@ class ArgonArchiveStdlibConan(ConanFile):
         tc = CMakeToolchain(self)
         tc.variables["CMAKE_POSITION_INDEPENDENT_CODE"] = True
         tc.variables["BUILD_SHARED_LIBS"] = False
-        tc.variables["ENABLE_WIN32_XMLLITE"] = False
         tc.generate()
 
     def build(self):
