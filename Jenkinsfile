@@ -138,6 +138,11 @@ pipeline {
                     mkdir -p archives macos-artifacts
 
                     rm -rf archives/* macos-artifacts/* *.zip *.tar.gz
+
+
+
+                    rm -rf out/windows $CONAN_HOME
+                    conan profile detect
                 '''
             }
         }
@@ -165,10 +170,7 @@ pipeline {
                                     set -e
                                     . /tmp/venv/bin/activate
 
-                                    rm -rf out/linux $CONAN_HOME
                                     mkdir -p out/linux/build/dist/bin
-
-                                    conan profile detect
 
                                     conan install . \
                                         --build=missing \
@@ -210,10 +212,7 @@ pipeline {
                                     set -e
                                     . /tmp/venv/bin/activate
 
-                                    rm -rf out/linux-arm64 $CONAN_HOME
                                     mkdir -p out/linux-arm64/build/dist/bin
-
-                                    conan profile detect
 
                                     conan install . \
                                         --profile:build=default \
@@ -242,7 +241,8 @@ pipeline {
                                          CXX=aarch64-linux-gnu-g++ \
                                          AR=aarch64-linux-gnu-ar \
                                          RANLIB=aarch64-linux-gnu-ranlib \
-                                         STRIP=aarch64-linux-gnu-strip
+                                         STRIP=aarch64-linux-gnu-strip \
+                                         TARGET_OS=linux-arm64
 
                                     echo "Building Isotope for Linux ARM64..."
 
@@ -272,11 +272,7 @@ pipeline {
                                 sh '''
                                     set -e
                                     . /tmp/venv/bin/activate
-
-                                    rm -rf out/windows $CONAN_HOME
                                     mkdir -p out/windows/build/dist/bin
-
-                                    conan profile detect
 
                                     conan install . \
                                         --profile:host=mingw-x86_64.txt \
