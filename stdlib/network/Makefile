@@ -76,26 +76,42 @@ ARGON_INCLUDE ?= ../../include
 
 # ------------------------------------------------------------
 # Optional TLS support (client-side), backed by OpenSSL.
-#   WITH_TLS=1 (default) - build with TLS if pkg-config finds openssl
-#   WITH_TLS=0            - force-disable TLS support
 # ------------------------------------------------------------
 WITH_TLS ?= 1
 
 ifeq ($(WITH_TLS),1)
-	OPENSSL_CFLAGS := $(shell pkg-config --cflags openssl 2>/dev/null)
-	OPENSSL_LIBS   := $(shell pkg-config --libs openssl 2>/dev/null)
 
-	ifeq ($(OPENSSL_LIBS),)
-		# pkg-config couldn't find it; fall back to plain -lssl -lcrypto and
-		# hope it's on the default include/lib path.
-		OPENSSL_LIBS := -lssl -lcrypto
+	ifeq ($(TARGET_OS),windows)
+
+		OPENSSL_MINGW_PREFIX ?= $(CURDIR)/native/openssl-mingw64
+
+		OPENSSL_CFLAGS := \
+			-I$(OPENSSL_MINGW_PREFIX)/include
+
+		OPENSSL_LIBS := \
+			-L$(OPENSSL_MINGW_PREFIX)/lib \
+			-lssl \
+			-lcrypto
+
+	else
+
+		OPENSSL_CFLAGS := $(shell pkg-config --cflags openssl 2>/dev/null)
+		OPENSSL_LIBS   := $(shell pkg-config --libs openssl 2>/dev/null)
+
+		ifeq ($(OPENSSL_LIBS),)
+			OPENSSL_LIBS := -lssl -lcrypto
+		endif
+
 	endif
 
-	TLS_CFLAGS :=  $(OPENSSL_CFLAGS)
+	TLS_CFLAGS := $(OPENSSL_CFLAGS)
 	TLS_LDFLAGS := $(OPENSSL_LIBS)
+
 else
+
 	TLS_CFLAGS := -DNET_WITHOUT_TLS
 	TLS_LDFLAGS :=
+
 endif
 
 # ------------------------------------------------------------
