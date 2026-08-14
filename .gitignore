@@ -16,7 +16,7 @@
 *.map
 *.exp
 
-!stdlib/archive/native/exports.map
+!stdlib/*/*/exports.map
 
 # Precompiled Headers
 *.gch
