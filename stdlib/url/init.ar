@@ -1,0 +1,50 @@
+import "hex" expose hex
+
+let toNotEncode = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_.~ "
+
+let decode(data) = do
+    data = data.replace("+", " ")
+    let split = data.split("%")
+    if (split.length == 1) return data
+    let decoded = [split[0]]
+    for (slice in split[1:]) do
+        if (slice.length < 2) do
+            decoded.append("%"+slice)
+            continue
+        let hex = slice[0:2]
+        decoded.append(string.from_byte(number("0x"+hex)))
+        decoded.append(slice[2:])
+    decoded = decoded.join("")
+    if (decoded.length == 0) return data
+    return decoded
+
+let encode(data) = do
+    let encoded = []
+    let i = 0
+    for (char in data) do
+        if (char in toNotEncode) do
+            encoded.append(char)
+        else do
+            let hexidecimal = hex(char.to_byte())
+            if (hexidecimal.length < 2) hexidecimal = "0"+hexidecimal
+            encoded.append("%"+hexidecimal)
+        i += 1
+    return encoded.join("").replace(" ", "+")
+
+let decodeURLQuery(querytext) = do
+    let query = {}
+    if (querytext.length == 0) return query
+    let querySplit = querytext.split("&")
+    for (q in querySplit) do
+        let queryItem = q.split("=")
+        let nameDecoded = decode(queryItem[0])
+        if (queryItem.length < 2) query[nameDecoded] = ""
+        else query[nameDecoded] = decode(queryItem[1:].join("="))
+    
+    return query
+
+let queryStr(queries) = do
+    let queryStr = []
+    for (query in queries) do
+        queryStr.append(encode(query[0])+"="+encode(query[1]))
+    return queryStr.join("&")
