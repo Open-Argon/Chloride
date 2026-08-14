@@ -28,8 +28,15 @@ ifeq ($(TARGET_OS),windows)
 	LIB_EXT := dll
 
 	SHARED_LDFLAGS := -shared
+
+	# Keep Windows system libraries after OpenSSL. OpenSSL is linked
+	# statically on Windows, so its dependencies must come afterward.
 	PLATFORM_LDFLAGS := \
-		-lws2_32 -lssl -lcrypto -lcrypt32
+		-lws2_32 \
+		-lcrypt32 \
+		-lgdi32 \
+		-ladvapi32 \
+		-luser32
 
 	PLATFORM_CFLAGS := \
 		-DWIN32 \
@@ -38,7 +45,7 @@ ifeq ($(TARGET_OS),windows)
 else ifeq ($(UNAME_S),Darwin)
 
 	ifeq ($(origin CC),default)
-	  CC      := gcc
+		CC := gcc
 	endif
 	LIB_EXT := dylib
 
@@ -53,7 +60,7 @@ else
 
 	# Linux / FreeBSD
 	ifeq ($(origin CC),default)
-	  CC      := gcc
+		CC := gcc
 	endif
 	LIB_EXT := so
 
@@ -145,8 +152,8 @@ $(OUT): $(SRC)
 		$(SHARED_LDFLAGS) \
 		-o $@ \
 		$^ \
-		$(PLATFORM_LDFLAGS) \
-		$(TLS_LDFLAGS)
+		$(TLS_LDFLAGS) \
+		$(PLATFORM_LDFLAGS)
 
 # ------------------------------------------------------------
 # Build variants
