@@ -138,11 +138,6 @@ pipeline {
                     mkdir -p archives macos-artifacts
 
                     rm -rf archives/* macos-artifacts/* *.zip *.tar.gz
-
-
-
-                    rm -rf out/windows $CONAN_HOME
-                    conan profile detect
                 '''
             }
         }
@@ -169,6 +164,9 @@ pipeline {
                                 sh '''
                                     set -e
                                     . /tmp/venv/bin/activate
+
+                                    rm -rf out/linux $CONAN_HOME
+                                    conan profile detect
 
                                     mkdir -p out/linux/build/dist/bin
 
@@ -212,7 +210,8 @@ pipeline {
                                 sh '''
                                     set -e
                                     . /tmp/venv/bin/activate
-
+                                    rm -rf out/linux-arm64 $CONAN_HOME
+                                    conan profile detect
                                     mkdir -p out/linux-arm64/build/dist/bin
 
                                     conan install . \
@@ -275,7 +274,8 @@ pipeline {
                                     set -e
                                     . /tmp/venv/bin/activate
                                     mkdir -p out/windows/build/dist/bin
-
+                                    rm -rf out/windows $CONAN_HOME
+                                    conan profile detect
                                     conan install . \
                                         --profile:host=mingw-x86_64.txt \
                                         --build=missing \
