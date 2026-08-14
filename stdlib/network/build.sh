@@ -7,13 +7,11 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+ROOT_DIR="$(pwd)"
 
-make -C "$SCRIPT_DIR" clean
+cd "$SCRIPT_DIR"
 
-# ------------------------------------------------------------
 # Parse make-style arguments
-# ------------------------------------------------------------
-
 TARGET_OS="linux"
 
 for arg in "$@"; do
@@ -24,84 +22,39 @@ for arg in "$@"; do
     esac
 done
 
-# ------------------------------------------------------------
-# Set compiler
-# ------------------------------------------------------------
+case "$TARGET_OS" in
+    linux)
+        HOST_PROFILE="default"
+        ;;
 
-if [ "$TARGET_OS" = "windows" ]; then
-    CC="${CC:-x86_64-w64-mingw32-gcc}"
-else
-    CC="${CC:-gcc}"
-fi
+    linux-arm64)
+        HOST_PROFILE="$ROOT_DIR/aarch64-linux-gnu.txt"
+        ;;
 
-echo "Building for $TARGET_OS using $CC..."
+    windows)
+        HOST_PROFILE="$ROOT_DIR/mingw-x86_64.txt"
+        ;;
 
-# ------------------------------------------------------------
-# Windows OpenSSL
-# ------------------------------------------------------------
-
-if [ "$TARGET_OS" = "windows" ]; then
-
-    OPENSSL_VERSION="1.1.1w"
-    OPENSSL_PREFIX="$SCRIPT_DIR/native/openssl-mingw64"
-    OPENSSL_ARCHIVE="/tmp/openssl-${OPENSSL_VERSION}.tar.gz"
-    OPENSSL_SOURCE="/tmp/openssl-${OPENSSL_VERSION}"
-
-    if [ ! -f "$OPENSSL_PREFIX/include/openssl/ssl.h" ]; then
-
-        echo "==> Building OpenSSL ${OPENSSL_VERSION} for Windows"
-
-        rm -rf "$OPENSSL_SOURCE"
-        rm -f "$OPENSSL_ARCHIVE"
-
-        curl -L \
-            -o "$OPENSSL_ARCHIVE" \
-            "https://www.openssl.org/source/openssl-${OPENSSL_VERSION}.tar.gz"
-
-        tar -xzf "$OPENSSL_ARCHIVE" -C /tmp
-
-        cd "$OPENSSL_SOURCE"
-
-        ./Configure \
-            mingw64 \
-            --cross-compile-prefix=x86_64-w64-mingw32- \
-            --prefix="$OPENSSL_PREFIX" \
-            --openssldir="$OPENSSL_PREFIX/ssl" \
-            no-shared
-
-        make -j"$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 2)"
-        make install_sw
-
-        cd "$SCRIPT_DIR"
-    fi
-
-    echo "Using MinGW OpenSSL:"
-    echo "  prefix: $OPENSSL_PREFIX"
-
-    if [ ! -f "$OPENSSL_PREFIX/include/openssl/ssl.h" ]; then
-        echo "ERROR: MinGW OpenSSL installation failed"
+    *)
+        echo "Unsupported TARGET_OS: $TARGET_OS"
         exit 1
-    fi
+        ;;
+esac
 
-    if [ ! -f "$OPENSSL_PREFIX/lib/libssl.a" ]; then
-        echo "ERROR: MinGW OpenSSL libssl.a not found"
-        exit 1
-    fi
+echo "Building archive stdlib for: $TARGET_OS"
+echo "Host profile: $HOST_PROFILE"
 
-    if [ ! -f "$OPENSSL_PREFIX/lib/libcrypto.a" ]; then
-        echo "ERROR: MinGW OpenSSL libcrypto.a not found"
-        exit 1
-    fi
+rm -rf build
+rm -rf native/bin
 
-    export OPENSSL_MINGW_PREFIX="$OPENSSL_PREFIX"
-fi
+conan install . \
+    --profile:build=default \
+    --profile:host="$HOST_PROFILE" \
+    --build=missing \
+    "${BUILD_ARGS[@]}"
 
-# ------------------------------------------------------------
-# Build stdlib
-# ------------------------------------------------------------
+conan build . \
+    --profile:build=default \
+    --profile:host="$HOST_PROFILE"
 
-cd "$SCRIPT_DIR"
-
-make \
-    CC="$CC" \
-    "$@"
+rm -rf build
