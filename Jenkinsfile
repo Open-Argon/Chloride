@@ -180,6 +180,7 @@ pipeline {
                                         -of "out/linux"
 
                                     cp -r stdlib out/linux/build/dist/
+                                    export ARGON_INCLUDE="$(realpath include)"
 
                                     ./build-stdlib.sh \
                                         out/linux/build/dist/stdlib \
@@ -232,6 +233,7 @@ pipeline {
                                     export AR=aarch64-linux-gnu-ar
                                     export RANLIB=aarch64-linux-gnu-ranlib
                                     export STRIP=aarch64-linux-gnu-strip
+                                    export ARGON_INCLUDE="$(realpath include)"
 
                                     ./build-stdlib.sh \
                                         out/linux-arm64/build/dist/stdlib \
@@ -284,6 +286,7 @@ pipeline {
                                         -of "out/windows"
 
                                     cp -r stdlib out/windows/build/dist/
+                                    export ARGON_INCLUDE="$(realpath include)"
 
                                     ./build-stdlib.sh \
                                         out/windows/build/dist/stdlib \

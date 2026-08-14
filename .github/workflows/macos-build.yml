@@ -162,6 +162,8 @@ jobs:
 
           cp -r stdlib out/macos-arm64/build/dist/
 
+          export ARGON_INCLUDE="$(realpath include)"
+
           ./build-stdlib.sh \
             out/macos-arm64/build/dist/stdlib \
             -j ARGON_INCLUDE="$(realpath include)"
@@ -188,6 +190,8 @@ jobs:
             -of "out/macos-x86_64"
 
           cp -r stdlib out/macos-x86_64/build/dist/
+
+          ARGON_INCLUDE="$(realpath include)"
 
           arch -x86_64 ./build-stdlib.sh \
             out/macos-x86_64/build/dist/stdlib \

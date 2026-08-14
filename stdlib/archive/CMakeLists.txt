@@ -8,8 +8,14 @@ add_library(archive SHARED
     native/main.c
 )
 
+if(NOT DEFINED ENV{ARGON_INCLUDE})
+    message(FATAL_ERROR "ARGON_INCLUDE environment variable is not set")
+endif()
+
+set(ARGON_INCLUDE "$ENV{ARGON_INCLUDE}")
+
 target_include_directories(archive PRIVATE
-    ../../include
+    "${ARGON_INCLUDE}"
 )
 
 target_link_libraries(archive PRIVATE
