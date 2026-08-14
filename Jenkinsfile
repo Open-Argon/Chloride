@@ -113,7 +113,7 @@ pipeline {
                     dpkg --add-architecture arm64
                     apt update
 
-                    apt install \
+                    apt install -y \
                         libzstd-dev \
                         liblzma-dev \
                         libbz2-dev \
