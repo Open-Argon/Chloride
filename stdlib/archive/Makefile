@@ -34,7 +34,6 @@ ifeq ($(TARGET_OS),windows)
 		-lbcrypt \
 		-lole32 \
 		-loleaut32 \
-		-lxmllite \
 		-luuid
 
 	PLATFORM_CFLAGS :=

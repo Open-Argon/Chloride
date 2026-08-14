@@ -238,6 +238,8 @@ case "$TARGET_OS" in
 
             "-DLIBMD_FOUND:BOOL=FALSE"
 
+            "-DENABLE_XAR=OFF"
+
             "-DENABLE_WERROR=OFF"
             "-DENABLE_UNZIP=OFF"
         )
