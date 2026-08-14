@@ -23,7 +23,3 @@
 [submodule "external/raylib"]
 	path = external/raylib
 	url = https://github.com/raysan5/raylib
-[submodule "external/libarchive"]
-	path = external/libarchive
-	url = https://git.wbell.dev/github-mirror/libarchive
-	branch = mingw-fixes

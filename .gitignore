@@ -16,6 +16,8 @@
 *.map
 *.exp
 
+!stdlib/archive/native/exports.map
+
 # Precompiled Headers
 *.gch
 *.pch
@@ -100,3 +102,7 @@ test.db
 .DS_Store
 
 .cache
+
+openssl-mingw64
+
+CMakeUserPresets.json

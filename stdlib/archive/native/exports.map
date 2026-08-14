@@ -1,0 +1,20 @@
+/*
+ * SPDX-FileCopyrightText: 2026 William Bell
+ *
+ * SPDX-License-Identifier: LGPL-3.0-or-later
+ *
+ * Linker version script: only the module's entry point is exported
+ * from archive.so / archive.dll. Everything else -- including every
+ * symbol pulled in from the statically-linked libzstd/liblzma/libbz2/
+ * libz/libcrypto/libxml2 archives -- is kept local, so this module
+ * can't clash with another loaded .so/.dll that embeds its own copy
+ * of the same dependencies.
+ *
+ * Update ARGON_MODULE_ENTRY_SYMBOL in the Makefile (or override it,
+ * e.g. `make ARGON_MODULE_ENTRY_SYMBOL=whatever_it_actually_is`) to
+ * match whatever INIT_ARGON_MODULE in Argon.h actually expands to.
+ */
+{
+  global: argon_module_init;
+  local: *;
+};
