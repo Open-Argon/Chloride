@@ -126,7 +126,7 @@ pipeline {
                         zlib1g-dev:arm64 \
                         libssl-dev:arm64 \
                         libxml2-dev:arm64 \
-                        libz-mingw-w64
+                        libz-mingw-w64-dev
 
                     python3 -m venv /tmp/venv
 
