@@ -1,0 +1,15 @@
+import "maths" as maths
+
+let hex(n) = do
+    if (n == 0) do
+        return "0"
+    
+    hex_digits = "0123456789ABCDEF"
+    negative = n < 0
+    n = maths.abs(n)
+    result = ""
+    while (n > 0) do
+        result = hex_digits[n % 16] + result
+        n //= 16
+    
+    return result
