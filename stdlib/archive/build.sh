@@ -56,6 +56,7 @@ case "$TARGET_OS" in
 
         CMAKE_ARGS+=(
             "-DCMAKE_C_COMPILER=$CC"
+            "-DENABLE_WERROR=OFF"
         )
         ;;
 
@@ -64,13 +65,30 @@ case "$TARGET_OS" in
 
         CMAKE_ARGS+=(
             "-DCMAKE_C_COMPILER=$CC"
+            "-DENABLE_WERROR=OFF"
         )
         ;;
 
     windows)
         CC="${CC:-x86_64-w64-mingw32-gcc}"
         MINGW_SYSROOT="$("$CC" -print-sysroot)"
-        MINGW_PREFIX="$MINGW_SYSROOT/mingw"
+
+        if [ -d "$MINGW_SYSROOT/mingw" ]; then
+            MINGW_PREFIX="$MINGW_SYSROOT/mingw"
+        elif [ -d "$MINGW_SYSROOT/include" ]; then
+            MINGW_PREFIX="$MINGW_SYSROOT"
+        elif [ -d "/mingw/include" ]; then
+            MINGW_PREFIX="/mingw"
+        else
+            echo "ERROR: Cannot determine MinGW target prefix"
+            echo "  compiler: $CC"
+            echo "  sysroot:  $MINGW_SYSROOT"
+            exit 1
+        fi
+
+        echo "Using compiler: $CC"
+        echo "MinGW sysroot: $MINGW_SYSROOT"
+        echo "MinGW prefix:  $MINGW_PREFIX"
 
         CMAKE_ARGS+=(
             "-DCMAKE_SYSTEM_NAME=Windows"
@@ -85,8 +103,8 @@ case "$TARGET_OS" in
             "-DCMAKE_FIND_ROOT_PATH_MODE_PACKAGE=ONLY"
 
             "-DENABLE_ZLIB=ON"
-            "-DZLIB_LIBRARY=$MINGW_PREFIX/lib/libz.dll.a"
             "-DZLIB_INCLUDE_DIR=$MINGW_PREFIX/include"
+            "-DZLIB_LIBRARY=$MINGW_PREFIX/lib/libz.dll.a"
 
             "-DENABLE_OPENSSL=OFF"
             "-DENABLE_MBEDTLS=OFF"
