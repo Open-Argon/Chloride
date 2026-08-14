@@ -402,7 +402,11 @@ void tls_close(tls_conn_t *conn) {
   }
   if (conn->ctx)
     SSL_CTX_free(conn->ctx);
-  if (conn->sock >= 0)
+  #ifdef _WIN32
+      if (conn->sock != INVALID_SOCKET)
+  #else
+      if (conn->sock >= 0)
+  #endif
     net_close(conn->sock);
 }
 

@@ -22,6 +22,13 @@ target_include_directories(network PRIVATE
     "${ARGON_INCLUDE}"
 )
 
+if(MINGW)
+    target_compile_definitions(network PRIVATE
+        WIN32
+        _WIN32_WINNT=0x0601
+    )
+endif()
+
 target_link_libraries(network PRIVATE
     OpenSSL::SSL
     OpenSSL::Crypto
