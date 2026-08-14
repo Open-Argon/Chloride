@@ -7,13 +7,12 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-
 ROOT_DIR="$(pwd)"
 
 cd "$SCRIPT_DIR"
 
 # Parse make-style arguments
-TARGET_OS="linux"  # default
+TARGET_OS="linux"
 
 for arg in "$@"; do
     case "$arg" in
@@ -26,19 +25,23 @@ done
 case "$TARGET_OS" in
     linux)
         HOST_PROFILE="default"
+        BUILD_ARGS=()
         ;;
 
     linux-arm64)
         HOST_PROFILE="$ROOT_DIR/aarch64-linux-gnu.txt"
+        BUILD_ARGS=()
         ;;
 
     windows)
         HOST_PROFILE="$ROOT_DIR/mingw-x86_64.txt"
+        BUILD_ARGS=(
+            "--build=libarchive/*"
+        )
         ;;
 
     *)
         echo "Unsupported TARGET_OS: $TARGET_OS"
-        echo "Supported targets: linux, linux-arm64, windows"
         exit 1
         ;;
 esac
@@ -52,7 +55,8 @@ rm -rf native/bin
 conan install . \
     --profile:build=default \
     --profile:host="$HOST_PROFILE" \
-    --build=missing
+    --build=missing \
+    "${BUILD_ARGS[@]}"
 
 conan build . \
     --profile:build=default \
