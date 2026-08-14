@@ -28,7 +28,14 @@ ifeq ($(TARGET_OS),windows)
 	LIB_EXT := dll
 
 	SHARED_LDFLAGS := -shared
-	PLATFORM_LDFLAGS := -lz -liconv -lws2_32 -lbcrypt -lxml2
+	PLATFORM_LDFLAGS := \
+		-lz \
+		-lws2_32 \
+		-lbcrypt \
+		-lole32 \
+		-loleaut32 \
+		-lxmllite \
+		-luuid
 
 	PLATFORM_CFLAGS :=
 

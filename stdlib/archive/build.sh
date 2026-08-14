@@ -123,31 +123,96 @@ case "$TARGET_OS" in
         CC="${CC:-x86_64-w64-mingw32-gcc}"
 
         MINGW_TARGET="$("$CC" -dumpmachine)"
-        MINGW_PREFIX="/usr/$MINGW_TARGET"
 
         echo "Using compiler: $CC"
         echo "MinGW target:  $MINGW_TARGET"
+
+        # --------------------------------------------------------
+        # Determine MinGW prefix
+        #
+        # Debian:
+        #   /usr/x86_64-w64-mingw32/include
+        #   /usr/x86_64-w64-mingw32/lib
+        #
+        # Fedora:
+        #   /usr/x86_64-w64-mingw32/sys-root/mingw/include
+        #   /usr/x86_64-w64-mingw32/sys-root/mingw/lib
+        # --------------------------------------------------------
+
+        MINGW_ROOT="/usr/$MINGW_TARGET"
+
+        if [ -d "$MINGW_ROOT/sys-root/mingw" ]; then
+            MINGW_PREFIX="$MINGW_ROOT/sys-root/mingw"
+        elif [ -d "$MINGW_ROOT" ]; then
+            MINGW_PREFIX="$MINGW_ROOT"
+        else
+            echo "ERROR: Cannot determine MinGW prefix"
+            echo "  compiler: $CC"
+            echo "  target:   $MINGW_TARGET"
+            echo "  expected:"
+            echo "    $MINGW_ROOT"
+            echo "    $MINGW_ROOT/sys-root/mingw"
+            exit 1
+        fi
+
+        echo "MinGW root:    $MINGW_ROOT"
         echo "MinGW prefix:  $MINGW_PREFIX"
 
-        ZLIB_INCLUDE_DIR="$MINGW_PREFIX/include"
-        ZLIB_LIBRARY="$MINGW_PREFIX/lib/libz.a"
+        # --------------------------------------------------------
+        # Locate zlib
+        # --------------------------------------------------------
 
-        if [ ! -f "$ZLIB_INCLUDE_DIR/zlib.h" ]; then
+        ZLIB_INCLUDE_DIR=""
+        ZLIB_LIBRARY=""
+
+        for dir in \
+            "$MINGW_PREFIX/include" \
+            "$MINGW_ROOT/include"
+        do
+            if [ -f "$dir/zlib.h" ]; then
+                ZLIB_INCLUDE_DIR="$dir"
+                break
+            fi
+        done
+
+        for lib in \
+            "$MINGW_PREFIX/lib/libz.a" \
+            "$MINGW_PREFIX/lib/libz.dll.a" \
+            "$MINGW_ROOT/lib/libz.a" \
+            "$MINGW_ROOT/lib/libz.dll.a"
+        do
+            if [ -f "$lib" ]; then
+                ZLIB_LIBRARY="$lib"
+                break
+            fi
+        done
+
+        if [ -z "$ZLIB_INCLUDE_DIR" ]; then
             echo "ERROR: MinGW zlib development headers not found"
-            echo "  expected: $ZLIB_INCLUDE_DIR/zlib.h"
-            echo "  install:  libz-mingw-w64-dev"
+            echo "  compiler: $CC"
+            echo "  target:   $MINGW_TARGET"
+            echo "  prefix:   $MINGW_PREFIX"
+            echo ""
+            echo "Install the MinGW zlib development package:"
+            echo "  Debian: libz-mingw-w64-dev"
+            echo "  Fedora: mingw32-zlib"
             exit 1
         fi
 
-        if [ ! -f "$ZLIB_LIBRARY" ]; then
+        if [ -z "$ZLIB_LIBRARY" ]; then
             echo "ERROR: MinGW zlib library not found"
-            echo "  expected: $ZLIB_LIBRARY"
-            echo "  install:  libz-mingw-w64-dev"
+            echo "  compiler: $CC"
+            echo "  target:   $MINGW_TARGET"
+            echo "  prefix:   $MINGW_PREFIX"
             exit 1
         fi
 
-        echo "zlib include: $ZLIB_INCLUDE_DIR"
-        echo "zlib library: $ZLIB_LIBRARY"
+        echo "zlib include:  $ZLIB_INCLUDE_DIR"
+        echo "zlib library:  $ZLIB_LIBRARY"
+
+        # --------------------------------------------------------
+        # CMake cross compilation
+        # --------------------------------------------------------
 
         CMAKE_ARGS+=(
             "-DCMAKE_SYSTEM_NAME=Windows"
@@ -165,9 +230,12 @@ case "$TARGET_OS" in
             "-DZLIB_INCLUDE_DIR=$ZLIB_INCLUDE_DIR"
             "-DZLIB_LIBRARY=$ZLIB_LIBRARY"
 
+            "-DENABLE_ICONV=OFF"
+            "-DENABLE_LIBXML2=OFF"
             "-DENABLE_OPENSSL=OFF"
             "-DENABLE_MBEDTLS=OFF"
             "-DENABLE_NETTLE=OFF"
+
             "-DLIBMD_FOUND:BOOL=FALSE"
 
             "-DENABLE_WERROR=OFF"
