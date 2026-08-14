@@ -5,7 +5,7 @@
 # ------------------------------------------------------------
 # Stdlib metadata
 # ------------------------------------------------------------
-LIB        := network
+LIB        := archive
 SRC_DIR    := native
 BIN_DIR    := native/bin
 
@@ -28,12 +28,9 @@ ifeq ($(TARGET_OS),windows)
 	LIB_EXT := dll
 
 	SHARED_LDFLAGS := -shared
-	PLATFORM_LDFLAGS := \
-		-lws2_32 -lssl -lcrypto -lcrypt32
+	PLATFORM_LDFLAGS := -lz -liconv -lws2_32 -lbcrypt -lxml2
 
-	PLATFORM_CFLAGS := \
-		-DWIN32 \
-		-D_WIN32_WINNT=0x0601
+	PLATFORM_CFLAGS :=
 
 else ifeq ($(UNAME_S),Darwin)
 
@@ -46,7 +43,7 @@ else ifeq ($(UNAME_S),Darwin)
 		-dynamiclib \
 		-Wl,-install_name,@rpath/$(LIB).dylib
 
-	PLATFORM_LDFLAGS :=
+	PLATFORM_LDFLAGS := -lzstd -llzma -lbz2 -lz -lcrypto -lxml2
 	PLATFORM_CFLAGS :=
 
 else
@@ -58,7 +55,7 @@ else
 	LIB_EXT := so
 
 	SHARED_LDFLAGS := -shared
-	PLATFORM_LDFLAGS :=
+	PLATFORM_LDFLAGS := -lzstd -llzma -lbz2 -lz -lcrypto -lxml2
 	PLATFORM_CFLAGS :=
 
 endif
@@ -75,33 +72,18 @@ COMMON_CFLAGS := \
 ARGON_INCLUDE ?= ../../include
 
 # ------------------------------------------------------------
-# Optional TLS support (client-side), backed by OpenSSL.
-#   WITH_TLS=1 (default) - build with TLS if pkg-config finds openssl
-#   WITH_TLS=0            - force-disable TLS support
+# libarchive location
+#   By default we build/link against the vendored copy at
+#   ../../external/libarchive, same pattern regex uses for pcre2.
 # ------------------------------------------------------------
-WITH_TLS ?= 1
-
-ifeq ($(WITH_TLS),1)
-	OPENSSL_CFLAGS := $(shell pkg-config --cflags openssl 2>/dev/null)
-	OPENSSL_LIBS   := $(shell pkg-config --libs openssl 2>/dev/null)
-
-	ifeq ($(OPENSSL_LIBS),)
-		# pkg-config couldn't find it; fall back to plain -lssl -lcrypto and
-		# hope it's on the default include/lib path.
-		OPENSSL_LIBS := -lssl -lcrypto
-	endif
-
-	TLS_CFLAGS :=  $(OPENSSL_CFLAGS)
-	TLS_LDFLAGS := $(OPENSSL_LIBS)
-else
-	TLS_CFLAGS := -DNET_WITHOUT_TLS
-	TLS_LDFLAGS :=
-endif
+LIBARCHIVE_DIR      ?= ../../external/libarchive
+LIBARCHIVE_BUILD_DIR ?= $(SRC_DIR)/libarchive/build
+LIBARCHIVE_INCLUDE  ?= $(LIBARCHIVE_DIR)/libarchive
 
 # ------------------------------------------------------------
 # Sources
 # ------------------------------------------------------------
-SRC := $(wildcard $(SRC_DIR)/*.c)
+SRC := $(wildcard $(SRC_DIR)/*.c) $(LIBARCHIVE_BUILD_DIR)/libarchive/libarchive.a
 OUT := $(BIN_DIR)/$(LIB).$(LIB_EXT)
 
 # ------------------------------------------------------------
@@ -123,14 +105,13 @@ $(OUT): $(SRC)
 	$(CC) \
 		$(COMMON_CFLAGS) \
 		$(PLATFORM_CFLAGS) \
-		$(TLS_CFLAGS) \
 		$(CFLAGS) \
 		-I$(ARGON_INCLUDE) \
+		-I$(LIBARCHIVE_INCLUDE) \
 		$(SHARED_LDFLAGS) \
 		-o $@ \
 		$^ \
-		$(PLATFORM_LDFLAGS) \
-		$(TLS_LDFLAGS)
+		$(PLATFORM_LDFLAGS)
 
 # ------------------------------------------------------------
 # Build variants

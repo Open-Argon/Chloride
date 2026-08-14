@@ -25,4 +25,5 @@
 	url = https://github.com/raysan5/raylib
 [submodule "external/libarchive"]
 	path = external/libarchive
-	url = https://github.com/libarchive/libarchive
+	url = https://git.wbell.dev/github-mirror/libarchive
+	branch = mingw-fixes

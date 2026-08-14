@@ -1,0 +1,123 @@
+# SPDX-FileCopyrightText: 2025, 2026 William Bell
+#
+# SPDX-License-Identifier: LGPL-3.0-or-later
+import "path" as path
+import "./exceptions" expose ArchiveError
+
+let __archive__ = load_native_code(path.resolve(program.file.directory, "native", "bin", "archive"+platform.lib_ext))
+
+class ArchiveEntry do
+  # Lightweight snapshot of "whatever the reader is currently pointing
+  # at" - captured eagerly on each next() so it stays valid even after
+  # the reader has moved on.
+  this.__init__(self, path, size, is_dir, mtime, mode) = do
+    self.path = path
+    self.size = size
+    self.is_dir = is_dir
+    self.mtime = mtime
+    self.mode = mode
+
+class ArchiveReader do
+  this.__new__(cls, source) = do
+    let instance = super.__init__(cls, source)
+    instance.__inited = false
+    return instance
+
+  this.__init__(self, source) = do
+    self.__inited = true
+    self.__closed = false
+    self.__source = source
+
+    if (is_instance(source, buffer)) do
+      self.__reader__ = __archive__.reader_open_memory(source, ArchiveError)
+    else do
+      self.__reader__ = __archive__.reader_open(source, ArchiveError)
+
+  this.close(self) = do
+    if (self.__closed) return null
+    __archive__.reader_close(self.__reader__)
+    self.__closed = true
+
+  # Advances to the next entry and returns an ArchiveEntry, or null
+  # at the end of the archive. Call read() / extract_to() before
+  # advancing again if you want that entry's data.
+  this.next(self) = do
+    let has_next = __archive__.reader_next(self.__reader__)
+    if (!has_next) return null
+
+    return ArchiveEntry(
+      __archive__.reader_entry_path(self.__reader__),
+      __archive__.reader_entry_size(self.__reader__),
+      __archive__.reader_entry_is_dir(self.__reader__),
+      __archive__.reader_entry_mtime(self.__reader__),
+      __archive__.reader_entry_mode(self.__reader__),
+    )
+
+  # Reads all remaining data for the current entry into one string.
+  this.read(self) = __archive__.reader_read_data(self.__reader__, ArchiveError)
+
+  # Reads at most max_len bytes of the current entry; returns null
+  # once the entry is exhausted. Useful for streaming large entries
+  # instead of pulling them fully into memory via read().
+  this.read_chunk(self, max_len) = __archive__.reader_read_chunk(self.__reader__, ArchiveError, max_len)
+
+  # Extracts the current entry straight to disk at dest_path.
+  this.extract_to(self, dest_path) = __archive__.reader_extract_to(self.__reader__, dest_path, ArchiveError)
+
+  # Iterates every entry, extracting each to dest_dir while
+  # preserving the archive's internal directory structure.
+  this.extract_all(self, dest_dir) = do
+    let entry = self.next()
+    while (entry != null) do
+      if (!entry.is_dir) do
+        __archive__.reader_extract_to(self.__reader__, path.join(dest_dir, entry.path), ArchiveError)
+      entry = self.next()
+
+class ArchiveWriter do
+  this.__new__(cls, dest, format, filter) = do
+    let instance = super.__init__(cls, dest, format, filter)
+    instance.__inited = false
+    return instance
+
+  # format: "tar" | "zip" | "cpio" | "7zip" | "iso9660"
+  # filter: "none" | "gzip" | "bzip2" | "xz" | "zstd" (ignored by
+  #   formats that don't use a separate compression filter, e.g. zip)
+  this.__init__(self, dest, format, filter) = do
+    self.__inited = true
+    self.__closed = false
+    self.__writer__ = __archive__.writer_open(dest, format, filter, ArchiveError)
+
+  this.close(self) = do
+    if (self.__closed) return null
+    __archive__.writer_close(self.__writer__)
+    self.__closed = true
+
+  # Adds a file already on disk at src_path, stored under
+  # archive_path inside the archive.
+  this.add_file(self, archive_path, src_path) = __archive__.writer_add_file(self.__writer__, archive_path, src_path, ArchiveError)
+
+  # Adds in-memory bytes as a file entry, without touching disk.
+  this.add_bytes(self, archive_path, data) = __archive__.writer_add_bytes(self.__writer__, archive_path, data, ArchiveError)
+
+  # Adds an empty directory entry.
+  this.add_dir(self, archive_path) = __archive__.writer_add_dir(self.__writer__, archive_path, ArchiveError)
+
+# ------------------------------------------------------------
+# Convenience free functions
+# ------------------------------------------------------------
+
+# extract(archive_path, dest_dir) -> null
+# Opens archive_path, extracts everything into dest_dir, closes it.
+let extract = (source, dest_dir) = do
+  let reader = ArchiveReader(source)
+  reader.extract_all(dest_dir)
+  reader.close()
+
+# create(dest_path, entries, format, filter) -> null
+# entries is a list of {archive_path: ..., src_path: ...} maps for
+# files on disk to bundle into a fresh archive at dest_path.
+let create = (dest_path, entries, format, filter) = do
+  let writer = ArchiveWriter(dest_path, format, filter)
+  for (entry in entries) do
+    writer.add_file(entry["archive_path"], entry["src_path"])
+  writer.close()

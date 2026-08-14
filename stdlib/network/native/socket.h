@@ -15,6 +15,7 @@
   #include <unistd.h>
   typedef int socket_t;
 #endif
+#include <stdbool.h>
 
 int  net_init(void);
 void net_cleanup(void);
@@ -51,9 +52,13 @@ int net_set_opt(socket_t s, int opt, int value);
 // Optional TLS support (client-side only), backed by OpenSSL.
 // Compiled in only when NET_WITH_TLS is defined by the build system.
 // ---------------------------------------------------------------------
-#ifdef NET_WITH_TLS
+#ifndef NET_WITHOUT_TLS
 
-typedef struct tls_conn tls_conn_t;
+typedef struct tls_conn {
+  socket_t sock;
+  struct ssl_ctx_st *ctx;
+  struct ssl_st *ssl;
+} tls_conn_t;
 
 // tls_connect: opens a TCP connection to host:port and performs a TLS
 // handshake, with SNI set to `host`.
@@ -62,8 +67,8 @@ typedef struct tls_conn tls_conn_t;
 //   ca_path       - optional path to a CA bundle (PEM) file. NULL uses the
 //                    system default trust store.
 // Returns a heap-allocated tls_conn_t* on success, NULL on failure.
-tls_conn_t *tls_connect(const char *host, int port, int verify_peer,
-                        const char *ca_path);
+bool tls_connect(const char *host, int port, int verify_peer,
+                       const char *ca_path, tls_conn_t *conn);
 
 // tls_send / tls_recv: like net_send/net_recv but over the TLS session.
 // Return >0 bytes transferred, 0 on clean shutdown, <0 on error.

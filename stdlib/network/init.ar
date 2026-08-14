@@ -16,6 +16,7 @@ let NET_OPT_SNDTIMEO  = 5
 # Poll bitmask constants
 let NET_POLL_READ  = 1
 let NET_POLL_WRITE = 2
+__net__.net_init()
 
 class SocketError(Exception) null
 class TLSError(Exception) null
@@ -61,7 +62,6 @@ class tcp do
   this.__refcount__=0
 
   this.__init__(self,port) = do
-    if (!this.__refcount__) __net__.net_init()
     this.__refcount__+=1
     self.__socket__ = __net__.net_listen(port, SocketError)
 
@@ -84,7 +84,6 @@ class tcp do
 
 class tcp_client do
   this.__init__(self, host, port) = do
-    __net__.net_init()
     self.__socket__ = __net__.net_connect(host, port, SocketError)
     self.__conn__   = tcp_connection(self.__socket__)
 
@@ -182,7 +181,6 @@ let __HEADER_TERM__ = buffer.from_string("\r\n\r\n")
 let __COLON_SPACE__ = buffer.from_string(": ")
 let __COLON__ = buffer.from_string(":")
 let __SPACE__ = buffer.from_string(" ")
-let __EMPTY_BUF__ = buffer.of_size(0)
 
 # Default cap on how many bytes of header data we'll buffer while
 # looking for the end of the header block (the blank line). This bounds
@@ -210,13 +208,16 @@ class HTTPResponse do
 
     self.__timeout_ms__ = timeout_ms
     self.__auto_close__ = auto_close
+    self.__content_length__ = null
+    self.__read__ = 0
     self.__body_done__ = false      # true once we've drained everything there is to drain
     self.__body_buf__ = []          # accumulated body chunks (buffers), once we start reading
 
     # Fold any bytes read past the header terminator straight in, so
     # nothing downstream has to special-case "leftover" separately from
     # "the rest of the body".
-    if (leftover != null && leftover.length > 0) self.__body_buf__.append(leftover)
+    if (leftover != null && leftover.length > 0) do
+      self.__body_buf__.append(leftover)
 
   this.ok(self) = do
     return self.status >= 200 && self.status < 300
@@ -225,11 +226,11 @@ class HTTPResponse do
   # not a valid integer (e.g. chunked responses, which aren't unchunked
   # here).
   this.content_length(self) = do
+    if (self.__content_length__!=null) return self.__content_length__
     for (value in self.headers) do
       if (value[0].lower() == "content-length") do
-        let n = number(self.headers[value[0]])
-        return n
-
+        self.__content_length__ = number(self.headers[value[0]])
+        return self.__content_length__
     return
 
   # __drain_body__(): internal. Pulls whatever's left of the body off
@@ -241,109 +242,64 @@ class HTTPResponse do
   
   this.__auto_closer__(self) = self.__auto_close__?self.close():null
 
-  this.__drain_body__(self) = do
+  this.__iter__(self) = self
+  this.__next__(self) = do
+    let chunk = self.chunk()
+    if (!chunk) throw StopIteration()
+    return chunk
+
+  this.chunk(self) = do
     if (self.__body_done__) return
-    if (self.conn == null) do
-      self.__body_done__ = true
-      return
+    if (self.conn == null) return
 
     let want = self.content_length()
 
-    let have = 0
-    for (chunk in self.__body_buf__) have += chunk.length
+    if (self.__body_buf__.length) do
+      let chunk = self.__body_buf__.pop(0)
+      self.__read__ = chunk.length
+      return chunk
 
-    if (want != null && have >= want) do
-      self.__body_done__ = true
+    if (want != null && self.__read__ >= want) do
       return self.__auto_closer__()
 
     # No Content-Length: fall back to "read until the peer closes",
     # matching this client's Connection: close behaviour. With
     # Content-Length: read exactly up to `want` bytes.
-    while (true) do
-      let ready = self.conn.poll(NET_POLL_READ, 0, self.__timeout_ms__)
-      if (ready == 0) throw HTTPError("timed out reading response body")
-      if (ready < 0) throw HTTPError("connection error while reading response body")
+    let ready = self.conn.poll(NET_POLL_READ, 0, self.__timeout_ms__)
+    if (ready == 0) throw HTTPError("timed out reading response body")
+    if (ready < 0) throw HTTPError("connection error while reading response body")
 
-      let chunk_buf = buffer.of_size(65536)
-      let n = self.conn.recv(chunk_buf)
-      if (n <= 0) break
+    let chunk_buf = buffer.of_size(65536)
+    let n = self.conn.recv(chunk_buf)
+    if (n <= 0) return self.__auto_closer__()
 
-      let chunk = n < chunk_buf.length ? chunk_buf[:n] : chunk_buf
-      self.__body_buf__.append(chunk)
-      have += chunk.length
-      if (want != null && have >= want) break
-
-    self.__body_done__ = true
-    self.__auto_closer__()
-
-  this.pipe(self, callback) = do
-    if (self.__body_done__) return
-    if (self.conn == null) do
-      self.__body_done__ = true
-      return
-
-    let want = self.content_length()
-
-    let have = 0
-    for (chunk in self.__body_buf__) do
-      callback(chunk)
-      have += chunk.length
-
-    if (want != null && have >= want) do
-      self.__body_done__ = true
-      return self.__auto_closer__()
-
-    # No Content-Length: fall back to "read until the peer closes",
-    # matching this client's Connection: close behaviour. With
-    # Content-Length: read exactly up to `want` bytes.
-    while (true) do
-      let ready = self.conn.poll(NET_POLL_READ, 0, self.__timeout_ms__)
-      if (ready == 0) throw HTTPError("timed out reading response body")
-      if (ready < 0) throw HTTPError("connection error while reading response body")
-
-      let chunk_buf = buffer.of_size(65536)
-      let n = self.conn.recv(chunk_buf)
-      if (n <= 0) break
-
-      let chunk = n < chunk_buf.length ? chunk_buf[:n] : chunk_buf
-      callback(chunk)
-      have += chunk.length
-      if (want != null && have >= want) break
-
-    self.__body_done__ = true
-    self.__auto_closer__()
+    let chunk = n < chunk_buf.length ? chunk_buf[:n] : chunk_buf
+    self.__read__ += chunk.length
+    return chunk
 
   # __body_buffer__(): internal. All accumulated body chunks merged
   # into a single buffer.
   this.__body_buffer__(self) = do
-    self.__drain_body__()
-    if (self.__body_buf__.length == 0) return __EMPTY_BUF__
-    if (self.__body_buf__.length == 1) return self.__body_buf__[0]
+    let buf = array(self)
+    if (buf.length == 1) return buf[0]
 
     let merged = buffer.of_size(0)
-    for (chunk in self.__body_buf__) merged.extend(chunk)
-    # Collapse back down to a single chunk so repeated calls stay cheap.
-    self.__body_buf__ = [merged]
+    for (chunk in buf) merged.extend(chunk)
     return merged
 
   # body_bytes() / bytes(): the full body as a buffer. This is the
   # native representation - reading it doesn't cost a string
   # conversion.
-  this.body_bytes(self) = do
-    return self.__body_buffer__()
-
   this.bytes(self) = do
-    return self.body_bytes()
+    return self.__body_buffer__()
 
   # body_string() / text(): the full body as a string. Buffers stay
   # buffers all the way through; the array .map() makes turning a list
   # of chunks into a joined string a one-liner, and to_string() is only
   # called once we actually need text.
-  this.body_string(self) = do
-    return self.__body_buffer__().to_string()
 
   this.text(self) = do
-    return self.body_string()
+    return self.__body_buffer__().to_string()
 
   this.json(self) = do
     return json.parse(self.text())
@@ -500,14 +456,14 @@ class http do
         parsed_header["status"], parsed_header["status_text"], parsed_header["headers"],
         conn, header_result["leftover"], timeout_ms, auto_close)
 
-  this.get(url, headers=null, verify_peer=true, ca_path=null, timeout_ms=30000, max_header_size=__DEFAULT_MAX_HEADER_SIZE__) = do
-    return this.request("GET", url, headers, null, verify_peer, ca_path, timeout_ms, max_header_size)
+  this.get(url, headers=null, verify_peer=true, ca_path=null, timeout_ms=30000, max_header_size=__DEFAULT_MAX_HEADER_SIZE__, auto_close=true) = do
+    return this.request("GET", url, headers, null, verify_peer, ca_path, timeout_ms, max_header_size, auto_close)
 
-  this.post(url, body=null, headers=null, verify_peer=true, ca_path=null, timeout_ms=30000, max_header_size=__DEFAULT_MAX_HEADER_SIZE__) = do
-    return this.request("POST", url, headers, body, verify_peer, ca_path, timeout_ms, max_header_size)
+  this.post(url, body=null, headers=null, verify_peer=true, ca_path=null, timeout_ms=30000, max_header_size=__DEFAULT_MAX_HEADER_SIZE__, auto_close=true) = do
+    return this.request("POST", url, headers, body, verify_peer, ca_path, timeout_ms, max_header_size, auto_close)
 
-  this.put(url, body=null, headers=null, verify_peer=true, ca_path=null, timeout_ms=30000, max_header_size=__DEFAULT_MAX_HEADER_SIZE__) = do
-    return this.request("PUT", url, headers, body, verify_peer, ca_path, timeout_ms, max_header_size)
+  this.put(url, body=null, headers=null, verify_peer=true, ca_path=null, timeout_ms=30000, max_header_size=__DEFAULT_MAX_HEADER_SIZE__, auto_close=true) = do
+    return this.request("PUT", url, headers, body, verify_peer, ca_path, timeout_ms, max_header_size, auto_close)
 
-  this.del(url, headers=null, verify_peer=true, ca_path=null, timeout_ms=30000, max_header_size=__DEFAULT_MAX_HEADER_SIZE__) = do
-    return this.request("DELETE", url, headers, null, verify_peer, ca_path, timeout_ms, max_header_size)
+  this.del(url, headers=null, verify_peer=true, ca_path=null, timeout_ms=30000, max_header_size=__DEFAULT_MAX_HEADER_SIZE__, auto_close=true) = do
+    return this.request("DELETE", url, headers, null, verify_peer, ca_path, timeout_ms, max_header_size, auto_close)

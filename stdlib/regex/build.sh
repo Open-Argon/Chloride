@@ -40,3 +40,5 @@ echo "Building for $TARGET_OS using $CC..."
     cmake --build $SCRIPT_DIR/native/pcre2/build)
 
 (cd $SCRIPT_DIR && make $@)
+
+rm -r $SCRIPT_DIR/native/pcre2

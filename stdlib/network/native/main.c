@@ -172,7 +172,9 @@ ARGON_FUNCTION(net_recv_string, {
 
   int n = net_recv(connection_socket, data, size);
 
-  return api->string_to_argon((struct string){data, n});
+  ArgonObject* str_obj = api->string_to_argon((struct string){data, n});
+  free(data);
+  return str_obj;
 })
 
 ARGON_FUNCTION(net_close, {
@@ -297,7 +299,7 @@ ARGON_FUNCTION(net_set_opt, {
   return api->i64_to_argon(net_set_opt(sock, (int)opt, (int)value));
 })
 
-#ifdef NET_WITH_TLS
+#ifndef NET_WITHOUT_TLS
 
 ARGON_FUNCTION(tls_connect, {
   (void)state;
@@ -326,15 +328,14 @@ ARGON_FUNCTION(tls_connect, {
     ca_path = ca_path_str.data;
   }
 
-  tls_conn_t *conn =
-      tls_connect(host.data, (int)port, (int)verify_peer, ca_path);
-  if (!conn)
+  tls_conn_t conn;
+  if (!tls_connect(host.data, (int)port, (int)verify_peer, ca_path, &conn))
     return api->throw_argon_error(err, argv[4],
                                   "failed to establish TLS connection to "
                                   "%s:%" PRId64 ": %s",
                                   host.data, port, tls_last_error());
 
-  ArgonObject *buf_obj = api->create_argon_buffer(sizeof(tls_conn_t *));
+  ArgonObject *buf_obj = api->create_argon_buffer(sizeof(tls_conn_t));
   struct buffer buf = api->argon_buffer_to_buffer(buf_obj, err);
   if (api->is_error(err))
     return api->ARGON_NULL;
@@ -350,7 +351,7 @@ ARGON_FUNCTION(tls_send, {
   struct buffer conn_buffer = api->argon_buffer_to_buffer(argv[0], err);
   if (api->is_error(err))
     return api->ARGON_NULL;
-  tls_conn_t *conn = *(tls_conn_t **)conn_buffer.data;
+  tls_conn_t *conn = conn_buffer.data;
 
   struct buffer data_buffer = api->argon_buffer_to_buffer(argv[1], err);
   if (api->is_error(err))
@@ -367,7 +368,7 @@ ARGON_FUNCTION(tls_send_string, {
   struct buffer conn_buffer = api->argon_buffer_to_buffer(argv[0], err);
   if (api->is_error(err))
     return api->ARGON_NULL;
-  tls_conn_t *conn = *(tls_conn_t **)conn_buffer.data;
+  tls_conn_t *conn = conn_buffer.data;
 
   struct string data_string = api->argon_to_string(argv[1], err);
   if (api->is_error(err))
@@ -385,7 +386,7 @@ ARGON_FUNCTION(tls_recv, {
   struct buffer conn_buffer = api->argon_buffer_to_buffer(argv[0], err);
   if (api->is_error(err))
     return api->ARGON_NULL;
-  tls_conn_t *conn = *(tls_conn_t **)conn_buffer.data;
+  tls_conn_t *conn = conn_buffer.data;
 
   struct buffer data_buffer = api->argon_buffer_to_buffer(argv[1], err);
   if (api->is_error(err))
@@ -402,7 +403,7 @@ ARGON_FUNCTION(tls_recv_string, {
   struct buffer conn_buffer = api->argon_buffer_to_buffer(argv[0], err);
   if (api->is_error(err))
     return api->ARGON_NULL;
-  tls_conn_t *conn = *(tls_conn_t **)conn_buffer.data;
+  tls_conn_t *conn = conn_buffer.data;
 
   int64_t size = api->argon_to_i64(argv[1], err);
   if (api->is_error(err))
@@ -412,11 +413,12 @@ ARGON_FUNCTION(tls_recv_string, {
 
   int n = tls_recv(conn, data, size);
   if (n < 0) {
-    free(data);
     n = 0;
   }
 
-  return api->string_to_argon((struct string){data, n});
+  ArgonObject* str_obj = api->string_to_argon((struct string){data, n});
+  free(data);
+  return str_obj;
 })
 
 ARGON_FUNCTION(tls_poll, {
@@ -427,7 +429,7 @@ ARGON_FUNCTION(tls_poll, {
   struct buffer conn_buffer = api->argon_buffer_to_buffer(argv[0], err);
   if (api->is_error(err))
     return api->ARGON_NULL;
-  tls_conn_t *conn = *(tls_conn_t **)conn_buffer.data;
+  tls_conn_t *conn = conn_buffer.data;
 
   int64_t want_read = api->argon_to_i64(argv[1], err);
   if (api->is_error(err))
@@ -451,7 +453,7 @@ ARGON_FUNCTION(tls_close, {
   struct buffer conn_buffer = api->argon_buffer_to_buffer(argv[0], err);
   if (api->is_error(err))
     return api->ARGON_NULL;
-  tls_conn_t *conn = *(tls_conn_t **)conn_buffer.data;
+  tls_conn_t *conn = conn_buffer.data;
 
   tls_close(conn);
   return api->ARGON_NULL;
@@ -496,7 +498,7 @@ void argon_module_init(ArgonState *vm, ArgonNativeAPI *api, ArgonError *err,
   REGISTER_ARGON_FUNCTION(net_peek)
   REGISTER_ARGON_FUNCTION(net_set_opt)
   REGISTER_ARGON_FUNCTION(tls_supported)
-#ifdef NET_WITH_TLS
+#ifndef NET_WITHOUT_TLS
   REGISTER_ARGON_FUNCTION(tls_connect)
   REGISTER_ARGON_FUNCTION(tls_send)
   REGISTER_ARGON_FUNCTION(tls_send_string)

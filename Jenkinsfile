@@ -333,11 +333,11 @@ pipeline {
                                 --name macos-build-arm64 \
                                 --dir macos-artifacts
 
-                            echo "Downloading macOS x86_64 artifact..."
-                            gh run download "$RUN_ID" \
-                                --repo "$GH_REPO" \
-                                --name macos-build-x86_64 \
-                                --dir macos-artifacts
+                            # echo "Downloading macOS x86_64 artifact..."
+                            # gh run download "$RUN_ID" \
+                            #     --repo "$GH_REPO" \
+                            #     --name macos-build-x86_64 \
+                            #     --dir macos-artifacts
                         '''
                     }
                 }

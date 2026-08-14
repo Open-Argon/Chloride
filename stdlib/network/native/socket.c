@@ -19,6 +19,7 @@ typedef WSAPOLLFD poll_fd_t;
 #include <netinet/in.h>
 #include <netinet/tcp.h> /* TCP_NODELAY */
 #include <poll.h>
+#include <stdbool.h>
 #include <sys/socket.h>
 #include <unistd.h>
 typedef struct pollfd poll_fd_t;
@@ -217,17 +218,11 @@ int net_set_opt(socket_t s, int opt, int value) {
   }
 }
 
-#ifdef NET_WITH_TLS
+#ifndef NET_WITHOUT_TLS
 
 #include <openssl/err.h>
 #include <openssl/ssl.h>
 #include <openssl/x509v3.h>
-
-struct tls_conn {
-  socket_t sock;
-  SSL_CTX *ctx;
-  SSL *ssl;
-};
 
 static int tls_globally_initialised = 0;
 
@@ -251,8 +246,52 @@ const char *tls_last_error(void) {
   return buf;
 }
 
-tls_conn_t *tls_connect(const char *host, int port, int verify_peer,
-                        const char *ca_path) {
+#ifdef _WIN32
+#include <windows.h>
+#include <wincrypt.h>
+#endif
+
+static int tls_load_default_ca(SSL_CTX *ctx) {
+#ifdef _WIN32
+    X509_STORE *store = SSL_CTX_get_cert_store(ctx);
+
+    HCERTSTORE cert_store = CertOpenStore(
+        CERT_STORE_PROV_SYSTEM_A,
+        0,
+        0,
+        CERT_SYSTEM_STORE_CURRENT_USER,
+        "ROOT"
+    );
+
+    if (!cert_store)
+        return 0;
+
+    int loaded = 0;
+    PCCERT_CONTEXT cert = NULL;
+
+    while ((cert = CertEnumCertificatesInStore(cert_store, cert)) != NULL) {
+        const unsigned char *data = cert->pbCertEncoded;
+
+        X509 *x509 = d2i_X509(NULL, &data, cert->cbCertEncoded);
+
+        if (x509) {
+            if (X509_STORE_add_cert(store, x509) == 1)
+                loaded = 1;
+
+            X509_free(x509);
+        }
+    }
+
+    CertCloseStore(cert_store, 0);
+
+    return loaded;
+#else
+    return SSL_CTX_set_default_verify_paths(ctx) == 1;
+#endif
+}
+
+bool tls_connect(const char *host, int port, int verify_peer,
+                       const char *ca_path, tls_conn_t *conn) {
   tls_global_init_once();
 
   socket_t sock = net_connect(host, port);
@@ -261,13 +300,13 @@ tls_conn_t *tls_connect(const char *host, int port, int verify_peer,
 #else
   if (sock < 0)
 #endif
-    return NULL;
+    return false;
 
   const SSL_METHOD *method = TLS_client_method();
   SSL_CTX *ctx = SSL_CTX_new(method);
   if (!ctx) {
     net_close(sock);
-    return NULL;
+    return false;
   }
 
   /* Modern TLS only: 1.2 minimum. */
@@ -279,12 +318,12 @@ tls_conn_t *tls_connect(const char *host, int port, int verify_peer,
     if (ca_path && ca_path[0]) {
       loaded = SSL_CTX_load_verify_locations(ctx, ca_path, NULL) == 1;
     } else {
-      loaded = SSL_CTX_set_default_verify_paths(ctx) == 1;
+      loaded = tls_load_default_ca(ctx);
     }
     if (!loaded) {
       SSL_CTX_free(ctx);
       net_close(sock);
-      return NULL;
+      return false;
     }
   } else {
     SSL_CTX_set_verify(ctx, SSL_VERIFY_NONE, NULL);
@@ -294,7 +333,7 @@ tls_conn_t *tls_connect(const char *host, int port, int verify_peer,
   if (!ssl) {
     SSL_CTX_free(ctx);
     net_close(sock);
-    return NULL;
+    return false;
   }
 
   /* SNI */
@@ -310,28 +349,20 @@ tls_conn_t *tls_connect(const char *host, int port, int verify_peer,
     SSL_free(ssl);
     SSL_CTX_free(ctx);
     net_close(sock);
-    return NULL;
+    return false;
   }
 
   if (SSL_connect(ssl) != 1) {
     SSL_free(ssl);
     SSL_CTX_free(ctx);
     net_close(sock);
-    return NULL;
+    return false;
   }
 
-  tls_conn_t *conn = malloc(sizeof(tls_conn_t));
-  if (!conn) {
-    SSL_shutdown(ssl);
-    SSL_free(ssl);
-    SSL_CTX_free(ctx);
-    net_close(sock);
-    return NULL;
-  }
   conn->sock = sock;
   conn->ctx = ctx;
   conn->ssl = ssl;
-  return conn;
+  return true;
 }
 
 int tls_send(tls_conn_t *conn, const void *buf, int len) {
@@ -356,8 +387,7 @@ int tls_recv(tls_conn_t *conn, void *buf, int len) {
   return n;
 }
 
-int tls_poll(tls_conn_t *conn, int want_read, int want_write,
-            int timeout_ms) {
+int tls_poll(tls_conn_t *conn, int want_read, int want_write, int timeout_ms) {
   if (!conn)
     return -1;
   return net_poll(conn->sock, want_read, want_write, timeout_ms);
@@ -374,7 +404,6 @@ void tls_close(tls_conn_t *conn) {
     SSL_CTX_free(conn->ctx);
   if (conn->sock >= 0)
     net_close(conn->sock);
-  free(conn);
 }
 
 #endif // NET_WITH_TLS
