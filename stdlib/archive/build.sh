@@ -114,46 +114,73 @@ case "$TARGET_OS" in
         CC="${CC:-x86_64-w64-mingw32-gcc}"
 
         MINGW_TARGET="$("$CC" -dumpmachine)"
-        MINGW_ROOT="/usr/$MINGW_TARGET"
-
-        if [ ! -d "$MINGW_ROOT" ]; then
-            echo "ERROR: MinGW target root not found"
-            echo "  compiler: $CC"
-            echo "  target:   $MINGW_TARGET"
-            echo "  root:     $MINGW_ROOT"
-            exit 1
-        fi
-
-        if [ -d "$MINGW_ROOT/sys-root/mingw/include" ]; then
-            MINGW_PREFIX="$MINGW_ROOT/sys-root/mingw"
-        elif [ -d "$MINGW_ROOT/include" ]; then
-            MINGW_PREFIX="$MINGW_ROOT"
-        else
-            echo "ERROR: Cannot determine MinGW target prefix"
-            echo "  compiler: $CC"
-            echo "  target:   $MINGW_TARGET"
-            echo "  root:     $MINGW_ROOT"
-            exit 1
-        fi
 
         echo "Using compiler: $CC"
         echo "MinGW target:  $MINGW_TARGET"
-        echo "MinGW prefix:  $MINGW_PREFIX"
 
-        ZLIB_INCLUDE="$MINGW_PREFIX/include"
-        ZLIB_LIBRARY="$MINGW_PREFIX/lib/libz.dll.a"
+        # Ask GCC where its target sysroot/prefix actually is.
+        MINGW_SYSROOT="$("$CC" -print-sysroot)"
 
-        if [ ! -f "$ZLIB_INCLUDE/zlib.h" ]; then
-            echo "ERROR: MinGW zlib headers not found:"
-            echo "  $ZLIB_INCLUDE/zlib.h"
+        if [ -z "$MINGW_SYSROOT" ] || [ "$MINGW_SYSROOT" = "/" ]; then
+            # Debian-style MinGW installations generally don't expose a
+            # useful sysroot through -print-sysroot.
+            MINGW_PREFIX="/usr/$MINGW_TARGET"
+        else
+            if [ -d "$MINGW_SYSROOT/mingw" ]; then
+                MINGW_PREFIX="$MINGW_SYSROOT/mingw"
+            else
+                MINGW_PREFIX="$MINGW_SYSROOT"
+            fi
+        fi
+
+        echo "MinGW prefix: $MINGW_PREFIX"
+
+        # Locate zlib using the compiler's own search paths rather than
+        # assuming a particular distro layout.
+        ZLIB_INCLUDE_DIR=""
+        ZLIB_LIBRARY=""
+
+        for dir in \
+            "$MINGW_PREFIX/include" \
+            "/usr/$MINGW_TARGET/include" \
+            "/usr/lib/gcc-cross/$MINGW_TARGET/include"
+        do
+            if [ -f "$dir/zlib.h" ]; then
+                ZLIB_INCLUDE_DIR="$dir"
+                break
+            fi
+        done
+
+        for lib in \
+            "$MINGW_PREFIX/lib/libz.dll.a" \
+            "$MINGW_PREFIX/lib/libz.a" \
+            "/usr/$MINGW_TARGET/lib/libz.dll.a" \
+            "/usr/$MINGW_TARGET/lib/libz.a"
+        do
+            if [ -f "$lib" ]; then
+                ZLIB_LIBRARY="$lib"
+                break
+            fi
+        done
+
+        if [ -z "$ZLIB_INCLUDE_DIR" ]; then
+            echo "ERROR: MinGW zlib headers not found"
+            echo "  compiler: $CC"
+            echo "  target:   $MINGW_TARGET"
+            echo "  prefix:   $MINGW_PREFIX"
             exit 1
         fi
 
-        if [ ! -f "$ZLIB_LIBRARY" ]; then
-            echo "ERROR: MinGW zlib library not found:"
-            echo "  $ZLIB_LIBRARY"
+        if [ -z "$ZLIB_LIBRARY" ]; then
+            echo "ERROR: MinGW zlib library not found"
+            echo "  compiler: $CC"
+            echo "  target:   $MINGW_TARGET"
+            echo "  prefix:   $MINGW_PREFIX"
             exit 1
         fi
+
+        echo "zlib include: $ZLIB_INCLUDE_DIR"
+        echo "zlib library: $ZLIB_LIBRARY"
 
         CMAKE_ARGS+=(
             "-DCMAKE_SYSTEM_NAME=Windows"
@@ -167,11 +194,9 @@ case "$TARGET_OS" in
             "-DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=ONLY"
             "-DCMAKE_FIND_ROOT_PATH_MODE_PACKAGE=ONLY"
 
-            "-DCMAKE_C_FLAGS=-I$ZLIB_INCLUDE"
-
-            "-DZLIB_INCLUDE_DIR=$ZLIB_INCLUDE"
-            "-DZLIB_LIBRARY=$ZLIB_LIBRARY"
             "-DENABLE_ZLIB=ON"
+            "-DZLIB_INCLUDE_DIR=$ZLIB_INCLUDE_DIR"
+            "-DZLIB_LIBRARY=$ZLIB_LIBRARY"
 
             "-DENABLE_OPENSSL=OFF"
             "-DENABLE_MBEDTLS=OFF"
