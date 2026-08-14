@@ -15,7 +15,9 @@
 #if defined(_WIN32) || defined(_WIN64)
 #include <windows.h>
 #else
+#include <fcntl.h>
 #include <sys/types.h>
+#include <unistd.h>
 #endif
 
 ARGON_FUNCTION(open_handle, {
@@ -634,9 +636,519 @@ ARGON_FUNCTION(open_stdnull, {
   return handle_obj;
 })
 
+/*
+ * Temporary files/directories
+ *
+ * temp_file(pattern)
+ * temp_dir(pattern)
+ *
+ * The pattern is relative to the platform's temporary directory unless
+ * it contains an absolute path.
+ *
+ * '*' is replaced with random characters.
+ *
+ * Examples:
+ *
+ *   temp_file("argon-*")
+ *   temp_file("argon-*.tmp")
+ *   temp_dir("argon-*")
+ *
+ * The returned value is the actual path that was created.
+ */
+
+#define ARGON_TEMP_RANDOM_CHARS \
+  "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+
+#define ARGON_TEMP_RANDOM_LENGTH 12
+
+static const char *argon_get_temp_directory(void) {
+#if defined(_WIN32) || defined(_WIN64)
+
+  static char temp_path[MAX_PATH + 1];
+  static int initialized = 0;
+
+  if (!initialized) {
+    DWORD length = GetTempPathA(MAX_PATH, temp_path);
+
+    if (length == 0 || length > MAX_PATH)
+      return NULL;
+
+    /*
+     * GetTempPathA normally returns a trailing backslash.
+     * Keep it because Windows accepts it naturally.
+     */
+    temp_path[length] = '\0';
+    initialized = 1;
+  }
+
+  return temp_path;
+
+#else
+
+  const char *temp_dir = getenv("TMPDIR");
+
+  if (!temp_dir || !*temp_dir)
+    temp_dir = getenv("TMP");
+
+  if (!temp_dir || !*temp_dir)
+    temp_dir = "/tmp";
+
+  return temp_dir;
+
+#endif
+}
+
+static bool argon_path_is_absolute(const char *path) {
+#if defined(_WIN32) || defined(_WIN64)
+
+  /*
+   * C:\foo
+   * C:/foo
+   * \\server\share\foo
+   * /foo
+   */
+  if (path[0] == '/' || path[0] == '\\')
+    return true;
+
+  if (((path[0] >= 'A' && path[0] <= 'Z') ||
+       (path[0] >= 'a' && path[0] <= 'z')) &&
+      path[1] == ':')
+    return true;
+
+  return false;
+
+#else
+
+  return path[0] == '/';
+
+#endif
+}
+
+static char argon_temp_random_char(void) {
+  return ARGON_TEMP_RANDOM_CHARS[
+      (unsigned int)rand() %
+      (sizeof(ARGON_TEMP_RANDOM_CHARS) - 1)];
+}
+
+static void argon_temp_fill_random(char *data, size_t length) {
+  for (size_t i = 0; i < length; i++)
+    data[i] = argon_temp_random_char();
+}
+
+/*
+ * Replace the first '*' in pattern with random characters.
+ *
+ * If there is no '*', append random characters to the name. This keeps
+ * the function useful while still guaranteeing a unique temporary name.
+ */
+static char *argon_temp_make_candidate(const char *pattern) {
+  const char *star = strchr(pattern, '*');
+
+  /*
+   * No wildcard: use the supplied name exactly.
+   *
+   * This means:
+   *
+   *   temp_file("hello.txt")
+   *
+   * creates /tmp/hello.txt and fails if it already exists.
+   */
+  if (!star) {
+    size_t length = strlen(pattern);
+
+    char *result = malloc(length + 1);
+    if (!result)
+      return NULL;
+
+    memcpy(result, pattern, length + 1);
+    return result;
+  }
+
+  /*
+   * Replace the first '*' with random characters.
+   *
+   *   hello-*.tar.gz
+   *
+   * becomes something like:
+   *
+   *   hello-a8F3kP91xQ2m.tar.gz
+   */
+  size_t prefix_len = (size_t)(star - pattern);
+  size_t suffix_len = strlen(star + 1);
+
+  size_t length =
+      prefix_len +
+      ARGON_TEMP_RANDOM_LENGTH +
+      suffix_len;
+
+  char *result = malloc(length + 1);
+
+  if (!result)
+    return NULL;
+
+  memcpy(result, pattern, prefix_len);
+
+  argon_temp_fill_random(
+      result + prefix_len,
+      ARGON_TEMP_RANDOM_LENGTH);
+
+  memcpy(
+      result + prefix_len + ARGON_TEMP_RANDOM_LENGTH,
+      star + 1,
+      suffix_len);
+
+  result[length] = '\0';
+
+  return result;
+}
+
+static char *argon_temp_join_path(
+    const char *directory,
+    const char *pattern) {
+
+  if (argon_path_is_absolute(pattern)) {
+    size_t length = strlen(pattern);
+
+    char *result = malloc(length + 1);
+
+    if (!result)
+      return NULL;
+
+    memcpy(result, pattern, length + 1);
+
+    return result;
+  }
+
+  size_t dir_len = strlen(directory);
+  size_t pattern_len = strlen(pattern);
+
+#if defined(_WIN32) || defined(_WIN64)
+  bool separator =
+      dir_len > 0 &&
+      directory[dir_len - 1] != '/' &&
+      directory[dir_len - 1] != '\\';
+#else
+  bool separator =
+      dir_len > 0 &&
+      directory[dir_len - 1] != '/';
+#endif
+
+  size_t total =
+      dir_len +
+      (separator ? 1 : 0) +
+      pattern_len;
+
+  char *result = malloc(total + 1);
+
+  if (!result)
+    return NULL;
+
+  memcpy(result, directory, dir_len);
+
+  size_t offset = dir_len;
+
+  if (separator) {
+#if defined(_WIN32) || defined(_WIN64)
+    result[offset++] = '\\';
+#else
+    result[offset++] = '/';
+#endif
+  }
+
+  memcpy(result + offset, pattern, pattern_len);
+
+  result[total] = '\0';
+
+  return result;
+}
+
+ARGON_FUNCTION(temp_file, {
+  if (api->fix_to_arg_size(2, argc, err))
+    return api->ARGON_NULL;
+
+  struct string pattern_str =
+      api->argon_to_string(argv[0], err);
+
+  if (api->is_error(err))
+    return api->ARGON_NULL;
+
+  char *pattern = malloc(pattern_str.length + 1);
+
+  if (!pattern)
+    return api->throw_argon_error(
+        err,
+        api->RuntimeError,
+        "out of memory");
+
+  memcpy(pattern, pattern_str.data, pattern_str.length);
+  pattern[pattern_str.length] = '\0';
+
+  const char *temp_directory =
+      argon_get_temp_directory();
+
+  if (!temp_directory) {
+    free(pattern);
+
+    return api->throw_argon_error(
+        err,
+        argv[1],
+        "failed to determine temporary directory");
+  }
+
+  /*
+   * Try multiple names in case of a collision.
+   */
+  for (int attempt = 0; attempt < 100; attempt++) {
+
+    char *candidate =
+    argon_temp_make_candidate(pattern);
+
+    if (!candidate) {
+      free(pattern);
+
+      return api->throw_argon_error(
+          err,
+          api->RuntimeError,
+          "out of memory");
+    }
+
+    char *path = argon_temp_join_path(
+        temp_directory,
+        candidate);
+
+    free(candidate);
+
+    if (!path) {
+      free(pattern);
+
+      return api->throw_argon_error(
+          err,
+          api->RuntimeError,
+          "out of memory");
+    }
+
+#if defined(_WIN32) || defined(_WIN64)
+
+    HANDLE handle = CreateFileA(
+        path,
+        GENERIC_READ | GENERIC_WRITE,
+        0,
+        NULL,
+        CREATE_NEW,
+        FILE_ATTRIBUTE_TEMPORARY,
+        NULL);
+
+    if (handle != INVALID_HANDLE_VALUE) {
+      CloseHandle(handle);
+
+      ArgonObject *result =
+          api->string_to_argon(
+              (struct string){path, strlen(path)});
+
+      free(path);
+      free(pattern);
+
+      return result;
+    }
+
+    DWORD error = GetLastError();
+
+    free(path);
+
+    if (error != ERROR_FILE_EXISTS &&
+        error != ERROR_ALREADY_EXISTS) {
+
+      free(pattern);
+
+      return api->throw_argon_error(
+          err,
+          argv[1],
+          "failed to create temporary file: %lu",
+          error);
+    }
+
+#else
+
+    /*
+     * O_CREAT | O_EXCL makes creation atomic and prevents us from
+     * accidentally opening an existing file.
+     */
+    int fd = open(
+        path,
+        O_RDWR | O_CREAT | O_EXCL,
+        0600);
+
+    if (fd >= 0) {
+      close(fd);
+
+      ArgonObject *result =
+          api->string_to_argon(
+              (struct string){path, strlen(path)});
+
+      free(path);
+      free(pattern);
+
+      return result;
+    }
+
+    int error = errno;
+
+    free(path);
+
+    if (error != EEXIST) {
+      free(pattern);
+
+      return api->throw_argon_error(
+          err,
+          argv[1],
+          "failed to create temporary file: %s",
+          strerror(error));
+    }
+
+#endif
+  }
+
+  free(pattern);
+
+  return api->throw_argon_error(
+      err,
+      argv[1],
+      "failed to create a unique temporary file");
+})
+
+ARGON_FUNCTION(temp_dir, {
+  if (api->fix_to_arg_size(2, argc, err))
+    return api->ARGON_NULL;
+
+  struct string pattern_str =
+      api->argon_to_string(argv[0], err);
+
+  if (api->is_error(err))
+    return api->ARGON_NULL;
+
+  char *pattern = malloc(pattern_str.length + 1);
+
+  if (!pattern)
+    return api->throw_argon_error(
+        err,
+        api->RuntimeError,
+        "out of memory");
+
+  memcpy(pattern, pattern_str.data, pattern_str.length);
+  pattern[pattern_str.length] = '\0';
+
+  const char *temp_directory =
+      argon_get_temp_directory();
+
+  if (!temp_directory) {
+    free(pattern);
+
+    return api->throw_argon_error(
+        err,
+        argv[1],
+        "failed to determine temporary directory");
+  }
+
+  /*
+   * Try multiple names in case of a collision.
+   */
+  for (int attempt = 0; attempt < 100; attempt++) {
+
+    char *candidate =
+    argon_temp_make_candidate(pattern);
+
+    if (!candidate) {
+      free(pattern);
+
+      return api->throw_argon_error(
+          err,
+          api->RuntimeError,
+          "out of memory");
+    }
+
+    char *path = argon_temp_join_path(
+        temp_directory,
+        candidate);
+
+    free(candidate);
+
+    if (!path) {
+      free(pattern);
+
+      return api->throw_argon_error(
+          err,
+          api->RuntimeError,
+          "out of memory");
+    }
+
+#if defined(_WIN32) || defined(_WIN64)
+
+    if (CreateDirectoryA(path, NULL)) {
+
+      ArgonObject *result =
+          api->string_to_argon(
+              (struct string){path, strlen(path)});
+
+      free(path);
+      free(pattern);
+
+      return result;
+    }
+
+    DWORD error = GetLastError();
+
+    free(path);
+
+    if (error != ERROR_ALREADY_EXISTS) {
+      free(pattern);
+
+      return api->throw_argon_error(
+          err,
+          argv[1],
+          "failed to create temporary directory: %lu",
+          error);
+    }
+
+#else
+
+    if (mkdir(path, 0700) == 0) {
+
+      ArgonObject *result =
+          api->string_to_argon(
+              (struct string){path, strlen(path)});
+
+      free(path);
+      free(pattern);
+
+      return result;
+    }
+
+    int error = errno;
+
+    free(path);
+
+    if (error != EEXIST) {
+      free(pattern);
+
+      return api->throw_argon_error(
+          err,
+          argv[1],
+          "failed to create temporary directory: %s",
+          strerror(error));
+    }
+
+#endif
+  }
+
+  free(pattern);
+
+  return api->throw_argon_error(
+      err,
+      argv[1],
+      "failed to create a unique temporary directory");
+})
+
 INIT_ARGON_MODULE({
-  (void)vm;
-  (void)err;
   REGISTER_ARGON_FUNCTION(open_handle)
   REGISTER_ARGON_FUNCTION(read_all)
   REGISTER_ARGON_FUNCTION(read)
@@ -653,4 +1165,6 @@ INIT_ARGON_MODULE({
   REGISTER_ARGON_FUNCTION(open_stdnull)
   REGISTER_ARGON_FUNCTION(mkdir)
   REGISTER_ARGON_FUNCTION(mkdir_p)
+  REGISTER_ARGON_FUNCTION(temp_file)
+  REGISTER_ARGON_FUNCTION(temp_dir)
 })
