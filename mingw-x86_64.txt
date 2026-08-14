@@ -18,4 +18,4 @@ STRIP=x86_64-w64-mingw32-strip
 tools.build:compiler_executables={"c": "x86_64-w64-mingw32-gcc", "cpp": "x86_64-w64-mingw32-g++"}
 tools.cmake.cmaketoolchain:generator=Ninja
 tools.build:skip_test=True
-tools.cmake.cmaketoolchain:extra_variables={"ENABLE_WIN32_XMLLITE": false}
+tools.cmake.cmaketoolchain:extra_variables={'ENABLE_WIN32_XMLLITE': False}
