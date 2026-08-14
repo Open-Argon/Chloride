@@ -3,8 +3,8 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
 #include "Argon.h"
-#include "../../../external/libarchive/libarchive/archive.h"
-#include "../../../external/libarchive/libarchive/archive_entry.h"
+#include <archive.h>
+#include <archive_entry.h>
 #include <stdlib.h>
 #include <string.h>
 
