@@ -71,23 +71,42 @@ case "$TARGET_OS" in
 
     windows)
         CC="${CC:-x86_64-w64-mingw32-gcc}"
-        MINGW_SYSROOT="$("$CC" -print-sysroot)"
 
-        if [ -d "$MINGW_SYSROOT/mingw" ]; then
-            MINGW_PREFIX="$MINGW_SYSROOT/mingw"
-        elif [ -d "$MINGW_SYSROOT/include" ]; then
-            MINGW_PREFIX="$MINGW_SYSROOT"
-        elif [ -d "/mingw/include" ]; then
-            MINGW_PREFIX="/mingw"
+        MINGW_TARGET="$("$CC" -dumpmachine)"
+        MINGW_ROOT="/usr/$MINGW_TARGET"
+
+        if [ ! -d "$MINGW_ROOT" ]; then
+            echo "ERROR: MinGW target root not found"
+            echo "  compiler: $CC"
+            echo "  target:   $MINGW_TARGET"
+            echo "  root:     $MINGW_ROOT"
+            exit 1
+        fi
+
+        # Debian/Ubuntu MinGW-w64 layout:
+        #
+        #   /usr/x86_64-w64-mingw32/include
+        #   /usr/x86_64-w64-mingw32/lib
+        #
+        # Some distributions instead use:
+        #
+        #   /usr/x86_64-w64-mingw32/sys-root/mingw
+        #
+        # Handle both.
+        if [ -d "$MINGW_ROOT/sys-root/mingw/include" ]; then
+            MINGW_PREFIX="$MINGW_ROOT/sys-root/mingw"
+        elif [ -d "$MINGW_ROOT/include" ]; then
+            MINGW_PREFIX="$MINGW_ROOT"
         else
             echo "ERROR: Cannot determine MinGW target prefix"
             echo "  compiler: $CC"
-            echo "  sysroot:  $MINGW_SYSROOT"
+            echo "  target:   $MINGW_TARGET"
+            echo "  root:     $MINGW_ROOT"
             exit 1
         fi
 
         echo "Using compiler: $CC"
-        echo "MinGW sysroot: $MINGW_SYSROOT"
+        echo "MinGW target:  $MINGW_TARGET"
         echo "MinGW prefix:  $MINGW_PREFIX"
 
         CMAKE_ARGS+=(
