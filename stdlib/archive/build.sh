@@ -25,19 +25,14 @@ done
 case "$TARGET_OS" in
     linux)
         HOST_PROFILE="default"
-        BUILD_ARGS=()
         ;;
 
     linux-arm64)
         HOST_PROFILE="$ROOT_DIR/aarch64-linux-gnu.txt"
-        BUILD_ARGS=()
         ;;
 
     windows)
         HOST_PROFILE="$ROOT_DIR/mingw-x86_64.txt"
-        BUILD_ARGS=(
-            "--build=libarchive/*"
-        )
         ;;
 
     *)

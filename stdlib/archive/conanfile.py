@@ -37,10 +37,6 @@ class ArgonArchiveStdlibConan(ConanFile):
         "libarchive/*:with_iconv": False,
     }
 
-    def configure(self):
-        if self.settings.os == "Windows":
-            self.options["libarchive"].with_libxml2 = False
-
     def layout(self):
         cmake_layout(self)
 

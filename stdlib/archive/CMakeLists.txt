@@ -2,6 +2,31 @@ cmake_minimum_required(VERSION 3.21)
 
 project(argon_archive_stdlib C)
 
+# MinGW compatibility: libxml2's Conan metadata asks for "Bcrypt",
+# while MinGW provides "bcrypt".
+if(MINGW)
+    execute_process(
+        COMMAND ${CMAKE_C_COMPILER} -print-file-name=libbcrypt.a
+        OUTPUT_VARIABLE BCRYPT_PATH
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        RESULT_VARIABLE BCRYPT_RESULT
+    )
+
+    if(NOT BCRYPT_RESULT EQUAL 0 OR NOT EXISTS "${BCRYPT_PATH}")
+        message(FATAL_ERROR "Could not locate MinGW libbcrypt.a")
+    endif()
+
+    set(MINGW_COMPAT_DIR "${CMAKE_CURRENT_BINARY_DIR}/mingw-compat")
+
+    file(MAKE_DIRECTORY "${MINGW_COMPAT_DIR}")
+
+    execute_process(
+        COMMAND ${CMAKE_COMMAND} -E create_symlink
+                "${BCRYPT_PATH}"
+                "${MINGW_COMPAT_DIR}/libBcrypt.a"
+    )
+endif()
+
 find_package(LibArchive REQUIRED)
 
 add_library(archive SHARED
@@ -21,6 +46,12 @@ target_include_directories(archive PRIVATE
 target_link_libraries(archive PRIVATE
     LibArchive::LibArchive
 )
+
+if(MINGW)
+    target_link_directories(archive PRIVATE
+        "${MINGW_COMPAT_DIR}"
+    )
+endif()
 
 target_compile_options(archive PRIVATE
     -fvisibility=hidden
