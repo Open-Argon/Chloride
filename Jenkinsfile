@@ -110,6 +110,23 @@ pipeline {
                     echo "ARM64 C++ compiler:"
                     aarch64-linux-gnu-g++ --version
 
+                    sudo dpkg --add-architecture arm64
+                    sudo apt update
+
+                    sudo apt install \
+                        libzstd-dev \
+                        liblzma-dev \
+                        libbz2-dev \
+                        zlib1g-dev \
+                        libssl-dev \
+                        libxml2-dev \
+                        libzstd-dev:arm64 \
+                        liblzma-dev:arm64 \
+                        libbz2-dev:arm64 \
+                        zlib1g-dev:arm64 \
+                        libssl-dev:arm64 \
+                        libxml2-dev:arm64
+
                     python3 -m venv /tmp/venv
 
                     . /tmp/venv/bin/activate

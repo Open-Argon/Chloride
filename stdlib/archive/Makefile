@@ -35,16 +35,36 @@ ifeq ($(TARGET_OS),windows)
 else ifeq ($(UNAME_S),Darwin)
 
 	ifeq ($(origin CC),default)
-	  CC      := gcc
+		CC := clang
 	endif
+
 	LIB_EXT := dylib
 
 	SHARED_LDFLAGS := \
 		-dynamiclib \
 		-Wl,-install_name,@rpath/$(LIB).dylib
 
-	PLATFORM_LDFLAGS := -lzstd -llzma -lbz2 -lz -lcrypto -lxml2
-	PLATFORM_CFLAGS :=
+	BREW_PREFIX := $(shell brew --prefix 2>/dev/null)
+
+	PLATFORM_CFLAGS := \
+		-I$(BREW_PREFIX)/opt/zstd/include \
+		-I$(BREW_PREFIX)/opt/xz/include \
+		-I$(BREW_PREFIX)/opt/bzip2/include \
+		-I$(BREW_PREFIX)/opt/openssl@3/include \
+		-I$(BREW_PREFIX)/opt/libxml2/include
+
+	PLATFORM_LDFLAGS := \
+		-L$(BREW_PREFIX)/opt/zstd/lib \
+		-L$(BREW_PREFIX)/opt/xz/lib \
+		-L$(BREW_PREFIX)/opt/bzip2/lib \
+		-L$(BREW_PREFIX)/opt/openssl@3/lib \
+		-L$(BREW_PREFIX)/opt/libxml2/lib \
+		-lzstd \
+		-llzma \
+		-lbz2 \
+		-lz \
+		-lcrypto \
+		-lxml2
 
 else
 

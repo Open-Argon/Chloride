@@ -64,6 +64,7 @@ jobs:
 
           brew update
           brew install cmake python ninja flex go
+          brew install zstd xz bzip2 openssl@3 libxml2
 
           python3 -m venv /tmp/venv
           source /tmp/venv/bin/activate
