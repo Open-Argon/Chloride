@@ -110,10 +110,10 @@ pipeline {
                     echo "ARM64 C++ compiler:"
                     aarch64-linux-gnu-g++ --version
 
-                    sudo dpkg --add-architecture arm64
-                    sudo apt update
+                    dpkg --add-architecture arm64
+                    apt update
 
-                    sudo apt install \
+                    apt install \
                         libzstd-dev \
                         liblzma-dev \
                         libbz2-dev \
