@@ -7,12 +7,12 @@ import "file" as file
 let __process__ = load_native_code(path.resolve(program.file.directory,"native","bin","subprocess"+platform.lib_ext))
 
 class Process do
-  this.__init__(self, args, stdin=file.stdin, stdout=file.stdout, stderr=file.stderr, env={}) = do
-    self.__process = __process__.process_start(args, stdin._handle, stdout._handle, stderr._handle)
+  this.__init__(self, args, stdin=file.stdin, stdout=file.stdout, stderr=file.stderr, env={}, cwd=null) = do
+    self.__process = __process__.process_start(args, stdin._handle, stdout._handle, stderr._handle, cwd)
     self.exit_code = null
   this.wait(self) = do
     return self.exit_code = __process__.process_wait(self.__process)
 
-let start(args, stdin=file.stdin, stdout=file.stdout, stderr=file.stderr, env={}) = Process(args, stdin, stdout, stderr, env)
+let start(args, stdin=file.stdin, stdout=file.stdout, stderr=file.stderr, env={}, cwd=null) = Process(args, stdin, stdout, stderr, env, cwd)
 
-let run(args, stdin=file.stdin, stdout=file.stdout, stderr=file.stderr, env={}) = start(args, stdin, stdout, stderr, env).wait()
+let run(args, stdin=file.stdin, stdout=file.stdout, stderr=file.stderr, env={}, cwd=null) = start(args, stdin, stdout, stderr, env, cwd).wait()

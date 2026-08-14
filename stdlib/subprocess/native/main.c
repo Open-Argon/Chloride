@@ -69,7 +69,7 @@ static void free_argv(char **argv) {
   free(argv);
 }
 ARGON_FUNCTION(process_start, {
-  if (api->fix_to_arg_size(4, argc, err))
+  if (api->fix_to_arg_size(5, argc, err))
     return api->ARGON_NULL;
 
   char **process_args = argon_array_to_argv(api, argv[0], err);
@@ -80,6 +80,11 @@ ARGON_FUNCTION(process_start, {
   struct buffer stdin_buffer = api->argon_buffer_to_buffer(argv[1], err);
   struct buffer stdout_buffer = api->argon_buffer_to_buffer(argv[2], err);
   struct buffer stderr_buffer = api->argon_buffer_to_buffer(argv[3], err);
+  char* cwd = NULL;
+  if (argv[4] != api->ARGON_NULL) {
+    cwd = api->argon_to_string(argv[4], err).data;
+    if (api->is_error(err)) return api->ARGON_NULL;
+  }
 
   FileHandle *stdin_handle = (FileHandle *)stdin_buffer.data;
   FileHandle *stdout_handle = (FileHandle *)stdout_buffer.data;
@@ -132,7 +137,7 @@ ARGON_FUNCTION(process_start, {
   }
 
   BOOL ok =
-      CreateProcessA(NULL, cmdline, NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi);
+      CreateProcessA(NULL, cmdline, NULL, NULL, TRUE, 0, NULL, cwd, &si, &pi);
 
   free(cmdline);
 
@@ -150,6 +155,8 @@ ARGON_FUNCTION(process_start, {
   pid_t pid = fork();
 
   if (pid == 0) {
+    if (cwd && chdir(cwd) == -1)
+        _exit(127);
 
     if (stdin_handle->type != FILE_NULL)
       dup2(fileno(stdin_handle->fp), STDIN_FILENO);
