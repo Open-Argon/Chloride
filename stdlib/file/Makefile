@@ -29,7 +29,8 @@ ifeq ($(TARGET_OS),windows)
 
 	SHARED_LDFLAGS := -shared
 	PLATFORM_LDFLAGS := \
-		-lws2_32
+		-lws2_32 \
+    -lbcrypt
 
 	PLATFORM_CFLAGS := \
 		-DWIN32 \
