@@ -41,7 +41,7 @@ case "$TARGET_OS" in
         ;;
 esac
 
-echo "Building archive stdlib for: $TARGET_OS"
+echo "Building network stdlib for: $TARGET_OS"
 echo "Host profile: $HOST_PROFILE"
 
 rm -rf build

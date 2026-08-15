@@ -4,8 +4,14 @@
 
 #include "Argon.h"
 #include "ArgonFunction.h"
+
 #include <errno.h>
+
+#ifdef _WIN32
+#include <windows.h>
+#else
 #include <time.h>
+#endif
 
 ARGON_FUNCTION(snooze, {
     if (api->fix_to_arg_size(1, argc, err))
@@ -15,6 +21,32 @@ ARGON_FUNCTION(snooze, {
 
     if (api->is_error(err))
         return api->ARGON_NULL;
+
+    if (n <= 0.0)
+        return api->ARGON_NULL;
+
+#ifdef _WIN32
+
+    while (n > 0.0) {
+        double milliseconds = n * 1000.0;
+
+        if (milliseconds >= 4294967295.0) {
+            Sleep(4294967295UL);
+            n -= 4294967.295;
+        } else {
+            DWORD ms = (DWORD)milliseconds;
+
+            if ((double)ms < milliseconds)
+                ++ms;
+
+            if (ms > 0)
+                Sleep(ms);
+
+            break;
+        }
+    }
+
+#else
 
     struct timespec remaining;
 
@@ -26,6 +58,8 @@ ARGON_FUNCTION(snooze, {
         if (errno != EINTR)
             break;
     }
+
+#endif
 
     return api->ARGON_NULL;
 })
