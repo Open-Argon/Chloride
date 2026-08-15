@@ -751,7 +751,7 @@ static bool argon_temp_random_bytes(
       (ULONG)length,
       BCRYPT_USE_SYSTEM_PREFERRED_RNG);
 
-  return status == STATUS_SUCCESS;
+  return BCRYPT_SUCCESS(status);
 
 #elif defined(__linux__)
 
