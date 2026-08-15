@@ -194,6 +194,10 @@ pipeline {
                                         -ldflags="-s -w" \
                                         -o ../out/linux/build/dist/bin/isotope \
                                         ./src
+
+                                    cd ../out/linux/build/dist/
+
+                                    isotope install isotope
                                 '''
                             }
                         }
@@ -257,6 +261,10 @@ pipeline {
                                         -ldflags="-s -w" \
                                         -o ../out/linux-arm64/build/dist/bin/isotope \
                                         ./src
+
+                                    cd ../out/linux-arm64/build/dist/
+
+                                    isotope install isotope
                                 '''
                             }
                         }
@@ -306,6 +314,10 @@ pipeline {
                                         -ldflags="-s -w" \
                                         -o ../out/windows/build/dist/bin/isotope.exe \
                                         ./src
+
+                                    cd ../out/windows/build/dist/
+
+                                    isotope install isotope
                                 '''
                             }
                         }
@@ -555,6 +567,12 @@ EOF
                     curl --fail --user Jenkins:$GITEA_TOKEN \
                         --upload-file "$OUTPUT_FILE" \
                         https://git.wbell.dev/api/packages/Open-Argon/debian/pool/trixie/main/upload
+                    curl --fail --user Jenkins:$GITEA_TOKEN \
+                        --upload-file "$OUTPUT_FILE" \
+                        https://git.wbell.dev/api/packages/Open-Argon/debian/pool/bookworm/main/upload
+                    curl --fail --user Jenkins:$GITEA_TOKEN \
+                        --upload-file "$OUTPUT_FILE" \
+                        https://git.wbell.dev/api/packages/Open-Argon/debian/pool/bullseye/main/upload
                 '''
                 }
 
@@ -666,6 +684,12 @@ EOF
                             --user Jenkins:$GITEA_TOKEN \
                             --upload-file "$OUTPUT_FILE" \
                             https://git.wbell.dev/api/packages/Open-Argon/debian/pool/trixie/main/upload
+                        curl --fail --user Jenkins:$GITEA_TOKEN \
+                            --upload-file "$OUTPUT_FILE" \
+                            https://git.wbell.dev/api/packages/Open-Argon/debian/pool/bookworm/main/upload
+                        curl --fail --user Jenkins:$GITEA_TOKEN \
+                            --upload-file "$OUTPUT_FILE" \
+                            https://git.wbell.dev/api/packages/Open-Argon/debian/pool/bullseye/main/upload
                     '''
                 }
 
