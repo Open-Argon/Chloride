@@ -84,6 +84,7 @@
   X(lower)                                                                     \
   X(title)                                                                     \
   X(replace)                                                                   \
+  X(repeat)                                                                    \
   X(strip)                                                                     \
   X(index_of)                                                                  \
   X(map)                                                                       \

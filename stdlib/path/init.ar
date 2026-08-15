@@ -9,15 +9,9 @@ let __sep__        = "/"
 # Internal helpers
 # ---------------------------------------------------------------------------
 
-let __starts_with__(s, prefix) = do
-    if (prefix.length > s.length) do
-        return false
-    return s[0:prefix.length] == prefix
+let __starts_with__(s, prefix) = s.starts_with(prefix)
 
-let __ends_with__(s, suffix) = do
-    if (suffix.length > s.length) do
-        return false
-    return s[s.length-suffix.length:] == suffix
+let __ends_with__(s, suffix) = s.ends_with(suffix)
 
 let __normalise__(p) = do
     if (__is_windows__) do

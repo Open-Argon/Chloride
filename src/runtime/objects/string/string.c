@@ -461,6 +461,67 @@ ARGON_METHOD(ARGON_STRING_TYPE, replace, {
   return result_obj;
 })
 
+ARGON_METHOD(ARGON_STRING_TYPE, repeat, {
+  (void)state;
+
+  if (argc != 2) {
+    *err = create_err(RuntimeError,
+                      "repeat expects 2 arguments, got %" PRIu64,
+                      argc);
+    return ARGON_NULL;
+  }
+
+  struct string self = api->argon_to_string(argv[0], err);
+  if (api->is_error(err))
+    return ARGON_NULL;
+
+  int64_t count = api->argon_to_i64(argv[1], err);
+  if (api->is_error(err))
+    return ARGON_NULL;
+
+  if (count < 0) {
+    *err = create_err(ValueError,
+                      "repeat count must be non-negative, got %" PRId64,
+                      count);
+    return ARGON_NULL;
+  }
+
+  if (count == 0 || self.length == 0) {
+    struct string result = {.data = "", .length = 0};
+    return api->string_to_argon(result);
+  }
+
+  // Check for size_t overflow before multiplying.
+  if ((uint64_t)count > (SIZE_MAX - 1) / self.length) {
+    *err = create_err(RuntimeError, "string too large");
+    return ARGON_NULL;
+  }
+
+  size_t new_len = self.length * (size_t)count;
+
+  char *buf = malloc(new_len + 1);
+  if (!buf) {
+    *err = create_err(RuntimeError, "out of memory");
+    return ARGON_NULL;
+  }
+
+  for (size_t i = 0; i < (size_t)count; i++) {
+    memcpy(buf + i * self.length, self.data, self.length);
+  }
+
+  buf[new_len] = '\0';
+
+  struct string result = {
+    .data = buf,
+    .length = new_len
+  };
+
+  ArgonObject *result_obj = api->string_to_argon(result);
+  free(buf);
+
+  return result_obj;
+})
+
 ARGON_METHOD(ARGON_STRING_TYPE, __getitem__, {
   (void)api;
   (void)state;
@@ -508,8 +569,9 @@ ARGON_METHOD(ARGON_STRING_TYPE, __getitem__, {
   return api->string_to_argon((struct string){&self.data[index], 1});
 })
 ARGON_METHOD(ARGON_STRING_TYPE, split, {
-  if (argc != 2) {
-    *err = create_err(RuntimeError, "split expects 2 arguments, got %" PRIu64,
+  if (argc != 2 && argc != 3) {
+    *err = create_err(RuntimeError,
+                      "split expects 2 or 3 arguments, got %" PRIu64,
                       argc);
     return ARGON_NULL;
   }
@@ -522,27 +584,52 @@ ARGON_METHOD(ARGON_STRING_TYPE, split, {
   if (api->is_error(err))
     return ARGON_NULL;
 
+  size_t max_splits = SIZE_MAX;
+
+  if (argc == 3) {
+    int64_t max = api->argon_to_i64(argv[2], err);
+    if (api->is_error(err))
+      return ARGON_NULL;
+
+    if (max < 0) {
+      return api->throw_argon_error(
+          err, ValueError, "max splits must be non-negative");
+    }
+
+    if ((uint64_t)max < SIZE_MAX)
+      max_splits = (size_t)max;
+  }
+
   size_t dlen = delim.length;
 
   if (dlen == 0) {
     return api->throw_argon_error(err, ValueError, "empty separator");
   }
 
-  ArgonObject *object = new_instance(ARRAY_TYPE, sizeof(darray_armem));
+  ArgonObject *object =
+      new_instance(ARRAY_TYPE, sizeof(darray_armem));
+
   object->type = TYPE_ARRAY;
   object->value.as_array = darray_armem_create();
-  darray_armem_init(object->value.as_array, sizeof(ArgonObject *), 0);
 
-  // Guard: if source string is empty or has no data, return array with
-  // just the original (empty) string as the sole element.
+  darray_armem_init(object->value.as_array,
+                    sizeof(ArgonObject *),
+                    0);
+
+  /* Guard: if source string is empty or has no data, return array with
+   * just the original (empty) string as the sole element. */
   if (s.length == 0 || s.data == NULL) {
-    ArgonObject *item = api->string_to_argon((struct string){s.data, 0});
-    darray_armem_insert(object->value.as_array, object->value.as_array->size,
+    ArgonObject *item =
+        api->string_to_argon((struct string){s.data, 0});
+
+    darray_armem_insert(object->value.as_array,
+                        object->value.as_array->size,
                         &item);
+
     return object;
   }
 
-  // Guard: delimiter data must not be null (length already checked above).
+  /* Guard: delimiter data must not be null (length already checked above). */
   if (delim.data == NULL) {
     return api->throw_argon_error(err, ValueError, "invalid separator");
   }
@@ -551,22 +638,32 @@ ARGON_METHOD(ARGON_STRING_TYPE, split, {
   char *end = s.data + s.length;
   char *p = start;
 
-  while (p <= end - dlen) {
+  size_t splits = 0;
+
+  while (p <= end - dlen && splits < max_splits) {
     if (memcmp(p, delim.data, dlen) == 0) {
       ArgonObject *item =
           api->string_to_argon((struct string){start, p - start});
-      darray_armem_insert(object->value.as_array, object->value.as_array->size,
+
+      darray_armem_insert(object->value.as_array,
+                          object->value.as_array->size,
                           &item);
+
       p += dlen;
       start = p;
+      splits++;
       continue;
     }
+
     p++;
   }
 
-  // Final segment
-  ArgonObject *item = api->string_to_argon((struct string){start, end - start});
-  darray_armem_insert(object->value.as_array, object->value.as_array->size,
+  /* Final segment */
+  ArgonObject *item =
+      api->string_to_argon((struct string){start, end - start});
+
+  darray_armem_insert(object->value.as_array,
+                      object->value.as_array->size,
                       &item);
 
   return object;

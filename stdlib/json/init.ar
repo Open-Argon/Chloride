@@ -2,41 +2,88 @@
 #
 # SPDX-License-Identifier: LGPL-3.0-or-later
 
-let stringify(value, pretty=false, parents=null) = do
-    if (parents==null) parents = []
-    else if (value in parents) throw ValueError("circular JSON serialisation")
+let stringify(value, pretty=false, parents=[], indent="    ") = do
+    if (value in parents) throw ValueError("circular JSON serialisation")
+
     if (is_instance(value, string) || is_instance(value, number) || value==null || value==true || value==false) do
         return value.__repr__()
+
     else if (is_instance(value, dictionary)) do
         let output = ["{"]
         let is_first = true
         parents.append(value)
+
         for (keyval in value) do
             if (!is_first) output.append(",")
-            output.append(stringify(string(keyval[0]), pretty=pretty, parents=parents))
+
+            if (pretty) do
+                output.append("\n")
+                output.append(indent.repeat(parents.length))
+
+            output.append(stringify(
+                string(keyval[0]),
+                pretty=pretty,
+                parents=parents,
+                indent=indent
+            ))
+
             output.append(":")
-            output.append(stringify(keyval[1], pretty=pretty, parents=parents))
-            is_first=false
+            if (pretty) output.append(" ")
+
+            output.append(stringify(
+                keyval[1],
+                pretty=pretty,
+                parents=parents,
+                indent=indent
+            ))
+
+            is_first = false
+
         parents.pop()
+
+        if (pretty && !is_first) do
+            output.append("\n")
+            output.append(indent.repeat(parents.length))
+
         output.append("}")
         return output.join("")
+
     else if (is_instance(value, array)) do
         let output = ["["]
         let is_first = true
         parents.append(value)
+
         for (item in value) do
             if (!is_first) output.append(",")
-            output.append(stringify(item, pretty=pretty, parents=parents))
+
+            if (pretty) do
+                output.append("\n")
+                output.append(indent.repeat(parents.length))
+
+            output.append(stringify(
+                item,
+                pretty=pretty,
+                parents=parents,
+                indent=indent
+            ))
+
             is_first = false
+
         parents.pop()
+
+        if (pretty && !is_first) do
+            output.append("\n")
+            output.append(indent.repeat(parents.length))
+
         output.append("]")
         return output.join("")
+
     else if ("__json__" in value.__dir__()) do
-        let is_first = true
         parents.append(value)
         let output = value.__json__(pretty, parents)
         parents.pop()
         return output
+
     throw TypeError(`Object of type $(type(value).__name__) is not JSON serialisable`)
 
 let parse_string(s) = do

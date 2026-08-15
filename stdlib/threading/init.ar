@@ -26,8 +26,9 @@ class Thread do
 
   this.join(self) = do
     if (!self.__started__ || !self.__thread__) return self.__retval__
-    __threading__.Join(self.__thread__, self.__err__)
+    let thread_temp = self.__thread__
     self.__thread__ = null
+    __threading__.Join(thread_temp, self.__err__)
     return self.__retval__
 
   this.detach(self) = do

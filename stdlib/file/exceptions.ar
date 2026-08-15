@@ -3,7 +3,9 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 
 class FileError(Exception) null
-class TempDirectoryError(Exception) null
+
+class PathError(FileError) null
+class TempDirectoryError(FileError) null
 class FileReadError(FileError) null
 class FileNotFoundError(FileError) null
 class FilePermissionError(FileError) null
