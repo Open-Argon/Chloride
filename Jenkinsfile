@@ -205,13 +205,13 @@ pipeline {
     "dependencies": {}
 }
 EOF
-                                    cat > argon-package.json << EOF
+                                    cat > iso-lock.json << EOF
 {
     "packages": {}
 }
 EOF
 
-                                    isotope install isotope
+                                    argon isotope install isotope
                                 '''
                             }
                         }
@@ -286,13 +286,13 @@ EOF
     "dependencies": {}
 }
 EOF
-                                    cat > argon-package.json << EOF
+                                    cat > iso-lock.json << EOF
 {
     "packages": {}
 }
 EOF
 
-                                    isotope install isotope
+                                    argon isotope install isotope
                                 '''
                             }
                         }
@@ -352,13 +352,13 @@ EOF
     "dependencies": {}
 }
 EOF
-                                    cat > argon-package.json << EOF
+                                    cat > iso-lock.json << EOF
 {
     "packages": {}
 }
 EOF
 
-                                    isotope install isotope
+                                    argon isotope install isotope
                                 '''
                             }
                         }
