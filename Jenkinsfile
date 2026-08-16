@@ -1163,11 +1163,11 @@ SPEC
             }
         }
 
-        stage('Archive macOS') {
-            steps {
-                archiveArtifacts artifacts: 'macos-artifacts/**/*.tar.gz', fingerprint: true
-            }
-        }
+        // stage('Archive macOS') {
+        //     steps {
+        //         archiveArtifacts artifacts: 'macos-artifacts/**/*.tar.gz', fingerprint: true
+        //     }
+        // }
     }
 
     post {
