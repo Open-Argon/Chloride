@@ -211,7 +211,7 @@ EOF
 }
 EOF
 
-                                    argon isotope install isotope
+                                    isotope install isotope
                                 '''
                             }
                         }
@@ -292,7 +292,7 @@ EOF
 }
 EOF
 
-                                    argon isotope install isotope
+                                    isotope install isotope
                                 '''
                             }
                         }
@@ -358,7 +358,7 @@ EOF
 }
 EOF
 
-                                    argon isotope install isotope
+                                    isotope install isotope
                                 '''
                             }
                         }
