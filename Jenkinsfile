@@ -197,7 +197,21 @@ pipeline {
 
                                     cd ../out/linux/build/dist/
 
-                                    isotope install isotope
+
+                                    cat > argon-package.json << EOF
+{
+    "name": "chloride",
+    "version": "$TAG_NAME",
+    "dependencies": {}
+}
+EOF
+                                    cat > argon-package.json << EOF
+{
+    "packages": {}
+}
+EOF
+
+                                    argon isotope install isotope
                                 '''
                             }
                         }
@@ -264,7 +278,21 @@ pipeline {
 
                                     cd ../out/linux-arm64/build/dist/
 
-                                    isotope install isotope
+
+                                    cat > argon-package.json << EOF
+{
+    "name": "chloride",
+    "version": "$TAG_NAME",
+    "dependencies": {}
+}
+EOF
+                                    cat > argon-package.json << EOF
+{
+    "packages": {}
+}
+EOF
+
+                                    argon isotope install isotope
                                 '''
                             }
                         }
@@ -317,7 +345,20 @@ pipeline {
 
                                     cd ../out/windows/build/dist/
 
-                                    isotope install isotope
+                                    cat > argon-package.json << EOF
+{
+    "name": "chloride",
+    "version": "$TAG_NAME",
+    "dependencies": {}
+}
+EOF
+                                    cat > argon-package.json << EOF
+{
+    "packages": {}
+}
+EOF
+
+                                    argon isotope install isotope
                                 '''
                             }
                         }
@@ -515,6 +556,23 @@ pipeline {
                     cp -R out/linux/build/dist/stdlib/* \
                         "$PACKAGE_ROOT$INSTALL_INTERNAL/stdlib/"
 
+                    mkdir -p "$PACKAGE_ROOT$INSTALL_INTERNAL/argon_modules"
+                    cp -R out/linux/build/dist/argon_modules/* \
+                        "$PACKAGE_ROOT$INSTALL_INTERNAL/argon_modules/"
+
+                    mkdir -p "$PACKAGE_ROOT$INSTALL_INTERNAL/LICENSES"
+                    cp -R out/linux/build/dist/LICENSES/* \
+                        "$PACKAGE_ROOT$INSTALL_INTERNAL/LICENSES/"
+
+                    cp out/linux/build/dist/LICENSE.txt \
+                        "$PACKAGE_ROOT$INSTALL_INTERNAL/LICENSE.txt"
+
+                    cp out/linux/build/dist/argon-package.json \
+                        "$PACKAGE_ROOT$INSTALL_INTERNAL/argon-package.json"
+
+                    cp out/linux/build/dist/iso-lock.json \
+                        "$PACKAGE_ROOT$INSTALL_INTERNAL/iso-lock.json"
+
                     # Install Argon + Isotope binaries
                     mkdir -p "$PACKAGE_ROOT$INSTALL_INTERNAL/bin"
 
@@ -618,6 +676,23 @@ EOF
                         cp -R \
                             out/linux-arm64/build/dist/stdlib/* \
                             "$PACKAGE_ROOT$INSTALL_INTERNAL/stdlib/"
+
+                        mkdir -p "$PACKAGE_ROOT$INSTALL_INTERNAL/argon_modules"
+                        cp -R out/linux-arm64/build/dist/argon_modules/* \
+                            "$PACKAGE_ROOT$INSTALL_INTERNAL/argon_modules/"
+
+                        mkdir -p "$PACKAGE_ROOT$INSTALL_INTERNAL/LICENSES"
+                        cp -R out/linux-arm64/build/dist/LICENSES/* \
+                            "$PACKAGE_ROOT$INSTALL_INTERNAL/LICENSES/"
+
+                        cp out/linux-arm64/build/dist/LICENSE.txt \
+                            "$PACKAGE_ROOT$INSTALL_INTERNAL/LICENSE.txt"
+
+                        cp out/linux-arm64/build/dist/argon-package.json \
+                            "$PACKAGE_ROOT$INSTALL_INTERNAL/argon-package.json"
+
+                        cp out/linux-arm64/build/dist/iso-lock.json \
+                            "$PACKAGE_ROOT$INSTALL_INTERNAL/iso-lock.json"
 
                         # Install Argon + Isotope
                         mkdir -p "$PACKAGE_ROOT$INSTALL_INTERNAL/bin"
@@ -743,6 +818,23 @@ EOF
                         mkdir -p "$STAGE_ROOT$INSTALL_INTERNAL/stdlib"
                         cp -R out/linux/build/dist/stdlib/* \
                             "$STAGE_ROOT$INSTALL_INTERNAL/stdlib/"
+                        
+                        mkdir -p "$STAGE_ROOT$INSTALL_INTERNAL/argon_modules"
+                        cp -R out/linux/build/dist/argon_modules/* \
+                            "$PACKAGE_ROOT$INSTALL_INTERNAL/argon_modules/"
+
+                        mkdir -p "$STAGE_ROOT$INSTALL_INTERNAL/LICENSES"
+                        cp -R out/linux/build/dist/LICENSES/* \
+                            "$STAGE_ROOT$INSTALL_INTERNAL/LICENSES/"
+
+                        cp out/linux/build/dist/LICENSE.txt \
+                            "$STAGE_ROOT$INSTALL_INTERNAL/LICENSE.txt"
+
+                        cp out/linux/build/dist/argon-package.json \
+                            "$STAGE_ROOT$INSTALL_INTERNAL/argon-package.json"
+
+                        cp out/linux/build/dist/iso-lock.json \
+                            "$STAGE_ROOT$INSTALL_INTERNAL/iso-lock.json"
 
                         # Install Argon + Isotope
                         mkdir -p "$STAGE_ROOT$INSTALL_INTERNAL/bin"
@@ -893,6 +985,23 @@ SPEC
                         cp -R \
                             out/linux-arm64/build/dist/stdlib/* \
                             "$STAGE_ROOT$INSTALL_INTERNAL/stdlib/"
+  
+                        mkdir -p "$STAGE_ROOT$INSTALL_INTERNAL/argon_modules"
+                        cp -R out/linux-arm64/build/dist/argon_modules/* \
+                            "$PACKAGE_ROOT$INSTALL_INTERNAL/argon_modules/"
+
+                        mkdir -p "$STAGE_ROOT$INSTALL_INTERNAL/LICENSES"
+                        cp -R out/linux-arm64/build/dist/LICENSES/* \
+                            "$STAGE_ROOT$INSTALL_INTERNAL/LICENSES/"
+
+                        cp out/linux-arm64/build/dist/LICENSE.txt \
+                            "$STAGE_ROOT$INSTALL_INTERNAL/LICENSE.txt"
+
+                        cp out/linux-arm64/build/dist/argon-package.json \
+                            "$STAGE_ROOT$INSTALL_INTERNAL/argon-package.json"
+
+                        cp out/linux-arm64/build/dist/iso-lock.json \
+                            "$STAGE_ROOT$INSTALL_INTERNAL/iso-lock.json"
 
                         # Install Argon + Isotope
                         mkdir -p "$STAGE_ROOT$INSTALL_INTERNAL/bin"
