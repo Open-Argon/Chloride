@@ -821,7 +821,7 @@ EOF
                         
                         mkdir -p "$STAGE_ROOT$INSTALL_INTERNAL/argon_modules"
                         cp -R out/linux/build/dist/argon_modules/* \
-                            "$PACKAGE_ROOT$INSTALL_INTERNAL/argon_modules/"
+                            "$STAGE_ROOT$INSTALL_INTERNAL/argon_modules/"
 
                         mkdir -p "$STAGE_ROOT$INSTALL_INTERNAL/LICENSES"
                         cp -R out/linux/build/dist/LICENSES/* \
@@ -993,7 +993,7 @@ SPEC
   
                         mkdir -p "$STAGE_ROOT$INSTALL_INTERNAL/argon_modules"
                         cp -R out/linux-arm64/build/dist/argon_modules/* \
-                            "$PACKAGE_ROOT$INSTALL_INTERNAL/argon_modules/"
+                            "$STAGE_ROOT$INSTALL_INTERNAL/argon_modules/"
 
                         mkdir -p "$STAGE_ROOT$INSTALL_INTERNAL/LICENSES"
                         cp -R out/linux-arm64/build/dist/LICENSES/* \
