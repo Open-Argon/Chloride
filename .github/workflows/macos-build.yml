@@ -273,7 +273,7 @@ jobs:
           # }
           # EOF
 
-          ../out/macos-${{ matrix.arch }}/build/dist/bin/isotope install isotope
+          ./bin/isotope install isotope
 
       # -------------------
       # Package artifact
