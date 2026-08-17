@@ -154,13 +154,13 @@ jobs:
           JENKINS_JOB="https://jenkins.wbell.dev/job/Argon/lastSuccessfulBuild"
 
           ARTIFACT_PATH=$(curl -fsSL -g "${JENKINS_JOB}/api/json?tree=artifacts[relativePath]" | python3 -c "
-import json, sys
-data = json.load(sys.stdin)
-for a in data['artifacts']:
-    if 'macos-${{ matrix.arch }}' in a['relativePath'] and a['relativePath'].endswith('.tar.gz'):
-        print(a['relativePath'])
-        break
-")
+          import json, sys
+          data = json.load(sys.stdin)
+          for a in data['artifacts']:
+              if 'macos-${{ matrix.arch }}' in a['relativePath'] and a['relativePath'].endswith('.tar.gz'):
+                  print(a['relativePath'])
+                  break
+          ")
 
           if [ -z "$ARTIFACT_PATH" ]; then
             echo "No macos-${{ matrix.arch }} artifact found in latest successful build" >&2
