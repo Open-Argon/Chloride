@@ -260,20 +260,20 @@ jobs:
 
           BUILD_NAME="${{ inputs.build_name }}"
 
-          # cat > argon-package.json << EOF
-          # {
-          #     "name": "chloride",
-          #     "version": "$BUILD_NAME",
-          #     "dependencies": {}
-          # }
-          # EOF
-          # cat > iso-lock.json << EOF
-          # {
-          #     "packages": {}
-          # }
-          # EOF
+          cat > argon-package.json << EOF
+          {
+              "name": "chloride",
+              "version": "$BUILD_NAME",
+              "dependencies": {}
+          }
+          EOF
+          cat > iso-lock.json << EOF
+          {
+              "packages": {}
+          }
+          EOF
 
-          ./bin/isotope install isotope
+          argon isotope install isotope
 
       # -------------------
       # Package artifact
