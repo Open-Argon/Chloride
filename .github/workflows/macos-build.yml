@@ -198,7 +198,7 @@ jobs:
             -j ARGON_INCLUDE="$(realpath include)"
 
       # -------------------
-      # Build Isotope
+      # Build Isotope (Go, bootstrap)
       # -------------------
       - name: Build Isotope
         run: |
@@ -215,6 +215,34 @@ jobs:
             ./src
 
           file "../out/macos-${{ matrix.arch }}/build/dist/bin/isotope"
+
+      # -------------------
+      # Bootstrap new Isotope (argon isotope) using the Go build above
+      # -------------------
+      - name: Bootstrap Isotope via argon isotope
+        run: |
+          set -e
+
+          cd "out/macos-${{ matrix.arch }}/build/dist"
+
+          export PATH="$(pwd)/bin:$PATH"
+
+          BUILD_NAME="${{ inputs.build_name }}"
+
+          # cat > argon-package.json << EOF
+          # {
+          #     "name": "chloride",
+          #     "version": "$BUILD_NAME",
+          #     "dependencies": {}
+          # }
+          # EOF
+          # cat > iso-lock.json << EOF
+          # {
+          #     "packages": {}
+          # }
+          # EOF
+
+          ./bin/isotope install isotope
 
       # -------------------
       # Package artifact
