@@ -301,7 +301,7 @@ let config_directory() = do
         return __normalise__(env["APPDATA"])
 
     if (platform.os == "darwin") do
-        return __normalise__(path.join(expand_user("~"), "Library", "Application Support"))
+        return __normalise__(join(expand_user("~"), "Library", "Application Support"))
 
     return __normalise__("XDG_CONFIG_HOME" in env ? env["XDG_CONFIG_HOME"] : join(expand_user("~"), ".config"))
 
