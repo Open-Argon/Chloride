@@ -23,8 +23,8 @@ jobs:
         include:
           - arch: arm64
             conan_arch: armv8
-          # - arch: x86_64
-          #   conan_arch: x86_64
+          - arch: x86_64
+            conan_arch: x86_64
 
     steps:
       # -------------------
