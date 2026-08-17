@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 import "path" as path
 import "json" as json
+import "multipart" expose multipart_form
 
 let __net__ = load_native_code(path.resolve(program.file.directory,"native","bin","network"+platform.lib_ext))
 
@@ -22,30 +23,26 @@ class SocketError(Exception) null
 class TLSError(Exception) null
 class HTTPError(Exception) null
 
-# Whether this build of the native module was compiled with TLS support
-# (i.e. linked against OpenSSL). If false, tls_client() will raise TLSError.
 let TLS_SUPPORTED = __net__.tls_supported()
 
 class tcp_connection do
   this.__init__(self,socket_id) = do
     self.__socket__ = socket_id
-  
+
   this.send(self,buff) = do
     return __net__.net_send(self.__socket__, buff)
 
   this.send_string(self,str) = do
     return __net__.net_send_string(self.__socket__, str)
-  
+
   this.recv(self,buff) = do
     return __net__.net_recv(self.__socket__, buff)
-  
+
   this.recv_string(self,size) = do
     return __net__.net_recv_string(self.__socket__, size)
   this.peek(self, buff) = do
     return __net__.net_peek(self.__socket__, buff)
 
-  # Returns a NET_POLL_* bitmask, 0 on timeout, -1 on error.
-  # Pass timeout_ms=-1 to block indefinitely.
   this.poll(self, want_read, want_write, timeout_ms) = do
     return __net__.net_poll(self.__socket__, want_read, want_write, timeout_ms)
 
@@ -54,7 +51,7 @@ class tcp_connection do
 
   this.set_opt(self, opt, value) = do
     return __net__.net_set_opt(self.__socket__, opt, value)
-    
+
   this.close(self) = do
     return __net__.net_close(self.__socket__)
 
@@ -124,25 +121,12 @@ class tls_connection do
   this.recv_string(self,size) = do
     return __net__.tls_recv_string(self.__tls__, size)
 
-  # Returns a NET_POLL_* bitmask, 0 on timeout, -1 on error.
-  # Pass timeout_ms=-1 to block indefinitely.
   this.poll(self, want_read, want_write, timeout_ms) = do
     return __net__.tls_poll(self.__tls__, want_read, want_write, timeout_ms)
 
   this.close(self) = do
     return __net__.tls_close(self.__tls__)
 
-# Client-side TLS socket. Same shape as tcp_client so higher-level code
-# (like `http`, below) can use either interchangeably.
-#
-#   host          - hostname to connect to (also used for SNI + hostname
-#                    verification)
-#   port          - port to connect to
-#   verify_peer   - true (default) to verify the server's certificate chain
-#                    and hostname; false disables verification (insecure,
-#                    only useful for testing against self-signed certs)
-#   ca_path       - optional path to a PEM CA bundle; null uses the system
-#                    default trust store
 class tls_client(tcp_client) do
   this.__init__(self, host, port, verify_peer=true, ca_path=null) = do
     if (!TLS_SUPPORTED) throw TLSError("this build of the network module was not compiled with TLS support")
@@ -163,68 +147,33 @@ class tls_client(tcp_client) do
   this.close(self) = do
     self.__conn__.close()
 
-# ---------------------------------------------------------------------
-# High-level HTTP client, built on top of tcp_client / tls_client.
-#
-# Deliberately minimal: HTTP/1.1, one request per connection (Connection:
-# close), no redirects, no chunked-transfer streaming beyond simple
-# reassembly. Good enough as a base to build a fuller client/abstraction
-# on top of, or to use directly for simple request/response needs.
-#
-# Everything below works in buffers, not strings, until the caller
-# explicitly asks for a string (text()/body_string()) - matching how
-# the rest of the runtime's socket layer (recv/peek/send) works.
-# ---------------------------------------------------------------------
-
 let __CRLF__ = buffer.from_string("\r\n")
 let __HEADER_TERM__ = buffer.from_string("\r\n\r\n")
 let __COLON_SPACE__ = buffer.from_string(": ")
 let __COLON__ = buffer.from_string(":")
 let __SPACE__ = buffer.from_string(" ")
 
-# Default cap on how many bytes of header data we'll buffer while
-# looking for the end of the header block (the blank line). This bounds
-# memory use / read time for a malicious or misbehaving peer that never
-# sends "\r\n\r\n" (a classic slow/never-ending-header DoS).
 let __DEFAULT_MAX_HEADER_SIZE__ = 65536
 
-# HTTPResponse only carries the parsed status line + headers up front.
-# The body is *not* read eagerly: it's read on demand, either as a
-# string (body_string / text) or as a buffer (body_bytes / bytes). Any
-# leftover body bytes that arrived attached to the header read are
-# folded straight into __body_buf__ at construction time, so callers
-# never need to think about "leftovers" - .conn and __body_buf__ are
-# just "whatever's left of the body, some possibly already in hand,
-# the rest still on the wire".
 class HTTPResponse do
   this.__init__(self, status, status_text, headers, conn, leftover, timeout_ms, auto_close=true) = do
     self.status = status
     self.status_text = status_text
     self.headers = headers
-
-    # Raw connection (tcp_connection or tls_connection). Exposed so
-    # callers can bypass all of this and read/poll/peek themselves.
     self.conn = conn
-
     self.__timeout_ms__ = timeout_ms
     self.__auto_close__ = auto_close
     self.__content_length__ = null
     self.__read__ = 0
-    self.__body_done__ = false      # true once we've drained everything there is to drain
-    self.__body_buf__ = []          # accumulated body chunks (buffers), once we start reading
+    self.__body_done__ = false
+    self.__body_buf__ = []
 
-    # Fold any bytes read past the header terminator straight in, so
-    # nothing downstream has to special-case "leftover" separately from
-    # "the rest of the body".
     if (leftover != null && leftover.length > 0) do
       self.__body_buf__.append(leftover)
 
   this.ok(self) = do
     return self.status >= 200 && self.status < 300
 
-  # content_length(): parsed Content-Length header, or null if absent /
-  # not a valid integer (e.g. chunked responses, which aren't unchunked
-  # here).
   this.content_length(self) = do
     if (self.__content_length__!=null) return self.__content_length__
     for (value in self.headers) do
@@ -233,13 +182,6 @@ class HTTPResponse do
         return self.__content_length__
     return
 
-  # __drain_body__(): internal. Pulls whatever's left of the body off
-  # the connection (respecting Content-Length if present) and appends
-  # it into __body_buf__, as buffers. Safe to call multiple times; a
-  # no-op once the body's fully read. This is where the *lazy* read
-  # actually happens - nothing here runs until a caller asks for the
-  # body.
-  
   this.__auto_closer__(self) = self.__auto_close__?self.close():null
 
   this.__iter__(self) = self
@@ -262,9 +204,6 @@ class HTTPResponse do
     if (want != null && self.__read__ >= want) do
       return self.__auto_closer__()
 
-    # No Content-Length: fall back to "read until the peer closes",
-    # matching this client's Connection: close behaviour. With
-    # Content-Length: read exactly up to `want` bytes.
     let ready = self.conn.poll(NET_POLL_READ, 0, self.__timeout_ms__)
     if (ready == 0) throw HTTPError("timed out reading response body")
     if (ready < 0) throw HTTPError("connection error while reading response body")
@@ -277,8 +216,6 @@ class HTTPResponse do
     self.__read__ += chunk.length
     return chunk
 
-  # __body_buffer__(): internal. All accumulated body chunks merged
-  # into a single buffer.
   this.__body_buffer__(self) = do
     let buf = array(self)
     if (buf.length == 1) return buf[0]
@@ -287,16 +224,8 @@ class HTTPResponse do
     for (chunk in buf) merged.extend(chunk)
     return merged
 
-  # body_bytes() / bytes(): the full body as a buffer. This is the
-  # native representation - reading it doesn't cost a string
-  # conversion.
   this.bytes(self) = do
     return self.__body_buffer__()
-
-  # body_string() / text(): the full body as a string. Buffers stay
-  # buffers all the way through; the array .map() makes turning a list
-  # of chunks into a joined string a one-liner, and to_string() is only
-  # called once we actually need text.
 
   this.text(self) = do
     return self.__body_buffer__().to_string()
@@ -304,11 +233,6 @@ class HTTPResponse do
   this.json(self) = do
     return json.parse(self.text())
 
-  # close(): close the underlying connection without reading the rest
-  # of the body. Use this when you only cared about the headers/status
-  # (e.g. a HEAD-style check, or you already got what you needed from
-  # self.conn directly) and want to release the socket promptly instead
-  # of waiting for GC.
   this.close(self) = do
     if (self.conn != null) do
       self.conn.close()
@@ -316,7 +240,6 @@ class HTTPResponse do
     self.__body_done__ = true
 
 let __http_parse_url__(url) = do
-  # Very small URL splitter: scheme://host[:port]/path
   let scheme = "http"
   let rest = url
   let part_pos = url.index_of("://")
@@ -341,35 +264,68 @@ let __http_parse_url__(url) = do
 
   return {"scheme": scheme, "host": host, "port": port, "path": path}
 
-let __http_build_request__(method, path, host, headers, body) = do
+# A body is "sized" if we can know its length without reading it -
+# either it's a string/buffer (len() works directly), or it exposes a
+# .length() method (e.g. multipart_form, which computes its total size
+# from file .size() calls up front, without reading file contents).
+# Anything sized gets a Content-Length header and is streamed with
+# exactly that many bytes.
+#
+# A body that is neither is still allowed - iterated in chunks with no
+# Content-Length - but then the caller MUST set "Transfer-Encoding:
+# chunked" or "Connection: close" themselves and format the chunks
+# accordingly, since plain HTTP/1.1 has no other way to delimit a body
+# of unknown length. This module does not implement chunked encoding
+# on the request side; it only avoids buffering a body whose size is
+# already known.
+let __body_length__(body) = do
+  if (body == null) return null
+  return body.length
+
+# Builds just the header block (status line + headers + terminating
+# blank line) as a string. Never touches the body's contents - only
+# consults __body_length__ for a Content-Length value. The body itself
+# is sent separately, in chunks, by the caller (see http.request).
+let __http_build_headers__(method, path, host, headers, body) = do
   let lines = [method + " " + path + " HTTP/1.1", "Host: " + host]
 
   let has_content_length = false
   let has_connection = false
-  for (key in headers) do
-    let lower = key.lower()
+  for (keyval in headers) do
+    let lower = keyval[0].lower()
     if (lower == "content-length") has_content_length = true
     if (lower == "connection") has_connection = true
-    lines.append(key + ": " + headers[key])
+    lines.append(keyval[0] + ": " + keyval[1])
 
-  if (body != null && !has_content_length) lines.append("Content-Length: " + str(len(body)))
+  if (!has_content_length) do
+    let known_length = __body_length__(body)
+    if (known_length != null) lines.append("Content-Length: " + string(known_length))
   if (!has_connection) lines.append("Connection: close")
 
-  let head = lines.join("\r\n") + "\r\n\r\n"
-  if (body == null) return head
-  return head + body
+  return lines.join("\r\n") + "\r\n\r\n"
 
-# __http_read_header__: reads from `conn` in buffer chunks until the
-# "\r\n\r\n" header terminator is found, WITHOUT reading the body past
-# it. Bails out with HTTPError if the header block exceeds
-# max_header_size before a terminator shows up, so a peer that just
-# streams headers (or never sends a blank line) can't be used to run us
-# out of memory or tie up the connection indefinitely.
-#
-# Returns {"header_block": <buffer>, "leftover": <buffer>} where
-# `leftover` is whatever bytes were read past the terminator (i.e. the
-# start of the body, if any arrived in the same recv as the header
-# tail). Both are buffers.
+# Sends a body over `conn` without ever holding the whole thing in
+# memory at once:
+#   - null            -> nothing to send
+#   - string / buffer -> sent as-is in one call (already fully in
+#                         memory anyway - nothing to gain by chunking)
+#   - anything else   -> assumed iterable; each yielded item is sent
+#                         with conn.send() as it's produced. This is
+#                         the path multipart_form (and any other
+#                         chunked/streaming body) goes through: reading
+#                         and sending happen chunk-by-chunk, so at most
+#                         one chunk's worth of the body ever exists in
+#                         memory.
+let __http_send_body__(conn, body) = do
+  if (body == null) return
+  if (type(body) == string) do
+    conn.send_string(body)
+    return
+  if (type(body) == buffer) do
+    conn.send(body)
+    return
+  for (chunk in body) conn.send(chunk)
+
 let __http_read_header__(conn, max_header_size, timeout_ms) = do
   let buf = buffer.of_size(0)
   while (true) do
@@ -378,15 +334,12 @@ let __http_read_header__(conn, max_header_size, timeout_ms) = do
       return {"header_block": parts[0], "leftover": parts[2]}
 
     if (buf.length >= max_header_size) throw HTTPError(
-        "response header exceeded max_header_size (" + str(max_header_size) + " bytes) before a terminator was found")
+        "response header exceeded max_header_size (" + string(max_header_size) + " bytes) before a terminator was found")
 
     let ready = conn.poll(NET_POLL_READ, 0, timeout_ms)
     if (ready == 0) throw HTTPError("timed out waiting for response headers")
     if (ready < 0) throw HTTPError("connection error while waiting for response headers")
 
-    # Only read up to the remaining header budget (plus the terminator
-    # itself) in one go, so a single oversized recv can't blow past
-    # max_header_size either.
     let remaining_budget = max_header_size - buf.length + __HEADER_TERM__.length
     let chunk_buf = buffer.of_size(remaining_budget)
     let n = conn.recv(chunk_buf)
@@ -413,8 +366,6 @@ let __http_parse_header_block__(header_block) = do
       key = parts[0].to_string()
       value = parts[2].to_string()
     else do
-      # Fall back to a bare ":" separator (no space) rather than
-      # dropping the header entirely.
       let alt = line.partition(__COLON__)
       if (alt[1].length == 0) continue
       key = alt[0].to_string()
@@ -424,21 +375,12 @@ let __http_parse_header_block__(header_block) = do
   return {"status": status, "status_text": status_text, "headers": headers}
 
 class http do
-  # request: perform a single HTTP or HTTPS request and return an
-  # HTTPResponse. `headers` is an optional dictionary; `body` an optional
-  # string. `verify_peer`/`ca_path` are forwarded to tls_client for https
-  # URLs.
-  # max_header_size: cap (in bytes) on how much header data we'll
-  # buffer while looking for the "\r\n\r\n" terminator. Protects against
-  # a peer that sends an enormous or never-terminated header block.
-  # Only the header is read here - the body is left on the connection
-  # and read lazily; see HTTPResponse.text()/bytes()/conn.
   this.request(method, url, headers=null, body=null, verify_peer=true,
               ca_path=null, timeout_ms=30000, max_header_size=__DEFAULT_MAX_HEADER_SIZE__, auto_close=true) = do
     let parsed = __http_parse_url__(url)
     let hdrs = headers == null ? {} : headers
 
-    let request_text = __http_build_request__(
+    let header_text = __http_build_headers__(
         method, parsed["path"], parsed["host"], hdrs, body)
 
     let conn = null
@@ -447,7 +389,8 @@ class http do
     else do
       conn = tcp_client(parsed["host"], parsed["port"])
 
-    conn.send_string(request_text)
+    conn.send_string(header_text)
+    __http_send_body__(conn, body)
 
     let header_result = __http_read_header__(conn, max_header_size, timeout_ms)
     let parsed_header = __http_parse_header_block__(header_result["header_block"])

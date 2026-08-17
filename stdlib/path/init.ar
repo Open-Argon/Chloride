@@ -294,6 +294,17 @@ let expand_user(p) = do
         return home + p[1:]
     return p
 
+let user_directory() = expand_user("~")
+
+let config_directory() = do
+    if (__is_windows__) do
+        return __normalise__(env["APPDATA"])
+
+    if (platform.os == "darwin") do
+        return __normalise__(path.join(expand_user("~"), "Library", "Application Support"))
+
+    return __normalise__("XDG_CONFIG_HOME" in env ? env["XDG_CONFIG_HOME"] : join(expand_user("~"), ".config"))
+
 # ---------------------------------------------------------------------------
 # path.is_hidden(p)
 # ---------------------------------------------------------------------------

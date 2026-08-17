@@ -883,6 +883,83 @@ ARGON_METHOD(ARGON_STRING_TYPE, index_of, {
   return new_number_object_from_int64(-1);
 })
 
+ARGON_METHOD(ARGON_STRING_TYPE, last_index_of, {
+  if (argc != 2 && argc != 3) {
+    *err = create_err(RuntimeError,
+                      "last_index_of expects 2 or 3 arguments, got %" PRIu64, argc);
+    return ARGON_NULL;
+  }
+
+  struct string self = api->argon_to_string(argv[0], err);
+  if (api->is_error(err))
+    return ARGON_NULL;
+
+  struct string needle = api->argon_to_string(argv[1], err);
+  if (api->is_error(err))
+    return ARGON_NULL;
+
+  // `from` is the highest starting index the match is allowed to begin at
+  // (inclusive), defaulting to the end of the string.
+  int64_t from = (int64_t)self.length - 1;
+  if (argc == 3) {
+    from = api->argon_to_i64(argv[2], err);
+    if (api->is_error(err))
+      return ARGON_NULL;
+    if (from < 0)
+      from += (int64_t)self.length;
+    if (from < 0)
+      return new_number_object_from_int64(-1);
+    if (from > (int64_t)self.length - 1)
+      from = (int64_t)self.length - 1;
+  }
+
+  // empty needle always found at from (clamped into range like the
+  // forward version clamps to length)
+  if (needle.length == 0) {
+    int64_t at = from + 1;
+    if (at > (int64_t)self.length) at = (int64_t)self.length;
+    if (at < 0) at = 0;
+    return new_number_object_from_int64(at);
+  }
+
+  if (needle.length > self.length)
+    return new_number_object_from_int64(-1);
+
+  // Highest index a match could start at, given needle length and `from`.
+  int64_t max_start = (int64_t)self.length - (int64_t)needle.length;
+  if (max_start < 0)
+    return new_number_object_from_int64(-1);
+  if (from < max_start)
+    max_start = from;
+  if (max_start < 0)
+    return new_number_object_from_int64(-1);
+
+  // Boyer-Moore-Horspool, mirrored to scan right-to-left: the skip table
+  // is built from the needle's *first* character occurrences (rightmost
+  // match position from the front), and we align/compare starting from
+  // the needle's first character instead of its last.
+  size_t skip[256];
+  for (size_t i = 0; i < 256; i++)
+    skip[i] = needle.length;
+  for (size_t i = needle.length - 1; i > 0; i--)
+    skip[(unsigned char)needle.data[i]] = i;
+
+  int64_t i = max_start;
+  while (i >= 0) {
+    size_t j = 0;
+    size_t k = (size_t)i;
+    while (needle.data[j] == self.data[k]) {
+      if (j == needle.length - 1)
+        return new_number_object_from_int64(i);
+      j++;
+      k++;
+    }
+    i -= (int64_t)skip[(unsigned char)self.data[i]];
+  }
+
+  return new_number_object_from_int64(-1);
+})
+
 char *char_chr(uint64_t codepoint, size_t *len_out) {
   char *out;
 

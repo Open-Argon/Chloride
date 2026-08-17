@@ -87,6 +87,7 @@
   X(repeat)                                                                    \
   X(strip)                                                                     \
   X(index_of)                                                                  \
+  X(last_index_of)                                                             \
   X(map)                                                                       \
   X(filter)                                                                    \
   X(sort)                                                                      \

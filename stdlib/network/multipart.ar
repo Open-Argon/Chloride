@@ -1,0 +1,276 @@
+# SPDX-License-Identifier: LGPL-3.0-or-later
+#
+# Streaming multipart/form-data body builder.
+#
+# Builds a multipart/form-data body for POST requests without ever
+# holding the whole thing (in particular, whole file contents) in
+# memory at once. Fields and files are registered up front (cheap -
+# no I/O happens at registration time), then the body is produced by
+# iterating the `multipart_form` instance, which yields buffers one
+# chunk at a time - mirroring how `HTTPResponse` in http.ar exposes
+# its body via .chunk()/__iter__ instead of reading it all eagerly.
+#
+# Typical use with the `http` client in http.ar:
+#
+#   let form = multipart_form()
+#   form.field("name", "William")
+#   form.file("avatar", "photo.jpg", open("/path/to/photo.jpg", "rb"))
+#
+#   let resp = http.post(url, body=form,
+#       headers={"Content-Type": form.content_type()})
+#
+# http.request() (network.ar) sends any body that exposes .length()
+# and is iterable by streaming it chunk-by-chunk over the connection
+# (via __http_send_body__), using .length() for Content-Length without
+# ever reading the body up front. multipart_form provides both, so it
+# can be passed as `body=` directly - no separate streaming helper
+# needed.
+import "random" expose random
+
+let __CRLF__ = buffer.from_string("\r\n")
+
+# Default chunk size used when reading file parts off disk. Kept the
+# same order of magnitude as the 64KiB read buffer HTTPResponse.chunk()
+# uses in http.ar, for similar memory/throughput tradeoffs.
+let __DEFAULT_CHUNK_SIZE__ = 65536
+
+let __rand_hex__(n) = do
+    let alphabet = "0123456789abcdef"
+    let out = ""
+    for (i in 0 until n) out += alphabet[random.int(0, 15)]
+    return out
+
+let __make_boundary__() = do
+    return "----ArBoundary" + __rand_hex__(24)
+
+let __guess_content_type__(filename) = do
+    let ext = filename.lower()
+    let dot = ext.last_index_of(".")
+    if (dot >= 0) ext = ext[dot+1:]
+
+    let known = {
+        "txt": "text/plain",
+        "html": "text/html",
+        "htm": "text/html",
+        "css": "text/css",
+        "csv": "text/csv",
+        "json": "application/json",
+        "xml": "application/xml",
+        "pdf": "application/pdf",
+        "zip": "application/zip",
+        "png": "image/png",
+        "jpg": "image/jpeg",
+        "jpeg": "image/jpeg",
+        "gif": "image/gif",
+        "webp": "image/webp",
+        "svg": "image/svg+xml",
+        "mp4": "video/mp4",
+        "mp3": "audio/mpeg",
+        "wav": "audio/wav"
+    }
+    if (ext in known) return known[ext]
+    return "application/octet-stream"
+
+# A single field part - value is small and held in memory as-is (this
+# mirrors ordinary form fields, which are typically short strings, not
+# file payloads).
+class __FieldPart__ do
+    this.__init__(self, name, value) = do
+        self.name = name
+        self.value = string(value)
+        self.__sent__ = false
+
+    this.header(self, boundary) = do
+        return ("--" + boundary + "\r\n" +
+                "Content-Disposition: form-data; name=\"" + self.name + "\"\r\n\r\n")
+
+    this.body_length(self) = self.value.length
+
+    # Returns the whole field body as one buffer the first time it's
+    # called, then null - it's already in memory, so there's nothing
+    # to gain from chunking it further.
+    this.next_chunk(self) = do
+        if (self.__sent__) return null
+        self.__sent__ = true
+        return buffer.from_string(self.value)
+
+# A single file part. Takes an already-open File-like object (anything
+# with .read(size) and .size(), such as an `open()` result from
+# file.ar - but just as well something backed by memory, a pipe, or
+# whatever else conforms to that shape, not necessarily a real file on
+# disk). The multipart_form takes ownership of it once passed to
+# .file() and closes it once its bytes have been fully streamed out
+# (or if an error interrupts that), so callers don't need to track its
+# lifetime themselves.
+class __FilePart__ do
+    this.__init__(self, name, filename, file, content_type, chunk_size) = do
+        self.name = name
+        self.filename = filename
+        self.__file__ = file
+        self.content_type = content_type != null ? content_type : __guess_content_type__(filename)
+        self.__chunk_size__ = chunk_size
+        self.__done__ = false
+
+    this.header(self, boundary) = do
+        return ("--" + boundary + "\r\n" +
+                "Content-Disposition: form-data; name=\"" + self.name +
+                "\"; filename=\"" + self.filename + "\"\r\n" +
+                "Content-Type: " + self.content_type + "\r\n\r\n")
+
+    # Total size of the file part's body, in bytes. Needed up front so
+    # the overall form can report a Content-Length. Relies on the
+    # object's own .size() rather than reading through it, so this
+    # doesn't disturb the read position.
+    this.body_length(self) = self.__file__.size()
+
+    # Returns the next chunk read from the file (up to chunk_size
+    # bytes), or null once the file is exhausted. Closes the file the
+    # moment it's exhausted, or if a read raises - so a part's file
+    # handle is never left open past the point it stops being useful,
+    # without needing a generator's try/finally to guarantee that.
+    #
+    # Defensively coerces a string chunk to a buffer: this only
+    # happens if the caller opened the file in text mode instead of
+    # binary ("rb") - a common mistake, since plain open(path) defaults
+    # to text mode in file.ar. Binary mode is still strongly preferred
+    # (text mode can mangle bytes on decode, e.g. via encoding errors
+    # or newline translation), but this stops that mistake from
+    # crashing deep inside the TLS layer with a confusing
+    # "expected buffer object" error.
+    this.next_chunk(self) = do
+        if (self.__done__) return null
+
+        let chunk = null
+        try do
+            chunk = self.__file__.read(self.__chunk_size__)
+        catch (err) do
+            self.__done__ = true
+            self.__file__.close()
+            throw err
+
+        if (chunk == null || chunk.length == 0) do
+            self.__done__ = true
+            self.__file__.close()
+            return null
+
+        if (type(chunk) == string) chunk = buffer.from_string(chunk)
+
+        return chunk
+
+class multipart_form do
+    # Note: like HTTPResponse's body, a multipart_form is single-pass.
+    # File parts close their underlying file once read, so the form
+    # can't be meaningfully re-iterated from the start after its bytes
+    # have been consumed once (calling .field()/.file() again to build
+    # a fresh form is the way to send the same data twice).
+    this.__init__(self, boundary=null, chunk_size=__DEFAULT_CHUNK_SIZE__) = do
+        self.__boundary__ = boundary != null ? boundary : __make_boundary__()
+        self.__chunk_size__ = chunk_size
+        self.__parts__ = []
+        self.__part_index__ = 0
+        self.__state__ = "header"
+
+    # Register a plain text field. Order of registration is preserved
+    # and reflected in iteration order.
+    this.field(self, name, value) = do
+        self.__parts__.append(__FieldPart__(name, value))
+        return self
+
+    # Register a file part.
+    #   name         - form field name
+    #   filename     - filename reported to the server
+    #   file         - an already-open File-like object (must support
+    #                  .read(size) and .size()) - e.g. an open() result
+    #                  from file.ar, or anything else with that shape,
+    #                  on disk or not. The form takes ownership and
+    #                  closes it once its bytes have been streamed.
+    #   content_type - optional; guessed from filename's extension if
+    #                  omitted
+    this.file(self, name, filename, file, content_type=null) = do
+        self.__parts__.append(
+            __FilePart__(name, filename, file, content_type, self.__chunk_size__))
+        return self
+
+    this.content_type(self) = do
+        return "multipart/form-data; boundary=" + self.__boundary__
+
+    this.boundary(self) = self.__boundary__
+
+    # Total byte length of the full encoded body, including all part
+    # headers, boundaries, and the trailing boundary. Computed without
+    # reading file contents (file parts use File.size()), so it's
+    # cheap even for large uploads and safe to use as Content-Length.
+    this.get_length(self) = do
+        let total = 0
+        for (part in self.__parts__) do
+            total += part.header(self.__boundary__).length
+            total += part.body_length()
+            total += __CRLF__.length
+        total += ("--" + self.__boundary__ + "--\r\n").length
+        return total
+
+    # Iterate the encoded body as a sequence of buffers. This is the
+    # streaming entry point: each call to .chunk() / each step of
+    # iteration returns at most one chunk_size buffer's worth of data,
+    # regardless of how large the underlying files are.
+    #
+    # Implemented as an explicit state machine (no generators/yield
+    # available) rather than the __gen__ approach used elsewhere: the
+    # form walks its own __parts__ list index by index. For each part
+    # it first emits that part's header line, then repeatedly calls
+    # the part's .next_chunk() until that returns null (body fully
+    # read), then emits a trailing CRLF, then moves to the next part.
+    # Once all parts are done it emits the closing boundary once, then
+    # every subsequent call returns null.
+    this.__iter__(self) = do
+        self.__part_index__ = 0
+        self.__state__ = "header"   # "header" -> "body" -> "trailer" -> ... -> "final" -> "done"
+        return self
+
+    this.__next__(self) = do
+        let chunk = self.chunk()
+        if (chunk == null) throw StopIteration()
+        return chunk
+
+    this.chunk(self) = do
+        if (self.__state__ == null) self.__iter__()
+
+        while (true) do
+            if (self.__state__ == "done") return null
+
+            if (self.__state__ == "final") do
+                self.__state__ = "done"
+                return buffer.from_string("--" + self.__boundary__ + "--\r\n")
+
+            if (self.__part_index__ >= self.__parts__.length) do
+                self.__state__ = "final"
+                continue
+
+            let part = self.__parts__[self.__part_index__]
+
+            if (self.__state__ == "header") do
+                self.__state__ = "body"
+                return buffer.from_string(part.header(self.__boundary__))
+
+            if (self.__state__ == "body") do
+                let next = part.next_chunk()
+                if (next != null) return next
+                self.__state__ = "trailer"
+                continue
+
+            if (self.__state__ == "trailer") do
+                self.__part_index__ += 1
+                self.__state__ = "header"
+                return __CRLF__
+
+    # Convenience for sending this form over a raw connection you're
+    # already managing yourself (bypassing http.request entirely) -
+    # e.g. as part of a hand-rolled request. Streams chunk by chunk,
+    # same as http.request does internally for any body with .length().
+    this.write_to(self, conn) = do
+        self.__iter__()
+        while (true) do
+            let chunk = self.chunk()
+            if (chunk == null) break
+            conn.send(chunk)
+        return self.length
