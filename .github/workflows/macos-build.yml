@@ -144,6 +144,38 @@ jobs:
       # -------------------
       # Build Argon (arm64)
       # -------------------
+      # -------------------
+      # Download latest stable Argon (macOS) from Jenkins
+      # -------------------
+      - name: Download latest Argon build from Jenkins
+        run: |
+          set -e
+
+          JENKINS_JOB="https://jenkins.wbell.dev/job/Argon/lastSuccessfulBuild"
+
+          ARTIFACT_PATH=$(curl -fsSL "${JENKINS_JOB}/api/json?tree=artifacts[relativePath]" \
+            | python3 -c "
+          import json, sys
+          data = json.load(sys.stdin)
+          for a in data['artifacts']:
+              if 'macos-${{ matrix.arch }}' in a['relativePath'] and a['relativePath'].endswith('.tar.gz'):
+                  print(a['relativePath'])
+                  break
+          ")
+
+          if [ -z "$ARTIFACT_PATH" ]; then
+            echo "No macos-${{ matrix.arch }} artifact found in latest successful build" >&2
+            exit 1
+          fi
+
+          echo "Downloading: $ARTIFACT_PATH"
+          curl -fsSL "${JENKINS_JOB}/artifact/${ARTIFACT_PATH}" -o argon-bootstrap.tar.gz
+
+          mkdir -p bootstrap-argon
+          tar -xzf argon-bootstrap.tar.gz -C bootstrap-argon
+
+          chmod +x bootstrap-argon/bin/argon bootstrap-argon/bin/isotope
+
       - name: Build Argon (arm64)
         if: matrix.arch == 'arm64'
         run: |
@@ -223,26 +255,28 @@ jobs:
         run: |
           set -e
 
+          export PATH="$(pwd)/bootstrap-argon/bin:$PATH"
+
           cd "out/macos-${{ matrix.arch }}/build/dist"
 
           export PATH="$(pwd)/bin:$PATH"
 
           BUILD_NAME="${{ inputs.build_name }}"
 
-          # cat > argon-package.json << EOF
-          # {
-          #     "name": "chloride",
-          #     "version": "$BUILD_NAME",
-          #     "dependencies": {}
-          # }
-          # EOF
-          # cat > iso-lock.json << EOF
-          # {
-          #     "packages": {}
-          # }
-          # EOF
+          cat > argon-package.json << EOF
+          {
+              "name": "chloride",
+              "version": "$BUILD_NAME",
+              "dependencies": {}
+          }
+          EOF
+          cat > iso-lock.json << EOF
+          {
+              "packages": {}
+          }
+          EOF
 
-          ./bin/isotope install isotope
+          argon isotope install isotope
 
       # -------------------
       # Package artifact
