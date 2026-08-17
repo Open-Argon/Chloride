@@ -258,8 +258,6 @@ jobs:
 
           cd "out/macos-${{ matrix.arch }}/build/dist"
 
-          export PATH="$(pwd)/bin:$PATH"
-
           BUILD_NAME="${{ inputs.build_name }}"
 
           cat > argon-package.json << EOF
