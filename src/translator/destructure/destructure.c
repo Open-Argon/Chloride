@@ -23,6 +23,10 @@ size_t translate_destructure(Translated *translated, Destructure *destructure,
   case DESTRUCTURE_IDENTIFIER: {
     char *name = destructure->identifier.name;
     size_t length = strlen(name);
+    push_instruction_byte(translated, OP_SOURCE_LOCATION);
+    push_instruction_code(translated, destructure->identifier.line);
+    push_instruction_code(translated, destructure->identifier.column);
+    push_instruction_code(translated, length);
 
     size_t identifier_pos = arena_push(&translated->constants, name, length);
 
@@ -189,7 +193,8 @@ size_t translate_destructure(Translated *translated, Destructure *destructure,
        */
       uint8_t *key_registers = NULL;
       if (destructure->key.rest && destructure->key.length) {
-        key_registers = checked_malloc(sizeof(uint8_t) * destructure->key.length);
+        key_registers =
+            checked_malloc(sizeof(uint8_t) * destructure->key.length);
       }
 
       for (size_t i = 0; i < destructure->key.length; i++) {
@@ -221,9 +226,9 @@ size_t translate_destructure(Translated *translated, Destructure *destructure,
           push_instruction_byte(translated, 0);
           push_instruction_code(translated, key_name_length);
           push_instruction_code(translated, key_string_pos);
-          push_instruction_code(translated,
-                                siphash64_bytes(key_name, key_name_length,
-                                                siphash_key_fixed));
+          push_instruction_code(
+              translated,
+              siphash64_bytes(key_name, key_name_length, siphash_key_fixed));
         } else {
           translate_parsed(translated, item->key, err);
           if (is_error(err)) {

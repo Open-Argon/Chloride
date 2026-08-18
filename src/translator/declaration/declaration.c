@@ -5,8 +5,8 @@
  */
 
 #include "declaration.h"
-#include "../../hash_data/hash_data.h"
 #include "../../parser/declaration/declaration.h"
+#include "../destructure/destructure.h"
 #include "../translator.h"
 #include <stddef.h>
 #include <stdio.h>
@@ -28,22 +28,8 @@ size_t translate_parsed_declaration(Translated *translated, DArray delcarations,
       return first;
     if (i == 0)
       first = temp;
-    size_t length = strlen(singleDeclaration->name);
-    size_t offset =
-        arena_push(&translated->constants, singleDeclaration->name, length);
-
-    push_instruction_byte(translated, OP_SOURCE_LOCATION);
-    push_instruction_code(translated, singleDeclaration->line);
-    push_instruction_code(translated, singleDeclaration->column);
-    push_instruction_code(translated, length);
-
-    push_instruction_byte(translated, OP_DECLARE);
-    push_instruction_code(translated, length);
-    push_instruction_code(translated, offset);
-    push_instruction_code(translated,
-                          siphash64_bytes(singleDeclaration->name, length,
-                                          siphash_key_fixed));
-    push_instruction_byte(translated, 0);
+    translate_destructure(translated, singleDeclaration->destructure, 0, err,
+                          OP_DECLARE);
     translated->return_jump = old_return_jump;
     translated->break_jump = old_break_jump;
   }

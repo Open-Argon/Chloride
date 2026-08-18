@@ -14,6 +14,7 @@
 #include "../function/function.h"
 #include "../literals/literals.h"
 #include "../parser.h"
+#include "../destructure/destructure.h"
 #include "param_list.h"
 #include <stdint.h>
 #include <stdio.h>
@@ -284,32 +285,63 @@ ParsedValueReturn parse_declaration(char *file, DArray *tokens, size_t *index) {
     darray_push(declarations, &_decl);
     ParsedSingleDeclaration *decl =
         darray_get(declarations, declarations->size - 1);
-    decl->line = token->line;
-    decl->column = token->column;
     decl->from = parse_null();
 
     bool isFunction = false;
     ParamState ps;
 
-    // ── name ─────────────────────────────────────────────────────────────
-    if (token->type != TOKEN_IDENTIFIER) {
+    // ── name / destructuring pattern ───────────────────────────────────────
+    /*
+     * A declaration target is any destructuring pattern:
+     *
+     *     let name = ...
+     *     let {x, y} = ...
+     *     let [a, b] = ...
+     *
+     * Function declarations (`let name(a, b) = ...`) are only permitted
+     * when the target is a bare identifier — parse_destructure_index/
+     * parse_destructure_key results can't be followed by a parameter list.
+     */
+    ArErr destructure_err;
+    Destructure *destructure =
+        parse_destructure(file, tokens, index, &destructure_err);
+
+    if (is_error(&destructure_err)) {
+      free_parsed(parsedValue);
+      free(parsedValue);
+      return (ParsedValueReturn){destructure_err, NULL};
+    }
+
+    if (!destructure) {
       free_parsed(parsedValue);
       free(parsedValue);
       return (ParsedValueReturn){
           path_specific_create_err(token->line, token->column, token->length,
                                    file, SyntaxError,
-                                   "declaration requires an identifier"),
+                                   "declaration requires an identifier or "
+                                   "destructuring pattern"),
           NULL};
     }
-    decl->name = strcpy(checked_malloc(strlen(token->value) + 1), token->value);
 
-    (*index)++;
+    decl->destructure = destructure;
+
     if (*index >= tokens->size)
       return (ParsedValueReturn){no_err, parsedValue};
     token = darray_get(tokens, *index);
 
     // ── optional parameter list ──────────────────────────────────────────
     if (token->type == TOKEN_LPAREN) {
+      if (destructure->type != DESTRUCTURE_IDENTIFIER) {
+        free_parsed(parsedValue);
+        free(parsedValue);
+        return (ParsedValueReturn){
+            path_specific_create_err(
+                token->line, token->column, token->length, file, SyntaxError,
+                "function declarations require a plain identifier, not a "
+                "destructuring pattern"),
+            NULL};
+      }
+
       isFunction = true;
       param_state_init(&ps);
       (*index)++;
@@ -328,9 +360,12 @@ ParsedValueReturn parse_declaration(char *file, DArray *tokens, size_t *index) {
       if (token->type == TOKEN_RPAREN) {
         (*index)++;
         if (*index >= tokens->size) {
-          decl->from =
-              create_parsed_function(decl->name, ps.positional, ps.defaults,
-                                     ps.v_param, ps.kw_param, decl->from);
+          char *fn_name = strcpy(
+              checked_malloc(strlen(destructure->identifier.name) + 1),
+              destructure->identifier.name);
+          decl->from = create_parsed_function(fn_name, ps.positional,
+                                              ps.defaults, ps.v_param,
+                                              ps.kw_param, decl->from);
           hashmap_free(ps.seen, NULL); // ← add this before the return
           return (ParsedValueReturn){no_err, parsedValue};
         }
@@ -387,9 +422,11 @@ ParsedValueReturn parse_declaration(char *file, DArray *tokens, size_t *index) {
     }
 
     if (isFunction) {
-      decl->from =
-          create_parsed_function(decl->name, ps.positional, ps.defaults,
-                                 ps.v_param, ps.kw_param, decl->from);
+      char *fn_name = strcpy(
+          checked_malloc(strlen(destructure->identifier.name) + 1),
+          destructure->identifier.name);
+      decl->from = create_parsed_function(fn_name, ps.positional, ps.defaults,
+                                          ps.v_param, ps.kw_param, decl->from);
       if (ps.seen)
         hashmap_free(ps.seen, NULL);
     }
@@ -437,8 +474,8 @@ void free_string(void *ptr) {
 
 void free_single_declaration(void *ptr) {
   ParsedSingleDeclaration *declaration = ptr;
-  if (declaration->name)
-    free(declaration->name);
+  if (declaration->destructure)
+    free_destructure(declaration->destructure);
   if (declaration->from) {
     free_parsed(declaration->from);
     free(declaration->from);

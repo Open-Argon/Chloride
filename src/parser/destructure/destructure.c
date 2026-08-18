@@ -467,6 +467,8 @@ Destructure *parse_destructure(char *file, DArray *tokens, size_t *index,
 
     result->type = DESTRUCTURE_IDENTIFIER;
     result->identifier.name = cloneString(token->value);
+    result->identifier.column = token->column;
+    result->identifier.line = token->line;
 
     (*index)++;
 

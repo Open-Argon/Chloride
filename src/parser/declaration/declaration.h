@@ -7,12 +7,11 @@
 #ifndef DECLARATION_H
 #define DECLARATION_H
 #include "../parser.h"
+#include "../destructure/destructure.h"
 
 typedef struct {
-  char * name;
+  Destructure * destructure;
   ParsedValue * from;
-  uint64_t line;
-  uint64_t column;
 } ParsedSingleDeclaration;
 
 void free_string(void *ptr);
