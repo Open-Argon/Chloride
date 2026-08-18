@@ -360,10 +360,7 @@ ParsedValueReturn parse_declaration(char *file, DArray *tokens, size_t *index) {
       if (token->type == TOKEN_RPAREN) {
         (*index)++;
         if (*index >= tokens->size) {
-          char *fn_name = strcpy(
-              checked_malloc(strlen(destructure->identifier.name) + 1),
-              destructure->identifier.name);
-          decl->from = create_parsed_function(fn_name, ps.positional,
+          decl->from = create_parsed_function(destructure->identifier.name, ps.positional,
                                               ps.defaults, ps.v_param,
                                               ps.kw_param, decl->from);
           hashmap_free(ps.seen, NULL); // ← add this before the return
@@ -422,10 +419,7 @@ ParsedValueReturn parse_declaration(char *file, DArray *tokens, size_t *index) {
     }
 
     if (isFunction) {
-      char *fn_name = strcpy(
-          checked_malloc(strlen(destructure->identifier.name) + 1),
-          destructure->identifier.name);
-      decl->from = create_parsed_function(fn_name, ps.positional, ps.defaults,
+      decl->from = create_parsed_function(destructure->identifier.name, ps.positional, ps.defaults,
                                           ps.v_param, ps.kw_param, decl->from);
       if (ps.seen)
         hashmap_free(ps.seen, NULL);
