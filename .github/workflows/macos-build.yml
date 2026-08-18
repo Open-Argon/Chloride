@@ -267,13 +267,13 @@ jobs:
               "dependencies": {}
           }
           EOF
-          # cat > iso-lock.json << EOF
-          # {
-          #     "packages": {}
-          # }
-          # EOF
+          cat > iso-lock.json << EOF
+          {
+              "packages": {}
+          }
+          EOF
 
-          ./bin/isotope install isotope
+          argon isotope install isotope
 
       # -------------------
       # Package artifact
