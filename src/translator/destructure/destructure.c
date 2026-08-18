@@ -91,9 +91,10 @@ size_t translate_destructure(Translated *translated, Destructure *destructure,
         push_instruction_code(translated, 0);
 
         push_instruction_byte(translated, OP_CALL);
-
-        translate_destructure(translated, destructure->index.items[i], 0, err,
-                              opcode);
+        if (destructure->index.items[i]) {
+          translate_destructure(translated, destructure->index.items[i], 0, err,
+                                opcode);
+        }
       }
 
       if (destructure->index.rest) {

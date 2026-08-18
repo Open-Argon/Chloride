@@ -14,6 +14,7 @@
 #include "../assignable/identifier/identifier.h"
 #include "../parser.h"
 #include <stddef.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 static void free_destructure_key_item(void *ptr) {
@@ -290,7 +291,7 @@ static Destructure *parse_destructure_key(char *file, DArray *tokens,
  */
 static void free_destructure_item(void *ptr) {
   Destructure *item = *(Destructure **)ptr;
-  free_destructure(item);
+  if (item) free_destructure(item);
 }
 
 static Destructure *parse_destructure_index(char *file, DArray *tokens,
@@ -319,6 +320,15 @@ static Destructure *parse_destructure_index(char *file, DArray *tokens,
     if (token->type == TOKEN_RBRACKET) {
       (*index)++;
       break;
+    } else if (token->type == TOKEN_COMMA) {
+
+      Destructure* item = NULL;
+
+      darray_push(&items, &item);
+
+      (*index)++;
+      skip_newlines_and_indents(tokens, index);
+      continue;
     }
 
     // *rest
