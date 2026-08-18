@@ -85,7 +85,10 @@ typedef enum {
   OP_LOAD_SLICE_CLASS,
   OP_QUIET_THROW,
   OP_UNPACK_KEY_WORD_ARGS,
-  OP_UNPACK_ARGS
+  OP_UNPACK_ARGS,
+  OP_DESTRUCTURE_ERROR,
+  OP_UNPACK_ITERATOR,
+  OP_LOAD_DICTIONARY_CLASS
 } OperationType;
 
 void arena_resize(ConstantArena *arena, size_t new_size);

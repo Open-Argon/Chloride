@@ -20,6 +20,8 @@ extern ArgonObject *ValueError;
 
 extern ArgonObject *SyntaxError;
 
+extern ArgonObject *DestructureError;
+
 extern ArgonObject *ConversionError;
 
 extern ArgonObject *MathsError;

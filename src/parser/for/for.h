@@ -7,9 +7,11 @@
 #ifndef PARSE_FOR_H
 #define PARSE_FOR_H
 #include "../parser.h"
+#include "../destructure/destructure.h"
+
 
 typedef struct {
-  char* key;
+  Destructure *value;
   ParsedValue * iterator;
   ParsedValue *content;
 } ParsedFor;

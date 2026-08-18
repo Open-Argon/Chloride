@@ -5,8 +5,8 @@
  */
 
 #include "for.h"
-#include "../../hash_data/hash_data.h"
 #include "../translator.h"
+#include "../destructure/destructure.h"
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
@@ -59,15 +59,11 @@ size_t translate_parsed_for(Translated *translated, ParsedFor *parsedFor,
       (struct continue_jump){start_of_loop, translated->exception_handler_depth,
                              translated->scope_depth};
 
-  size_t length = strlen(parsedFor->key);
-  size_t identifier_pos =
-      arena_push(&translated->constants, parsedFor->key, length);
-  push_instruction_byte(translated, OP_DECLARE);
-  push_instruction_code(translated, length);
-  push_instruction_code(translated, identifier_pos);
-  push_instruction_code(
-      translated, siphash64_bytes(parsedFor->key, length, siphash_key_fixed));
-  push_instruction_byte(translated, 0);
+  translate_destructure(translated, parsedFor->value, 0, err, OP_DECLARE);
+
+  if (is_error(err)) {
+    return 0;
+  }
 
   translate_parsed(translated, parsedFor->content, err);
 
@@ -113,7 +109,7 @@ size_t translate_parsed_for(Translated *translated, ParsedFor *parsedFor,
   push_instruction_byte(translated, OP_COPY_TO_REGISTER);
   push_instruction_byte(translated, iterator_and_err_register);
   push_instruction_byte(translated, 0);
-  push_instruction_byte(translated, OP_THROW);
+  push_instruction_byte(translated, OP_QUIET_THROW);
   set_instruction_code(translated, is_exception_type,
                        translated->bytecode.size);
 

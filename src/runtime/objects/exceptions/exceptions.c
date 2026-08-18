@@ -19,6 +19,7 @@ ArgonObject *RuntimeError;
 ArgonObject *AssignError;
 ArgonObject *ValueError;
 ArgonObject *SyntaxError;
+ArgonObject *DestructureError;
 ArgonObject *ConversionError;
 ArgonObject *MathsError;
 ArgonObject *ZeroDivisionError;
@@ -111,6 +112,11 @@ void init_exceptions() {
   add_builtin_field(SyntaxError, __base__, Exception);
   add_builtin_field(SyntaxError, __name__,
                     new_string_object_null_terminated("SyntaxError"));
+
+  DestructureError = new_class();
+  add_builtin_field(DestructureError, __base__, Exception);
+  add_builtin_field(DestructureError, __name__,
+                    new_string_object_null_terminated("DestructureError"));
 
   ConversionError = new_class();
   add_builtin_field(ConversionError, __base__, Exception);

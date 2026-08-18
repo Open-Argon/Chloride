@@ -248,7 +248,7 @@ jobs:
           file "../out/macos-${{ matrix.arch }}/build/dist/bin/isotope"
 
       # -------------------
-      # Bootstrap new Isotope (argon isotope) using the Go build above
+      # Bootstrap new Isotope (argon isotope)
       # -------------------
       - name: Bootstrap Isotope via argon isotope
         run: |

@@ -23,7 +23,7 @@ this operation 4 operands.
 
 initilises a variable on the current scope with a given value. errors if the variable is already initilises on the current scope.
 
-this operation takes 3 operands.
+this operation takes 4 operands.
 
 1. the length of the variable name.
 1. the offset in the constant buffer of the variable name.
@@ -171,6 +171,12 @@ initialises a call instance struct and arguments buffer.
 
 takes the object in register 0 and iterates over its iterator object, appending each item as positional arguments
 
+## OP_UNPACK_ITERATOR
+
+calls the \_\_next\_\_ method stored in the register passed in, appending the result of \_\_next\_\_ as positional arguments.
+
+1. the register storing the \_\_next\_\_ method. (*)
+
 ## OP_UNPACK_KEY_WORD_ARGS
 
 takes the object in register 0 and iterates over its iterator object, appending each item as key word arguments (index 0 as key and index 1 as value). the key must be a string object, otherwise an error is throw.
@@ -195,7 +201,7 @@ loads the \_\_template\_\_ method from the objects class in register 0 and put i
 
 loads the \_\_iter\_\_ method from the objects class in register 0 and put it into register 0
 
-## OP_LOAD_ITER_METHOD
+## OP_LOAD_NEXT_METHOD
 
 loads the \_\_next\_\_ method from the objects class in register 0 and put it into register 0
 
@@ -208,6 +214,13 @@ loads the \_\_getattribute\_\_ method from the objects class in register 0 and p
 loads a boolean into register 0
 
 1. byte representing true or false (1 or 0) *
+
+## OP_DESTRUCTURE_ERROR
+
+throws a destructure error
+
+1. expected size
+1. received size
 
 ## OP_LOAD_NUMBER
 
@@ -363,6 +376,10 @@ loads the render template function into register 0.
 ## OP_LOAD_RANGE_CLASS
 
 loads the range class into register 0.
+
+## OP_LOAD_DICTIONARY_CLASS
+
+loads the dictionary class into register 0.
 
 ## OP_CREATE_CLASS
 

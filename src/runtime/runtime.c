@@ -1632,7 +1632,10 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       [OP_DELETE_IDENTIFIER] = &&DO_DELETE_IDENTIFIER,
       [OP_LOAD_DELATTR_METHOD] = &&DO_LOAD_DELATTR_METHOD,
       [OP_LOAD_DELITEM_METHOD] = &&DO_LOAD_DELITEM_METHOD,
-      [OP_QUIET_THROW] = &&DO_QUIET_THROW};
+      [OP_QUIET_THROW] = &&DO_QUIET_THROW,
+      [OP_DESTRUCTURE_ERROR] = &&DO_DESTRUCTURE_ERROR,
+      [OP_UNPACK_ITERATOR] = &&DO_UNPACK_ITERATOR,
+      [OP_LOAD_DICTIONARY_CLASS] = &&DO_LOAD_DICTIONARY_CLASS};
   _state.head = 0;
 
   ArErr err = *err_ptr;
@@ -2105,6 +2108,31 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
                          "unable to get __next__ from objects iterator class");
           break;
         }
+        while (true) {
+          ArgonObject *item = argon_call(next, 0, NULL, NULL, &err, state);
+          if (is_error(&err)) {
+            if (err.ptr == StopIteration_instance) {
+              err.ptr = ARGON_NULL;
+            }
+            break;
+          }
+          if (state->call_instance->args.capacity <=
+              state->call_instance->args.length) {
+            if (state->call_instance->args.capacity == 0)
+              state->call_instance->args.capacity = 1;
+            state->call_instance->args.capacity *= 2;
+            state->call_instance->args.arr = ar_realloc(
+                state->call_instance->args.arr,
+                state->call_instance->args.capacity * sizeof(ArgonObject *));
+          }
+          state->call_instance->args.arr[state->call_instance->args.length++] =
+              item;
+        }
+        continue;
+      }
+    DO_UNPACK_ITERATOR:
+      {
+        ArgonObject *next =state->registers[POP_BYTE()];
         while (true) {
           ArgonObject *item = argon_call(next, 0, NULL, NULL, &err, state);
           if (is_error(&err)) {
@@ -2755,6 +2783,16 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
         continue;
       }
 
+    DO_DESTRUCTURE_ERROR:
+      {
+        uint64_t expected;
+        POP_U64(expected);
+        uint8_t got_register = POP_BYTE();
+        err = create_err(DestructureError,
+                           "expected at least %"PRIu64" value(s), got %"PRIu64, expected, state->registers[got_register]->value.as_number->n.i64);
+        continue;
+      }
+
     DO_QUIET_THROW:
       {
         if (!is_instance(state->registers[0], BaseException)) {
@@ -3257,6 +3295,11 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
         continue;
       }
     DO_LOAD_RANGE_CLASS:
+      {
+        state->registers[0] = ARGON_RANGE_ITERATOR_TYPE;
+        continue;
+      }
+    DO_LOAD_DICTIONARY_CLASS:
       {
         state->registers[0] = ARGON_RANGE_ITERATOR_TYPE;
         continue;
