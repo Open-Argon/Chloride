@@ -249,6 +249,8 @@ const char *tls_last_error(void) {
 #ifdef _WIN32
 #include <windows.h>
 #include <wincrypt.h>
+#elif defined(__APPLE__)
+#include <Security/Security.h>
 #endif
 
 static int tls_load_default_ca(SSL_CTX *ctx) {
@@ -284,6 +286,36 @@ static int tls_load_default_ca(SSL_CTX *ctx) {
 
     CertCloseStore(cert_store, 0);
 
+    return loaded;
+#elif defined(__APPLE__)
+// loads only Apple's built-in root CAs, not user/admin-trusted certs
+    X509_STORE *store = SSL_CTX_get_cert_store(ctx);
+    int loaded = 0;
+
+    CFArrayRef anchors = NULL;
+    OSStatus status = SecTrustCopyAnchorCertificates(&anchors);
+    if (status != errSecSuccess || !anchors)
+        return 0;
+
+    CFIndex count = CFArrayGetCount(anchors);
+    for (CFIndex i = 0; i < count; i++) {
+        SecCertificateRef cert = (SecCertificateRef)CFArrayGetValueAtIndex(anchors, i);
+        CFDataRef der = SecCertificateCopyData(cert);
+        if (!der) continue;
+
+        const unsigned char *data = CFDataGetBytePtr(der);
+        long len = CFDataGetLength(der);
+
+        X509 *x509 = d2i_X509(NULL, &data, len);
+        if (x509) {
+            if (X509_STORE_add_cert(store, x509) == 1)
+                loaded = 1;
+            X509_free(x509);
+        }
+        CFRelease(der);
+    }
+
+    CFRelease(anchors);
     return loaded;
 #else
     return SSL_CTX_set_default_verify_paths(ctx) == 1;
