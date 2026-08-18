@@ -29,6 +29,16 @@ if(MINGW)
     )
 endif()
 
+if(APPLE)
+    find_library(SECURITY_FRAMEWORK Security REQUIRED)
+    find_library(COREFOUNDATION_FRAMEWORK CoreFoundation REQUIRED)
+
+    target_link_libraries(network PRIVATE
+        ${SECURITY_FRAMEWORK}
+        ${COREFOUNDATION_FRAMEWORK}
+    )
+endif()
+
 target_link_libraries(network PRIVATE
     OpenSSL::SSL
     OpenSSL::Crypto
