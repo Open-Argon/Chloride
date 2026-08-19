@@ -179,11 +179,12 @@ pipeline {
 
                                     cp -r stdlib out/linux/build/dist/
                                     export ARGON_INCLUDE="$(realpath include)"
+                                    export UNAME_S=Linux
+                                    export TARGET_ARCH=x86_64
 
                                     ./build-stdlib.sh \
                                         out/linux/build/dist/stdlib \
-                                        -j \
-                                        ARGON_INCLUDE="$(realpath include)"
+                                        -j
 
                                     echo "Building Isotope for Linux..."
 
@@ -251,17 +252,13 @@ EOF
                                     export RANLIB=aarch64-linux-gnu-ranlib
                                     export STRIP=aarch64-linux-gnu-strip
                                     export ARGON_INCLUDE="$(realpath include)"
+                                    export UNAME_S=Linux
+                                    export TARGET_OS=linux-arm64
+                                    export TARGET_ARCH=arm64
 
                                     ./build-stdlib.sh \
                                         out/linux-arm64/build/dist/stdlib \
-                                        -j \
-                                        ARGON_INCLUDE="$(realpath include)" \
-                                         CC=aarch64-linux-gnu-gcc \
-                                         CXX=aarch64-linux-gnu-g++ \
-                                         AR=aarch64-linux-gnu-ar \
-                                         RANLIB=aarch64-linux-gnu-ranlib \
-                                         STRIP=aarch64-linux-gnu-strip \
-                                         TARGET_OS=linux-arm64
+                                        -j
 
                                     echo "Building Isotope for Linux ARM64..."
 
@@ -365,50 +362,153 @@ EOF
                     }
                 }
 
-                stage('macOS Build (GitHub Actions)') {
+                stage('macOS ARM64 Build') {
+                    agent { label 'debian-osxcross' }
                     environment {
-                        GH_TOKEN = credentials('github-pat')
-                        GH_REPO  = 'open-argon/chloride'
-                        WORKFLOW = 'macOS Build (Jenkins-triggered)'
-                        BUILD_NAME_ARG = "${env.TAG_NAME ?: 'dev'}"
+                        CONAN_HOME = "${WORKSPACE}/.conan-macos-arm64"
                     }
-                    steps {
-                        sh '''
-                            set -e
+                    stages {
+                        stage('Build') {
+                            steps {
+                                sh '''
+                                    set -e
+                                    . /tmp/venv/bin/activate
 
-                            REF=$(git describe --tags --exact-match 2>/dev/null || git rev-parse HEAD)
-                            echo "Triggering macOS build for ref: $REF"
+                                    rm -rf out/macos-arm64 $CONAN_HOME
+                                    conan profile detect
 
-                            gh workflow run "$WORKFLOW" \
-                                --repo "$GH_REPO" \
-                                --ref main \
-                                -f ref="$REF" \
-                                -f build_name="$BUILD_NAME_ARG"
+                                    mkdir -p out/macos-arm64/build/dist/bin
 
-                            RUN_ID=$(gh run list \
-                                --repo "$GH_REPO" \
-                                --workflow "$WORKFLOW" \
-                                --limit 1 \
-                                --json databaseId \
-                                -q '.[0].databaseId')
+                                    conan install . \
+                                        --profile:build=default \
+                                        --profile:host=profiles/apple/macos-arm64 \
+                                        --build=missing \
+                                        -of "out/macos-arm64"
 
-                            echo "Waiting for GitHub Actions run $RUN_ID"
+                                    conan build . \
+                                        --profile:build=default \
+                                        --profile:host=profiles/apple/macos-arm64 \
+                                        -of "out/macos-arm64"
 
-                            gh run watch "$RUN_ID" \
-                                --repo "$GH_REPO"
+                                    cp -r stdlib out/macos-arm64/build/dist/
 
-                            echo "Downloading macOS arm64 artifact..."
-                            gh run download "$RUN_ID" \
-                                --repo "$GH_REPO" \
-                                --name macos-build-arm64 \
-                                --dir macos-artifacts
+                                    export CC="arm64-apple-darwin24.5-clang"
+                                    export CXX="arm64-apple-darwin24.5-clang++"
+                                    export ARGON_INCLUDE="$(realpath include)"
+                                    export UNAME_S=Darwin
+                                    export TARGET_ARCH=arm64
 
-                            # echo "Downloading macOS x86_64 artifact..."
-                            # gh run download "$RUN_ID" \
-                            #     --repo "$GH_REPO" \
-                            #     --name macos-build-x86_64 \
-                            #     --dir macos-artifacts
-                        '''
+                                    ./build-stdlib.sh \
+                                        out/macos-arm64/build/dist/stdlib \
+                                        -j
+
+                                    echo "Building Isotope for macOS ARM64..."
+
+                                    cd isotope-src
+
+                                    GOOS=darwin \
+                                    GOARCH=arm64 \
+                                    CGO_ENABLED=0 \
+                                    go build \
+                                        -trimpath \
+                                        -ldflags="-s -w" \
+                                        -o ../out/macos-arm64/build/dist/bin/isotope \
+                                        ./src
+
+                                    cd ../out/macos-arm64/build/dist/
+
+                                    cat > argon-package.json << EOF
+{
+    "name": "chloride",
+    "version": "$TAG_NAME",
+    "dependencies": {}
+}
+EOF
+                                    cat > iso-lock.json << EOF
+{
+    "packages": {}
+}
+EOF
+
+                                    argon isotope install isotope
+                                '''
+                            }
+                        }
+                    }
+                }
+
+                stage('macOS x86_64 Build') {
+                    agent { label 'debian-osxcross' }
+                    environment {
+                        CONAN_HOME = "${WORKSPACE}/.conan-macos-x86_64"
+                    }
+                    stages {
+                        stage('Build') {
+                            steps {
+                                sh '''
+                                    set -e
+                                    . /tmp/venv/bin/activate
+
+                                    rm -rf out/macos-x86_64 $CONAN_HOME
+                                    conan profile detect
+
+                                    mkdir -p out/macos-x86_64/build/dist/bin
+
+                                    conan install . \
+                                        --profile:build=default \
+                                        --profile:host=profiles/apple/macos-x86_64 \
+                                        --build=missing \
+                                        -of "out/macos-x86_64"
+
+                                    conan build . \
+                                        --profile:build=default \
+                                        --profile:host=profiles/apple/macos-x86_64 \
+                                        -of "out/macos-x86_64"
+
+                                    cp -r stdlib out/macos-x86_64/build/dist/
+
+                                    export CC="x86_64-apple-darwin24.5-clang"
+                                    export CXX="x86_64-apple-darwin24.5-clang++"
+                                    export ARGON_INCLUDE="$(realpath include)"
+                                    export UNAME_S=Darwin
+                                    export TARGET_ARCH=x86_64
+
+                                    ./build-stdlib.sh \
+                                        out/macos-x86_64/build/dist/stdlib \
+                                        -j
+
+                                    echo "Building Isotope for macOS x86_64..."
+
+                                    cd isotope-src
+
+                                    GOOS=darwin \
+                                    GOARCH=amd64 \
+                                    CGO_ENABLED=0 \
+                                    go build \
+                                        -trimpath \
+                                        -ldflags="-s -w" \
+                                        -o ../out/macos-x86_64/build/dist/bin/isotope \
+                                        ./src
+
+                                    cd ../out/macos-x86_64/build/dist/
+
+                                    cat > argon-package.json << EOF
+{
+    "name": "chloride",
+    "version": "$TAG_NAME",
+    "dependencies": {}
+}
+EOF
+                                    cat > iso-lock.json << EOF
+{
+    "packages": {}
+}
+EOF
+
+                                    argon isotope install isotope
+                                '''
+                            }
+                        }
                     }
                 }
             }
@@ -1163,9 +1263,39 @@ SPEC
             }
         }
 
-        stage('Archive macOS') {
+        stage('Archive macOS ARM64') {
             steps {
-                archiveArtifacts artifacts: 'macos-artifacts/**/*.tar.gz', fingerprint: true
+                script {
+                    def version = env.TAG_NAME ?: "dev"
+                    env.OUTPUT_FILE = "archives/argon-${version}-macos-arm64.tar.gz"
+                    echo "Packaging macOS ARM64 as: ${env.OUTPUT_FILE}"
+                }
+                sh '''
+                    cp LICENSE.txt out/macos-arm64/build/dist/
+                    cp -r LICENSES out/macos-arm64/build/dist/
+                    cp -r include out/macos-arm64/build/dist/
+
+                    tar -czf "$OUTPUT_FILE" -C out/macos-arm64/build/dist .
+                '''
+                archiveArtifacts artifacts: "${env.OUTPUT_FILE}", allowEmptyArchive: false, fingerprint: true
+            }
+        }
+
+        stage('Archive macOS x86_64') {
+            steps {
+                script {
+                    def version = env.TAG_NAME ?: "dev"
+                    env.OUTPUT_FILE = "archives/argon-${version}-macos-x86_64.tar.gz"
+                    echo "Packaging macOS x86_64 as: ${env.OUTPUT_FILE}"
+                }
+                sh '''
+                    cp LICENSE.txt out/macos-x86_64/build/dist/
+                    cp -r LICENSES out/macos-x86_64/build/dist/
+                    cp -r include out/macos-x86_64/build/dist/
+
+                    tar -czf "$OUTPUT_FILE" -C out/macos-x86_64/build/dist .
+                '''
+                archiveArtifacts artifacts: "${env.OUTPUT_FILE}", allowEmptyArchive: false, fingerprint: true
             }
         }
     }

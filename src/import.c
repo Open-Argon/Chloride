@@ -567,7 +567,8 @@ int get_executable_path(char *path, size_t size) {
     return -1;
   }
 #elif defined(__APPLE__)
-  if (_NSGetExecutablePath(path, &size) != 0) {
+  uint32_t apple_size = (uint32_t)size;
+  if (_NSGetExecutablePath(path, &apple_size) != 0) {
     return -1; // buffer too small
   }
 #else // Linux / Unix

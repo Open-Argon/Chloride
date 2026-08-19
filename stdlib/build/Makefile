@@ -15,7 +15,7 @@ BIN_DIR    := native/bin
 #   windows = Windows (via MinGW-w64)
 # ------------------------------------------------------------
 TARGET_OS ?= posix
-UNAME_S   := $(shell uname -s)
+UNAME_S   ?= $(shell uname -s)
 
 # ------------------------------------------------------------
 # Toolchain & platform specifics
