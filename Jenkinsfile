@@ -135,9 +135,9 @@ pipeline {
                     pip install --upgrade pip
                     pip install conan
 
-                    mkdir -p archives macos-artifacts
+                    mkdir -p archives
 
-                    rm -rf archives/* macos-artifacts/* *.zip *.tar.gz
+                    rm -rf archives/* *.zip *.tar.gz
                 '''
             }
         }
@@ -368,11 +368,55 @@ EOF
                         CONAN_HOME = "${WORKSPACE}/.conan-macos-arm64"
                     }
                     stages {
+                        stage('Checkout') {
+                            steps {
+                                script {
+                                    if (env.GIT_TAG) {
+                                        echo "Checking out tag: ${env.GIT_TAG}"
+                                        checkout([
+                                            $class: 'GitSCM',
+                                            branches: [[name: "refs/tags/${env.GIT_TAG}"]],
+                                            userRemoteConfigs: [[url: scm.userRemoteConfigs[0].url]],
+                                            doGenerateSubmoduleConfigurations: false,
+                                            extensions: [
+                                                [$class: 'SubmoduleUpdate', recursiveSubmodules: true]
+                                            ]
+                                        ])
+                                    } else {
+                                        echo "Checking out normal branch"
+                                        checkout scm
+                                    }
+                                    sh 'git submodule update --init --recursive'
+                                }
+                            }
+                        }
+                        stage('Checkout Isotope') {
+                            steps {
+                                sh '''
+                                    set -e
+                                    rm -rf isotope-src
+                                    git clone --depth 1 https://git.wbell.dev/Open-Argon/Isotope.git isotope-src
+                                '''
+                            }
+                        }
+                        stage('Setup Conan') {
+                            steps {
+                                sh '''
+                                    set -e
+
+                                    python3 -m venv /tmp/venv-macos-arm64
+                                    . /tmp/venv-macos-arm64/bin/activate
+
+                                    pip install --upgrade pip
+                                    pip install conan
+                                '''
+                            }
+                        }
                         stage('Build') {
                             steps {
                                 sh '''
                                     set -e
-                                    . /tmp/venv/bin/activate
+                                    . /tmp/venv-macos-arm64/bin/activate
 
                                     rm -rf out/macos-arm64 $CONAN_HOME
                                     conan profile detect
@@ -434,6 +478,24 @@ EOF
                                 '''
                             }
                         }
+                        stage('Archive') {
+                            steps {
+                                script {
+                                    def version = env.TAG_NAME ?: "dev"
+                                    env.MACOS_ARM64_OUTPUT_FILE = "archives/argon-${version}-macos-arm64.tar.gz"
+                                    echo "Packaging macOS ARM64 as: ${env.MACOS_ARM64_OUTPUT_FILE}"
+                                }
+                                sh '''
+                                    mkdir -p archives
+                                    cp LICENSE.txt out/macos-arm64/build/dist/
+                                    cp -r LICENSES out/macos-arm64/build/dist/
+                                    cp -r include out/macos-arm64/build/dist/
+
+                                    tar -czf "$MACOS_ARM64_OUTPUT_FILE" -C out/macos-arm64/build/dist .
+                                '''
+                                archiveArtifacts artifacts: "${env.MACOS_ARM64_OUTPUT_FILE}", allowEmptyArchive: false, fingerprint: true
+                            }
+                        }
                     }
                 }
 
@@ -443,11 +505,55 @@ EOF
                         CONAN_HOME = "${WORKSPACE}/.conan-macos-x86_64"
                     }
                     stages {
+                        stage('Checkout') {
+                            steps {
+                                script {
+                                    if (env.GIT_TAG) {
+                                        echo "Checking out tag: ${env.GIT_TAG}"
+                                        checkout([
+                                            $class: 'GitSCM',
+                                            branches: [[name: "refs/tags/${env.GIT_TAG}"]],
+                                            userRemoteConfigs: [[url: scm.userRemoteConfigs[0].url]],
+                                            doGenerateSubmoduleConfigurations: false,
+                                            extensions: [
+                                                [$class: 'SubmoduleUpdate', recursiveSubmodules: true]
+                                            ]
+                                        ])
+                                    } else {
+                                        echo "Checking out normal branch"
+                                        checkout scm
+                                    }
+                                    sh 'git submodule update --init --recursive'
+                                }
+                            }
+                        }
+                        stage('Checkout Isotope') {
+                            steps {
+                                sh '''
+                                    set -e
+                                    rm -rf isotope-src
+                                    git clone --depth 1 https://git.wbell.dev/Open-Argon/Isotope.git isotope-src
+                                '''
+                            }
+                        }
+                        stage('Setup Conan') {
+                            steps {
+                                sh '''
+                                    set -e
+
+                                    python3 -m venv /tmp/venv-macos-x86_64
+                                    . /tmp/venv-macos-x86_64/bin/activate
+
+                                    pip install --upgrade pip
+                                    pip install conan
+                                '''
+                            }
+                        }
                         stage('Build') {
                             steps {
                                 sh '''
                                     set -e
-                                    . /tmp/venv/bin/activate
+                                    . /tmp/venv-macos-x86_64/bin/activate
 
                                     rm -rf out/macos-x86_64 $CONAN_HOME
                                     conan profile detect
@@ -507,6 +613,24 @@ EOF
 
                                     argon isotope install isotope
                                 '''
+                            }
+                        }
+                        stage('Archive') {
+                            steps {
+                                script {
+                                    def version = env.TAG_NAME ?: "dev"
+                                    env.MACOS_X86_64_OUTPUT_FILE = "archives/argon-${version}-macos-x86_64.tar.gz"
+                                    echo "Packaging macOS x86_64 as: ${env.MACOS_X86_64_OUTPUT_FILE}"
+                                }
+                                sh '''
+                                    mkdir -p archives
+                                    cp LICENSE.txt out/macos-x86_64/build/dist/
+                                    cp -r LICENSES out/macos-x86_64/build/dist/
+                                    cp -r include out/macos-x86_64/build/dist/
+
+                                    tar -czf "$MACOS_X86_64_OUTPUT_FILE" -C out/macos-x86_64/build/dist .
+                                '''
+                                archiveArtifacts artifacts: "${env.MACOS_X86_64_OUTPUT_FILE}", allowEmptyArchive: false, fingerprint: true
                             }
                         }
                     }
@@ -1263,41 +1387,6 @@ SPEC
             }
         }
 
-        stage('Archive macOS ARM64') {
-            steps {
-                script {
-                    def version = env.TAG_NAME ?: "dev"
-                    env.OUTPUT_FILE = "archives/argon-${version}-macos-arm64.tar.gz"
-                    echo "Packaging macOS ARM64 as: ${env.OUTPUT_FILE}"
-                }
-                sh '''
-                    cp LICENSE.txt out/macos-arm64/build/dist/
-                    cp -r LICENSES out/macos-arm64/build/dist/
-                    cp -r include out/macos-arm64/build/dist/
-
-                    tar -czf "$OUTPUT_FILE" -C out/macos-arm64/build/dist .
-                '''
-                archiveArtifacts artifacts: "${env.OUTPUT_FILE}", allowEmptyArchive: false, fingerprint: true
-            }
-        }
-
-        stage('Archive macOS x86_64') {
-            steps {
-                script {
-                    def version = env.TAG_NAME ?: "dev"
-                    env.OUTPUT_FILE = "archives/argon-${version}-macos-x86_64.tar.gz"
-                    echo "Packaging macOS x86_64 as: ${env.OUTPUT_FILE}"
-                }
-                sh '''
-                    cp LICENSE.txt out/macos-x86_64/build/dist/
-                    cp -r LICENSES out/macos-x86_64/build/dist/
-                    cp -r include out/macos-x86_64/build/dist/
-
-                    tar -czf "$OUTPUT_FILE" -C out/macos-x86_64/build/dist .
-                '''
-                archiveArtifacts artifacts: "${env.OUTPUT_FILE}", allowEmptyArchive: false, fingerprint: true
-            }
-        }
     }
 
     post {
