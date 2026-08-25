@@ -42,14 +42,9 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 # Install architecture-specific Argon, Isotope and stdlib.
-COPY --from=binaries /selected/bin/argon \
-     ${CHLORIDE_HOME}/bin/argon
 
-COPY --from=binaries /selected/bin/isotope \
-     ${CHLORIDE_HOME}/bin/isotope
-
-COPY --from=binaries /selected/stdlib/ \
-     ${CHLORIDE_HOME}/stdlib/
+COPY --from=binaries /selected/ \
+     ${CHLORIDE_HOME}/
 
 # Install Argon C headers.
 COPY include/ \
