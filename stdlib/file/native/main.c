@@ -6,6 +6,7 @@
 #include "Argon.h"
 #include "ArgonFunction.h"
 #include <errno.h>
+#include <inttypes.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -14,8 +15,8 @@
 
 #if defined(_WIN32) || defined(_WIN64)
 
-#include <windows.h>
 #include <bcrypt.h>
+#include <windows.h>
 
 #else
 
@@ -733,9 +734,7 @@ static bool argon_path_is_absolute(const char *path) {
 #endif
 }
 
-static bool argon_temp_random_bytes(
-    unsigned char *data,
-    size_t length) {
+static bool argon_temp_random_bytes(unsigned char *data, size_t length) {
 
   if (length == 0)
     return true;
@@ -745,11 +744,8 @@ static bool argon_temp_random_bytes(
   if (length > ULONG_MAX)
     return false;
 
-  NTSTATUS status = BCryptGenRandom(
-      NULL,
-      data,
-      (ULONG)length,
-      BCRYPT_USE_SYSTEM_PREFERRED_RNG);
+  NTSTATUS status = BCryptGenRandom(NULL, data, (ULONG)length,
+                                    BCRYPT_USE_SYSTEM_PREFERRED_RNG);
 
   return BCRYPT_SUCCESS(status);
 
@@ -759,10 +755,7 @@ static bool argon_temp_random_bytes(
 
   while (offset < length) {
 
-    ssize_t result = getrandom(
-        data + offset,
-        length - offset,
-        0);
+    ssize_t result = getrandom(data + offset, length - offset, 0);
 
     if (result < 0) {
       if (errno == EINTR)
@@ -787,15 +780,12 @@ static bool argon_temp_random_bytes(
 #endif
 }
 
-static bool argon_temp_fill_random(
-    char *data,
-    size_t length) {
+static bool argon_temp_fill_random(char *data, size_t length) {
 
   if (length == 0)
     return true;
 
-  const size_t chars =
-      sizeof(ARGON_TEMP_RANDOM_CHARS) - 1;
+  const size_t chars = sizeof(ARGON_TEMP_RANDOM_CHARS) - 1;
 
   /*
    * 248 is the largest multiple of 62 below 256.
@@ -812,9 +802,7 @@ static bool argon_temp_fill_random(
     if (requested > sizeof(random))
       requested = sizeof(random);
 
-    if (!argon_temp_random_bytes(
-            random,
-            requested))
+    if (!argon_temp_random_bytes(random, requested))
       return false;
 
     for (size_t i = 0; i < requested; i++) {
@@ -824,9 +812,7 @@ static bool argon_temp_fill_random(
       if (value >= 248)
         continue;
 
-      data[written++] =
-          ARGON_TEMP_RANDOM_CHARS[
-              value % chars];
+      data[written++] = ARGON_TEMP_RANDOM_CHARS[value % chars];
 
       if (written == length)
         break;
@@ -1772,6 +1758,185 @@ ARGON_FUNCTION(copy_file, {
   return api->ARGON_NULL;
 })
 
+ARGON_FUNCTION(file_metadata, {
+  if (api->fix_to_arg_size(1, argc, err))
+    return api->ARGON_NULL;
+
+  struct string path_str = api->argon_to_string(argv[0], err);
+
+  if (api->is_error(err))
+    return api->ARGON_NULL;
+
+  char *path = malloc(path_str.length + 1);
+
+  if (!path)
+    return api->throw_argon_error(err, api->RuntimeError, "out of memory");
+
+  memcpy(path, path_str.data, path_str.length);
+  path[path_str.length] = '\0';
+
+#if defined(_WIN32) || defined(_WIN64)
+
+  /*
+   * Windows does not expose a Unix-style inode.
+   *
+   * GetFileInformationByHandle() gives us:
+   *
+   *   - file size
+   *   - last write time
+   *   - volume serial number
+   *   - file index
+   *
+   * The volume serial + file index is effectively our
+   * device + inode equivalent.
+   */
+
+  HANDLE file =
+      CreateFileA(path, FILE_READ_ATTRIBUTES,
+                  FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL,
+                  OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+
+  if (file == INVALID_HANDLE_VALUE) {
+    DWORD error = GetLastError();
+
+    free(path);
+
+    return api->throw_argon_error(err, api->FileError,
+                                  "failed to get metadata for '%s': %lu", path,
+                                  error);
+  }
+
+  BY_HANDLE_FILE_INFORMATION info;
+
+  if (!GetFileInformationByHandle(file, &info)) {
+    DWORD error = GetLastError();
+
+    CloseHandle(file);
+    free(path);
+
+    return api->throw_argon_error(err, api->FileError,
+                                  "failed to get metadata for '%s': %lu", path,
+                                  error);
+  }
+
+  CloseHandle(file);
+  free(path);
+
+  /*
+   * File size.
+   */
+  uint64_t size =
+      ((uint64_t)info.nFileSizeHigh << 32) | (uint64_t)info.nFileSizeLow;
+
+  /*
+   * Windows FILETIME is:
+   *
+   *   100-nanosecond intervals since
+   *   January 1, 1601 UTC.
+   *
+   * Convert it into Unix seconds + nanoseconds.
+   */
+  uint64_t filetime = ((uint64_t)info.ftLastWriteTime.dwHighDateTime << 32) |
+                      (uint64_t)info.ftLastWriteTime.dwLowDateTime;
+
+  const uint64_t WINDOWS_TO_UNIX_EPOCH = 116444736000000000ULL;
+
+  uint64_t unix_100ns = 0;
+
+  if (filetime >= WINDOWS_TO_UNIX_EPOCH)
+    unix_100ns = filetime - WINDOWS_TO_UNIX_EPOCH;
+
+  int64_t mtime_seconds = (int64_t)(unix_100ns / 10000000ULL);
+
+  int64_t mtime_nanoseconds = (int64_t)((unix_100ns % 10000000ULL) * 100ULL);
+
+  /*
+   * Windows equivalent of:
+   *
+   *   st_dev
+   *   st_ino
+   *
+   * Use volume serial as the device and the
+   * 64-bit file index as the inode.
+   */
+  int64_t device = (int64_t)(uint32_t)info.dwVolumeSerialNumber;
+
+  uint64_t file_index =
+      ((uint64_t)info.nFileIndexHigh << 32) | (uint64_t)info.nFileIndexLow;
+
+  int64_t inode = (int64_t)file_index;
+
+  ArgonObject **items = malloc(sizeof(ArgonObject *) * 5);
+
+  if (!items)
+    return api->throw_argon_error(err, api->RuntimeError, "out of memory");
+
+  items[0] = api->i64_to_argon((int64_t)size);
+  items[1] = api->i64_to_argon(mtime_seconds);
+  items[2] = api->i64_to_argon(mtime_nanoseconds);
+  items[3] = api->i64_to_argon(device);
+  items[4] = api->i64_to_argon(inode);
+
+  return api->create_argon_array(items, 5);
+
+#else
+
+  struct stat st;
+
+  if (stat(path, &st) != 0) {
+    int error = errno;
+
+    free(path);
+
+    return api->throw_argon_error(
+        err,
+        api->FileError,
+        "failed to get metadata for '%s': %s",
+        path,
+        strerror(error));
+  }
+
+  free(path);
+
+  /*
+   * Nanosecond timestamp support differs slightly between
+   * platforms.
+   */
+#if defined(__APPLE__)
+
+  int64_t mtime_seconds = (int64_t)st.st_mtimespec.tv_sec;
+  int64_t mtime_nanoseconds = (int64_t)st.st_mtimespec.tv_nsec;
+
+#else
+
+  int64_t mtime_seconds = (int64_t)st.st_mtim.tv_sec;
+  int64_t mtime_nanoseconds = (int64_t)st.st_mtim.tv_nsec;
+
+#endif
+
+  int64_t size = (int64_t)st.st_size;
+  int64_t device = (int64_t)st.st_dev;
+  int64_t inode = (int64_t)st.st_ino;
+
+  ArgonObject **items = malloc(sizeof(ArgonObject *) * 5);
+
+  if (!items)
+    return api->throw_argon_error(
+        err,
+        api->RuntimeError,
+        "out of memory");
+
+  items[0] = api->i64_to_argon(size);
+  items[1] = api->i64_to_argon(mtime_seconds);
+  items[2] = api->i64_to_argon(mtime_nanoseconds);
+  items[3] = api->i64_to_argon(device);
+  items[4] = api->i64_to_argon(inode);
+
+  return api->create_argon_array(items, 5);
+
+#endif
+})
+
 ARGON_FUNCTION(copy_dir, {
   if (api->fix_to_arg_size(3, argc, err))
     return api->ARGON_NULL;
@@ -2531,4 +2696,5 @@ INIT_ARGON_MODULE({
   REGISTER_ARGON_FUNCTION(delete_file);
   REGISTER_ARGON_FUNCTION(delete_dir);
   REGISTER_ARGON_FUNCTION(move_contents);
+  REGISTER_ARGON_FUNCTION(file_metadata);
 })

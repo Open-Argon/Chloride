@@ -1,0 +1,9 @@
+{
+    "packages": {
+        "isotope@1.0.0": {
+            "remote": "isotope.wbell.dev",
+            "url": "https://isotope.wbell.dev/isotope-download?name=isotope&version=1.0.0",
+            "dependencies": {}
+        }
+    }
+}

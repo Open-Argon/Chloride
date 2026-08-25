@@ -1,0 +1,7 @@
+{
+    "name": "chloride",
+    "version": "dev",
+    "dependencies": {
+        "isotope": "1.0.0"
+    }
+}

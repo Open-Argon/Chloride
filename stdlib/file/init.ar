@@ -120,3 +120,7 @@ let tree_dir(path) = _file.tree_dir(path, PathError)
 let delete_file(path) = _file.delete_file(path, FileError)
 
 let delete_dir(path) = _file.delete_dir(path, FileError)
+
+let get_metadata(path) = do
+    let [size, mtime, mtime_ns, device, inode] = _file.file_metadata(path)
+    return {size, mtime, mtime_ns, device, inode}
