@@ -15,8 +15,8 @@
 
 #if defined(_WIN32) || defined(_WIN64)
 
-#include <bcrypt.h>
 #include <windows.h>
+#include <bcrypt.h>
 
 #else
 
