@@ -203,8 +203,8 @@ int load_cache(Translated *translated_dest, char *joined_paths, uint64_t hash,
   }
 
   uint32_t read_bytecode_version;
-  if (fread(&read_bytecode_version, 1, sizeof(read_bytecode_version), bytecode_file) !=
-      sizeof(read_bytecode_version)) {
+  if (fread(&read_bytecode_version, 1, sizeof(read_bytecode_version),
+            bytecode_file) != sizeof(read_bytecode_version)) {
     goto FAILED;
   }
   read_bytecode_version = le32toh(read_bytecode_version);
@@ -418,7 +418,6 @@ Translated load_argon_file(char *path, ArErr *err) {
 
     start = clock();
 #endif
-
     translated = init_translator(path);
     *err = translate(&translated, &ast);
     darray_free(&ast, (void (*)(void *))free_parsed);
@@ -479,7 +478,7 @@ Translated load_argon_file(char *path, ArErr *err) {
       }
     }
   }
-  char path_length = strlen(translated.path) + 1;
+  uint64_t path_length = strlen(translated.path) + 1;
   char *path_alloc = ar_alloc_atomic(path_length);
   memcpy(path_alloc, translated.path, path_length);
   hashmap_free(translated.constants.hashmap, NULL);
@@ -679,7 +678,7 @@ Stack *ar_import(char *current_directory, char *path_relative, ArErr *err,
   RuntimeState state;
   init_runtime_state(&state, translated, path);
   Stack *program_scope = create_scope(Global_Scope
-    // , true
+                                      // , true
   );
   hashmap_GC *program = createHashmap_GC();
   hashmap_GC *file = createHashmap_GC();
@@ -701,7 +700,7 @@ Stack *ar_import(char *current_directory, char *path_relative, ArErr *err,
 
   add_to_scope(program_scope, "program", create_dictionary(program));
   Stack *main_scope = create_scope(program_scope
-    //, true
+                                   //, true
   );
   runtime(translated, state, main_scope, err);
   if (is_error(err)) {
