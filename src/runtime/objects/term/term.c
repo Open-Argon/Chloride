@@ -5,11 +5,11 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 #include "term.h"
+#include "../../../err.h"
 #include "../../../shell.h"
 #include "../../call/call.h"
 #include "../../objects/literals/literals.h"
 #include "../exceptions/exceptions.h"
-#include "../../../err.h"
 #include <inttypes.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -55,17 +55,18 @@ ARGON_METHOD(term, log, {
     }
   }
   fwrite(end, sizeof(char), endlength, stdout);
+  fflush(stdout);
   return ARGON_NULL;
 })
 
 ARGON_METHOD(term, error, {
   if (argc != 1)
     return api->throw_argon_error(err, api->RuntimeError,
-                           "expects 1 argument, got %" PRIu64, argc);
+                                  "expects 1 argument, got %" PRIu64, argc);
 
   if (!is_instance(argv[0], BaseException))
     return api->throw_argon_error(err, api->RuntimeError,
-                           "expects instance of BaseException");
+                                  "expects instance of BaseException");
 
   ArErr err = {argv[0]};
 
@@ -77,7 +78,8 @@ ARGON_METHOD(term, error, {
 ARGON_METHOD(term, input, {
   if (argc >= 2)
     return api->throw_argon_error(err, api->RuntimeError,
-                           "expects at most 1 argument, got %" PRIu64, argc);
+                                  "expects at most 1 argument, got %" PRIu64,
+                                  argc);
   struct string prompt_str = {NULL, 0};
   if (argc == 1) {
     ArgonObject *string_convert_method = get_builtin_field_for_class(
