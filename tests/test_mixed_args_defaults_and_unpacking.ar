@@ -8,3 +8,6 @@ term.log(f(a=2, *["this should go to x"]))
 term.log(f(1, a=2, **["this should go to kwargs"]))
 term.log(f(1, a=2, **{wow:"this should go to kwargs"}))
 term.log(f(a=2, **{x:"this should go to x"}))
+
+let [x,y,z] = [1,2,3]
+let [a,b,*c] = [4,5,6]

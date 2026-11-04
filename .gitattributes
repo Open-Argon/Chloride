@@ -4,3 +4,4 @@
 
 *.ar linguist-language=Argon
 *.ar linguist-detectable=true
+*.sh text eol=lf

@@ -142,15 +142,6 @@ pipeline {
             }
         }
 
-        stage('Checkout Isotope') {
-            steps {
-                sh '''
-                    set -e
-                    rm -rf isotope-src
-                    git clone --depth 1 https://git.wbell.dev/Open-Argon/Isotope.git isotope-src
-                '''
-            }
-        }
         stage('Build (Parallel)') {
             parallel {
 
@@ -186,17 +177,11 @@ pipeline {
                                         out/linux/build/dist/stdlib \
                                         -j
 
-                                    echo "Building Isotope for Linux..."
+                                    echo "Adding Isotope launcher for Linux..."
 
-                                    cd isotope-src
+                                    install -m 755 shim/isotope.sh out/linux/build/dist/bin/isotope
 
-                                    go build \
-                                        -trimpath \
-                                        -ldflags="-s -w" \
-                                        -o ../out/linux/build/dist/bin/isotope \
-                                        ./src
-
-                                    cd ../out/linux/build/dist/
+                                    cd out/linux/build/dist/
 
 
                                     cat > argon-package.json << EOF
@@ -260,20 +245,11 @@ EOF
                                         out/linux-arm64/build/dist/stdlib \
                                         -j
 
-                                    echo "Building Isotope for Linux ARM64..."
+                                    echo "Adding Isotope launcher for Linux ARM64..."
 
-                                    cd isotope-src
+                                    install -m 755 shim/isotope.sh out/linux-arm64/build/dist/bin/isotope
 
-                                    GOOS=linux \
-                                    GOARCH=arm64 \
-                                    CGO_ENABLED=0 \
-                                    go build \
-                                        -trimpath \
-                                        -ldflags="-s -w" \
-                                        -o ../out/linux-arm64/build/dist/bin/isotope \
-                                        ./src
-
-                                    cd ../out/linux-arm64/build/dist/
+                                    cd out/linux-arm64/build/dist/
 
 
                                     cat > argon-package.json << EOF
@@ -327,20 +303,16 @@ EOF
                                         TARGET_OS=windows \
                                         ARGON_INCLUDE="$(realpath include)"
 
-                                    echo "Building Isotope for Windows..."
+                                    echo "Building Isotope launcher for Windows..."
 
-                                    cd isotope-src
+                                    x86_64-w64-mingw32-gcc -O2 -s -static \
+                                        -o out/windows/build/dist/bin/isotope.exe \
+                                        shim/main.c
 
-                                    GOOS=windows \
-                                    GOARCH=amd64 \
-                                    CGO_ENABLED=0 \
-                                    go build \
-                                        -trimpath \
-                                        -ldflags="-s -w" \
-                                        -o ../out/windows/build/dist/bin/isotope.exe \
-                                        ./src
+                                    mkdir -p out/windows/build/dist/tools-config
+                                    cp tools-config/isotope.conf out/windows/build/dist/tools-config/isotope.conf
 
-                                    cd ../out/windows/build/dist/
+                                    cd out/windows/build/dist/
 
                                     cat > argon-package.json << EOF
 {
@@ -390,15 +362,6 @@ EOF
                                 }
                             }
                         }
-                        stage('Checkout Isotope') {
-                            steps {
-                                sh '''
-                                    set -e
-                                    rm -rf isotope-src
-                                    git clone --depth 1 https://git.wbell.dev/Open-Argon/Isotope.git isotope-src
-                                '''
-                            }
-                        }
                         stage('Setup Conan') {
                             steps {
                                 sh '''
@@ -446,20 +409,11 @@ EOF
                                         out/macos-arm64/build/dist/stdlib \
                                         -j
 
-                                    echo "Building Isotope for macOS ARM64..."
+                                    echo "Adding Isotope launcher for macOS ARM64..."
 
-                                    cd isotope-src
+                                    install -m 755 shim/isotope.sh out/macos-arm64/build/dist/bin/isotope
 
-                                    GOOS=darwin \
-                                    GOARCH=arm64 \
-                                    CGO_ENABLED=0 \
-                                    go build \
-                                        -trimpath \
-                                        -ldflags="-s -w" \
-                                        -o ../out/macos-arm64/build/dist/bin/isotope \
-                                        ./src
-
-                                    cd ../out/macos-arm64/build/dist/
+                                    cd out/macos-arm64/build/dist/
 
                                     cat > argon-package.json << EOF
 {
@@ -527,15 +481,6 @@ EOF
                                 }
                             }
                         }
-                        stage('Checkout Isotope') {
-                            steps {
-                                sh '''
-                                    set -e
-                                    rm -rf isotope-src
-                                    git clone --depth 1 https://git.wbell.dev/Open-Argon/Isotope.git isotope-src
-                                '''
-                            }
-                        }
                         stage('Setup Conan') {
                             steps {
                                 sh '''
@@ -583,20 +528,11 @@ EOF
                                         out/macos-x86_64/build/dist/stdlib \
                                         -j
 
-                                    echo "Building Isotope for macOS x86_64..."
+                                    echo "Adding Isotope launcher for macOS x86_64..."
 
-                                    cd isotope-src
+                                    install -m 755 shim/isotope.sh out/macos-x86_64/build/dist/bin/isotope
 
-                                    GOOS=darwin \
-                                    GOARCH=amd64 \
-                                    CGO_ENABLED=0 \
-                                    go build \
-                                        -trimpath \
-                                        -ldflags="-s -w" \
-                                        -o ../out/macos-x86_64/build/dist/bin/isotope \
-                                        ./src
-
-                                    cd ../out/macos-x86_64/build/dist/
+                                    cd out/macos-x86_64/build/dist/
 
                                     cat > argon-package.json << EOF
 {
@@ -813,10 +749,10 @@ EOF
                     # Public commands
                     mkdir -p "$PACKAGE_ROOT/usr/bin"
 
-                    printf '#!/bin/bash\\nexec "%s/bin/argon" "$@"\\n' "$INSTALL_INTERNAL" \
+                    printf '#!/bin/sh\\nexec "%s/bin/argon" "$@"\\n' "$INSTALL_INTERNAL" \
                         > "$PACKAGE_ROOT/usr/bin/argon"
 
-                    printf '#!/bin/bash\\nexec "%s/bin/isotope" "$@"\\n' "$INSTALL_INTERNAL" \
+                    printf '#!/bin/sh\\nexec "%s/bin/isotope" "$@"\\n' "$INSTALL_INTERNAL" \
                         > "$PACKAGE_ROOT/usr/bin/isotope"
 
                     chmod +x \
@@ -834,7 +770,7 @@ EOF
                         > "$PACKAGE_ROOT/DEBIAN/control"
 
                     cat > "$PACKAGE_ROOT/DEBIAN/postrm" << 'EOF'
-#!/bin/bash
+#!/bin/sh
 if [ "$1" = "remove" ] || [ "$1" = "purge" ]; then
     rm -rf /usr/local/lib/chloride
 fi
@@ -936,11 +872,11 @@ EOF
                         # Public commands
                         mkdir -p "$PACKAGE_ROOT/usr/bin"
 
-                        printf '#!/bin/bash\\nexec "%s/bin/argon" "$@"\\n' \
+                        printf '#!/bin/sh\\nexec "%s/bin/argon" "$@"\\n' \
                             "$INSTALL_INTERNAL" \
                             > "$PACKAGE_ROOT/usr/bin/argon"
 
-                        printf '#!/bin/bash\\nexec "%s/bin/isotope" "$@"\\n' \
+                        printf '#!/bin/sh\\nexec "%s/bin/isotope" "$@"\\n' \
                             "$INSTALL_INTERNAL" \
                             > "$PACKAGE_ROOT/usr/bin/isotope"
 
@@ -963,7 +899,7 @@ EOF
                             > "$PACKAGE_ROOT/DEBIAN/control"
 
                         cat > "$PACKAGE_ROOT/DEBIAN/postrm" << 'EOF'
-#!/bin/bash
+#!/bin/sh
 
 if [ "$1" = "remove" ] || [ "$1" = "purge" ]; then
     rm -rf /usr/local/lib/chloride
@@ -1076,10 +1012,10 @@ EOF
                         # Public commands
                         mkdir -p "$STAGE_ROOT/usr/bin"
 
-                        printf '#!/bin/bash\\nexec "%s/bin/argon" "$@"\\n' "$INSTALL_INTERNAL" \
+                        printf '#!/bin/sh\\nexec "%s/bin/argon" "$@"\\n' "$INSTALL_INTERNAL" \
                             > "$STAGE_ROOT/usr/bin/argon"
 
-                        printf '#!/bin/bash\\nexec "%s/bin/isotope" "$@"\\n' "$INSTALL_INTERNAL" \
+                        printf '#!/bin/sh\\nexec "%s/bin/isotope" "$@"\\n' "$INSTALL_INTERNAL" \
                             > "$STAGE_ROOT/usr/bin/isotope"
 
                         chmod +x \
@@ -1250,11 +1186,11 @@ SPEC
                         # Public commands
                         mkdir -p "$STAGE_ROOT/usr/bin"
 
-                        printf '#!/bin/bash\\nexec "%s/bin/argon" "$@"\\n' \
+                        printf '#!/bin/sh\\nexec "%s/bin/argon" "$@"\\n' \
                             "$INSTALL_INTERNAL" \
                             > "$STAGE_ROOT/usr/bin/argon"
 
-                        printf '#!/bin/bash\\nexec "%s/bin/isotope" "$@"\\n' \
+                        printf '#!/bin/sh\\nexec "%s/bin/isotope" "$@"\\n' \
                             "$INSTALL_INTERNAL" \
                             > "$STAGE_ROOT/usr/bin/isotope"
 

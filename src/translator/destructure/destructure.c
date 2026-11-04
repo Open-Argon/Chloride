@@ -102,7 +102,6 @@ size_t translate_destructure(Translated *translated, Destructure *destructure,
         push_instruction_byte(translated, OP_INIT_CALL);
         push_instruction_code(translated, 0);
         push_instruction_byte(translated, OP_UNPACK_ITERATOR);
-        push_instruction_byte(translated, iterator_or_error_register);
         push_instruction_byte(translated, next_register);
         push_instruction_byte(translated, OP_CALL);
 

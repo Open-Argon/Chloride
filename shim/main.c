@@ -1,3 +1,10 @@
+/*
+ * SPDX-FileCopyrightText: 2026 William Bell
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -224,6 +231,168 @@ static int read_package_name(
 }
 
 
+#ifdef _WIN32
+
+/*
+ * Ctrl+C is delivered to every process attached to the console. Ignore it in
+ * the shim so only argon handles it; otherwise the shim would exit first and
+ * hand the prompt back while argon is still running.
+ */
+static BOOL WINAPI ignore_ctrl_c(DWORD type)
+{
+    return type == CTRL_C_EVENT || type == CTRL_BREAK_EVENT;
+}
+
+/*
+ * Append one argument to a command line, quoted so that the child's standard
+ * CRT parsing gives back exactly the same string (handles spaces, quotes and
+ * backslashes before quotes).
+ *
+ * Returns the new length, or 0 if the buffer is too small.
+ */
+static size_t append_quoted_argument(
+    char *cmdline,
+    size_t length,
+    size_t capacity,
+    const char *arg
+)
+{
+    size_t needed = length + strlen(arg) * 2 + 4;
+
+    if (needed >= capacity)
+        return 0;
+
+    char *out = cmdline + length;
+
+    if (length > 0)
+        *out++ = ' ';
+
+    *out++ = '"';
+
+    for (const char *p = arg;; p++)
+    {
+        size_t backslashes = 0;
+
+        while (*p == '\\')
+        {
+            backslashes++;
+            p++;
+        }
+
+        if (*p == '\0')
+        {
+            /* Backslashes before the closing quote must be doubled. */
+            for (size_t i = 0; i < backslashes * 2; i++)
+                *out++ = '\\';
+            break;
+        }
+
+        if (*p == '"')
+        {
+            /* Double the backslashes and escape the quote itself. */
+            for (size_t i = 0; i < backslashes * 2 + 1; i++)
+                *out++ = '\\';
+            *out++ = '"';
+        }
+        else
+        {
+            for (size_t i = 0; i < backslashes; i++)
+                *out++ = '\\';
+            *out++ = *p;
+        }
+    }
+
+    *out++ = '"';
+    *out = '\0';
+
+    return (size_t)(out - cmdline);
+}
+
+/*
+ * Run argon, wait for it, and return its exit code.
+ *
+ * _execv() is not used on Windows: it does not replace the process, so the
+ * parent returns to the shell immediately (losing the exit code), and it does
+ * not quote arguments, which breaks paths like "C:\Program Files\Argon".
+ */
+static int run_argon(const char *argon_path, char **args, int arg_count)
+{
+    /* Windows limits a command line to 32767 characters. */
+    enum { CMDLINE_CAPACITY = 32768 };
+
+    char *cmdline = malloc(CMDLINE_CAPACITY);
+
+    if (!cmdline) {
+        perror("malloc");
+        return 1;
+    }
+
+    cmdline[0] = '\0';
+
+    size_t length = append_quoted_argument(
+        cmdline, 0, CMDLINE_CAPACITY, argon_path
+    );
+
+    for (int i = 0; length != 0 && i < arg_count; i++)
+    {
+        length = append_quoted_argument(
+            cmdline, length, CMDLINE_CAPACITY, args[i]
+        );
+    }
+
+    if (length == 0) {
+        fprintf(stderr, "Command line too long\n");
+        free(cmdline);
+        return 1;
+    }
+
+    STARTUPINFOA startup_info;
+    PROCESS_INFORMATION process_info;
+
+    memset(&startup_info, 0, sizeof(startup_info));
+    memset(&process_info, 0, sizeof(process_info));
+    startup_info.cb = sizeof(startup_info);
+
+    SetConsoleCtrlHandler(ignore_ctrl_c, TRUE);
+
+    if (!CreateProcessA(
+            argon_path,
+            cmdline,
+            NULL,
+            NULL,
+            TRUE, /* inherit stdin/stdout/stderr handles */
+            0,
+            NULL,
+            NULL,
+            &startup_info,
+            &process_info
+        ))
+    {
+        fprintf(
+            stderr,
+            "Failed to execute '%s' (error %lu)\n",
+            argon_path,
+            (unsigned long)GetLastError()
+        );
+        free(cmdline);
+        return 1;
+    }
+
+    free(cmdline);
+
+    WaitForSingleObject(process_info.hProcess, INFINITE);
+
+    DWORD exit_code = 1;
+    GetExitCodeProcess(process_info.hProcess, &exit_code);
+
+    CloseHandle(process_info.hThread);
+    CloseHandle(process_info.hProcess);
+
+    return (int)exit_code;
+}
+
+#endif
+
 int main(int argc, char **argv)
 {
     char executable_path[4096];
@@ -375,11 +544,13 @@ int main(int argc, char **argv)
 #ifdef _WIN32
 
     /*
-     * MinGW provides _execv().
-     *
-     * If successful, this does not return.
+     * new_argv[1..] are the package name plus the original arguments.
      */
-    _execv(argon_path, new_argv);
+    int exit_code = run_argon(argon_path, new_argv + 1, argc);
+
+    free(new_argv);
+
+    return exit_code;
 
 #else
 
