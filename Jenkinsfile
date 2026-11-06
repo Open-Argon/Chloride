@@ -2,6 +2,24 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+// Blocks until every named target has built successfully. Build stages set
+// env.BUILD_<TARGET> to 'ok' or 'failed'; waiting costs no executor.
+def waitForBuilds(List targets) {
+    waitUntil(initialRecurrencePeriod: 5000) {
+        def done = true
+        for (int i = 0; i < targets.size(); i++) {
+            def state = env."BUILD_${targets[i]}"
+            if (state == 'failed') {
+                error("Skipped: the ${targets[i]} build did not succeed")
+            }
+            if (state != 'ok') {
+                done = false
+            }
+        }
+        return done
+    }
+}
+
 pipeline {
     agent { label 'debian11' }
     environment {
@@ -142,7 +160,7 @@ pipeline {
             }
         }
 
-        stage('Build (Parallel)') {
+        stage('Build & Package (Parallel)') {
             parallel {
 
                 stage('Linux Build') {
@@ -198,8 +216,20 @@ EOF
 EOF
 
                                     argon isotope install isotope
+                                    cd "$WORKSPACE"
+                                    cp LICENSE.txt out/linux/build/dist/
+                                    cp -r LICENSES out/linux/build/dist/
+                                    cp -r include out/linux/build/dist/
                                 '''
                             }
+                        }
+                    }
+                    post {
+                        success {
+                            script { env.BUILD_LINUX_X86_64 = 'ok' }
+                        }
+                        unsuccessful {
+                            script { env.BUILD_LINUX_X86_64 = 'failed' }
                         }
                     }
                 }
@@ -266,8 +296,20 @@ EOF
 EOF
 
                                     argon isotope install isotope
+                                    cd "$WORKSPACE"
+                                    cp LICENSE.txt out/linux-arm64/build/dist/
+                                    cp -r LICENSES out/linux-arm64/build/dist/
+                                    cp -r include out/linux-arm64/build/dist/
                                 '''
                             }
+                        }
+                    }
+                    post {
+                        success {
+                            script { env.BUILD_LINUX_ARM64 = 'ok' }
+                        }
+                        unsuccessful {
+                            script { env.BUILD_LINUX_ARM64 = 'failed' }
                         }
                     }
                 }
@@ -328,8 +370,20 @@ EOF
 EOF
 
                                     argon isotope install isotope
+                                    cd "$WORKSPACE"
+                                    cp LICENSE.txt out/windows/build/dist/
+                                    cp -r LICENSES out/windows/build/dist/
+                                    cp -r include out/windows/build/dist/
                                 '''
                             }
+                        }
+                    }
+                    post {
+                        success {
+                            script { env.BUILD_WINDOWS = 'ok' }
+                        }
+                        unsuccessful {
+                            script { env.BUILD_WINDOWS = 'failed' }
                         }
                     }
                 }
@@ -571,464 +625,485 @@ EOF
                         }
                     }
                 }
-            }
-        }
 
+                // Each stage below waits only for the build(s) it needs
+                // (see waitForBuilds), not for every target.
 
-        stage('Archive arm64 Linux') {
-            steps {
-                script {
-                    def version = env.TAG_NAME ?: "dev"
-                    env.OUTPUT_FILE = "archives/argon-${version}-linux-arm64.tar.gz"
-                    echo "Packaging Linux as: ${env.OUTPUT_FILE}"
-                }
-                sh '''
-                    cp LICENSE.txt out/linux-arm64/build/dist/
-                    cp -r LICENSES out/linux-arm64/build/dist/
-                    cp -r include out/linux-arm64/build/dist/
-                    
-                    tar -czf "$OUTPUT_FILE" -C out/linux-arm64/build/dist .
-                '''
-                archiveArtifacts artifacts: "${env.OUTPUT_FILE}", allowEmptyArchive: false, fingerprint: true
-            }
-        }
-        stage('Archive Linux') {
-            steps {
-                script {
-                    def version = env.TAG_NAME ?: "dev"
-                    env.OUTPUT_FILE = "archives/argon-${version}-linux-x86_64.tar.gz"
-                    echo "Packaging Linux as: ${env.OUTPUT_FILE}"
-                }
-                sh '''
-                    cp LICENSE.txt out/linux/build/dist/
-                    cp -r LICENSES out/linux/build/dist/
-                    cp -r include out/linux/build/dist/
-                    
-                    tar -czf "$OUTPUT_FILE" -C out/linux/build/dist .
-                '''
-                archiveArtifacts artifacts: "${env.OUTPUT_FILE}", allowEmptyArchive: false, fingerprint: true
-            }
-        }
-        stage('Docker Images') {
-            steps {
-                script {
-                    def version = env.TAG_NAME ?: "dev"
+                stage('Archive arm64 Linux') {
+                    steps {
+                        script {
+                            waitForBuilds(['LINUX_ARM64'])
+                        }
 
-                    // Docker tags cannot contain some characters that Git tags may have.
-                    def dockerVersion = version
-                        .replaceFirst('^v', '')
-                        .replaceAll(/[^a-zA-Z0-9_.-]/, '-')
-                        .toLowerCase()
-
-                    env.DOCKER_VERSION = dockerVersion
+                        script {
+                            def version = env.TAG_NAME ?: "dev"
+                            env.LINUX_ARM64_ARCHIVE_OUTPUT_FILE = "archives/argon-${version}-linux-arm64.tar.gz"
+                            echo "Packaging Linux as: ${env.LINUX_ARM64_ARCHIVE_OUTPUT_FILE}"
+                        }
+                        sh '''
+                            tar -czf "$LINUX_ARM64_ARCHIVE_OUTPUT_FILE" -C out/linux-arm64/build/dist .
+                        '''
+                        archiveArtifacts artifacts: "${env.LINUX_ARM64_ARCHIVE_OUTPUT_FILE}", allowEmptyArchive: false, fingerprint: true
+                    }
                 }
 
-                withCredentials([usernamePassword(
-                    credentialsId: 'gitea-pat',
-                    usernameVariable: 'GITEA_USER',
-                    passwordVariable: 'GITEA_TOKEN'
-                )]) {
-                    sh '''
-                        set -e
+                stage('Archive Linux') {
+                    steps {
+                        script {
+                            waitForBuilds(['LINUX_X86_64'])
+                        }
 
-                        IMAGE="git.wbell.dev/open-argon/argon:${DOCKER_VERSION}"
-
-                        echo "Logging into Gitea container registry..."
-
-                        echo "$GITEA_TOKEN" | docker login git.wbell.dev \
-                            --username "$GITEA_USER" \
-                            --password-stdin
-
-                        echo "Checking Docker Buildx..."
-
-                        docker buildx version
-
-                        # Create our builder if it does not already exist.
-                        if ! docker buildx inspect argon-builder >/dev/null 2>&1; then
-                            echo "Creating Buildx builder..."
-
-                            docker buildx create \
-                                --name argon-builder \
-                                --use
-                        else
-                            echo "Using existing Buildx builder..."
-
-                            docker buildx use argon-builder
-                        fi
-
-                        echo "Bootstrapping Buildx..."
-
-                        docker buildx inspect --bootstrap
-
-                        echo "Building multi-architecture Debian image..."
-
-                        docker buildx build \
-                            --platform linux/amd64,linux/arm64 \
-                            -f docker/debian/Dockerfile \
-                            -t "$IMAGE" \
-                            --push \
-                            .
-
-                        echo "Successfully pushed:"
-                        echo "  $IMAGE"
-
-                        if ! echo "$DOCKER_VERSION" | grep -qi unstable; then
-                            echo "Stable release detected; publishing latest..."
-
-                            docker buildx imagetools create \
-                                -t "git.wbell.dev/open-argon/argon:latest" \
-                                "$IMAGE"
-
-                            echo "Successfully pushed:"
-                            echo "  git.wbell.dev/open-argon/argon:latest"
-                        else
-                            echo "Unstable release; not updating latest."
-                        fi
-
-                        echo "Logging out of Gitea..."
-
-                        docker logout git.wbell.dev
-                    '''
+                        script {
+                            def version = env.TAG_NAME ?: "dev"
+                            env.LINUX_X86_64_ARCHIVE_OUTPUT_FILE = "archives/argon-${version}-linux-x86_64.tar.gz"
+                            echo "Packaging Linux as: ${env.LINUX_X86_64_ARCHIVE_OUTPUT_FILE}"
+                        }
+                        sh '''
+                            tar -czf "$LINUX_X86_64_ARCHIVE_OUTPUT_FILE" -C out/linux/build/dist .
+                        '''
+                        archiveArtifacts artifacts: "${env.LINUX_X86_64_ARCHIVE_OUTPUT_FILE}", allowEmptyArchive: false, fingerprint: true
+                    }
                 }
-            }
-        }
-        stage('Debian Package Build') {
-            steps {
-                script {
-                    def version = env.TAG_NAME ?: "0.0.0-1"
-                    env.DEB_VERSION = version.replaceFirst('^v', '')
-                    env.OUTPUT_FILE = "archives/argon-${env.DEB_VERSION}-x86_64.deb"
-                    env.PACKAGE_ROOT = "${env.WORKSPACE}/argon-${env.DEB_VERSION}-x86_64"
+
+                stage('Docker Images') {
+                    steps {
+                        script {
+                            waitForBuilds(['LINUX_X86_64', 'LINUX_ARM64'])
+                        }
+
+                        script {
+                            def version = env.TAG_NAME ?: "dev"
+
+                            // Docker tags cannot contain some characters that Git tags may have.
+                            def dockerVersion = version
+                                .replaceFirst('^v', '')
+                                .replaceAll(/[^a-zA-Z0-9_.-]/, '-')
+                                .toLowerCase()
+
+                            env.DOCKER_VERSION = dockerVersion
+                        }
+
+                        withCredentials([usernamePassword(
+                            credentialsId: 'gitea-pat',
+                            usernameVariable: 'GITEA_USER',
+                            passwordVariable: 'GITEA_TOKEN'
+                        )]) {
+                            sh '''
+                                set -e
+
+                                IMAGE="git.wbell.dev/open-argon/argon:${DOCKER_VERSION}"
+
+                                echo "Logging into Gitea container registry..."
+
+                                echo "$GITEA_TOKEN" | docker login git.wbell.dev \
+                                    --username "$GITEA_USER" \
+                                    --password-stdin
+
+                                echo "Checking Docker Buildx..."
+
+                                docker buildx version
+
+                                # Create our builder if it does not already exist.
+                                if ! docker buildx inspect argon-builder >/dev/null 2>&1; then
+                                    echo "Creating Buildx builder..."
+
+                                    docker buildx create \
+                                        --name argon-builder \
+                                        --use
+                                else
+                                    echo "Using existing Buildx builder..."
+
+                                    docker buildx use argon-builder
+                                fi
+
+                                echo "Bootstrapping Buildx..."
+
+                                docker buildx inspect --bootstrap
+
+                                echo "Building multi-architecture Debian image..."
+
+                                docker buildx build \
+                                    --platform linux/amd64,linux/arm64 \
+                                    -f docker/debian/Dockerfile \
+                                    -t "$IMAGE" \
+                                    --push \
+                                    .
+
+                                echo "Successfully pushed:"
+                                echo "  $IMAGE"
+
+                                if ! echo "$DOCKER_VERSION" | grep -qi unstable; then
+                                    echo "Stable release detected; publishing latest..."
+
+                                    docker buildx imagetools create \
+                                        -t "git.wbell.dev/open-argon/argon:latest" \
+                                        "$IMAGE"
+
+                                    echo "Successfully pushed:"
+                                    echo "  git.wbell.dev/open-argon/argon:latest"
+                                else
+                                    echo "Unstable release; not updating latest."
+                                fi
+
+                                echo "Logging out of Gitea..."
+
+                                docker logout git.wbell.dev
+                            '''
+                        }
+                    }
                 }
-                withCredentials([string(credentialsId: 'gitea-pat', variable: 'GITEA_TOKEN')]) {
-                sh '''
-                    set -e
 
-                    INSTALL_INTERNAL="/usr/local/lib/chloride"
+                stage('Debian Package Build') {
+                    steps {
+                        script {
+                            waitForBuilds(['LINUX_X86_64'])
+                        }
 
-                    rm -rf "$PACKAGE_ROOT"
+                        script {
+                            def version = env.TAG_NAME ?: "0.0.0-1"
+                            env.DEB_VERSION = version.replaceFirst('^v', '')
+                            env.DEB_X86_64_OUTPUT_FILE = "archives/argon-${env.DEB_VERSION}-x86_64.deb"
+                            env.DEB_X86_64_PACKAGE_ROOT = "${env.WORKSPACE}/argon-${env.DEB_VERSION}-x86_64"
+                        }
+                        withCredentials([string(credentialsId: 'gitea-pat', variable: 'GITEA_TOKEN')]) {
+                        sh '''
+                            set -e
 
-                    # Install Argon
-                    DESTDIR="$PACKAGE_ROOT" cmake --install out/linux/build --prefix "$INSTALL_INTERNAL"
+                            INSTALL_INTERNAL="/usr/local/lib/chloride"
 
-                    # Install stdlib
-                    mkdir -p "$PACKAGE_ROOT$INSTALL_INTERNAL/stdlib"
-                    cp -R out/linux/build/dist/stdlib/* \
-                        "$PACKAGE_ROOT$INSTALL_INTERNAL/stdlib/"
+                            rm -rf "$DEB_X86_64_PACKAGE_ROOT"
 
-                    mkdir -p "$PACKAGE_ROOT$INSTALL_INTERNAL/argon_modules"
-                    cp -R out/linux/build/dist/argon_modules/* \
-                        "$PACKAGE_ROOT$INSTALL_INTERNAL/argon_modules/"
+                            # Install Argon
+                            DESTDIR="$DEB_X86_64_PACKAGE_ROOT" cmake --install out/linux/build --prefix "$INSTALL_INTERNAL"
 
-                    mkdir -p "$PACKAGE_ROOT$INSTALL_INTERNAL/LICENSES"
-                    cp -R out/linux/build/dist/LICENSES/* \
-                        "$PACKAGE_ROOT$INSTALL_INTERNAL/LICENSES/"
+                            # Install stdlib
+                            mkdir -p "$DEB_X86_64_PACKAGE_ROOT$INSTALL_INTERNAL/stdlib"
+                            cp -R out/linux/build/dist/stdlib/* \
+                                "$DEB_X86_64_PACKAGE_ROOT$INSTALL_INTERNAL/stdlib/"
 
-                    cp out/linux/build/dist/LICENSE.txt \
-                        "$PACKAGE_ROOT$INSTALL_INTERNAL/LICENSE.txt"
+                            mkdir -p "$DEB_X86_64_PACKAGE_ROOT$INSTALL_INTERNAL/argon_modules"
+                            cp -R out/linux/build/dist/argon_modules/* \
+                                "$DEB_X86_64_PACKAGE_ROOT$INSTALL_INTERNAL/argon_modules/"
 
-                    cp out/linux/build/dist/argon-package.json \
-                        "$PACKAGE_ROOT$INSTALL_INTERNAL/argon-package.json"
+                            mkdir -p "$DEB_X86_64_PACKAGE_ROOT$INSTALL_INTERNAL/LICENSES"
+                            cp -R out/linux/build/dist/LICENSES/* \
+                                "$DEB_X86_64_PACKAGE_ROOT$INSTALL_INTERNAL/LICENSES/"
 
-                    cp out/linux/build/dist/iso-lock.json \
-                        "$PACKAGE_ROOT$INSTALL_INTERNAL/iso-lock.json"
+                            cp out/linux/build/dist/LICENSE.txt \
+                                "$DEB_X86_64_PACKAGE_ROOT$INSTALL_INTERNAL/LICENSE.txt"
 
-                    # Install Argon + Isotope binaries
-                    mkdir -p "$PACKAGE_ROOT$INSTALL_INTERNAL/bin"
+                            cp out/linux/build/dist/argon-package.json \
+                                "$DEB_X86_64_PACKAGE_ROOT$INSTALL_INTERNAL/argon-package.json"
 
-                    cp out/linux/build/dist/bin/argon \
-                        "$PACKAGE_ROOT$INSTALL_INTERNAL/bin/argon"
+                            cp out/linux/build/dist/iso-lock.json \
+                                "$DEB_X86_64_PACKAGE_ROOT$INSTALL_INTERNAL/iso-lock.json"
 
-                    cp out/linux/build/dist/bin/isotope \
-                        "$PACKAGE_ROOT$INSTALL_INTERNAL/bin/isotope"
+                            # Install Argon + Isotope binaries
+                            mkdir -p "$DEB_X86_64_PACKAGE_ROOT$INSTALL_INTERNAL/bin"
 
-                    chmod +x \
-                        "$PACKAGE_ROOT$INSTALL_INTERNAL/bin/argon" \
-                        "$PACKAGE_ROOT$INSTALL_INTERNAL/bin/isotope"
+                            cp out/linux/build/dist/bin/argon \
+                                "$DEB_X86_64_PACKAGE_ROOT$INSTALL_INTERNAL/bin/argon"
 
-                    # Public commands
-                    mkdir -p "$PACKAGE_ROOT/usr/bin"
+                            cp out/linux/build/dist/bin/isotope \
+                                "$DEB_X86_64_PACKAGE_ROOT$INSTALL_INTERNAL/bin/isotope"
 
-                    printf '#!/bin/sh\\nexec "%s/bin/argon" "$@"\\n' "$INSTALL_INTERNAL" \
-                        > "$PACKAGE_ROOT/usr/bin/argon"
+                            chmod +x \
+                                "$DEB_X86_64_PACKAGE_ROOT$INSTALL_INTERNAL/bin/argon" \
+                                "$DEB_X86_64_PACKAGE_ROOT$INSTALL_INTERNAL/bin/isotope"
 
-                    printf '#!/bin/sh\\nexec "%s/bin/isotope" "$@"\\n' "$INSTALL_INTERNAL" \
-                        > "$PACKAGE_ROOT/usr/bin/isotope"
+                            # Public commands
+                            mkdir -p "$DEB_X86_64_PACKAGE_ROOT/usr/bin"
 
-                    chmod +x \
-                        "$PACKAGE_ROOT/usr/bin/argon" \
-                        "$PACKAGE_ROOT/usr/bin/isotope"
-                    # Headers
-                    mkdir -p "$PACKAGE_ROOT/usr/include"
-                    cp -R include/* "$PACKAGE_ROOT/usr/include/"
+                            printf '#!/bin/sh\\nexec "%s/bin/argon" "$@"\\n' "$INSTALL_INTERNAL" \
+                                > "$DEB_X86_64_PACKAGE_ROOT/usr/bin/argon"
 
-                    # Debian metadata
-                    mkdir -p "$PACKAGE_ROOT/DEBIAN"
+                            printf '#!/bin/sh\\nexec "%s/bin/isotope" "$@"\\n' "$INSTALL_INTERNAL" \
+                                > "$DEB_X86_64_PACKAGE_ROOT/usr/bin/isotope"
 
-                    printf 'Package: argon\\nVersion: %s\\nArchitecture: amd64\\nMaintainer: Ugric\\nDescription: Interpreter written in C for the argon programming language\\n' \
-                        "$DEB_VERSION" \
-                        > "$PACKAGE_ROOT/DEBIAN/control"
+                            chmod +x \
+                                "$DEB_X86_64_PACKAGE_ROOT/usr/bin/argon" \
+                                "$DEB_X86_64_PACKAGE_ROOT/usr/bin/isotope"
+                            # Headers
+                            mkdir -p "$DEB_X86_64_PACKAGE_ROOT/usr/include"
+                            cp -R include/* "$DEB_X86_64_PACKAGE_ROOT/usr/include/"
 
-                    cat > "$PACKAGE_ROOT/DEBIAN/postrm" << 'EOF'
+                            # Debian metadata
+                            mkdir -p "$DEB_X86_64_PACKAGE_ROOT/DEBIAN"
+
+                            printf 'Package: argon\\nVersion: %s\\nArchitecture: amd64\\nMaintainer: Ugric\\nDescription: Interpreter written in C for the argon programming language\\n' \
+                                "$DEB_VERSION" \
+                                > "$DEB_X86_64_PACKAGE_ROOT/DEBIAN/control"
+
+                            cat > "$DEB_X86_64_PACKAGE_ROOT/DEBIAN/postrm" << 'EOF'
 #!/bin/sh
 if [ "$1" = "remove" ] || [ "$1" = "purge" ]; then
-    rm -rf /usr/local/lib/chloride
+            rm -rf /usr/local/lib/chloride
 fi
 EOF
 
-                    chmod +x "$PACKAGE_ROOT/DEBIAN/postrm"
+                            chmod +x "$DEB_X86_64_PACKAGE_ROOT/DEBIAN/postrm"
 
-                    # Build package
-                    dpkg-deb --build "$PACKAGE_ROOT" "$OUTPUT_FILE"
+                            # Build package
+                            dpkg-deb --build "$DEB_X86_64_PACKAGE_ROOT" "$DEB_X86_64_OUTPUT_FILE"
 
-                    # Upload
-                    curl --fail --user Jenkins:$GITEA_TOKEN \
-                        --upload-file "$OUTPUT_FILE" \
-                        https://git.wbell.dev/api/packages/Open-Argon/debian/pool/trixie/main/upload
-                    curl --fail --user Jenkins:$GITEA_TOKEN \
-                        --upload-file "$OUTPUT_FILE" \
-                        https://git.wbell.dev/api/packages/Open-Argon/debian/pool/bookworm/main/upload
-                    curl --fail --user Jenkins:$GITEA_TOKEN \
-                        --upload-file "$OUTPUT_FILE" \
-                        https://git.wbell.dev/api/packages/Open-Argon/debian/pool/bullseye/main/upload
-                '''
+                            # Upload
+                            curl --fail --user Jenkins:$GITEA_TOKEN \
+                                --upload-file "$DEB_X86_64_OUTPUT_FILE" \
+                                https://git.wbell.dev/api/packages/Open-Argon/debian/pool/trixie/main/upload
+                            curl --fail --user Jenkins:$GITEA_TOKEN \
+                                --upload-file "$DEB_X86_64_OUTPUT_FILE" \
+                                https://git.wbell.dev/api/packages/Open-Argon/debian/pool/bookworm/main/upload
+                            curl --fail --user Jenkins:$GITEA_TOKEN \
+                                --upload-file "$DEB_X86_64_OUTPUT_FILE" \
+                                https://git.wbell.dev/api/packages/Open-Argon/debian/pool/bullseye/main/upload
+                        '''
+                        }
+
+                        archiveArtifacts artifacts: "${env.DEB_X86_64_OUTPUT_FILE}",
+                            allowEmptyArchive: false,
+                            fingerprint: true
+                    }
                 }
 
-                archiveArtifacts artifacts: "${env.OUTPUT_FILE}",
-                    allowEmptyArchive: false,
-                    fingerprint: true
-            }
-        }
-        stage('Debian Package Build ARM64') {
-            steps {
-                script {
-                    def version = env.TAG_NAME ?: "0.0.0-1"
+                stage('Debian Package Build ARM64') {
+                    steps {
+                        script {
+                            waitForBuilds(['LINUX_ARM64'])
+                        }
 
-                    env.DEB_ARM64_VERSION = version.replaceFirst('^v', '')
-                    env.OUTPUT_FILE =
-                        "archives/argon-${env.DEB_ARM64_VERSION}-arm64.deb"
+                        script {
+                            def version = env.TAG_NAME ?: "0.0.0-1"
 
-                    env.PACKAGE_ROOT =
-                        "${env.WORKSPACE}/argon-${env.DEB_ARM64_VERSION}-arm64"
-                }
+                            env.DEB_ARM64_VERSION = version.replaceFirst('^v', '')
+                            env.DEB_ARM64_OUTPUT_FILE =
+                                "archives/argon-${env.DEB_ARM64_VERSION}-arm64.deb"
 
-                withCredentials([
-                    string(
-                        credentialsId: 'gitea-pat',
-                        variable: 'GITEA_TOKEN'
-                    )
-                ]) {
-                    sh '''
-                        set -e
+                            env.DEB_ARM64_PACKAGE_ROOT =
+                                "${env.WORKSPACE}/argon-${env.DEB_ARM64_VERSION}-arm64"
+                        }
 
-                        INSTALL_INTERNAL="/usr/local/lib/chloride"
+                        withCredentials([
+                            string(
+                                credentialsId: 'gitea-pat',
+                                variable: 'GITEA_TOKEN'
+                            )
+                        ]) {
+                            sh '''
+                                set -e
 
-                        rm -rf "$PACKAGE_ROOT"
+                                INSTALL_INTERNAL="/usr/local/lib/chloride"
 
-                        # Install Argon
-                        DESTDIR="$PACKAGE_ROOT" \
-                            cmake --install out/linux-arm64/build \
-                            --prefix "$INSTALL_INTERNAL"
+                                rm -rf "$DEB_ARM64_PACKAGE_ROOT"
 
-                        # Install stdlib
-                        mkdir -p "$PACKAGE_ROOT$INSTALL_INTERNAL/stdlib"
+                                # Install Argon
+                                DESTDIR="$DEB_ARM64_PACKAGE_ROOT" \
+                                    cmake --install out/linux-arm64/build \
+                                    --prefix "$INSTALL_INTERNAL"
 
-                        cp -R \
-                            out/linux-arm64/build/dist/stdlib/* \
-                            "$PACKAGE_ROOT$INSTALL_INTERNAL/stdlib/"
+                                # Install stdlib
+                                mkdir -p "$DEB_ARM64_PACKAGE_ROOT$INSTALL_INTERNAL/stdlib"
 
-                        mkdir -p "$PACKAGE_ROOT$INSTALL_INTERNAL/argon_modules"
-                        cp -R out/linux-arm64/build/dist/argon_modules/* \
-                            "$PACKAGE_ROOT$INSTALL_INTERNAL/argon_modules/"
+                                cp -R \
+                                    out/linux-arm64/build/dist/stdlib/* \
+                                    "$DEB_ARM64_PACKAGE_ROOT$INSTALL_INTERNAL/stdlib/"
 
-                        mkdir -p "$PACKAGE_ROOT$INSTALL_INTERNAL/LICENSES"
-                        cp -R out/linux-arm64/build/dist/LICENSES/* \
-                            "$PACKAGE_ROOT$INSTALL_INTERNAL/LICENSES/"
+                                mkdir -p "$DEB_ARM64_PACKAGE_ROOT$INSTALL_INTERNAL/argon_modules"
+                                cp -R out/linux-arm64/build/dist/argon_modules/* \
+                                    "$DEB_ARM64_PACKAGE_ROOT$INSTALL_INTERNAL/argon_modules/"
 
-                        cp out/linux-arm64/build/dist/LICENSE.txt \
-                            "$PACKAGE_ROOT$INSTALL_INTERNAL/LICENSE.txt"
+                                mkdir -p "$DEB_ARM64_PACKAGE_ROOT$INSTALL_INTERNAL/LICENSES"
+                                cp -R out/linux-arm64/build/dist/LICENSES/* \
+                                    "$DEB_ARM64_PACKAGE_ROOT$INSTALL_INTERNAL/LICENSES/"
 
-                        cp out/linux-arm64/build/dist/argon-package.json \
-                            "$PACKAGE_ROOT$INSTALL_INTERNAL/argon-package.json"
+                                cp out/linux-arm64/build/dist/LICENSE.txt \
+                                    "$DEB_ARM64_PACKAGE_ROOT$INSTALL_INTERNAL/LICENSE.txt"
 
-                        cp out/linux-arm64/build/dist/iso-lock.json \
-                            "$PACKAGE_ROOT$INSTALL_INTERNAL/iso-lock.json"
+                                cp out/linux-arm64/build/dist/argon-package.json \
+                                    "$DEB_ARM64_PACKAGE_ROOT$INSTALL_INTERNAL/argon-package.json"
 
-                        # Install Argon + Isotope
-                        mkdir -p "$PACKAGE_ROOT$INSTALL_INTERNAL/bin"
+                                cp out/linux-arm64/build/dist/iso-lock.json \
+                                    "$DEB_ARM64_PACKAGE_ROOT$INSTALL_INTERNAL/iso-lock.json"
 
-                        cp \
-                            out/linux-arm64/build/dist/bin/argon \
-                            "$PACKAGE_ROOT$INSTALL_INTERNAL/bin/argon"
+                                # Install Argon + Isotope
+                                mkdir -p "$DEB_ARM64_PACKAGE_ROOT$INSTALL_INTERNAL/bin"
 
-                        cp \
-                            out/linux-arm64/build/dist/bin/isotope \
-                            "$PACKAGE_ROOT$INSTALL_INTERNAL/bin/isotope"
+                                cp \
+                                    out/linux-arm64/build/dist/bin/argon \
+                                    "$DEB_ARM64_PACKAGE_ROOT$INSTALL_INTERNAL/bin/argon"
 
-                        chmod +x \
-                            "$PACKAGE_ROOT$INSTALL_INTERNAL/bin/argon" \
-                            "$PACKAGE_ROOT$INSTALL_INTERNAL/bin/isotope"
+                                cp \
+                                    out/linux-arm64/build/dist/bin/isotope \
+                                    "$DEB_ARM64_PACKAGE_ROOT$INSTALL_INTERNAL/bin/isotope"
 
-                        # Public commands
-                        mkdir -p "$PACKAGE_ROOT/usr/bin"
+                                chmod +x \
+                                    "$DEB_ARM64_PACKAGE_ROOT$INSTALL_INTERNAL/bin/argon" \
+                                    "$DEB_ARM64_PACKAGE_ROOT$INSTALL_INTERNAL/bin/isotope"
 
-                        printf '#!/bin/sh\\nexec "%s/bin/argon" "$@"\\n' \
-                            "$INSTALL_INTERNAL" \
-                            > "$PACKAGE_ROOT/usr/bin/argon"
+                                # Public commands
+                                mkdir -p "$DEB_ARM64_PACKAGE_ROOT/usr/bin"
 
-                        printf '#!/bin/sh\\nexec "%s/bin/isotope" "$@"\\n' \
-                            "$INSTALL_INTERNAL" \
-                            > "$PACKAGE_ROOT/usr/bin/isotope"
+                                printf '#!/bin/sh\\nexec "%s/bin/argon" "$@"\\n' \
+                                    "$INSTALL_INTERNAL" \
+                                    > "$DEB_ARM64_PACKAGE_ROOT/usr/bin/argon"
 
-                        chmod +x \
-                            "$PACKAGE_ROOT/usr/bin/argon" \
-                            "$PACKAGE_ROOT/usr/bin/isotope"
+                                printf '#!/bin/sh\\nexec "%s/bin/isotope" "$@"\\n' \
+                                    "$INSTALL_INTERNAL" \
+                                    > "$DEB_ARM64_PACKAGE_ROOT/usr/bin/isotope"
 
-                        # Headers
-                        mkdir -p "$PACKAGE_ROOT/usr/include"
+                                chmod +x \
+                                    "$DEB_ARM64_PACKAGE_ROOT/usr/bin/argon" \
+                                    "$DEB_ARM64_PACKAGE_ROOT/usr/bin/isotope"
 
-                        cp -R \
-                            include/* \
-                            "$PACKAGE_ROOT/usr/include/"
+                                # Headers
+                                mkdir -p "$DEB_ARM64_PACKAGE_ROOT/usr/include"
 
-                        # Debian metadata
-                        mkdir -p "$PACKAGE_ROOT/DEBIAN"
+                                cp -R \
+                                    include/* \
+                                    "$DEB_ARM64_PACKAGE_ROOT/usr/include/"
 
-                        printf 'Package: argon\\nVersion: %s\\nArchitecture: arm64\\nMaintainer: Ugric\\nDescription: Interpreter written in C for the argon programming language\\n' \
-                            "$DEB_ARM64_VERSION" \
-                            > "$PACKAGE_ROOT/DEBIAN/control"
+                                # Debian metadata
+                                mkdir -p "$DEB_ARM64_PACKAGE_ROOT/DEBIAN"
 
-                        cat > "$PACKAGE_ROOT/DEBIAN/postrm" << 'EOF'
+                                printf 'Package: argon\\nVersion: %s\\nArchitecture: arm64\\nMaintainer: Ugric\\nDescription: Interpreter written in C for the argon programming language\\n' \
+                                    "$DEB_ARM64_VERSION" \
+                                    > "$DEB_ARM64_PACKAGE_ROOT/DEBIAN/control"
+
+                                cat > "$DEB_ARM64_PACKAGE_ROOT/DEBIAN/postrm" << 'EOF'
 #!/bin/sh
 
 if [ "$1" = "remove" ] || [ "$1" = "purge" ]; then
-    rm -rf /usr/local/lib/chloride
+            rm -rf /usr/local/lib/chloride
 fi
 EOF
 
-                        chmod +x "$PACKAGE_ROOT/DEBIAN/postrm"
+                                chmod +x "$DEB_ARM64_PACKAGE_ROOT/DEBIAN/postrm"
 
-                        # Build package
-                        dpkg-deb \
-                            --build \
-                            "$PACKAGE_ROOT" \
-                            "$OUTPUT_FILE"
+                                # Build package
+                                dpkg-deb \
+                                    --build \
+                                    "$DEB_ARM64_PACKAGE_ROOT" \
+                                    "$DEB_ARM64_OUTPUT_FILE"
 
-                        # Upload
-                        curl --fail \
-                            --user Jenkins:$GITEA_TOKEN \
-                            --upload-file "$OUTPUT_FILE" \
-                            https://git.wbell.dev/api/packages/Open-Argon/debian/pool/trixie/main/upload
-                        curl --fail --user Jenkins:$GITEA_TOKEN \
-                            --upload-file "$OUTPUT_FILE" \
-                            https://git.wbell.dev/api/packages/Open-Argon/debian/pool/bookworm/main/upload
-                        curl --fail --user Jenkins:$GITEA_TOKEN \
-                            --upload-file "$OUTPUT_FILE" \
-                            https://git.wbell.dev/api/packages/Open-Argon/debian/pool/bullseye/main/upload
-                    '''
+                                # Upload
+                                curl --fail \
+                                    --user Jenkins:$GITEA_TOKEN \
+                                    --upload-file "$DEB_ARM64_OUTPUT_FILE" \
+                                    https://git.wbell.dev/api/packages/Open-Argon/debian/pool/trixie/main/upload
+                                curl --fail --user Jenkins:$GITEA_TOKEN \
+                                    --upload-file "$DEB_ARM64_OUTPUT_FILE" \
+                                    https://git.wbell.dev/api/packages/Open-Argon/debian/pool/bookworm/main/upload
+                                curl --fail --user Jenkins:$GITEA_TOKEN \
+                                    --upload-file "$DEB_ARM64_OUTPUT_FILE" \
+                                    https://git.wbell.dev/api/packages/Open-Argon/debian/pool/bullseye/main/upload
+                            '''
+                        }
+
+                        archiveArtifacts artifacts: "${env.DEB_ARM64_OUTPUT_FILE}",
+                            allowEmptyArchive: false,
+                            fingerprint: true
+                    }
                 }
 
-                archiveArtifacts artifacts: "${env.OUTPUT_FILE}",
-                    allowEmptyArchive: false,
-                    fingerprint: true
-            }
-        }
-        stage('RPM Package Build') {
-            steps {
-                script {
-                    def version = env.TAG_NAME ?: "0.0.0-1"
-                    env.RPM_VERSION = version.replaceFirst('^v', '').replaceAll('-', '.')
-                    env.OUTPUT_FILE = "archives/argon-${env.RPM_VERSION}-x86_64.rpm"
-                    env.RPM_BUILD_ROOT = "${env.WORKSPACE}/rpmbuild"
-                }
+                stage('RPM Package Build') {
+                    steps {
+                        script {
+                            waitForBuilds(['LINUX_X86_64'])
+                        }
 
-                withCredentials([
-                    string(credentialsId: 'gitea-pat', variable: 'GITEA_TOKEN'),
-                    file(credentialsId: 'rpm-signing-key', variable: 'GPG_KEY_FILE')
-                ]) {
-                    sh '''
-                        set -e
+                        script {
+                            def version = env.TAG_NAME ?: "0.0.0-1"
+                            env.RPM_VERSION = version.replaceFirst('^v', '').replaceAll('-', '.')
+                            env.RPM_X86_64_OUTPUT_FILE = "archives/argon-${env.RPM_VERSION}-x86_64.rpm"
+                            env.RPM_BUILD_ROOT = "${env.WORKSPACE}/rpmbuild"
+                        }
 
-                        INSTALL_INTERNAL="/usr/local/lib/chloride"
+                        withCredentials([
+                            string(credentialsId: 'gitea-pat', variable: 'GITEA_TOKEN'),
+                            file(credentialsId: 'rpm-signing-key', variable: 'GPG_KEY_FILE')
+                        ]) {
+                            sh '''
+                                set -e
 
-                        rm -rf "$RPM_BUILD_ROOT"
+                                INSTALL_INTERNAL="/usr/local/lib/chloride"
 
-                        mkdir -p \
-                            "$RPM_BUILD_ROOT/BUILD" \
-                            "$RPM_BUILD_ROOT/RPMS" \
-                            "$RPM_BUILD_ROOT/SOURCES" \
-                            "$RPM_BUILD_ROOT/SPECS" \
-                            "$RPM_BUILD_ROOT/SRPMS"
+                                rm -rf "$RPM_BUILD_ROOT"
 
-                        # Staging dir — NOT the same as rpmbuild's own BUILDROOT,
-                        # which rpmbuild wipes/recreates itself before %install runs.
-                        STAGE_ROOT="$RPM_BUILD_ROOT/STAGE"
-                        rm -rf "$STAGE_ROOT"
+                                mkdir -p \
+                                    "$RPM_BUILD_ROOT/BUILD" \
+                                    "$RPM_BUILD_ROOT/RPMS" \
+                                    "$RPM_BUILD_ROOT/SOURCES" \
+                                    "$RPM_BUILD_ROOT/SPECS" \
+                                    "$RPM_BUILD_ROOT/SRPMS"
 
-                        # Install Argon
-                        DESTDIR="$STAGE_ROOT" cmake --install out/linux/build \
-                            --prefix "$INSTALL_INTERNAL"
+                                # Staging dir — NOT the same as rpmbuild's own BUILDROOT,
+                                # which rpmbuild wipes/recreates itself before %install runs.
+                                STAGE_ROOT="$RPM_BUILD_ROOT/STAGE"
+                                rm -rf "$STAGE_ROOT"
 
-                        # Strip CMake's own internal scratch/test artifacts (e.g.
-                        # compiler-detection binaries left behind in submodule build
-                        # dirs) so they don't get packaged or trip up brp-strip.
-                        find out/linux/build/dist/stdlib -depth -type d -name CMakeFiles -exec rm -rf {} +
+                                # Install Argon
+                                DESTDIR="$STAGE_ROOT" cmake --install out/linux/build \
+                                    --prefix "$INSTALL_INTERNAL"
 
-                        # Install stdlib
-                        mkdir -p "$STAGE_ROOT$INSTALL_INTERNAL/stdlib"
-                        cp -R out/linux/build/dist/stdlib/* \
-                            "$STAGE_ROOT$INSTALL_INTERNAL/stdlib/"
-                        
-                        mkdir -p "$STAGE_ROOT$INSTALL_INTERNAL/argon_modules"
-                        cp -R out/linux/build/dist/argon_modules/* \
-                            "$STAGE_ROOT$INSTALL_INTERNAL/argon_modules/"
+                                # Strip CMake's own internal scratch/test artifacts (e.g.
+                                # compiler-detection binaries left behind in submodule build
+                                # dirs) so they don't get packaged or trip up brp-strip.
+                                find out/linux/build/dist/stdlib -depth -type d -name CMakeFiles -exec rm -rf {} +
 
-                        mkdir -p "$STAGE_ROOT$INSTALL_INTERNAL/LICENSES"
-                        cp -R out/linux/build/dist/LICENSES/* \
-                            "$STAGE_ROOT$INSTALL_INTERNAL/LICENSES/"
+                                # Install stdlib
+                                mkdir -p "$STAGE_ROOT$INSTALL_INTERNAL/stdlib"
+                                cp -R out/linux/build/dist/stdlib/* \
+                                    "$STAGE_ROOT$INSTALL_INTERNAL/stdlib/"
+                                
+                                mkdir -p "$STAGE_ROOT$INSTALL_INTERNAL/argon_modules"
+                                cp -R out/linux/build/dist/argon_modules/* \
+                                    "$STAGE_ROOT$INSTALL_INTERNAL/argon_modules/"
 
-                        cp out/linux/build/dist/LICENSE.txt \
-                            "$STAGE_ROOT$INSTALL_INTERNAL/LICENSE.txt"
+                                mkdir -p "$STAGE_ROOT$INSTALL_INTERNAL/LICENSES"
+                                cp -R out/linux/build/dist/LICENSES/* \
+                                    "$STAGE_ROOT$INSTALL_INTERNAL/LICENSES/"
 
-                        cp out/linux/build/dist/argon-package.json \
-                            "$STAGE_ROOT$INSTALL_INTERNAL/argon-package.json"
+                                cp out/linux/build/dist/LICENSE.txt \
+                                    "$STAGE_ROOT$INSTALL_INTERNAL/LICENSE.txt"
 
-                        cp out/linux/build/dist/iso-lock.json \
-                            "$STAGE_ROOT$INSTALL_INTERNAL/iso-lock.json"
+                                cp out/linux/build/dist/argon-package.json \
+                                    "$STAGE_ROOT$INSTALL_INTERNAL/argon-package.json"
 
-                        # Install Argon + Isotope
-                        mkdir -p "$STAGE_ROOT$INSTALL_INTERNAL/bin"
+                                cp out/linux/build/dist/iso-lock.json \
+                                    "$STAGE_ROOT$INSTALL_INTERNAL/iso-lock.json"
 
-                        cp out/linux/build/dist/bin/argon \
-                            "$STAGE_ROOT$INSTALL_INTERNAL/bin/argon"
+                                # Install Argon + Isotope
+                                mkdir -p "$STAGE_ROOT$INSTALL_INTERNAL/bin"
 
-                        cp out/linux/build/dist/bin/isotope \
-                            "$STAGE_ROOT$INSTALL_INTERNAL/bin/isotope"
+                                cp out/linux/build/dist/bin/argon \
+                                    "$STAGE_ROOT$INSTALL_INTERNAL/bin/argon"
 
-                        chmod +x \
-                            "$STAGE_ROOT$INSTALL_INTERNAL/bin/argon" \
-                            "$STAGE_ROOT$INSTALL_INTERNAL/bin/isotope"
+                                cp out/linux/build/dist/bin/isotope \
+                                    "$STAGE_ROOT$INSTALL_INTERNAL/bin/isotope"
 
-                        # Public commands
-                        mkdir -p "$STAGE_ROOT/usr/bin"
+                                chmod +x \
+                                    "$STAGE_ROOT$INSTALL_INTERNAL/bin/argon" \
+                                    "$STAGE_ROOT$INSTALL_INTERNAL/bin/isotope"
 
-                        printf '#!/bin/sh\\nexec "%s/bin/argon" "$@"\\n' "$INSTALL_INTERNAL" \
-                            > "$STAGE_ROOT/usr/bin/argon"
+                                # Public commands
+                                mkdir -p "$STAGE_ROOT/usr/bin"
 
-                        printf '#!/bin/sh\\nexec "%s/bin/isotope" "$@"\\n' "$INSTALL_INTERNAL" \
-                            > "$STAGE_ROOT/usr/bin/isotope"
+                                printf '#!/bin/sh\\nexec "%s/bin/argon" "$@"\\n' "$INSTALL_INTERNAL" \
+                                    > "$STAGE_ROOT/usr/bin/argon"
 
-                        chmod +x \
-                            "$STAGE_ROOT/usr/bin/argon" \
-                            "$STAGE_ROOT/usr/bin/isotope"
+                                printf '#!/bin/sh\\nexec "%s/bin/isotope" "$@"\\n' "$INSTALL_INTERNAL" \
+                                    > "$STAGE_ROOT/usr/bin/isotope"
 
-                        # Headers
-                        mkdir -p "$STAGE_ROOT/usr/include"
-                        cp -R include/* "$STAGE_ROOT/usr/include/"
+                                chmod +x \
+                                    "$STAGE_ROOT/usr/bin/argon" \
+                                    "$STAGE_ROOT/usr/bin/isotope"
 
-                        CHANGELOG_DATE=$(date '+%a %b %d %Y')
+                                # Headers
+                                mkdir -p "$STAGE_ROOT/usr/include"
+                                cp -R include/* "$STAGE_ROOT/usr/include/"
 
-                        cat > "$RPM_BUILD_ROOT/SPECS/argon.spec" << SPEC
+                                CHANGELOG_DATE=$(date '+%a %b %d %Y')
+
+                                cat > "$RPM_BUILD_ROOT/SPECS/argon.spec" << SPEC
 Name:           argon
 Version:        ${RPM_VERSION}
 Release:        1%{?dist}
@@ -1061,153 +1136,156 @@ cp -r ${STAGE_ROOT}/* %{buildroot}/
 - Automated build from tag ${TAG_NAME}
 SPEC
 
-                        rpmbuild --define "_topdir $RPM_BUILD_ROOT" \
-                            -bb "$RPM_BUILD_ROOT/SPECS/argon.spec"
+                                rpmbuild --define "_topdir $RPM_BUILD_ROOT" \
+                                    -bb "$RPM_BUILD_ROOT/SPECS/argon.spec"
 
-                        BUILT_RPM=$(find "$RPM_BUILD_ROOT/RPMS" \
-                            -name "argon-*.rpm" | head -1)
+                                BUILT_RPM=$(find "$RPM_BUILD_ROOT/RPMS" \
+                                    -name "argon-*.rpm" | head -1)
 
-                        mkdir -p archives
-                        cp "$BUILT_RPM" "$OUTPUT_FILE"
+                                mkdir -p archives
+                                cp "$BUILT_RPM" "$RPM_X86_64_OUTPUT_FILE"
 
-                        # Sign RPM
-                        gpg --batch --import "$GPG_KEY_FILE"
+                                # Sign RPM
+                                gpg --batch --import "$GPG_KEY_FILE"
 
-                        echo "%_gpg_name William Bell <william@wbell.dev>" \
-                            > ~/.rpmmacros
-                        echo "%__gpg /usr/bin/gpg" \
-                            >> ~/.rpmmacros
+                                rpm --addsign \
+                                    --define "_gpg_name William Bell <william@wbell.dev>" \
+                                    --define "__gpg /usr/bin/gpg" \
+                                    "$RPM_X86_64_OUTPUT_FILE"
 
-                        rpm --addsign "$OUTPUT_FILE"
+                                # Upload
+                                curl --fail --user Jenkins:$GITEA_TOKEN \
+                                    --upload-file "$RPM_X86_64_OUTPUT_FILE" \
+                                    https://git.wbell.dev/api/packages/Open-Argon/rpm/upload
+                            '''
+                        }
 
-                        # Upload
-                        curl --fail --user Jenkins:$GITEA_TOKEN \
-                            --upload-file "$OUTPUT_FILE" \
-                            https://git.wbell.dev/api/packages/Open-Argon/rpm/upload
-                    '''
+                        archiveArtifacts artifacts: "${env.RPM_X86_64_OUTPUT_FILE}",
+                            allowEmptyArchive: false,
+                            fingerprint: true
+                    }
                 }
 
-                archiveArtifacts artifacts: "${env.OUTPUT_FILE}",
-                    allowEmptyArchive: false,
-                    fingerprint: true
-            }
-        }
-        stage('RPM Package Build ARM64') {
-            steps {
-                script {
-                    def version = env.TAG_NAME ?: "0.0.0-1"
+                stage('RPM Package Build ARM64') {
+                    steps {
+                        script {
+                            waitForBuilds(['LINUX_ARM64'])
+                        }
 
-                    env.RPM_ARM64_VERSION =
-                        version.replaceFirst('^v', '').replaceAll('-', '.')
+                        script {
+                            def version = env.TAG_NAME ?: "0.0.0-1"
 
-                    env.OUTPUT_FILE =
-                        "archives/argon-${env.RPM_ARM64_VERSION}-arm64.rpm"
+                            env.RPM_ARM64_VERSION =
+                                version.replaceFirst('^v', '').replaceAll('-', '.')
 
-                    env.RPM_ARM64_BUILD_ROOT =
-                        "${env.WORKSPACE}/rpmbuild-arm64"
-                }
+                            env.RPM_ARM64_OUTPUT_FILE =
+                                "archives/argon-${env.RPM_ARM64_VERSION}-arm64.rpm"
 
-                withCredentials([
-                    string(
-                        credentialsId: 'gitea-pat',
-                        variable: 'GITEA_TOKEN'
-                    ),
-                    file(
-                        credentialsId: 'rpm-signing-key',
-                        variable: 'GPG_KEY_FILE'
-                    )
-                ]) {
-                    sh '''
-                        set -e
+                            env.RPM_ARM64_BUILD_ROOT =
+                                "${env.WORKSPACE}/rpmbuild-arm64"
+                        }
 
-                        INSTALL_INTERNAL="/usr/local/lib/chloride"
+                        withCredentials([
+                            string(
+                                credentialsId: 'gitea-pat',
+                                variable: 'GITEA_TOKEN'
+                            ),
+                            file(
+                                credentialsId: 'rpm-signing-key',
+                                variable: 'GPG_KEY_FILE'
+                            )
+                        ]) {
+                            sh '''
+                                set -e
 
-                        rm -rf "$RPM_ARM64_BUILD_ROOT"
+                                INSTALL_INTERNAL="/usr/local/lib/chloride"
 
-                        mkdir -p \
-                            "$RPM_ARM64_BUILD_ROOT/BUILD" \
-                            "$RPM_ARM64_BUILD_ROOT/RPMS" \
-                            "$RPM_ARM64_BUILD_ROOT/SOURCES" \
-                            "$RPM_ARM64_BUILD_ROOT/SPECS" \
-                            "$RPM_ARM64_BUILD_ROOT/SRPMS"
+                                rm -rf "$RPM_ARM64_BUILD_ROOT"
 
-                        STAGE_ROOT="$RPM_ARM64_BUILD_ROOT/STAGE"
-                        rm -rf "$STAGE_ROOT"
+                                mkdir -p \
+                                    "$RPM_ARM64_BUILD_ROOT/BUILD" \
+                                    "$RPM_ARM64_BUILD_ROOT/RPMS" \
+                                    "$RPM_ARM64_BUILD_ROOT/SOURCES" \
+                                    "$RPM_ARM64_BUILD_ROOT/SPECS" \
+                                    "$RPM_ARM64_BUILD_ROOT/SRPMS"
 
-                        # Install Argon
-                        DESTDIR="$STAGE_ROOT" \
-                            cmake --install out/linux-arm64/build \
-                            --prefix "$INSTALL_INTERNAL"
+                                STAGE_ROOT="$RPM_ARM64_BUILD_ROOT/STAGE"
+                                rm -rf "$STAGE_ROOT"
 
-                        # Strip CMake's own internal scratch/test artifacts before
-                        # packaging — these are wrong-architecture binaries that
-                        # brp-strip can't (and shouldn't) touch.
-                        find out/linux-arm64/build/dist/stdlib -depth -type d -name CMakeFiles -exec rm -rf {} +
+                                # Install Argon
+                                DESTDIR="$STAGE_ROOT" \
+                                    cmake --install out/linux-arm64/build \
+                                    --prefix "$INSTALL_INTERNAL"
 
-                        # Install stdlib
-                        mkdir -p "$STAGE_ROOT$INSTALL_INTERNAL/stdlib"
+                                # Strip CMake's own internal scratch/test artifacts before
+                                # packaging — these are wrong-architecture binaries that
+                                # brp-strip can't (and shouldn't) touch.
+                                find out/linux-arm64/build/dist/stdlib -depth -type d -name CMakeFiles -exec rm -rf {} +
 
-                        cp -R \
-                            out/linux-arm64/build/dist/stdlib/* \
-                            "$STAGE_ROOT$INSTALL_INTERNAL/stdlib/"
-  
-                        mkdir -p "$STAGE_ROOT$INSTALL_INTERNAL/argon_modules"
-                        cp -R out/linux-arm64/build/dist/argon_modules/* \
-                            "$STAGE_ROOT$INSTALL_INTERNAL/argon_modules/"
+                                # Install stdlib
+                                mkdir -p "$STAGE_ROOT$INSTALL_INTERNAL/stdlib"
 
-                        mkdir -p "$STAGE_ROOT$INSTALL_INTERNAL/LICENSES"
-                        cp -R out/linux-arm64/build/dist/LICENSES/* \
-                            "$STAGE_ROOT$INSTALL_INTERNAL/LICENSES/"
+                                cp -R \
+                                    out/linux-arm64/build/dist/stdlib/* \
+                                    "$STAGE_ROOT$INSTALL_INTERNAL/stdlib/"
+          
+                                mkdir -p "$STAGE_ROOT$INSTALL_INTERNAL/argon_modules"
+                                cp -R out/linux-arm64/build/dist/argon_modules/* \
+                                    "$STAGE_ROOT$INSTALL_INTERNAL/argon_modules/"
 
-                        cp out/linux-arm64/build/dist/LICENSE.txt \
-                            "$STAGE_ROOT$INSTALL_INTERNAL/LICENSE.txt"
+                                mkdir -p "$STAGE_ROOT$INSTALL_INTERNAL/LICENSES"
+                                cp -R out/linux-arm64/build/dist/LICENSES/* \
+                                    "$STAGE_ROOT$INSTALL_INTERNAL/LICENSES/"
 
-                        cp out/linux-arm64/build/dist/argon-package.json \
-                            "$STAGE_ROOT$INSTALL_INTERNAL/argon-package.json"
+                                cp out/linux-arm64/build/dist/LICENSE.txt \
+                                    "$STAGE_ROOT$INSTALL_INTERNAL/LICENSE.txt"
 
-                        cp out/linux-arm64/build/dist/iso-lock.json \
-                            "$STAGE_ROOT$INSTALL_INTERNAL/iso-lock.json"
+                                cp out/linux-arm64/build/dist/argon-package.json \
+                                    "$STAGE_ROOT$INSTALL_INTERNAL/argon-package.json"
 
-                        # Install Argon + Isotope
-                        mkdir -p "$STAGE_ROOT$INSTALL_INTERNAL/bin"
+                                cp out/linux-arm64/build/dist/iso-lock.json \
+                                    "$STAGE_ROOT$INSTALL_INTERNAL/iso-lock.json"
 
-                        cp \
-                            out/linux-arm64/build/dist/bin/argon \
-                            "$STAGE_ROOT$INSTALL_INTERNAL/bin/argon"
+                                # Install Argon + Isotope
+                                mkdir -p "$STAGE_ROOT$INSTALL_INTERNAL/bin"
 
-                        cp \
-                            out/linux-arm64/build/dist/bin/isotope \
-                            "$STAGE_ROOT$INSTALL_INTERNAL/bin/isotope"
+                                cp \
+                                    out/linux-arm64/build/dist/bin/argon \
+                                    "$STAGE_ROOT$INSTALL_INTERNAL/bin/argon"
 
-                        chmod +x \
-                            "$STAGE_ROOT$INSTALL_INTERNAL/bin/argon" \
-                            "$STAGE_ROOT$INSTALL_INTERNAL/bin/isotope"
+                                cp \
+                                    out/linux-arm64/build/dist/bin/isotope \
+                                    "$STAGE_ROOT$INSTALL_INTERNAL/bin/isotope"
 
-                        # Public commands
-                        mkdir -p "$STAGE_ROOT/usr/bin"
+                                chmod +x \
+                                    "$STAGE_ROOT$INSTALL_INTERNAL/bin/argon" \
+                                    "$STAGE_ROOT$INSTALL_INTERNAL/bin/isotope"
 
-                        printf '#!/bin/sh\\nexec "%s/bin/argon" "$@"\\n' \
-                            "$INSTALL_INTERNAL" \
-                            > "$STAGE_ROOT/usr/bin/argon"
+                                # Public commands
+                                mkdir -p "$STAGE_ROOT/usr/bin"
 
-                        printf '#!/bin/sh\\nexec "%s/bin/isotope" "$@"\\n' \
-                            "$INSTALL_INTERNAL" \
-                            > "$STAGE_ROOT/usr/bin/isotope"
+                                printf '#!/bin/sh\\nexec "%s/bin/argon" "$@"\\n' \
+                                    "$INSTALL_INTERNAL" \
+                                    > "$STAGE_ROOT/usr/bin/argon"
 
-                        chmod +x \
-                            "$STAGE_ROOT/usr/bin/argon" \
-                            "$STAGE_ROOT/usr/bin/isotope"
+                                printf '#!/bin/sh\\nexec "%s/bin/isotope" "$@"\\n' \
+                                    "$INSTALL_INTERNAL" \
+                                    > "$STAGE_ROOT/usr/bin/isotope"
 
-                        # Headers
-                        mkdir -p "$STAGE_ROOT/usr/include"
+                                chmod +x \
+                                    "$STAGE_ROOT/usr/bin/argon" \
+                                    "$STAGE_ROOT/usr/bin/isotope"
 
-                        cp -R \
-                            include/* \
-                            "$STAGE_ROOT/usr/include/"
+                                # Headers
+                                mkdir -p "$STAGE_ROOT/usr/include"
 
-                        CHANGELOG_DATE=$(date '+%a %b %d %Y')
+                                cp -R \
+                                    include/* \
+                                    "$STAGE_ROOT/usr/include/"
 
-                        cat > "$RPM_ARM64_BUILD_ROOT/SPECS/argon.spec" << SPEC
+                                CHANGELOG_DATE=$(date '+%a %b %d %Y')
+
+                                cat > "$RPM_ARM64_BUILD_ROOT/SPECS/argon.spec" << SPEC
 Name:           argon
 Version:        ${RPM_ARM64_VERSION}
 Release:        1%{?dist}
@@ -1239,89 +1317,95 @@ cp -r ${STAGE_ROOT}/* %{buildroot}/
 - Automated ARM64 build from tag ${TAG_NAME}
 SPEC
 
-                        rpmbuild \
-                            --target aarch64 \
-                            --define "_topdir $RPM_ARM64_BUILD_ROOT" \
-                            --define "__strip /usr/bin/aarch64-linux-gnu-strip" \
-                            --define "__objdump /usr/bin/aarch64-linux-gnu-objdump" \
-                            -bb "$RPM_ARM64_BUILD_ROOT/SPECS/argon.spec"
+                                rpmbuild \
+                                    --target aarch64 \
+                                    --define "_topdir $RPM_ARM64_BUILD_ROOT" \
+                                    --define "__strip /usr/bin/aarch64-linux-gnu-strip" \
+                                    --define "__objdump /usr/bin/aarch64-linux-gnu-objdump" \
+                                    -bb "$RPM_ARM64_BUILD_ROOT/SPECS/argon.spec"
 
-                        BUILT_RPM=$(find "$RPM_ARM64_BUILD_ROOT/RPMS" \
-                            -name "argon-*.rpm" | head -1)
+                                BUILT_RPM=$(find "$RPM_ARM64_BUILD_ROOT/RPMS" \
+                                    -name "argon-*.rpm" | head -1)
 
-                        if [ -z "$BUILT_RPM" ]; then
-                            echo "ERROR: ARM64 RPM was not produced"
-                            find "$RPM_ARM64_BUILD_ROOT/RPMS" -type f -print
-                            exit 1
-                        fi
-                        
-                        mkdir -p archives
+                                if [ -z "$BUILT_RPM" ]; then
+                                    echo "ERROR: ARM64 RPM was not produced"
+                                    find "$RPM_ARM64_BUILD_ROOT/RPMS" -type f -print
+                                    exit 1
+                                fi
+                                
+                                mkdir -p archives
 
-                        cp \
-                            "$BUILT_RPM" \
-                            "$OUTPUT_FILE"
+                                cp \
+                                    "$BUILT_RPM" \
+                                    "$RPM_ARM64_OUTPUT_FILE"
 
-                        # Sign RPM
-                        gpg --batch --import "$GPG_KEY_FILE"
+                                # Sign RPM
+                                gpg --batch --import "$GPG_KEY_FILE"
 
-                        echo "%_gpg_name William Bell <william@wbell.dev>" \
-                            > ~/.rpmmacros
-                        echo "%__gpg /usr/bin/gpg" \
-                            >> ~/.rpmmacros
+                                rpm --addsign \
+                                    --define "_gpg_name William Bell <william@wbell.dev>" \
+                                    --define "__gpg /usr/bin/gpg" \
+                                    "$RPM_ARM64_OUTPUT_FILE"
 
-                        rpm --addsign "$OUTPUT_FILE"
+                                # Upload
+                                curl --fail \
+                                    --user Jenkins:$GITEA_TOKEN \
+                                    --upload-file "$RPM_ARM64_OUTPUT_FILE" \
+                                    https://git.wbell.dev/api/packages/Open-Argon/rpm/upload
+                            '''
+                        }
 
-                        # Upload
-                        curl --fail \
-                            --user Jenkins:$GITEA_TOKEN \
-                            --upload-file "$OUTPUT_FILE" \
-                            https://git.wbell.dev/api/packages/Open-Argon/rpm/upload
-                    '''
+                        archiveArtifacts artifacts: "${env.RPM_ARM64_OUTPUT_FILE}",
+                            allowEmptyArchive: false,
+                            fingerprint: true
+                    }
                 }
 
-                archiveArtifacts artifacts: "${env.OUTPUT_FILE}",
-                    allowEmptyArchive: false,
-                    fingerprint: true
-            }
-        }
-        stage('Archive Windows') {
-            steps {
-                script {
-                    def version = env.TAG_NAME ?: "dev"
-                    env.OUTPUT_FILE = "archives/argon-${version}-windows-x86_64.zip"
-                    echo "Packaging Windows as: ${env.OUTPUT_FILE}"
+                stage('Archive Windows') {
+                    steps {
+                        script {
+                            waitForBuilds(['WINDOWS'])
+                        }
+
+                        script {
+                            def version = env.TAG_NAME ?: "dev"
+                            env.WINDOWS_ARCHIVE_OUTPUT_FILE = "archives/argon-${version}-windows-x86_64.zip"
+                            echo "Packaging Windows as: ${env.WINDOWS_ARCHIVE_OUTPUT_FILE}"
+                        }
+                        sh '''
+                            set -e
+                            (
+                            cd "out/windows/build/dist" && zip -r "../../../../$WINDOWS_ARCHIVE_OUTPUT_FILE" .
+                            )
+                        '''
+                        archiveArtifacts artifacts: "${env.WINDOWS_ARCHIVE_OUTPUT_FILE}", allowEmptyArchive: false, fingerprint: true
+                    }
                 }
-                sh '''
-                    set -e
-                    cp LICENSE.txt out/windows/build/dist/
-                    cp -r LICENSES out/windows/build/dist/
-                    cp -r include out/windows/build/dist/
-                    
-                    (
-                    cd "out/windows/build/dist" && zip -r "../../../../$OUTPUT_FILE" .
-                    )
-                '''
-                archiveArtifacts artifacts: "${env.OUTPUT_FILE}", allowEmptyArchive: false, fingerprint: true
+
+                stage('Windows Installer build') {
+                    steps {
+                        script {
+                            waitForBuilds(['WINDOWS'])
+                        }
+
+                        script {
+                            def version = env.TAG_NAME ?: "dev"
+                            env.ARGON_VERSION = "${version}"
+                            env.WINDOWS_INSTALLER_OUTPUT_FILE = "archives/argon-${version}-windows-installer-x86_64.exe"
+                            echo "Packaging Windows as: ${env.WINDOWS_INSTALLER_OUTPUT_FILE}"
+                        }
+                        sh '''
+                            set -e
+                            
+                            OUTPUT_FILE="$WINDOWS_INSTALLER_OUTPUT_FILE" python3 build-windows-installer.py
+                            makensis -DOUTFILE="$WINDOWS_INSTALLER_OUTPUT_FILE" installer.nsi
+                        '''
+                        archiveArtifacts artifacts: "${env.WINDOWS_INSTALLER_OUTPUT_FILE}", allowEmptyArchive: false, fingerprint: true
+                    }
+                }
             }
         }
 
-        stage('Windows Installer build') {
-            steps {
-                script {
-                    def version = env.TAG_NAME ?: "dev"
-                    env.ARGON_VERSION = "${version}"
-                    env.OUTPUT_FILE = "archives/argon-${version}-windows-installer-x86_64.exe"
-                    echo "Packaging Windows as: ${env.OUTPUT_FILE}"
-                }
-                sh '''
-                    set -e
-                    
-                    python3 build-windows-installer.py
-                    makensis -DOUTFILE="$OUTPUT_FILE" installer.nsi
-                '''
-                archiveArtifacts artifacts: "${env.OUTPUT_FILE}", allowEmptyArchive: false, fingerprint: true
-            }
-        }
 
     }
 
