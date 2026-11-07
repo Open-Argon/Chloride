@@ -29,7 +29,7 @@ char *argon_object_to_null_terminated_string(ArgonObject *object, ArErr *err,
 ArgonObject *new_string_object_without_memcpy(char *data, size_t length,
                                               uint64_t hash);
 
-ArgonObject *new_string_object(char *data, size_t length, uint64_t hash);
+ArgonObject *new_string_object(const char *data, size_t length, uint64_t hash);
 
 ArgonObject *new_string_object_null_terminated(char *data);
 

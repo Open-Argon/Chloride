@@ -26,7 +26,7 @@ ARGON_METHOD(term, log, {
       struct string string = api->argon_to_string(sepObject, err);
       if (api->is_error(err))
         return ARGON_NULL;
-      sep = string.data;
+      sep = (char*)string.data;
       seplength = string.length;
     }
     ArgonObject *endObject = api->get_from_hashmap_string_key(kwargs, "end");
@@ -34,7 +34,7 @@ ARGON_METHOD(term, log, {
       struct string string = api->argon_to_string(endObject, err);
       if (api->is_error(err))
         return ARGON_NULL;
-      end = string.data;
+      end = (char*)string.data;
       endlength = string.length;
     }
   }

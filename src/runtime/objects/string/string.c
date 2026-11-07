@@ -320,20 +320,29 @@ ARGON_METHOD(ARGON_STRING_TYPE, upper, {
                       argc);
     return ARGON_NULL;
   }
+
   struct string self = api->argon_to_string(argv[0], err);
   if (api->is_error(err))
     return ARGON_NULL;
 
-  ArgonObject *new_str_obj = api->string_to_argon(self);
-  struct string new_str = api->argon_to_string(new_str_obj, err);
-  if (api->is_error(err))
+  char *buf = malloc(self.length + 1);
+  if (!buf) {
+    *err = create_err(RuntimeError, "out of memory");
     return ARGON_NULL;
-
-  for (size_t i = 0; i < new_str.length; i++) {
-    new_str.data[i] = toupper((unsigned char)new_str.data[i]);
   }
 
-  return new_str_obj;
+  memcpy(buf, self.data, self.length);
+  buf[self.length] = '\0';
+
+  for (size_t i = 0; i < self.length; i++) {
+    buf[i] = (char)toupper((unsigned char)buf[i]);
+  }
+
+  ArgonObject *result = api->string_to_argon(
+      (struct string){.data = buf, .length = self.length});
+
+  free(buf);
+  return result;
 })
 
 ARGON_METHOD(ARGON_STRING_TYPE, lower, {
@@ -344,54 +353,74 @@ ARGON_METHOD(ARGON_STRING_TYPE, lower, {
                       argc);
     return ARGON_NULL;
   }
+
   struct string self = api->argon_to_string(argv[0], err);
   if (api->is_error(err))
     return ARGON_NULL;
 
-  ArgonObject *new_str_obj = api->string_to_argon(self);
-  struct string new_str = api->argon_to_string(new_str_obj, err);
-  if (api->is_error(err))
+  char *buf = malloc(self.length + 1);
+  if (!buf) {
+    *err = create_err(RuntimeError, "out of memory");
     return ARGON_NULL;
-
-  for (size_t i = 0; i < new_str.length; i++) {
-    new_str.data[i] = tolower((unsigned char)new_str.data[i]);
   }
 
-  return new_str_obj;
+  memcpy(buf, self.data, self.length);
+  buf[self.length] = '\0';
+
+  for (size_t i = 0; i < self.length; i++) {
+    buf[i] = (char)tolower((unsigned char)buf[i]);
+  }
+
+  ArgonObject *result = api->string_to_argon(
+      (struct string){.data = buf, .length = self.length});
+
+  free(buf);
+  return result;
 })
 
 ARGON_METHOD(ARGON_STRING_TYPE, title, {
   (void)api;
   (void)state;
   if (argc != 1) {
-    *err = create_err(RuntimeError, "upper expects 1 argument, got %" PRIu64,
+    *err = create_err(RuntimeError, "title expects 1 argument, got %" PRIu64,
                       argc);
     return ARGON_NULL;
   }
+
   struct string self = api->argon_to_string(argv[0], err);
   if (api->is_error(err))
     return ARGON_NULL;
 
-  ArgonObject *new_str_obj = api->string_to_argon(self);
-  struct string new_str = api->argon_to_string(new_str_obj, err);
-  if (api->is_error(err))
+  char *buf = malloc(self.length + 1);
+  if (!buf) {
+    *err = create_err(RuntimeError, "out of memory");
     return ARGON_NULL;
+  }
+
+  memcpy(buf, self.data, self.length);
+  buf[self.length] = '\0';
 
   bool new_word = true;
-  for (size_t i = 0; i < new_str.length; i++) {
-    if (new_str.data[i] == ' ') {
+
+  for (size_t i = 0; i < self.length; i++) {
+    if (buf[i] == ' ') {
       new_word = true;
       continue;
     }
+
     if (new_word) {
-      new_str.data[i] = toupper((unsigned char)new_str.data[i]);
-      new_word = false; // always reset, not just when char changed
+      buf[i] = (char)toupper((unsigned char)buf[i]);
+      new_word = false;
     } else {
-      new_str.data[i] = tolower((unsigned char)new_str.data[i]);
+      buf[i] = (char)tolower((unsigned char)buf[i]);
     }
   }
 
-  return new_str_obj;
+  ArgonObject *result = api->string_to_argon(
+      (struct string){.data = buf, .length = self.length});
+
+  free(buf);
+  return result;
 })
 
 ARGON_METHOD(ARGON_STRING_TYPE, replace, {
@@ -634,9 +663,9 @@ ARGON_METHOD(ARGON_STRING_TYPE, split, {
     return api->throw_argon_error(err, ValueError, "invalid separator");
   }
 
-  char *start = s.data;
-  char *end = s.data + s.length;
-  char *p = start;
+  const char *start = s.data;
+  const char *end = s.data + s.length;
+  const char *p = start;
 
   size_t splits = 0;
 
@@ -690,8 +719,8 @@ ARGON_METHOD(ARGON_STRING_TYPE, strip, {
     return api->string_to_argon((struct string){s.data, s.length});
   }
 
-  char *start = s.data;
-  char *end = s.data + s.length - 1; // points to last char
+  const char *start = s.data;
+  const char *end = s.data + s.length - 1; // points to last char
 
   // Strip from the left
   while (start <= end &&
@@ -1218,7 +1247,7 @@ ArgonObject *new_string_object_without_memcpy(char *data, size_t length,
   return object;
 }
 
-ArgonObject *new_string_object(char *data, size_t length, uint64_t hash) {
+ArgonObject *new_string_object(const char *data, size_t length, uint64_t hash) {
   if (length == 0)
     return &empty_str.obj;
   if (length == 1)

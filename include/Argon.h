@@ -44,7 +44,7 @@ struct rational {
 };
 
 struct string {
-  char *data;
+  const char *data;
   size_t length;
 };
 

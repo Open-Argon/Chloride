@@ -219,7 +219,7 @@ struct as_array_iterator {
 
 struct as_string_iterator {
   size_t current;
-  char *data;
+  const char *data;
   size_t length;
 };
 
