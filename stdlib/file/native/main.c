@@ -1886,14 +1886,16 @@ ARGON_FUNCTION(file_metadata, {
   if (stat(path, &st) != 0) {
     int error = errno;
 
-    free(path);
-
-    return api->throw_argon_error(
+    ArgonObject* e = api->throw_argon_error(
         err,
         api->FileError,
         "failed to get metadata for '%s': %s",
         path,
         strerror(error));
+
+    free(path);
+
+    return e;
   }
 
   free(path);
