@@ -2,187 +2,378 @@
 #
 # SPDX-License-Identifier: LGPL-3.0-or-later
 import "path" as path
+import "maths" as maths
 
 let _date = load_native_code(path.resolve(program.file.directory,"native","bin","date"+platform.lib_ext))
 
+let WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+let MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
+
+let __MS_PER_SECOND__ = 1000
+let __MS_PER_MINUTE__ = 60 * 1000
+let __MS_PER_HOUR__ = 60 * 60 * 1000
+let __MS_PER_DAY__ = 24 * 60 * 60 * 1000
+
+let __DEFAULT_FORMAT__ = "%Y-%m-%d %H:%M:%S"
+
+let __pad__(n, width) = do
+    let s = string(n)
+    while (s.length < width) s = "0" + s
+    return s
+
+let __is_digits__(s) = do
+    if (!s.length) return false
+    for (c in s) if (c not in "0123456789") return false
+    return true
+
+let __parse_int__(s, what) = do
+    if (!__is_digits__(s)) throw ValueError(`invalid $(what): "$(s)"`)
+    return number(s)
+
+# ---------------------------------------------------------------------------
+# Calendar helpers
+# ---------------------------------------------------------------------------
+
+let is_leap_year(year) = (year % 4 == 0 && year % 100 != 0) || year % 400 == 0
+
+let days_in_month(year, month) = do
+    if (month == 2) return is_leap_year(year) ? 29 : 28
+    if (month in [4, 6, 9, 11]) return 30
+    return 31
+
+# Builds a timestamp in milliseconds from calendar fields, read as UTC or as
+# local time. Out-of-range fields roll over (e.g. month 13 is January of the
+# next year).
+let __compose__(year, month, day, hour, minute, second, millisecond, utc) = do
+    let whole_second = maths.floor(second)
+    millisecond += (second - whole_second) * __MS_PER_SECOND__
+    let whole_ms = maths.floor(millisecond)
+    whole_second += whole_ms // __MS_PER_SECOND__
+    let remainder_ms = millisecond - (whole_ms // __MS_PER_SECOND__) * __MS_PER_SECOND__
+    let seconds = do
+        if (utc) return _date.time_from_parts_utc(year, month, day, hour, minute, whole_second)
+        return _date.time_from_parts(year, month, day, hour, minute, whole_second)
+    return seconds * __MS_PER_SECOND__ + remainder_ms
+
+let __fields_from_parts__(parts, millisecond) = {
+    year: _date.time_parts_get_year(parts),
+    month: _date.time_parts_get_month(parts),
+    day: _date.time_parts_get_day(parts),
+    hour: _date.time_parts_get_hour(parts),
+    minute: _date.time_parts_get_minute(parts),
+    second: _date.time_parts_get_second(parts),
+    millisecond,
+    day_of_week: _date.time_parts_get_wday(parts),
+    day_of_year: _date.time_parts_get_yday(parts),
+}
+
+let __format_offset__(offset_seconds, separator=":") = do
+    let sign = offset_seconds < 0 ? "-" : "+"
+    let minutes = maths.abs(offset_seconds) // 60
+    return sign + __pad__(minutes // 60, 2) + separator + __pad__(minutes % 60, 2)
+
+# ---------------------------------------------------------------------------
+# Duration
+# ---------------------------------------------------------------------------
+
+# A length of time, stored in milliseconds. Durations can be added to and
+# subtracted from dates, and subtracting one date from another gives one.
+class Duration do
+    this.__init__(self, weeks=0, days=0, hours=0, minutes=0, seconds=0, milliseconds=0) = do
+        self.__ms = milliseconds + seconds * __MS_PER_SECOND__ + minutes * __MS_PER_MINUTE__ + hours * __MS_PER_HOUR__ + (days + weeks * 7) * __MS_PER_DAY__
+
+    this.get_total_milliseconds(self) = self.__ms
+    this.get_total_seconds(self) = self.__ms / __MS_PER_SECOND__
+    this.get_total_minutes(self) = self.__ms / __MS_PER_MINUTE__
+    this.get_total_hours(self) = self.__ms / __MS_PER_HOUR__
+    this.get_total_days(self) = self.__ms / __MS_PER_DAY__
+
+    this.__check__(other, operation) = do
+        if (!is_instance(other, Duration)) throw TypeError(`can't $(operation) a Duration and $(type(other).__name__)`)
+
+    this.__add__(self, other) = do
+        if (is_instance(other, Date)) return other + self
+        Duration.__check__(other, "add")
+        return Duration(milliseconds = self.__ms + other.__ms)
+    this.__subtract__(self, other) = do
+        Duration.__check__(other, "subtract")
+        return Duration(milliseconds = self.__ms - other.__ms)
+    this.__multiply__(self, factor) = Duration(milliseconds = self.__ms * factor)
+    this.__division__(self, other) = do
+        if (is_instance(other, Duration)) return self.__ms / other.__ms
+        return Duration(milliseconds = self.__ms / other)
+    this.__negation__(self) = Duration(milliseconds = -self.__ms)
+    this.__boolean__(self) = self.__ms != 0
+
+    this.__equal__(self, other) = is_instance(other, Duration) && self.__ms == other.__ms
+    this.__not_equal__(self, other) = !(self == other)
+    this.__less_than__(self, other) = do
+        Duration.__check__(other, "compare")
+        return self.__ms < other.__ms
+    this.__less_than_equal__(self, other) = do
+        Duration.__check__(other, "compare")
+        return self.__ms <= other.__ms
+    this.__greater_than__(self, other) = do
+        Duration.__check__(other, "compare")
+        return self.__ms > other.__ms
+    this.__greater_than_equal__(self, other) = do
+        Duration.__check__(other, "compare")
+        return self.__ms >= other.__ms
+    this.__hash__(self) = maths.floor(self.__ms)
+
+    # e.g. "2 days, 03:04:05.006" or "-00:00:01"
+    this.__string__(self) = do
+        let ms = maths.abs(self.__ms)
+        let days = ms // __MS_PER_DAY__
+        ms -= days * __MS_PER_DAY__
+        let hours = ms // __MS_PER_HOUR__
+        ms -= hours * __MS_PER_HOUR__
+        let minutes = ms // __MS_PER_MINUTE__
+        ms -= minutes * __MS_PER_MINUTE__
+        let seconds = ms // __MS_PER_SECOND__
+        let milliseconds = maths.floor(ms - seconds * __MS_PER_SECOND__)
+        let out = `$(__pad__(hours, 2)):$(__pad__(minutes, 2)):$(__pad__(seconds, 2))`
+        if (milliseconds) out += "." + __pad__(milliseconds, 3)
+        if (days) out = `$(days) day$(days == 1 ? "" : "s"), ` + out
+        if (self.__ms < 0) out = "-" + out
+        return out
+    this.__repr__(self) = `Duration($(string(self)))`
+
+# ---------------------------------------------------------------------------
+# Date
+# ---------------------------------------------------------------------------
+
+# A moment in time, stored as a Unix timestamp in milliseconds. Calendar
+# fields (year, month, ...) are in UTC; use local() or the *_local methods for
+# the computer's time zone.
 class Date do
-    this.__init__(self, timestamp_ms = null, timestamp_s = null, date = null, year = null, month = null, day = null, hour = null, minute = null, second = null) = do
+    this.__init__(self, timestamp_ms = null, timestamp_s = null, date = null, year = null, month = null, day = null, hour = null, minute = null, second = null, millisecond = null, utc = true) = do
         if (date != null) do
             self.__ts = date.__ts
         else if (timestamp_ms != null) do
             self.__ts = timestamp_ms
         else if (timestamp_s != null) do
-            self.__ts = timestamp_s * 1000
-        else if (year != null || month != null || day != null || hour != null || minute != null || second != null) do
-            let base = _date.time_to_parts_utc(0)
-            self.__ts = _date.time_from_parts_utc(
-                (do
-                    if (year != null) return year
-                    return _date.time_parts_get_year(base)
-                ),
-                (do
-                    if (month != null) return month
-                    return _date.time_parts_get_month(base)
-                ),
-                (do
-                    if (day != null) return day
-                    return _date.time_parts_get_day(base)
-                ),
-                (do
-                    if (hour != null) return hour
-                    return 0
-                ),
-                (do
-                    if (minute != null) return minute
-                    return 0
-                ),
-                (do
-                    if (second != null) return second
-                    return 0
-                )
-            ) * 1000
+            self.__ts = timestamp_s * __MS_PER_SECOND__
+        else if (year != null || month != null || day != null || hour != null || minute != null || second != null || millisecond != null) do
+            self.__ts = __compose__(
+                year == null ? 1970 : year,
+                month == null ? 1 : month,
+                day == null ? 1 : day,
+                hour == null ? 0 : hour,
+                minute == null ? 0 : minute,
+                second == null ? 0 : second,
+                millisecond == null ? 0 : millisecond,
+                utc,
+            )
         else do
             self.__ts = 0
 
+    # ----- creating dates -----
+
     this.now() = do
         let ts = _date.time_now()
-        return this(_date.time_get_seconds(ts) * 1000 + _date.time_get_subsecond(ts) / 1000000)
+        return this(timestamp_ms = _date.time_get_seconds(ts) * __MS_PER_SECOND__ + _date.time_get_subsecond(ts) // 1000000)
 
-    this.now_utc() = do
-        return Date.now()
+    this.now_utc() = Date.now()
 
-    this.from_string(str, fmt = "%Y-%m-%d %H:%M:%S") = do
+    # midnight at the start of today
+    this.today(utc = true) = Date.now().start_of_day(utc)
+
+    this.from_string(str, fmt = __DEFAULT_FORMAT__, utc = true) = do
         let parts = _date.time_parse(str, fmt)
-        return this(_date.time_from_parts(
-            _date.time_parts_get_year(parts),
-            _date.time_parts_get_month(parts),
-            _date.time_parts_get_day(parts),
-            _date.time_parts_get_hour(parts),
-            _date.time_parts_get_minute(parts),
-            _date.time_parts_get_second(parts)
-        ) * 1000)
+        if (parts == null) throw ValueError(`"$(str)" doesn't match the date format "$(fmt)"`)
+        let fields = __fields_from_parts__(parts, 0)
+        return this(timestamp_ms = __compose__(fields.year, fields.month, fields.day, fields.hour, fields.minute, fields.second, 0, utc))
 
-    this.unix(self) = do
-        return self.__ts // 1000
+    # Parses ISO 8601 / RFC 3339 dates such as "2026-07-28", "2026-07-28T15:30",
+    # "2026-07-28T15:30:00.250Z" and "2026-07-28 15:30:00+01:00". Without a
+    # time zone suffix the time is read as UTC, or local time if utc is false.
+    this.from_iso_string(str, utc = true) = do
+        let text = str.strip(" \t\n\r")
+        let invalid() = ValueError(`invalid ISO 8601 date: "$(str)"`)
+        if (text.length < 10 || text[4] != "-" || text[7] != "-") throw invalid()
+        let year = __parse_int__(text[0:4], "year")
+        let month = __parse_int__(text[5:7], "month")
+        let day = __parse_int__(text[8:10], "day")
+        let hour = 0, minute = 0, second = 0, millisecond = 0
+        let offset_minutes = null
 
-    this.unix_ms(self) = do
-        return self.__ts
+        if (text.length > 10) do
+            if (text[10] not in "Tt ") throw invalid()
+            let rest = text[11:]
 
-    # getters - accessible as .year, .month etc
-    this.get_year(self) = do
-        return _date.time_parts_get_year(_date.time_to_parts_utc(self.unix()))
+            if (rest.ends_with("Z") || rest.ends_with("z")) do
+                offset_minutes = 0
+                rest = rest[:-1]
+            else do
+                let sign_index = maths.max(rest.last_index_of("+"), rest.last_index_of("-"))
+                if (sign_index >= 0) do
+                    let zone = rest[sign_index + 1:].replace(":", "")
+                    if (zone.length != 2 && zone.length != 4) throw invalid()
+                    offset_minutes = __parse_int__(zone[0:2], "time zone") * 60
+                    if (zone.length == 4) offset_minutes += __parse_int__(zone[2:4], "time zone")
+                    if (rest[sign_index] == "-") offset_minutes = -offset_minutes
+                    rest = rest[:sign_index]
 
-    this.get_month(self) = do
-        return _date.time_parts_get_month(_date.time_to_parts_utc(self.unix()))
+            let time = rest.split(":")
+            if (time.length < 2 || time.length > 3) throw invalid()
+            hour = __parse_int__(time[0], "hour")
+            minute = __parse_int__(time[1], "minute")
+            if (time.length == 3) do
+                let seconds = time[2].split(".", 1)
+                second = __parse_int__(seconds[0], "second")
+                if (seconds.length == 2) do
+                    if (!__is_digits__(seconds[1])) throw invalid()
+                    millisecond = number("0." + seconds[1]) * __MS_PER_SECOND__
 
-    this.get_day(self) = do
-        return _date.time_parts_get_day(_date.time_to_parts_utc(self.unix()))
+        if (month < 1 || month > 12 || day < 1 || day > days_in_month(year, month) || hour > 23 || minute > 59 || second > 59) throw invalid()
 
-    this.get_hour(self) = do
-        return _date.time_parts_get_hour(_date.time_to_parts_utc(self.unix()))
+        if (offset_minutes != null) do
+            return this(timestamp_ms = __compose__(year, month, day, hour, minute, second, millisecond, true) - offset_minutes * __MS_PER_MINUTE__)
+        return this(timestamp_ms = __compose__(year, month, day, hour, minute, second, millisecond, utc))
 
-    this.get_minute(self) = do
-        return _date.time_parts_get_minute(_date.time_to_parts_utc(self.unix()))
+    # a monotonic clock reading in nanoseconds, for measuring durations
+    this.monotonic() = _date.time_monotonic()
 
-    this.get_second(self) = do
-        return _date.time_parts_get_second(_date.time_to_parts_utc(self.unix()))
+    # ----- timestamps -----
 
-    this.get_day_of_week(self) = do
-        return _date.time_parts_get_wday(_date.time_to_parts_utc(self.unix()))
+    this.unix(self) = self.__ts // __MS_PER_SECOND__
+    this.unix_ms(self) = self.__ts
+    this.copy(self) = Date(date = self)
 
-    this.get_day_of_year(self) = do
-        return _date.time_parts_get_yday(_date.time_to_parts_utc(self.unix()))
+    # ----- calendar fields (UTC) -----
 
-    this.to_string(self, fmt = "%Y-%m-%d %H:%M:%S") = do
-        return _date.time_format_utc(self.unix(), fmt)
+    this.__parts(self) = _date.time_to_parts_utc(self.unix())
+    this.__fields(self, utc) = do
+        let millisecond = maths.floor(self.__ts % __MS_PER_SECOND__)
+        if (utc) return __fields_from_parts__(self.__parts(), millisecond)
+        return __fields_from_parts__(_date.time_to_parts_local(self.unix()), millisecond)
 
-    this.http_date(self) = do
-        return _date.time_format_utc(self.unix(), "%a, %d %b %Y %H:%M:%S GMT")
+    this.get_year(self) = _date.time_parts_get_year(self.__parts())
+    this.get_month(self) = _date.time_parts_get_month(self.__parts())
+    this.get_day(self) = _date.time_parts_get_day(self.__parts())
+    this.get_hour(self) = _date.time_parts_get_hour(self.__parts())
+    this.get_minute(self) = _date.time_parts_get_minute(self.__parts())
+    this.get_second(self) = _date.time_parts_get_second(self.__parts())
+    this.get_millisecond(self) = maths.floor(self.__ts % __MS_PER_SECOND__)
+    this.get_day_of_week(self) = _date.time_parts_get_wday(self.__parts())
+    this.get_day_of_year(self) = _date.time_parts_get_yday(self.__parts())
+    this.get_weekday_name(self) = WEEKDAYS[self.day_of_week]
+    this.get_month_name(self) = MONTHS[self.month - 1]
+    this.get_is_leap_year(self) = is_leap_year(self.year)
+    this.get_days_in_month(self) = days_in_month(self.year, self.month)
 
-    this.to_local_string(self, fmt = "%Y-%m-%d %H:%M:%S") = do
-        return _date.time_format(self.year, self.month, self.day, self.hour, self.minute, self.second, fmt)
+    # Returns a copy with some fields changed, e.g. d.replace(day = 1).
+    this.replace(self, year = null, month = null, day = null, hour = null, minute = null, second = null, millisecond = null, utc = true) = do
+        let f = self.__fields(utc)
+        return Date(timestamp_ms = __compose__(
+            year == null ? f.year : year,
+            month == null ? f.month : month,
+            day == null ? f.day : day,
+            hour == null ? f.hour : hour,
+            minute == null ? f.minute : minute,
+            second == null ? f.second : second,
+            millisecond == null ? f.millisecond : millisecond,
+            utc,
+        ))
 
-    this.to_iso_string(self) = do
-        return _date.time_format_utc(self.unix(), "%Y-%m-%dT%H:%M:%S") + ".000Z"
-
-    this.monotonic() = do
-        return _date.time_monotonic()
-        
-    this.__parts(self) = do
-        return _date.time_to_parts_utc(self.unix())
-
-    this.__recompose(self, parts) = do
-        self.__ts = _date.time_from_parts_utc(
-            _date.time_parts_get_year(parts),
-            _date.time_parts_get_month(parts),
-            _date.time_parts_get_day(parts),
-            _date.time_parts_get_hour(parts),
-            _date.time_parts_get_minute(parts),
-            _date.time_parts_get_second(parts)
-        ) * 1000
-
+    # Setting a field changes this date in place.
     this.set_year(self, value) = do
-        let p = self.__parts()
-        self.__ts = _date.time_from_parts_utc(
-            value,
-            _date.time_parts_get_month(p),
-            _date.time_parts_get_day(p),
-            _date.time_parts_get_hour(p),
-            _date.time_parts_get_minute(p),
-            _date.time_parts_get_second(p)
-        ) * 1000
-
+        self.__ts = self.replace(year = value).__ts
     this.set_month(self, value) = do
-        let p = self.__parts()
-        self.__ts = _date.time_from_parts_utc(
-            _date.time_parts_get_year(p),
-            value,
-            _date.time_parts_get_day(p),
-            _date.time_parts_get_hour(p),
-            _date.time_parts_get_minute(p),
-            _date.time_parts_get_second(p)
-        ) * 1000
-
+        self.__ts = self.replace(month = value).__ts
     this.set_day(self, value) = do
-        let p = self.__parts()
-        self.__ts = _date.time_from_parts_utc(
-            _date.time_parts_get_year(p),
-            _date.time_parts_get_month(p),
-            value,
-            _date.time_parts_get_hour(p),
-            _date.time_parts_get_minute(p),
-            _date.time_parts_get_second(p)
-        ) * 1000
-
+        self.__ts = self.replace(day = value).__ts
     this.set_hour(self, value) = do
-        let p = self.__parts()
-        self.__ts = _date.time_from_parts_utc(
-            _date.time_parts_get_year(p),
-            _date.time_parts_get_month(p),
-            _date.time_parts_get_day(p),
-            value,
-            _date.time_parts_get_minute(p),
-            _date.time_parts_get_second(p)
-        ) * 1000
-
+        self.__ts = self.replace(hour = value).__ts
     this.set_minute(self, value) = do
-        let p = self.__parts()
-        self.__ts = _date.time_from_parts_utc(
-            _date.time_parts_get_year(p),
-            _date.time_parts_get_month(p),
-            _date.time_parts_get_day(p),
-            _date.time_parts_get_hour(p),
-            value,
-            _date.time_parts_get_second(p)
-        ) * 1000
-
+        self.__ts = self.replace(minute = value).__ts
     this.set_second(self, value) = do
-        let p = self.__parts()
-        self.__ts = _date.time_from_parts_utc(
-            _date.time_parts_get_year(p),
-            _date.time_parts_get_month(p),
-            _date.time_parts_get_day(p),
-            _date.time_parts_get_hour(p),
-            _date.time_parts_get_minute(p),
-            value
-        ) * 1000
+        self.__ts = self.replace(second = value).__ts
+    this.set_millisecond(self, value) = do
+        self.__ts = self.replace(millisecond = value).__ts
+
+    # ----- local time -----
+
+    # The local time zone's offset from UTC at this moment, as a Duration.
+    this.utc_offset(self) = Duration(seconds = _date.time_utc_offset(self.unix()))
+
+    # This date's calendar fields in the local time zone, as a dictionary with
+    # year, month, day, hour, minute, second, millisecond, day_of_week,
+    # day_of_year and utc_offset.
+    this.local(self) = do
+        let fields = self.__fields(false)
+        fields.utc_offset = self.utc_offset()
+        return fields
+
+    # ----- arithmetic -----
+
+    this.add(self, weeks = 0, days = 0, hours = 0, minutes = 0, seconds = 0, milliseconds = 0) = do
+        return self + Duration(weeks, days, hours, minutes, seconds, milliseconds)
+
+    # Adds calendar months, keeping the day of the month where possible
+    # (Jan 31 + 1 month is Feb 28 or 29).
+    this.add_months(self, months, utc = true) = do
+        let f = self.__fields(utc)
+        let total = f.year * 12 + (f.month - 1) + months
+        let year = total // 12
+        let month = total % 12 + 1
+        let day = maths.min(f.day, days_in_month(year, month))
+        return Date(timestamp_ms = __compose__(year, month, day, f.hour, f.minute, f.second, f.millisecond, utc))
+
+    this.add_years(self, years, utc = true) = self.add_months(years * 12, utc)
+
+    this.start_of_day(self, utc = true) = self.replace(hour = 0, minute = 0, second = 0, millisecond = 0, utc = utc)
+    this.end_of_day(self, utc = true) = self.replace(hour = 23, minute = 59, second = 59, millisecond = 999, utc = utc)
+    this.start_of_month(self, utc = true) = self.replace(day = 1, hour = 0, minute = 0, second = 0, millisecond = 0, utc = utc)
+    this.start_of_year(self, utc = true) = self.replace(month = 1, day = 1, hour = 0, minute = 0, second = 0, millisecond = 0, utc = utc)
+
+    this.__add__(self, other) = do
+        if (!is_instance(other, Duration)) throw TypeError(`can't add a Date and $(type(other).__name__); add a Duration`)
+        return Date(timestamp_ms = self.__ts + other.total_milliseconds)
+
+    this.__subtract__(self, other) = do
+        if (is_instance(other, Date)) return Duration(milliseconds = self.__ts - other.__ts)
+        if (is_instance(other, Duration)) return Date(timestamp_ms = self.__ts - other.total_milliseconds)
+        throw TypeError(`can't subtract $(type(other).__name__) from a Date`)
+
+    # ----- comparison -----
+
+    this.__check__(other) = do
+        if (!is_instance(other, Date)) throw TypeError(`can't compare a Date and $(type(other).__name__)`)
+
+    this.__equal__(self, other) = is_instance(other, Date) && self.__ts == other.__ts
+    this.__not_equal__(self, other) = !(self == other)
+    this.__less_than__(self, other) = do
+        Date.__check__(other)
+        return self.__ts < other.__ts
+    this.__less_than_equal__(self, other) = do
+        Date.__check__(other)
+        return self.__ts <= other.__ts
+    this.__greater_than__(self, other) = do
+        Date.__check__(other)
+        return self.__ts > other.__ts
+    this.__greater_than_equal__(self, other) = do
+        Date.__check__(other)
+        return self.__ts >= other.__ts
+    this.__hash__(self) = maths.floor(self.__ts)
+
+    # ----- formatting -----
+
+    this.to_string(self, fmt = __DEFAULT_FORMAT__) = _date.time_format_utc(self.unix(), fmt)
+
+    this.to_local_string(self, fmt = __DEFAULT_FORMAT__) = _date.time_format_local(self.unix(), fmt)
+
+    # e.g. "2026-07-28T15:00:00.000Z"
+    this.to_iso_string(self) = _date.time_format_utc(self.unix(), "%Y-%m-%dT%H:%M:%S") + "." + __pad__(self.millisecond, 3) + "Z"
+
+    # e.g. "2026-07-28T16:00:00.000+01:00"
+    this.to_local_iso_string(self) = do
+        let offset = _date.time_utc_offset(self.unix())
+        return _date.time_format_local(self.unix(), "%Y-%m-%dT%H:%M:%S") + "." + __pad__(self.millisecond, 3) + __format_offset__(offset)
+
+    # e.g. "Tue, 28 Jul 2026 15:00:00 GMT"
+    this.http_date(self) = _date.time_format_utc(self.unix(), "%a, %d %b %Y %H:%M:%S GMT")
+
+    this.__string__(self) = self.to_iso_string()
+    this.__repr__(self) = `Date($(self.to_iso_string()))`
