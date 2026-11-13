@@ -11,10 +11,12 @@ class Random do
     self.__state__ = __rand__.random_seed(seed)
   this.random(self) = do
     return __rand__.random_next_number(self.__state__)
+  # a random number in [start, end)
   this.range(self,start,end) = do
-    return start + self.random()*end
+    return start + self.random()*(end-start)
+  # a random integer in [start, end)
   this.int(self,start, end) = do
-    return maths.int(self.range(start,end))
+    return maths.floor(self.range(start,end))
   this.choice(self, arr) = do
     return arr[self.int(0,arr.length)]
   

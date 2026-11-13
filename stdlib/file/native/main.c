@@ -105,19 +105,21 @@ ARGON_FUNCTION(read_all, {
   char *buf = NULL;
   size_t total = 0;
 
-  // try seekable path first
-  if (fseek(handle->fp, 0, SEEK_END) == 0) {
-    long size = ftell(handle->fp);
-    if (size >= 0 && fseek(handle->fp, 0, SEEK_SET) == 0) {
+  // try seekable path first: read from the current position to the end
+  long position = ftell(handle->fp);
+  if (position >= 0 && fseek(handle->fp, 0, SEEK_END) == 0) {
+    long end = ftell(handle->fp);
+    if (end >= position && fseek(handle->fp, position, SEEK_SET) == 0) {
       // seekable, allocate exact size
+      long size = end - position;
       buf = malloc(size + 1);
       if (!buf)
-        return api->throw_argon_error(err, argv[1], "out of memory");
+        return api->throw_argon_error(err, argv[2], "out of memory");
 
       total = fread(buf, 1, size, handle->fp);
       if (ferror(handle->fp)) {
         free(buf);
-        return api->throw_argon_error(err, argv[1], "%s", strerror(errno));
+        return api->throw_argon_error(err, argv[2], "%s", strerror(errno));
       }
       buf[total] = '\0';
       goto done;
@@ -130,7 +132,7 @@ ARGON_FUNCTION(read_all, {
     char *tmp = realloc(buf, total + n);
     if (!tmp) {
       free(buf);
-      return api->throw_argon_error(err, argv[1], "out of memory");
+      return api->throw_argon_error(err, argv[2], "out of memory");
     }
     buf = tmp;
     memcpy(buf + total, chunk, n);
@@ -139,7 +141,7 @@ ARGON_FUNCTION(read_all, {
 
   if (ferror(handle->fp)) {
     free(buf);
-    return api->throw_argon_error(err, argv[1], "%s", strerror(errno));
+    return api->throw_argon_error(err, argv[2], "%s", strerror(errno));
   }
 
 done:;

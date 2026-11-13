@@ -2,7 +2,10 @@
 #
 # SPDX-License-Identifier: LGPL-3.0-or-later
 
-let stringify(value, pretty=false, parents=[], indent="    ") = do
+let stringify(value, pretty=false, parents=null, indent="    ") = do
+    # parents is the stack of containers currently being serialised, used to
+    # detect circular references. A fresh one is made for each top-level call.
+    if (parents == null) parents = []
     if (value in parents) throw ValueError("circular JSON serialisation")
 
     if (is_instance(value, string) || is_instance(value, number) || value==null || value==true || value==false) do
@@ -48,7 +51,7 @@ let stringify(value, pretty=false, parents=[], indent="    ") = do
         output.append("}")
         return output.join("")
 
-    else if (is_instance(value, array)) do
+    else if (is_instance(value, array) || is_instance(value, tuple)) do
         let output = ["["]
         let is_first = true
         parents.append(value)

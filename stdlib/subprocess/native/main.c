@@ -12,6 +12,8 @@
 #include <windows.h>
 #include <io.h>
 #else
+#include <fcntl.h>
+#include <stdio.h>
 #include <sys/wait.h>
 #include <unistd.h>
 #endif
@@ -108,17 +110,34 @@ ARGON_FUNCTION(process_start, {
 
   si.dwFlags |= STARTF_USESTDHANDLES;
 
+  // A FILE_NULL handle (file.stdnull) connects the stream to the NUL device.
+  SECURITY_ATTRIBUTES null_attributes = {sizeof(SECURITY_ATTRIBUTES), NULL,
+                                         TRUE};
+  HANDLE null_device = INVALID_HANDLE_VALUE;
+  if (stdin_handle->type == FILE_NULL || stdout_handle->type == FILE_NULL ||
+      stderr_handle->type == FILE_NULL)
+    null_device = CreateFileA("NUL", GENERIC_READ | GENERIC_WRITE,
+                              FILE_SHARE_READ | FILE_SHARE_WRITE,
+                              &null_attributes, OPEN_EXISTING, 0, NULL);
+
+  if (stdin_handle->type != FILE_NULL)
+    fflush(stdin_handle->fp);
+  if (stdout_handle->type != FILE_NULL)
+    fflush(stdout_handle->fp);
+  if (stderr_handle->type != FILE_NULL)
+    fflush(stderr_handle->fp);
+
   si.hStdInput = stdin_handle->type != FILE_NULL
                      ? (HANDLE)_get_osfhandle(fileno(stdin_handle->fp))
-                     : GetStdHandle(STD_INPUT_HANDLE);
+                     : null_device;
 
   si.hStdOutput = stdout_handle->type != FILE_NULL
                       ? (HANDLE)_get_osfhandle(fileno(stdout_handle->fp))
-                      : GetStdHandle(STD_OUTPUT_HANDLE);
+                      : null_device;
 
   si.hStdError = stderr_handle->type != FILE_NULL
                      ? (HANDLE)_get_osfhandle(fileno(stderr_handle->fp))
-                     : GetStdHandle(STD_ERROR_HANDLE);
+                     : null_device;
 
   // Windows wants a single command line, not argv[]
   size_t cmd_len = 0;
@@ -141,6 +160,9 @@ ARGON_FUNCTION(process_start, {
 
   free(cmdline);
 
+  if (null_device != INVALID_HANDLE_VALUE)
+    CloseHandle(null_device);
+
   if (!ok) {
     free_argv(process_args);
     return api->ARGON_NULL;
@@ -152,20 +174,32 @@ ARGON_FUNCTION(process_start, {
 
 #else
 
+  // Flush anything buffered so it isn't written after the child's output.
+  FileHandle *handles[] = {stdin_handle, stdout_handle, stderr_handle};
+  for (size_t i = 0; i < 3; i++)
+    if (handles[i]->type != FILE_NULL && handles[i]->fp)
+      fflush(handles[i]->fp);
+
   pid_t pid = fork();
 
   if (pid == 0) {
     if (cwd && chdir(cwd) == -1)
         _exit(127);
 
-    if (stdin_handle->type != FILE_NULL)
-      dup2(fileno(stdin_handle->fp), STDIN_FILENO);
-
-    if (stdout_handle->type != FILE_NULL)
-      dup2(fileno(stdout_handle->fp), STDOUT_FILENO);
-
-    if (stderr_handle->type != FILE_NULL)
-      dup2(fileno(stderr_handle->fp), STDERR_FILENO);
+    // A FILE_NULL handle (file.stdnull) connects the stream to /dev/null.
+    int targets[] = {STDIN_FILENO, STDOUT_FILENO, STDERR_FILENO};
+    for (size_t i = 0; i < 3; i++) {
+      if (handles[i]->type == FILE_NULL) {
+        int null_fd = open("/dev/null", O_RDWR);
+        if (null_fd >= 0) {
+          dup2(null_fd, targets[i]);
+          if (null_fd != targets[i])
+            close(null_fd);
+        }
+      } else {
+        dup2(fileno(handles[i]->fp), targets[i]);
+      }
+    }
 
     execvp(process_args[0], process_args);
 

@@ -350,10 +350,10 @@ let __http_read_header__(conn, max_header_size, timeout_ms) = do
 let __http_parse_header_block__(header_block) = do
   let header_lines = header_block.split(__CRLF__)
   let status_line = header_lines[0].to_string()
-  let status_line_spacing = status_line.index_of(" ")
-  let status_parts = [status_line[:status_line_spacing], status_line[status_line_spacing+1:]]
-  let status = number(status_parts[1].split(" ")[0])
-  let status_text = status_parts.length > 2? status_parts[2] : ""
+  # e.g. "HTTP/1.1 404 Not Found" -> ["HTTP/1.1", "404", "Not Found"]
+  let status_parts = status_line.split(" ", 2)
+  let status = number(status_parts[1])
+  let status_text = status_parts.length > 2 ? status_parts[2] : ""
 
   let headers = {}
   for (i in 1 until header_lines.length) do

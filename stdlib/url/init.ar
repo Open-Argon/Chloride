@@ -19,6 +19,7 @@ let decode(data) = do
     return decoded
 
 let encode(data) = do
+    data = string(data)
     let encoded = []
     let i = 0
     for (char in data) do

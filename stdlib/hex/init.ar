@@ -1,15 +1,20 @@
 import "maths" as maths
 
+# Formats an integer as uppercase hexadecimal, e.g. hex(255) == "FF" and
+# hex(-255) == "-FF".
 let hex(n) = do
+    if (!is_instance(n, number) || n != maths.int(n)) do
+        throw ValueError(`hex() expects an integer, got $(n)`)
     if (n == 0) do
         return "0"
-    
-    hex_digits = "0123456789ABCDEF"
-    negative = n < 0
+
+    let hex_digits = "0123456789ABCDEF"
+    let negative = n < 0
     n = maths.abs(n)
-    result = ""
+    let result = ""
     while (n > 0) do
         result = hex_digits[n % 16] + result
         n //= 16
-    
+
+    if (negative) return "-" + result
     return result

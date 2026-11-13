@@ -272,8 +272,9 @@ let common_prefix(paths) = do
         common.append(seg)
     if (common.length == 0) do
         return ""
-    if (common.length == 1 && (common[0] == "/" || __ends_with__(common[0], ":/"))) do
-        return common[0]
+    let root = common[0]
+    if (root == "/" || __ends_with__(root, ":/")) do
+        return root + common[1:].join("/")
     return common.join("/")
 
 # ---------------------------------------------------------------------------
