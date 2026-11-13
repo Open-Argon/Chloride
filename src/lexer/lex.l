@@ -21,8 +21,6 @@ int yywrap(void * unused_param) {
 
 %x TEMPLATE
 
-/* Any backslash sequence is lexed as part of the string; unquote() in
-   parser/string/string.c validates it and reports invalid escapes. */
 ESCAPE      \\(.|\n)
 
 %%
