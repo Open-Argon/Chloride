@@ -88,6 +88,8 @@ ParsedValueReturn parse_token_full(char *file, DArray *tokens, size_t *index,
       return parse_try(file, tokens, index);
     case TOKEN_WHILE:
       return parse_while(file, tokens, index);
+    case TOKEN_FOREVER:
+      return parse_forever(file, tokens, index);
     case TOKEN_FOR:
       return parse_for(file, tokens, index);
     case TOKEN_THROW:
@@ -125,7 +127,7 @@ ParsedValueReturn parse_token_full(char *file, DArray *tokens, size_t *index,
     break;
   case TOKEN_STRING:
     (*index)++;
-    output = parse_string(token, true);
+    output = parse_string(file, token, true);
     break;
   case TOKEN_NEW_LINE:
     (*index)++;
@@ -209,10 +211,6 @@ ParsedValueReturn parse_token_full(char *file, DArray *tokens, size_t *index,
       break;
     case TOKEN_DOT:
       output = parse_access(file, tokens, index, output.value);
-      break;
-    case TOKEN_TO:
-    case TOKEN_UNTIL:
-      output = parse_range(file, tokens, index, output.value);
       break;
     case TOKEN_TEMPLATE_START:
       output = parse_template(file, tokens, index, output.value);

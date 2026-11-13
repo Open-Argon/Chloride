@@ -158,15 +158,15 @@ void init_exceptions() {
   add_builtin_field(IndexError, __name__,
                     new_string_object_null_terminated("IndexError"));
 
-  PathError = new_class();
-  add_builtin_field(PathError, __base__, Exception);
-  add_builtin_field(PathError, __name__,
-                    new_string_object_null_terminated("PathError"));
-
   FileError = new_class();
   add_builtin_field(FileError, __base__, Exception);
   add_builtin_field(FileError, __name__,
                     new_string_object_null_terminated("FileError"));
+
+  PathError = new_class();
+  add_builtin_field(PathError, __base__, FileError);
+  add_builtin_field(PathError, __name__,
+                    new_string_object_null_terminated("PathError"));
 
   ImportError = new_class();
   add_builtin_field(ImportError, __base__, Exception);

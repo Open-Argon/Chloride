@@ -81,7 +81,12 @@ static int utf8_encode(uint32_t codepoint, char **out_ptr) {
  *
  * Caller must free() returned buffer.
  */
-char *unquote(char *input, size_t *out_len, char quote_char, bool is_quoted) {
+char *unquote(char *input, size_t *out_len, char quote_char, bool is_quoted,
+              const char **error) {
+  const char *unused_error;
+  if (!error)
+    error = &unused_error;
+  *error = "invalid string";
   if (!input)
     return NULL;
 
@@ -132,9 +137,17 @@ char *unquote(char *input, size_t *out_len, char quote_char, bool is_quoted) {
       src++;
       if (src >= src_end) {
         free(outbuf);
+        *error = "a string can't end with a backslash";
         return NULL; // invalid escape at end
       }
       switch (*src) {
+      case '"':
+      case '\'':
+      case '`':
+      case '$':
+        *dst++ = *src;
+        src++;
+        break;
       case '\\':
         *dst++ = '\\';
         src++;
@@ -166,11 +179,13 @@ char *unquote(char *input, size_t *out_len, char quote_char, bool is_quoted) {
       case 'u': {
         if (src + 5 > src_end) {
           free(outbuf);
+          *error = "invalid \\u escape: expected 4 hex digits";
           return NULL;
         }
         uint16_t code_unit1 = 0;
         if (!parse_hex4(src + 1, &code_unit1)) {
           free(outbuf);
+          *error = "invalid \\u escape: expected 4 hex digits";
           return NULL;
         }
         src += 5;
@@ -181,6 +196,7 @@ char *unquote(char *input, size_t *out_len, char quote_char, bool is_quoted) {
             uint16_t code_unit2 = 0;
             if (!parse_hex4(src + 2, &code_unit2)) {
               free(outbuf);
+              *error = "invalid \\u escape: expected 4 hex digits";
               return NULL;
             }
             if (code_unit2 >= 0xDC00 && code_unit2 <= 0xDFFF) {
@@ -191,14 +207,17 @@ char *unquote(char *input, size_t *out_len, char quote_char, bool is_quoted) {
               break;
             } else {
               free(outbuf);
+              *error = "invalid \\u escape: unpaired surrogate";
               return NULL;
             }
           } else {
             free(outbuf);
+            *error = "invalid \\u escape: unpaired surrogate";
             return NULL;
           }
         } else if (code_unit1 >= 0xDC00 && code_unit1 <= 0xDFFF) {
           free(outbuf);
+          *error = "invalid \\u escape: unpaired surrogate";
           return NULL;
         } else {
           utf8_encode(code_unit1, &dst);
@@ -206,12 +225,9 @@ char *unquote(char *input, size_t *out_len, char quote_char, bool is_quoted) {
         break;
       }
       default:
-        if (is_quoted) {
-          *dst++ = quote_char;
-          src++;
-          break;
-        }
         free(outbuf);
+        *error = "invalid escape sequence (valid escapes are \\\" \\' \\` "
+                 "\\$ \\\\ \\/ \\b \\f \\n \\r \\t and \\uXXXX)";
         return NULL;
       }
     }
@@ -224,21 +240,21 @@ char *unquote(char *input, size_t *out_len, char quote_char, bool is_quoted) {
   return outbuf;
 }
 
-ParsedValueReturn parse_string(Token *token, bool to_unquote) {
+ParsedValueReturn parse_string(char *file, Token *token, bool to_unquote) {
   ParsedValue *parsedValue = checked_malloc(sizeof(ParsedValue));
   parsedValue->type = AST_STRING;
   ParsedString *parsedString = checked_malloc(sizeof(ParsedString));
   parsedValue->data = parsedString;
   if (to_unquote) {
-    parsedString->string =
-        unquote(token->value, &parsedString->length, token->value[0], true);
+    const char *unquote_error;
+    parsedString->string = unquote(token->value, &parsedString->length,
+                                   token->value[0], true, &unquote_error);
     if (!parsedString->string) {
       free(parsedValue);
       free(parsedString);
       return (ParsedValueReturn){
           path_specific_create_err(token->line, token->column, token->length,
-                                   NULL, InternalError,
-                                   "failed to unquote string %s", token->value),
+                                   file, SyntaxError, "%s", unquote_error),
           NULL};
     }
   } else {
@@ -295,38 +311,43 @@ ParsedValueReturn parse_template(char *file, DArray *tokens, size_t *index,
   while (token->type != TOKEN_TEMPLATE_END) {
     switch (token->type) {
     case TOKEN_TEMPLATE_TEXT: {
-      if (template.size > 0) {
-        TemplateValue *value = darray_get(&template, template.size - 1);
-        if (value->is_string) {
-          size_t length;
-          char *unquoted = unquote(token->value, &length, '`', false);
-          if (!unquoted) {
-            darray_free(&template, free_template_value);
-            return (ParsedValueReturn){
-                path_specific_create_err(token->line, token->column,
-                                         token->length, file, SyntaxError,
-                                         "failed to unquote"),
-                NULL};
-          }
-
-          value->value.string.string = realloc(
-              value->value.string.string, value->value.string.length + length);
-          memcpy(value->value.string.string + value->value.string.length,
-                 unquoted, length);
-          value->value.string.length += length;
-          free(unquoted);
+      // The lexer can split a run of text into several tokens (e.g. around
+      // escapes), so join the raw text of consecutive tokens before decoding
+      // it; otherwise escapes like \u001b or surrogate pairs get cut apart.
+      Token *first_text = token;
+      size_t raw_length = 0;
+      size_t last = *index;
+      while (last < tokens->size) {
+        Token *text = darray_get(tokens, last);
+        if (text->type != TOKEN_TEMPLATE_TEXT)
           break;
-        }
+        raw_length += strlen(text->value);
+        last++;
       }
+      char *raw = checked_malloc(raw_length + 1);
+      size_t offset = 0;
+      for (size_t i = *index; i < last; i++) {
+        Token *text = darray_get(tokens, i);
+        size_t length = strlen(text->value);
+        memcpy(raw + offset, text->value, length);
+        offset += length;
+      }
+      raw[raw_length] = '\0';
+      *index = last - 1;
+      token = darray_get(tokens, *index);
+
       TemplateValue value;
       value.is_string = true;
+      const char *unquote_error;
       value.value.string.string =
-          unquote(token->value, &value.value.string.length, '`', false);
+          unquote(raw, &value.value.string.length, '`', false, &unquote_error);
+      free(raw);
       if (!value.value.string.string) {
         darray_free(&template, free_template_value);
         return (ParsedValueReturn){
-            path_specific_create_err(token->line, token->column, token->length,
-                                     file, SyntaxError, "failed to unquote"),
+            path_specific_create_err(first_text->line, first_text->column,
+                                     first_text->length, file, SyntaxError,
+                                     "%s", unquote_error),
             NULL};
       }
       darray_push(&template, &value);

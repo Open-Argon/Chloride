@@ -367,23 +367,23 @@ ARGON_FUNCTION(ARGON_EXPONENT_FUNCTION, {
   if (argc < 1) {
     *err =
         create_err(RuntimeError,
-                   "multiply expects at least 1 argument, got %" PRIu64, argc);
+                   "exponent expects at least 1 argument, got %" PRIu64, argc);
     return ARGON_NULL;
   }
   ArgonObject *output = argv[0];
   for (size_t i = 1; i < argc; i++) {
     ArgonObject *object_class = get_builtin_field(output, __class__);
-    ArgonObject *function__multiply__ =
-        get_builtin_field_for_class(object_class, __multiply__, output);
-    if (!function__multiply__) {
+    ArgonObject *function___exponent__ =
+        get_builtin_field_for_class(object_class, __exponent__, output);
+    if (!function___exponent__) {
       ArgonObject *cls___name__ = get_builtin_field(object_class, __name__);
       *err = create_err(RuntimeError,
-                        "Object of type '%.*s' is missing __multiply__ method",
+                        "Object of type '%.*s' is missing __exponent__ method",
                         (int)cls___name__->value.as_str->length,
                         cls___name__->value.as_str->data);
       return ARGON_NULL;
     }
-    output = argon_call(function__multiply__, 1, (ArgonObject *[]){argv[i]},
+    output = argon_call(function___exponent__, 1, (ArgonObject *[]){argv[i]},
                         NULL, err, state);
   }
   return output;
@@ -1238,7 +1238,7 @@ void bootstrap_types() {
   MULTIPLY_FUNCTION = create_argon_native_function(
       "multiply", ARGON_FUNC_ARGON_MULTIPLY_FUNCTION);
   EXPONENT_FUNCTION = create_argon_native_function(
-      "multiply", ARGON_FUNC_ARGON_EXPONENT_FUNCTION);
+      "exponent", ARGON_FUNC_ARGON_EXPONENT_FUNCTION);
   DIVIDE_FUNCTION =
       create_argon_native_function("divide", ARGON_FUNC_ARGON_DIVIDE_FUNCTION);
   FLOOR_DIVIDE_FUNCTION = create_argon_native_function(
@@ -2733,7 +2733,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
               err = create_err(ZeroDivisionError, "floor division by zero");
               continue;
             }
-            state->registers[registerC] = new_number_object_from_int64(a / b);
+            state->registers[registerC] = int64_floor_divide(a, b);
           } else if (!valueA->value.as_number->is_int64 &&
                      !valueB->value.as_number->is_int64) {
             mpq_t r;
@@ -2845,7 +2845,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
               err = create_err(ZeroDivisionError, "modulo by zero");
               continue;
             }
-            state->registers[registerC] = new_number_object_from_int64(a % b);
+            state->registers[registerC] = int64_floor_modulo(a, b);
           } else if (!valueA->value.as_number->is_int64 &&
                      !valueB->value.as_number->is_int64) {
             mpq_t r;

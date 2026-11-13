@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 #include "while.h"
+#include "../literals/literals.h"
 #include "../../lexer/token.h"
 #include "../../memory.h"
 #include "../../err.h"
@@ -91,6 +92,32 @@ ParsedValueReturn parse_while(char *file, DArray *tokens, size_t *index) {
   ParsedWhile *Parsed_while = checked_malloc(sizeof(ParsedWhile));
   Parsedvalue->data = Parsed_while;
   Parsed_while->condition = condition.value;
+  Parsed_while->content = parsed_content.value;
+  return (ParsedValueReturn){no_err, Parsedvalue};
+}
+
+ParsedValueReturn parse_forever(char *file, DArray *tokens, size_t *index) {
+  Token *token = darray_get(tokens, *index);
+  (*index)++;
+  ArErr err = error_if_finished(file, tokens, index);
+  if (is_error(&err)) {
+    return (ParsedValueReturn){err, NULL};
+  }
+  ParsedValueReturn parsed_content = parse_token(file, tokens, index, false);
+  if (is_error(&parsed_content.err)) {
+    return parsed_content;
+  }
+  if (!parsed_content.value) {
+    return (ParsedValueReturn){path_specific_create_err(token->line, token->column,
+                                          token->length, file, SyntaxError,
+                                          "expected body"),
+                               NULL};
+  }
+  ParsedValue *Parsedvalue = checked_malloc(sizeof(ParsedValue));
+  Parsedvalue->type = AST_WHILE;
+  ParsedWhile *Parsed_while = checked_malloc(sizeof(ParsedWhile));
+  Parsedvalue->data = Parsed_while;
+  Parsed_while->condition = parse_true();
   Parsed_while->content = parsed_content.value;
   return (ParsedValueReturn){no_err, Parsedvalue};
 }

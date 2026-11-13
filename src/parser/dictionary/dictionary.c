@@ -44,7 +44,7 @@ ParsedValueReturn parse_dictionary(char *file, DArray *tokens, size_t *index) {
       ParsedValueReturn key;
       if (keyToken->type == TOKEN_IDENTIFIER) {
         (*index)++;
-        key = parse_string(keyToken, false);
+        key = parse_string(file, keyToken, false);
       } else {
         key = parse_token(file, tokens, index, true);
       }

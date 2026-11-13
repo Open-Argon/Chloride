@@ -15,6 +15,36 @@
 
 ArgonObject *ARGON_RANGE_ITERATOR_TYPE;
 
+// Copies a number object's value into an initialised mpq_t.
+static void number_to_mpq(ArgonObject *number, mpq_t out) {
+  if (number->value.as_number->is_int64)
+    mpq_set_si64(out, number->value.as_number->n.i64, 1);
+  else
+    mpq_set(out, *number->value.as_number->n.mpq);
+}
+
+// Reads the current, stop and step values of a range as rationals.
+static void range_to_mpq(struct as_range_iterator *range, mpq_t current,
+                         mpq_t stop, mpq_t step) {
+  if (range->is_int64) {
+    mpq_set_si64(current, range->current.i64, 1);
+    mpq_set_si64(stop, range->stop.i64, 1);
+    mpq_set_si64(step, range->step.i64, 1);
+  } else {
+    number_to_mpq(range->current.obj, current);
+    number_to_mpq(range->stop.obj, stop);
+    number_to_mpq(range->step.obj, step);
+  }
+}
+
+// Whether a value that compares to stop as `compared_to_stop` (<0, 0, >0) is
+// beyond the end of a range moving in the direction of step_sign.
+static bool past_end(int compared_to_stop, int step_sign, bool inclusive) {
+  if (step_sign > 0)
+    return inclusive ? compared_to_stop > 0 : compared_to_stop >= 0;
+  return inclusive ? compared_to_stop < 0 : compared_to_stop <= 0;
+}
+
 ARGON_METHOD(ARGON_RANGE_ITERATOR_TYPE, __new__, {
 
   (void)api;
@@ -47,6 +77,11 @@ ARGON_METHOD(ARGON_RANGE_ITERATOR_TYPE, __init__, {
       *err = create_err(RuntimeError, "expects number");
       return ARGON_NULL;
     }
+  }
+  if (argc == 4 && argv[3]->value.as_number->is_int64 &&
+      argv[3]->value.as_number->n.i64 == 0) {
+    *err = create_err(RuntimeError, "step cannot be 0");
+    return ARGON_NULL;
   }
   ArgonObject *self = argv[0];
   self->value.as_range_iterator->inclusive = false;
@@ -143,21 +178,15 @@ ARGON_METHOD(ARGON_RANGE_ITERATOR_TYPE, __next__, {
     return new_number_object_from_int64(current_val);
   } else {
     ArgonObject *current_val = range_iterator->current.obj;
-    ArgonObject *stop_val = range_iterator->stop.obj;
     ArgonObject *step_val = range_iterator->step.obj;
 
-    if ((ARGON_FUNC_ARGON_NUMBER_TYPE___greater_than__(
-             2, (ArgonObject *[]){step_val, &small_ints[-small_ints_min].obj}, NULL, err,
-             state, api) == ARGON_TRUE &&
-         ARGON_FUNC_ARGON_NUMBER_TYPE___greater_than_equal__(
-             2, (ArgonObject *[]){current_val, stop_val}, NULL, err, state, api) ==
-             ARGON_TRUE) ||
-        ((ARGON_FUNC_ARGON_NUMBER_TYPE___less_than__(
-              2, (ArgonObject *[]){step_val, &small_ints[-small_ints_min].obj}, NULL, err,
-              state, api) == ARGON_TRUE &&
-          ARGON_FUNC_ARGON_NUMBER_TYPE___less_than_equal__(
-              2, (ArgonObject *[]){current_val, stop_val}, NULL, err, state, api) ==
-              ARGON_TRUE))) {
+    mpq_t current, stop, step;
+    mpq_inits(current, stop, step, NULL);
+    range_to_mpq(range_iterator, current, stop, step);
+    bool finished = past_end(mpq_cmp(current, stop), mpq_sgn(step),
+                             range_iterator->inclusive);
+    mpq_clears(current, stop, step, NULL);
+    if (finished) {
       err->ptr = StopIteration_instance;
       return ARGON_NULL;
     }
@@ -169,6 +198,42 @@ ARGON_METHOD(ARGON_RANGE_ITERATOR_TYPE, __next__, {
   }
 })
 
+// `value in range`: whether iterating the range would produce value.
+ARGON_METHOD(ARGON_RANGE_ITERATOR_TYPE, __contains__, {
+  (void)api;
+  (void)state;
+  if (argc != 2) {
+    *err = create_err(RuntimeError,
+                      "__contains__ expects 2 arguments, got %" PRIu64, argc);
+    return ARGON_NULL;
+  }
+  if (argv[1]->type != TYPE_NUMBER)
+    return ARGON_FALSE;
+  struct as_range_iterator *range = argv[0]->value.as_range_iterator;
+
+  mpq_t start, stop, step, value;
+  mpq_inits(start, stop, step, value, NULL);
+  range_to_mpq(range, start, stop, step);
+  number_to_mpq(argv[1], value);
+
+  int step_sign = mpq_sgn(step);
+  int compared_to_start = mpq_cmp(value, start);
+  bool contained =
+      step_sign != 0 &&
+      (step_sign > 0 ? compared_to_start >= 0 : compared_to_start <= 0) &&
+      !past_end(mpq_cmp(value, stop), step_sign, range->inclusive);
+
+  if (contained) {
+    // value must be a whole number of steps from the start
+    mpq_sub(value, value, start);
+    mpq_div(value, value, step);
+    contained = mpz_cmp_ui(mpq_denref(value), 1) == 0;
+  }
+
+  mpq_clears(start, stop, step, value, NULL);
+  return contained ? ARGON_TRUE : ARGON_FALSE;
+})
+
 void init_range_iterator() {
   ARGON_RANGE_ITERATOR_TYPE = new_class();
   add_builtin_field(ARGON_RANGE_ITERATOR_TYPE, __name__,
@@ -177,4 +242,5 @@ void init_range_iterator() {
   MOUNT_ARGON_METHOD(ARGON_RANGE_ITERATOR_TYPE, __init__)
   MOUNT_ARGON_METHOD(ARGON_RANGE_ITERATOR_TYPE, __iter__)
   MOUNT_ARGON_METHOD(ARGON_RANGE_ITERATOR_TYPE, __next__)
+  MOUNT_ARGON_METHOD(ARGON_RANGE_ITERATOR_TYPE, __contains__)
 }

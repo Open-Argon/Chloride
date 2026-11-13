@@ -49,6 +49,7 @@ size_t translate_operation(Translated *translated, ParsedOperation *operation,
     push_instruction_byte(translated, 0);
     push_instruction_byte(translated, OP_LOAD_NULL);
     push_instruction_byte(translated, registerA);
+    translated->registerAssignment -= 1;
 
     free(jump_to_if_false);
     return first;

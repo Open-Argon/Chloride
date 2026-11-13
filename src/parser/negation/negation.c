@@ -8,11 +8,12 @@
 #include "../../memory.h"
 #include "../../err.h"
 #include "../parser.h"
+#include "../operations/operations.h"
 #include "../../runtime/objects/exceptions/exceptions.h"
 
 ParsedValueReturn parse_negation(char *file, DArray *tokens, size_t *index) {
-  (*index)++;
   Token *token = darray_get(tokens, *index);
+  (*index)++;
   ArErr err = error_if_finished(file, tokens, index);
   if (is_error(&err)) {
     return (ParsedValueReturn){err, NULL};
@@ -25,6 +26,19 @@ ParsedValueReturn parse_negation(char *file, DArray *tokens, size_t *index) {
                                           token->length, file, SyntaxError,
                                           "expected value"),
                                NULL};
+  }
+
+  // Exponentiation binds more tightly than negation: -2 ^ 2 is -(2 ^ 2).
+  size_t before_newlines = *index;
+  skip_newlines_and_indents(tokens, index);
+  if (*index < tokens->size &&
+      ((Token *)darray_get(tokens, *index))->type == TOKEN_CARET) {
+    value = parse_operations_with_minimum(file, tokens, index, value.value,
+                                          PRECEDENCE_EXPONENT);
+    if (is_error(&value.err))
+      return value;
+  } else {
+    *index = before_newlines;
   }
   if (value.value->type == AST_NUMBER) {
     mpq_t *number = value.value->data;

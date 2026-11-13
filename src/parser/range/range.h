@@ -17,9 +17,6 @@ typedef struct {
   uint64_t length;
 } ParsedRange;
 
-// Function declaration for parsing an identifier
-ParsedValueReturn parse_range(char *file, DArray *tokens, size_t *index,
-                             ParsedValue *start);
 void free_parse_range(void *ptr);
 
 #endif // RANGE_H

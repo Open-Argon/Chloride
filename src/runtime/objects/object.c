@@ -10,6 +10,7 @@
 #include "../../memory.h"
 #include "../call/call.h"
 #include "exceptions/exceptions.h"
+#include "literals/literals.h"
 #include "type/type.h"
 #include <gc/gc.h>
 #include <pthread.h>
@@ -271,7 +272,8 @@ ArgonObject *get_field_l(ArgonObject *target, char *name, uint64_t hash,
                          bool disable_method_wrapper) {
   // pthread_rwlock_wrlock(&target->lock);
   for (size_t i = 0; i < target->built_in_slot_length; i++) {
-    if (strcmp_len(name, length, built_in_field_names[i]) == 0) {
+    if (strcmp_len(name, length,
+                   built_in_field_names[target->built_in_slot[i].field]) == 0) {
       ArgonObject *result = target->built_in_slot[i].value;
       // pthread_rwlock_unlock(&target->lock);
       return result;
@@ -285,6 +287,18 @@ ArgonObject *get_field_l(ArgonObject *target, char *name, uint64_t hash,
   }
   if (!recursive) {
     return NULL;
+  }
+  if (get_builtin_field(target, __class__) == ARGON_TYPE_TYPE) {
+    // target is a class: look through the classes it inherits from before
+    // falling back to the attributes of `type` itself. Functions found this
+    // way are returned unbound, the same as ones defined on the class.
+    ArgonObject *base = get_builtin_field(target, __base__);
+    if (base && base != ARGON_NULL) {
+      ArgonObject *inherited =
+          get_field_for_class_l(base, name, hash, length, NULL);
+      if (inherited)
+        return inherited;
+    }
   }
   ArgonObject *binding = target;
   if (disable_method_wrapper)

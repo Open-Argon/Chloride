@@ -21,7 +21,9 @@ int yywrap(void * unused_param) {
 
 %x TEMPLATE
 
-ESCAPE      \\([\"\\\/bfnrt`]|u[0-9a-fA-F]{4})
+/* Any backslash sequence is lexed as part of the string; unquote() in
+   parser/string/string.c validates it and reports invalid escapes. */
+ESCAPE      \\(.|\n)
 
 %%
 
@@ -126,11 +128,11 @@ ESCAPE      \\([\"\\\/bfnrt`]|u[0-9a-fA-F]{4})
 
 [a-zA-Z_][a-zA-Z0-9_]* { return TOKEN_IDENTIFIER; }
 
-\"((\\([\"\\\/bfnrt]|u[0-9a-fA-F]{4}))|[^\\\"\n])*\" {
+\"((\\.)|[^\\\"\n])*\" {
     return TOKEN_STRING;
 }
 
-\'((\\([\'\\\/bfnrt]|u[0-9a-fA-F]{4}))|[^\\\'\n])*\' {
+\'((\\.)|[^\\\'\n])*\' {
     return TOKEN_STRING;
 }
 

@@ -14,41 +14,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-ParsedValueReturn parse_range(char *file, DArray *tokens, size_t *index,
-                              ParsedValue *start) {
-  Token *token = darray_get(tokens, *index);
-  bool inclusive = token->type == TOKEN_TO;
-  (*index)++;
-  ArErr err = error_if_finished(file, tokens, index);
-  if (is_error(&err)) {
-    return (ParsedValueReturn){err, NULL};
-  }
-
-  ParsedValueReturn stop = parse_token(file, tokens, index, true);
-  if (is_error(&stop.err)) {
-    return stop;
-  } else if (!stop.value) {
-    return (ParsedValueReturn){
-        path_specific_create_err(token->line, token->column, token->length,
-                                 file, SyntaxError, "expected value"),
-        NULL};
-  }
-
-  ParsedValue *parsedValue = checked_malloc(sizeof(ParsedValue));
-  ParsedRange *range = checked_malloc(sizeof(ParsedRange));
-
-  range->start = start;
-  range->stop = stop.value;
-  range->inclusive = inclusive;
-  range->line = token->line;
-  range->column = token->column;
-  range->length = token->length;
-
-  parsedValue->data = range;
-  parsedValue->type = AST_RANGE;
-  return (ParsedValueReturn){no_err, parsedValue};
-}
-
 void free_parse_range(void *ptr) {
   ParsedValue *parsedValue = ptr;
   ParsedRange *parsedRange = parsedValue->data;

@@ -30,7 +30,9 @@
   case TOKEN_STAR:                                                             \
   case TOKEN_FLOORDIV:                                                         \
   case TOKEN_SLASH:                                                            \
-  case TOKEN_CARET:
+  case TOKEN_CARET:                                                             \
+  case TOKEN_TO:                                                                \
+  case TOKEN_UNTIL:
 
 typedef struct LinkedList LinkedList;
 

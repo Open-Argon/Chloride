@@ -34,6 +34,11 @@ void mpq_pow_q(mpq_t rop, const mpq_t e, const mpq_t n);
 void mpq_fdiv(mpq_t result, const mpq_t a, const mpq_t b);
 
 void mpq_fmod(mpq_t result, const mpq_t a, const mpq_t b);
+// Floor division / modulo of two int64s (Python semantics: the quotient is
+// rounded down and the remainder takes the sign of the divisor). b must not
+// be zero. Handles INT64_MIN // -1 without overflowing.
+ArgonObject *int64_floor_divide(int64_t a, int64_t b);
+ArgonObject *int64_floor_modulo(int64_t a, int64_t b);
 
 uint64_t make_id(size_t num_size, size_t num_pos, bool is_int, bool is_negative,
                  size_t den_size, size_t den_pos);

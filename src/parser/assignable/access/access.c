@@ -42,7 +42,7 @@ ParsedValueReturn parse_access(char *file, DArray *tokens, size_t *index,
   parsedAccess->line = token->line;
   parsedAccess->column = token->column;
   parsedAccess->length = token->length;
-  ParsedValueReturn parsedString = parse_string(token, false);
+  ParsedValueReturn parsedString = parse_string(file, token, false);
   if (is_error(&parsedString.err)) {
     free_parsed(parsedValue);
     free(parsedValue);

@@ -5,70 +5,133 @@
  */
 
 #include "operations.h"
-#include "../../memory.h"
 #include "../../err.h"
-#include "../parser.h"
+#include "../../memory.h"
 #include "../../runtime/objects/exceptions/exceptions.h"
+#include "../parser.h"
+#include "../range/range.h"
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-ParsedValue convert_to_operation(DArray *to_operate_on, DArray *operations) {
-  if (to_operate_on->size == 1) {
-    return *((ParsedValue *)darray_get(to_operate_on, 0));
+/*
+ * Binary operator precedence, lowest to highest. Every level is
+ * left-associative except exponentiation, which is right-associative.
+ */
+int operation_precedence(ArTokenType type) {
+  switch (type) {
+  case TOKEN_OR:
+    return PRECEDENCE_OR;
+  case TOKEN_AND:
+    return PRECEDENCE_AND;
+  case TOKEN_EQ:
+  case TOKEN_NE:
+    return PRECEDENCE_EQUALITY;
+  case TOKEN_LT:
+  case TOKEN_GT:
+  case TOKEN_LE:
+  case TOKEN_GE:
+  case TOKEN_IN:
+  case TOKEN_NOT_IN:
+    return PRECEDENCE_COMPARISON;
+  case TOKEN_TO:
+  case TOKEN_UNTIL:
+    return PRECEDENCE_RANGE;
+  case TOKEN_PLUS:
+  case TOKEN_MINUS:
+    return PRECEDENCE_ADDITIVE;
+  case TOKEN_STAR:
+  case TOKEN_SLASH:
+  case TOKEN_FLOORDIV:
+  case TOKEN_MODULO:
+    return PRECEDENCE_MULTIPLICATIVE;
+  case TOKEN_CARET:
+    return PRECEDENCE_EXPONENT;
+  default:
+    return 0;
   }
-  ArTokenType operation_type = 0;
-  Token operation = {};
-  DArray positions;
-  for (size_t i = 0; i < operations->size; i++) {
-    Token *current_operation = darray_get(operations, i);
-    if (operation_type < current_operation->type) {
-      if (operation_type != 0) {
-        darray_free(&positions, NULL);
-      }
-      operation_type = current_operation->type;
-      operation = *current_operation;
-      darray_init(&positions, sizeof(size_t));
-    }
-    if (operation_type == current_operation->type) {
-      darray_push(&positions, &i);
-    }
-  }
-  ParsedValue parsedValue;
-  parsedValue.type = AST_OPERATION;
-  ParsedOperation *operationStruct = checked_malloc(sizeof(ParsedOperation));
-  parsedValue.data = operationStruct;
-  operationStruct->operation = operation_type;
-  operationStruct->line = operation.line;
-  operationStruct->column = operation.column;
-  operationStruct->length = operation.length;
-  darray_init(&operationStruct->to_operate_on, sizeof(ParsedValue));
-  size_t to_operate_on_last_position = 0;
-  for (size_t i = 0; i < positions.size; i++) {
-    size_t *position = darray_get(&positions, i);
-    DArray to_operate_on_slice = darray_slice(
-        to_operate_on, to_operate_on_last_position, (*position) + 1);
-    DArray operations_slice =
-        darray_slice(operations, to_operate_on_last_position, (*position));
-    ParsedValue result =
-        convert_to_operation(&to_operate_on_slice, &operations_slice);
-    darray_push(&operationStruct->to_operate_on, &result);
-    to_operate_on_last_position = (*position) + 1;
-  }
-  DArray to_operate_on_slice = darray_slice(
-      to_operate_on, to_operate_on_last_position, to_operate_on->size);
-  DArray operations_slice =
-      darray_slice(operations, to_operate_on_last_position, operations->size);
-  ParsedValue result =
-      convert_to_operation(&to_operate_on_slice, &operations_slice);
-  darray_push(&operationStruct->to_operate_on, &result);
-  darray_free(&positions, NULL);
-  return parsedValue;
 }
 
-ParsedValueReturn parse_operations(char *file, DArray *tokens, size_t *index,
-                                   ParsedValue *first_parsed_value) {
+static ParsedValue make_range(ParsedValue left, ParsedValue right,
+                              Token *operation) {
+  ParsedRange *range = checked_malloc(sizeof(ParsedRange));
+  range->start = checked_malloc(sizeof(ParsedValue));
+  *range->start = left;
+  range->stop = checked_malloc(sizeof(ParsedValue));
+  *range->stop = right;
+  range->inclusive = operation->type == TOKEN_TO;
+  range->line = operation->line;
+  range->column = operation->column;
+  range->length = operation->length;
+  return (ParsedValue){AST_RANGE, range};
+}
+
+static ParsedValue make_operation(ParsedValue left, ParsedValue right,
+                                  Token *operation, bool merge_left) {
+  /*
+   * Chains of the same left-associative operator (a + b + c) are kept as
+   * a single n-ary operation rather than nested binary ones, which keeps
+   * the number of registers the translator needs constant.
+   */
+  if (merge_left && left.type == AST_OPERATION) {
+    ParsedOperation *existing = left.data;
+    if (existing->operation == operation->type) {
+      darray_push(&existing->to_operate_on, &right);
+      return left;
+    }
+  }
+  ParsedOperation *operationStruct = checked_malloc(sizeof(ParsedOperation));
+  operationStruct->operation = operation->type;
+  operationStruct->line = operation->line;
+  operationStruct->column = operation->column;
+  operationStruct->length = operation->length;
+  darray_init(&operationStruct->to_operate_on, sizeof(ParsedValue));
+  darray_push(&operationStruct->to_operate_on, &left);
+  darray_push(&operationStruct->to_operate_on, &right);
+  return (ParsedValue){AST_OPERATION, operationStruct};
+}
+
+/*
+ * Builds the tree for operands[lo..hi] joined by operations[lo..hi-1] by
+ * splitting on the lowest-precedence operator: the last one for
+ * left-associative levels, the first one for right-associative levels.
+ */
+static ParsedValue build_operation(ParsedValue *operands, Token *operations,
+                                   size_t lo, size_t hi) {
+  if (lo == hi)
+    return operands[lo];
+
+  int lowest = 0;
+  for (size_t i = lo; i < hi; i++) {
+    int precedence = operation_precedence(operations[i].type);
+    if (lowest == 0 || precedence < lowest)
+      lowest = precedence;
+  }
+
+  bool right_associative = lowest == PRECEDENCE_EXPONENT;
+  size_t split = lo;
+  for (size_t i = lo; i < hi; i++) {
+    if (operation_precedence(operations[i].type) == lowest) {
+      split = i;
+      if (right_associative)
+        break;
+    }
+  }
+
+  ParsedValue left = build_operation(operands, operations, lo, split);
+  ParsedValue right = build_operation(operands, operations, split + 1, hi);
+  Token *operation = &operations[split];
+
+  if (operation->type == TOKEN_TO || operation->type == TOKEN_UNTIL)
+    return make_range(left, right, operation);
+  return make_operation(left, right, operation, !right_associative);
+}
+
+ParsedValueReturn parse_operations_with_minimum(char *file, DArray *tokens,
+                                                size_t *index,
+                                                ParsedValue *first_parsed_value,
+                                                int minimum_precedence) {
   DArray to_operate_on;
   darray_init(&to_operate_on, sizeof(ParsedValue));
   darray_push(&to_operate_on, first_parsed_value);
@@ -82,6 +145,7 @@ ParsedValueReturn parse_operations(char *file, DArray *tokens, size_t *index,
     Token *token = darray_get(tokens, *index);
     switch (token->type) {
       SWITCH_OPERATIONS
+      to_break = operation_precedence(token->type) < minimum_precedence;
       break;
     default:
       to_break = true;
@@ -106,20 +170,28 @@ ParsedValueReturn parse_operations(char *file, DArray *tokens, size_t *index,
     } else if (!parsedValue.value) {
       darray_free(&to_operate_on, (void (*)(void *))free_parsed);
       darray_free(&operations, NULL);
-      return (ParsedValueReturn){path_specific_create_err(token->line, token->column,
-                                            token->length, file, SyntaxError,
-                                            "expected value"),
-                                 NULL};
+      return (ParsedValueReturn){
+          path_specific_create_err(token->line, token->column, token->length,
+                                   file, SyntaxError, "expected value"),
+          NULL};
     }
     darray_push(&to_operate_on, parsedValue.value);
     free(parsedValue.value);
   }
+
   ParsedValue *parsedValue = checked_malloc(sizeof(ParsedValue));
-  ParsedValue output = convert_to_operation(&to_operate_on, &operations);
-  memcpy(parsedValue, &output, sizeof(ParsedValue));
+  *parsedValue = build_operation((ParsedValue *)to_operate_on.data,
+                                 (Token *)operations.data, 0,
+                                 to_operate_on.size - 1);
   darray_free(&to_operate_on, NULL);
   darray_free(&operations, NULL);
   return (ParsedValueReturn){no_err, parsedValue};
+}
+
+ParsedValueReturn parse_operations(char *file, DArray *tokens, size_t *index,
+                                   ParsedValue *first_parsed_value) {
+  return parse_operations_with_minimum(file, tokens, index,
+                                       first_parsed_value, 0);
 }
 
 void free_operation(void *ptr) {

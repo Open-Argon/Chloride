@@ -49,6 +49,32 @@ void mpq_fdiv(mpq_t result, const mpq_t a, const mpq_t b) {
   mpq_clear(tmp);
 }
 
+ArgonObject *int64_floor_divide(int64_t a, int64_t b) {
+  if (a == INT64_MIN && b == -1) {
+    // the result (2^63) doesn't fit in an int64
+    mpq_t r;
+    mpq_init(r);
+    mpq_set_si64(r, a, 1);
+    mpq_neg(r, r);
+    ArgonObject *result = new_number_object(r);
+    mpq_clear(r);
+    return result;
+  }
+  int64_t q = a / b;
+  if ((a % b != 0) && ((a < 0) != (b < 0)))
+    q -= 1;
+  return new_number_object_from_int64(q);
+}
+
+ArgonObject *int64_floor_modulo(int64_t a, int64_t b) {
+  if (b == -1)
+    return new_number_object_from_int64(0);
+  int64_t r = a % b;
+  if (r != 0 && ((r < 0) != (b < 0)))
+    r += b;
+  return new_number_object_from_int64(r);
+}
+
 void mpq_fmod(mpq_t result, const mpq_t a, const mpq_t b) {
   // result = a - b * floor(a / b)
 
@@ -420,7 +446,7 @@ ARGON_METHOD(ARGON_NUMBER_TYPE, __exponent__, {
         get_builtin_field(argv[1], __class__), __name__, argv[1]);
     *err = create_err(
         RuntimeError,
-        "__exponent__ cannot perform multiplication between number and %.*s",
+        "__exponent__ cannot perform exponentiation between number and %.*s",
         type_name->value.as_str->length, type_name->value.as_str->data);
     return ARGON_NULL;
   }
@@ -686,7 +712,7 @@ ARGON_METHOD(ARGON_NUMBER_TYPE, __floor_division__, {
       *err = create_err(ZeroDivisionError, "floor division by zero");
       return NULL;
     }
-    return new_number_object_from_int64(a / b);
+    return int64_floor_divide(a, b);
   } else if (!argv[0]->value.as_number->is_int64 &&
              !argv[1]->value.as_number->is_int64) {
     mpq_t r;
@@ -745,7 +771,7 @@ ARGON_METHOD(ARGON_NUMBER_TYPE, __modulo__, {
       *err = create_err(ZeroDivisionError, "modulo by zero");
       return NULL;
     }
-    return new_number_object_from_int64(a % b);
+    return int64_floor_modulo(a, b);
   } else if (!argv[0]->value.as_number->is_int64 &&
              !argv[1]->value.as_number->is_int64) {
     mpq_t r;

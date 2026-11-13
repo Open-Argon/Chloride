@@ -15,6 +15,9 @@ typedef struct {
 
 ParsedValueReturn parse_while(char *file, DArray *tokens, size_t *index);
 
+// `forever <body>` is shorthand for `while (true) <body>`.
+ParsedValueReturn parse_forever(char *file, DArray *tokens, size_t *index);
+
 void free_parsed_while(void *ptr);
 
 #endif // PARSE_WHILE_H

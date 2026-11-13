@@ -30,9 +30,12 @@ typedef struct {
   } value;
 } TemplateValue;
 
-char *unquote(char *input, size_t *out_len, char quote_char, bool is_quoted);
+// Decodes the escapes in a string literal. On failure returns NULL and, if
+// error is not NULL, sets it to a description of the problem.
+char *unquote(char *input, size_t *out_len, char quote_char, bool is_quoted,
+              const char **error);
 
-ParsedValueReturn parse_string(Token *token, bool to_unquote);
+ParsedValueReturn parse_string(char *file, Token *token, bool to_unquote);
 
 void free_parsed_string(void *ptr);
 
