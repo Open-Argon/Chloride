@@ -25,6 +25,9 @@ ARGON_FUNCTION(snooze, {
     if (n <= 0.0)
         return api->ARGON_NULL;
 
+    // Sleeping touches no Argon objects: let other threads collect meanwhile.
+    api->blocking_begin();
+
 #ifdef _WIN32
 
     while (n > 0.0) {
@@ -61,6 +64,7 @@ ARGON_FUNCTION(snooze, {
 
 #endif
 
+    api->blocking_end();
     return api->ARGON_NULL;
 })
 

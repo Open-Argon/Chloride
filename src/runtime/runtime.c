@@ -1594,14 +1594,13 @@ bool is_instance(ArgonObject *object, ArgonObject *type_) {
 // asks trace_vm_roots for everything they point at, and keeps it alive.
 // ---------------------------------------------------------------------------
 
-// Every runtime() invocation that hasn't returned yet, innermost first.
-// (Per thread; the collector itself only runs single-threaded for now.)
+// Every runtime() invocation that hasn't returned yet, innermost first. Each
+// thread has its own list, kept in the GC's per-thread roots pointer
+// (gc_thread_roots), so a collection can walk every thread's frames.
 typedef struct ActiveRuntime {
   StackFrame **frame; // that invocation's currentStackFrame
   struct ActiveRuntime *prev;
 } ActiveRuntime;
-
-static __thread ActiveRuntime *active_runtimes;
 
 #define VISIT(ptr) visit((GCHeader *)(ptr), ctx)
 
@@ -1615,8 +1614,8 @@ static void trace_call_instances(call_instance *ci, gc_visit_fn visit,
   }
 }
 
-static void trace_vm_roots(gc_visit_fn visit, void *ctx) {
-  for (ActiveRuntime *r = active_runtimes; r; r = r->prev) {
+static void trace_vm_roots(void *thread_roots, gc_visit_fn visit, void *ctx) {
+  for (ActiveRuntime *r = thread_roots; r; r = r->prev) {
     for (StackFrame *f = *r->frame; f; f = f->previousStackFrame) {
       for (size_t i = 0; i < f->translated.registerCount; i++)
         VISIT(f->state.registers[i]);
@@ -1634,7 +1633,7 @@ static void trace_vm_roots(gc_visit_fn visit, void *ctx) {
 
 #undef VISIT
 
-void register_vm_roots(void) { gc_add_uncounted_roots(trace_vm_roots); }
+void register_vm_roots(void) { gc_add_thread_roots(trace_vm_roots); }
 
 // ---------------------------------------------------------------------------
 // Freeing the VM's own memory (frames and pending calls belong to the VM,
@@ -1769,8 +1768,9 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
   StackFrame *currentStackFrame = ar_alloc(sizeof(StackFrame));
   *currentStackFrame = (StackFrame){_translated, _state, stack, NULL, 0, {}};
   currentStackFrame->state.currentStackFramePointer = &currentStackFrame;
-  ActiveRuntime active = {&currentStackFrame, active_runtimes};
-  active_runtimes = &active;
+  ActiveRuntime **active_runtimes = (ActiveRuntime **)gc_thread_roots();
+  ActiveRuntime active = {&currentStackFrame, *active_runtimes};
+  *active_runtimes = &active;
   while (currentStackFrame) {
     size_t ip = currentStackFrame->state.head;
     DArray *bytecode = &currentStackFrame->translated.bytecode;
@@ -3529,7 +3529,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
     if (currentStackFrame)
       currentStackFrame->state.registers[0] = result;
   }
-  active_runtimes = active.prev;
+  *active_runtimes = active.prev;
   gc_leave(outer_epoch);
   if (is_error(&err))
     *err_ptr = err;

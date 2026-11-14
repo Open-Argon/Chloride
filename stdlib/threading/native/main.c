@@ -126,8 +126,11 @@ ARGON_FUNCTION(Join, {
 
   int expected = UNCHANGED;
   if (atomic_compare_exchange_strong(&thread->status, &expected, JOINED)) {
+    /* Block until thread exits (touching no Argon objects meanwhile, so
+       other threads can garbage collect while we wait) */
+    api->blocking_begin();
     mt_thread_join(&thread->thread);
-    /* Block until thread exits */
+    api->blocking_end();
     api->set_err(argv[1], err);
     int expected = 0;
     if (atomic_compare_exchange_strong(&thread->freed, &expected, 1)) {

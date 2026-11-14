@@ -98,8 +98,19 @@ void gc_add_uncounted_roots(gc_root_tracer tracer) { (void)tracer; }
 GCVerifyResult gc_verify(void) { return (GCVerifyResult){0}; }
 GCStats gc_stats(void) { return (GCStats){0}; }
 void gc_init(void) {}
-void gc_thread_started(void) {}
-void gc_thread_finished(void) {}
+void *gc_thread_started(void) { return NULL; }
+void gc_thread_adopt(void *thread) { (void)thread; }
+void gc_thread_finished(void *thread) { (void)thread; }
+void gc_thread_attach(void) {}
+void gc_thread_detach(void) {}
+void gc_blocking_begin(void) {}
+void gc_blocking_end(void) {}
+static __thread void *boehm_thread_roots;
+void **gc_thread_roots(void) { return &boehm_thread_roots; }
+void gc_add_thread_roots(gc_thread_root_tracer tracer) { (void)tracer; }
+void gc_trace_all_uncounted_roots(gc_visit_fn visit, void *ctx) {
+  (void)visit, (void)ctx;
+}
 void gc_shutdown(void) {}
 
 #endif // ARGON_GC_CUSTOM

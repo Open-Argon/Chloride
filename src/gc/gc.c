@@ -27,6 +27,8 @@
 // average cost per allocation constant.
 #define CYCLE_MIN 10000
 
+static void *xrealloc(void *p, size_t size);
+
 GCConfig gc_config;
 const GCKind *gc_kinds[256];
 size_t gc_kind_count;
@@ -37,39 +39,183 @@ size_t gc_counted_root_count, gc_uncounted_root_count;
 
 bool gc_work_due;
 
-// Threads (stage 6a). While any thread besides the main one exists:
-//   * refcount updates are atomic (gc.h), so counts stay exact;
-//   * allocation, the ZCT and flag changes take alloc_lock;
-//   * safe points don't free anything, because collecting would need every
-//     thread stopped at a safe point and all their VM roots traced (6b).
-// When the last extra thread finishes, the counts are still exact, so
-// freeing simply resumes: whatever died meanwhile is waiting in the ZCT (or,
-// for cycles, gets found by the next cycle collection).
+// ---------------------------------------------------------------------------
+// Threads (stage 6). See README.md, "Threads".
+//
+// Every thread that may touch objects has a GCThread record, in one of three
+// states:
+//   RUNNING   executing; may touch objects at any moment
+//   PARKED    stopped at a safe point because a collection was requested
+//   BLOCKING  promised not to touch objects: inside gc_blocking_begin/end,
+//             or not (yet / any more) registered with the runtime
+// A collection needs every other thread PARKED or BLOCKING. The collecting
+// thread asks (stop_requested), waits a short while, and gives up if someone
+// doesn't stop in time (a long native call, say) - so an unmarked native
+// can only delay collection, never deadlock it.
+//
+// While more than one thread exists, refcount updates are atomic (gc.h) and
+// allocation and the ZCT take alloc_lock.
+// ---------------------------------------------------------------------------
+
+enum { GC_THREAD_RUNNING, GC_THREAD_PARKED, GC_THREAD_BLOCKING };
+
+#define MAX_BLOCKING_DEPTH 16
+
+typedef struct GCThread {
+  int state;
+  // The innermost epoch of this thread: its innermost runtime() invocation,
+  // or blocking region. Objects older than this may be held by its C code.
+  gc_epoch epoch;
+  void *roots; // for gc_add_thread_roots tracers (runtime.c's frame list)
+  int blocking_depth;
+  struct {
+    gc_epoch epoch;
+    int state;
+  } blocking_saved[MAX_BLOCKING_DEPTH];
+  struct GCThread *prev, *next;
+} GCThread;
+
 bool gc_multithreaded;
-static size_t live_threads; // started but not yet finished
+static size_t live_threads; // extra threads started but not yet finished
 static pthread_mutex_t alloc_lock = PTHREAD_MUTEX_INITIALIZER;
 
-void gc_thread_started(void) {
+static GCThread main_thread = {.state = GC_THREAD_RUNNING};
+static GCThread *threads = &main_thread; // the registry
+static __thread GCThread *self;          // this thread's record
+static pthread_mutex_t threads_lock = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t parked_cv = PTHREAD_COND_INITIALIZER;
+static pthread_cond_t resume_cv = PTHREAD_COND_INITIALIZER;
+static bool stop_requested; // guarded by threads_lock; read racily as a hint
+static size_t retry_after_alloc; // backoff after a stop attempt timed out
+
+#define STOP_TIMEOUT_NS 2000000 // how long to wait for others to park: 2 ms
+#define RETRY_ALLOCS 20000      // don't try again for this many allocations
+
+static gc_thread_root_tracer *thread_root_tracers;
+static size_t thread_root_tracer_count;
+
+static uint64_t birth_counter; // birth number of the next allocation
+
+static uint64_t current_birth(void) {
+  return __atomic_load_n(&birth_counter, __ATOMIC_RELAXED);
+}
+
+// Threads not created through our pthread_create wrapper have no record;
+// they get a private one so the API still works, but no collection ever
+// knows about them (they mustn't touch objects).
+static __thread GCThread unknown_thread;
+static GCThread *me(void) { return self ? self : &unknown_thread; }
+
+void *gc_thread_started(void) {
+  GCThread *t = calloc(1, sizeof *t);
+  if (!t) {
+    fprintf(stderr, "panic: gc: out of memory\n");
+    exit(EXIT_FAILURE);
+  }
+  t->state = GC_THREAD_BLOCKING;
+  // Everything that exists now may have been handed to the new thread, and
+  // nothing counts those references: protect it all until the thread enters
+  // runtime() (whose epoch is later) or finishes.
+  pthread_mutex_lock(&threads_lock); // waits for any collection in progress
+  t->epoch = current_birth();
+  t->next = threads;
+  threads->prev = t;
+  threads = t;
   pthread_mutex_lock(&alloc_lock);
   live_threads++;
   __atomic_store_n(&gc_multithreaded, true, __ATOMIC_RELEASE);
   pthread_mutex_unlock(&alloc_lock);
+  pthread_mutex_unlock(&threads_lock);
+  return t;
 }
 
-void gc_thread_finished(void) {
+void gc_thread_adopt(void *thread) { self = thread; }
+
+void gc_thread_finished(void *thread) {
+  GCThread *t = thread;
+  pthread_mutex_lock(&threads_lock);
+  if (t->prev)
+    t->prev->next = t->next;
+  else
+    threads = t->next;
+  if (t->next)
+    t->next->prev = t->prev;
   pthread_mutex_lock(&alloc_lock);
   if (--live_threads == 0) {
     __atomic_store_n(&gc_multithreaded, false, __ATOMIC_RELEASE);
     gc_work_due = true; // catch up on everything that died meanwhile
   }
   pthread_mutex_unlock(&alloc_lock);
+  pthread_cond_broadcast(&parked_cv); // a collector may be waiting on it
+  pthread_mutex_unlock(&threads_lock);
+  if (self == t)
+    self = NULL;
+  free(t);
 }
 
-static uint64_t birth_counter; // birth number of the next allocation
-// Objects born before this can't be freed at this thread's safe points. Per
-// thread: each thread has its own nest of runtime() invocations.
-static __thread gc_epoch current_epoch;
+// Leaving BLOCKING: wait out any collection in progress first, since it may
+// be freeing things this thread is about to look at. threads_lock held.
+static void resume_running(GCThread *t, int state) {
+  while (stop_requested)
+    pthread_cond_wait(&resume_cv, &threads_lock);
+  t->state = state;
+}
+
+void gc_thread_attach(void) {
+  GCThread *t = me();
+  pthread_mutex_lock(&threads_lock);
+  resume_running(t, GC_THREAD_RUNNING);
+  pthread_mutex_unlock(&threads_lock);
+}
+
+void gc_thread_detach(void) {
+  GCThread *t = me();
+  pthread_mutex_lock(&threads_lock);
+  t->state = GC_THREAD_BLOCKING;
+  pthread_cond_broadcast(&parked_cv);
+  pthread_mutex_unlock(&threads_lock);
+}
+
+void gc_blocking_begin(void) {
+  GCThread *t = me();
+  pthread_mutex_lock(&threads_lock);
+  if (t->blocking_depth < MAX_BLOCKING_DEPTH) {
+    t->blocking_saved[t->blocking_depth].epoch = t->epoch;
+    t->blocking_saved[t->blocking_depth].state = t->state;
+  }
+  t->blocking_depth++;
+  // Whatever the blocked C code holds was born before now.
+  t->epoch = current_birth();
+  t->state = GC_THREAD_BLOCKING;
+  pthread_cond_broadcast(&parked_cv);
+  pthread_mutex_unlock(&threads_lock);
+}
+
+void gc_blocking_end(void) {
+  GCThread *t = me();
+  pthread_mutex_lock(&threads_lock);
+  if (t->blocking_depth > 0 && --t->blocking_depth < MAX_BLOCKING_DEPTH) {
+    t->epoch = t->blocking_saved[t->blocking_depth].epoch;
+    resume_running(t, t->blocking_saved[t->blocking_depth].state);
+  } else {
+    resume_running(t, t->state);
+  }
+  pthread_mutex_unlock(&threads_lock);
+}
+
+void **gc_thread_roots(void) { return &me()->roots; }
+
+void gc_add_thread_roots(gc_thread_root_tracer tracer) {
+  thread_root_tracers =
+      xrealloc(thread_root_tracers,
+                     (thread_root_tracer_count + 1) * sizeof *thread_root_tracers);
+  thread_root_tracers[thread_root_tracer_count++] = tracer;
+}
+
 static bool in_collection;      // guards against re-entering a safe point
+// The epoch a collection in progress uses: the current thread's, or with
+// several threads, the latest of all of theirs (see collect_world).
+static gc_epoch collect_epoch;
 static bool stress_pending;     // ARGON_GC_STRESS asked for a full safe point
 static size_t stress_counter;
 
@@ -275,22 +421,37 @@ static void release_root(GCHeader *obj, void *ctx) {
   }
 }
 
+// Global uncounted roots, then every registered thread's own (its frames).
 static void trace_uncounted_roots(gc_visit_fn visit) {
   for (size_t i = 0; i < gc_uncounted_root_count; i++)
     gc_uncounted_roots[i](visit, NULL);
+  for (GCThread *t = threads; t; t = t->next)
+    for (size_t i = 0; i < thread_root_tracer_count; i++)
+      thread_root_tracers[i](t->roots, visit, NULL);
+}
+
+void gc_trace_all_uncounted_roots(gc_visit_fn visit, void *ctx) {
+  for (size_t i = 0; i < gc_uncounted_root_count; i++)
+    gc_uncounted_roots[i](visit, ctx);
+  for (GCThread *t = threads; t; t = t->next)
+    for (size_t i = 0; i < thread_root_tracer_count; i++)
+      thread_root_tracers[i](t->roots, visit, ctx);
 }
 
 // ---------------------------------------------------------------------------
 // Epochs
 // ---------------------------------------------------------------------------
 
+// Only this thread writes its own epoch; a collector reads it only while
+// this thread is parked or blocking.
 gc_epoch gc_enter(void) {
-  gc_epoch previous = current_epoch;
-  current_epoch = __atomic_load_n(&birth_counter, __ATOMIC_RELAXED);
+  GCThread *t = me();
+  gc_epoch previous = t->epoch;
+  t->epoch = current_birth();
   return previous;
 }
 
-void gc_leave(gc_epoch previous) { current_epoch = previous; }
+void gc_leave(gc_epoch previous) { me()->epoch = previous; }
 
 // ---------------------------------------------------------------------------
 // Freeing
@@ -344,7 +505,7 @@ static void process_zct(void) {
     if (h->refcount > 0 || !(h->flags & GC_MORTAL) ||
         (h->flags & GC_ZOMBIE)) {
       h->flags &= ~GC_IN_ZCT;
-    } else if (h->birth >= current_epoch && !(h->flags & GC_ROOTED)) {
+    } else if (h->birth >= collect_epoch && !(h->flags & GC_ROOTED)) {
       h->flags &= ~GC_IN_ZCT;
       stats.freed_by_rc++;
       free_object(h);
@@ -368,7 +529,7 @@ static void process_zct(void) {
 static void add_candidate(void *cell, void *ctx) {
   GCHeader *h = cell;
   if (!(h->flags & GC_MORTAL) || (h->flags & GC_ZOMBIE) ||
-      h->birth < current_epoch || !gc_kind_of(h)->traverse)
+      h->birth < collect_epoch || !gc_kind_of(h)->traverse)
     return;
   h->flags |= GC_CANDIDATE;
   h->gc_refs += h->refcount;
@@ -467,15 +628,9 @@ static void collect_cycles(void) {
 // Safe points
 // ---------------------------------------------------------------------------
 
-static void run_safe_point(bool full) {
-  if (in_collection)
-    return;
-  // See alloc_lock above. ACQUIRE pairs with gc_thread_finished, so once we
-  // see no threads, we also see every count update they made.
-  if (__atomic_load_n(&gc_multithreaded, __ATOMIC_ACQUIRE)) {
-    gc_work_due = false;
-    return;
-  }
+// The work of a safe point. Runs with no other thread touching objects:
+// either there is only one thread, or every other one is parked/blocking.
+static void collect(bool full) {
   in_collection = true;
 
   trace_uncounted_roots(hold_root);
@@ -490,21 +645,117 @@ static void run_safe_point(bool full) {
       HeapStats hs = heap_stats();
       fprintf(stderr,
               "[gc] cycle collection #%zu: %.2f ms, %zu live objects, "
-              "%zu KiB heap\n",
+              "%zu KiB heap%s\n",
               stats.cycle_collections, last_cycle_pause_ms, stats.live,
-              hs.mapped_bytes / 1024);
+              hs.mapped_bytes / 1024,
+              gc_threads_running() ? " (threads stopped)" : "");
     }
   }
   trace_uncounted_roots(release_root);
-  if (full && gc_config.verify)
-    gc_verify(); // after release_root: it needs gc_refs to be 0
+  // The verifier walks every thread's roots too, but keep it simple: only
+  // with a single thread (after release_root: it needs gc_refs to be 0).
+  if (full && gc_config.verify && !gc_threads_running())
+    gc_verify();
 
   stress_pending = false;
   gc_work_due = zct_len >= zct_limit || allocs_since_cycle >= cycle_threshold;
   in_collection = false;
 }
 
+static bool others_stopped(void) {
+  for (GCThread *t = threads; t; t = t->next)
+    if (t != self && t->state == GC_THREAD_RUNNING)
+      return false;
+  return true;
+}
+
+// Called with threads_lock held, when another thread has asked to collect.
+static void park(GCThread *t) {
+  t->state = GC_THREAD_PARKED;
+  pthread_cond_broadcast(&parked_cv);
+  while (stop_requested)
+    pthread_cond_wait(&resume_cv, &threads_lock);
+  t->state = GC_THREAD_RUNNING;
+}
+
+// Collect with several threads: stop the others, collect, restart them.
+static void collect_world(bool full) {
+  GCThread *t = me();
+  if (!self) // an unknown thread never collects
+    return;
+  pthread_mutex_lock(&threads_lock);
+  if (stop_requested) { // someone else got there first
+    park(t);
+    pthread_mutex_unlock(&threads_lock);
+    return;
+  }
+
+  stop_requested = true;
+  gc_work_due = true; // sends every running thread into its slow path
+  struct timespec deadline;
+  clock_gettime(CLOCK_REALTIME, &deadline);
+  deadline.tv_nsec += STOP_TIMEOUT_NS;
+  if (deadline.tv_nsec >= 1000000000L) {
+    deadline.tv_sec++;
+    deadline.tv_nsec -= 1000000000L;
+  }
+  bool stopped = others_stopped();
+  while (!stopped) {
+    if (pthread_cond_timedwait(&parked_cv, &threads_lock, &deadline) != 0) {
+      stopped = others_stopped();
+      break; // timed out
+    }
+    stopped = others_stopped();
+  }
+
+  if (stopped) {
+    // The epoch rule across threads: an object may be freed only if no
+    // thread's suspended C code could be holding it, i.e. it was born after
+    // every thread's current epoch.
+    collect_epoch = 0;
+    for (GCThread *u = threads; u; u = u->next)
+      if (u->epoch > collect_epoch)
+        collect_epoch = u->epoch;
+    collect(full);
+  } else {
+    // Someone is busy outside a safe point (a long native call, say). Don't
+    // wait for them; try again a little later.
+    retry_after_alloc = stats.allocated + RETRY_ALLOCS;
+  }
+
+  stop_requested = false;
+  pthread_cond_broadcast(&resume_cv);
+  pthread_mutex_unlock(&threads_lock);
+}
+
+static void run_safe_point(bool full) {
+  if (in_collection)
+    return;
+  // ACQUIRE pairs with gc_thread_finished: once we see no other threads, we
+  // also see every count update they made.
+  if (!__atomic_load_n(&gc_multithreaded, __ATOMIC_ACQUIRE)) {
+    collect_epoch = me()->epoch;
+    collect(full);
+    return;
+  }
+  collect_world(full);
+}
+
 void gc_safe_point_slow(void) {
+  if (__atomic_load_n(&gc_multithreaded, __ATOMIC_ACQUIRE)) {
+    // Asked to stop for someone else's collection?
+    if (__atomic_load_n(&stop_requested, __ATOMIC_ACQUIRE) && self) {
+      pthread_mutex_lock(&threads_lock);
+      if (stop_requested)
+        park(self);
+      pthread_mutex_unlock(&threads_lock);
+      return;
+    }
+    // Backing off after a stop attempt that timed out.
+    if (__atomic_load_n(&stats.allocated, __ATOMIC_RELAXED) <
+        __atomic_load_n(&retry_after_alloc, __ATOMIC_RELAXED))
+      return;
+  }
   run_safe_point(stress_pending || allocs_since_cycle >= cycle_threshold);
 }
 
@@ -521,6 +772,7 @@ static bool env_flag(const char *name) {
 
 void gc_init(void) {
   heap_init();
+  self = &main_thread;
   gc_config.print_stats = env_flag("ARGON_GC_STATS");
   gc_config.verify = env_flag("ARGON_GC_VERIFY");
   gc_config.nofree = env_flag("ARGON_GC_NOFREE");
@@ -537,7 +789,7 @@ void gc_shutdown(void) {
   // collect once more so "live" shows only what is really still referenced
   // (module globals and immortal objects), which makes leaks stand out.
   gc_collect_now();
-  if (gc_config.verify)
+  if (gc_config.verify && !gc_threads_running())
     gc_verify();
   if (!gc_config.print_stats)
     return;

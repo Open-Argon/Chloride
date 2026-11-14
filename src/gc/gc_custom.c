@@ -61,19 +61,18 @@ void ar_finalizer(void *obj, ar_finalizer_fn fn, void *client_data) {
 typedef struct {
   void *(*start)(void *);
   void *arg;
+  void *gc_thread; // its record, made by the parent (gc_thread_started)
 } ThreadStart;
 
-static void thread_done(void *unused) {
-  (void)unused;
-  gc_thread_finished();
-}
+static void thread_done(void *gc_thread) { gc_thread_finished(gc_thread); }
 
 static void *thread_trampoline(void *p) {
   ThreadStart ts = *(ThreadStart *)p;
   free(p);
+  gc_thread_adopt(ts.gc_thread);
   void *result;
   // Also runs if the thread calls pthread_exit or is cancelled.
-  pthread_cleanup_push(thread_done, NULL);
+  pthread_cleanup_push(thread_done, ts.gc_thread);
   result = ts.start(ts.arg);
   pthread_cleanup_pop(1);
   return result;
@@ -92,18 +91,26 @@ int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
   ThreadStart *ts = malloc(sizeof *ts);
   if (!ts)
     return EAGAIN;
-  *ts = (ThreadStart){start, arg};
-  gc_thread_started();
+  *ts = (ThreadStart){start, arg, gc_thread_started()};
   int result = real_pthread_create(thread, attr, thread_trampoline, ts);
   if (result != 0) { // no thread after all
+    gc_thread_finished(ts->gc_thread);
     free(ts);
-    gc_thread_finished();
   }
   return result;
 }
 
-int ar_register_thread(void) { return 0; }
-int ar_unregister_thread(void) { return 0; }
+// The native API's register/unregister_thread: from here on (until
+// unregister) this thread may touch objects, and so must stop for
+// collections at safe points.
+int ar_register_thread(void) {
+  gc_thread_attach();
+  return 0;
+}
+int ar_unregister_thread(void) {
+  gc_thread_detach();
+  return 0;
+}
 
 void ar_gc_collect(void) { gc_collect_now(); }
 

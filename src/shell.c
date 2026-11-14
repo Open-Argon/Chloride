@@ -15,6 +15,7 @@
 #include "hashmap/hashmap.h"
 #include "import.h"
 #include "memory.h"
+#include "gc/gc.h"
 #include "runtime/objects/literals/literals.h"
 #include "runtime/objects/string/string.h"
 #include <limits.h>
@@ -135,7 +136,9 @@ char *input(const char *prompt) {
 
   char *buffer = NULL;
   size_t size = 0;
+  gc_blocking_begin(); // waiting for the user: let other threads collect
   ssize_t len = getline(&buffer, &size, stdin);
+  gc_blocking_end();
 
   if (len == -1) {
     free(buffer);
@@ -146,7 +149,9 @@ char *input(const char *prompt) {
     buffer[len - 1] = '\0';
   }
 #else
+  gc_blocking_begin(); // waiting for the user: let other threads collect
   char *buffer = linenoise(prompt);
+  gc_blocking_end();
   if (buffer && buffer[0] != '\0') {
     linenoiseHistoryAdd(buffer);
   }

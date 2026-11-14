@@ -326,30 +326,73 @@ because the pointers to it live in our pages where it can't look.
       through raw pointers by other threads) are uncounted roots rather than
       counted holders. Checked: verifier clean after six threads hammered a
       shared dict; ASan clean; 40/40 runs of the start-up race test.
-- [ ] **6b. Threads, parallel collection.** So memory is also reclaimed
-      *while* threads run:
-      * a registry of threads and their `active_runtimes`, so a collection
-        can trace every thread's VM roots;
-      * cooperative stop-the-world: the collecting thread asks the others to
-        park at their next safe point;
-      * a "blocking" marker natives put around waits (join, sleep, IO), so a
-        thread stuck in one counts as parked;
-      * the epoch rule across threads: an object may only be freed if it was
-        born after the current epoch of *every* thread;
-      * incref/decref in the native API, so natives can hold objects in
-        their own memory (the threading module's `thread_arg`).
+- [x] **6b. Threads, parallel collection.** Memory is reclaimed *while*
+      threads run (see "Threads" below): a thread registry with per-thread
+      VM roots, cooperative stop-the-world with a timeout, blocking regions
+      (`join`, `sleep` and the shell's input are marked), and the epoch rule
+      across threads. Results: the 8-thread test peaks at 121 MB (Boehm:
+      246 MB; 6a: 925 MB); a 6-thread script at 20 MB (Boehm: 59 MB).
+      ASan clean; 25/25 and 15/15 repeated stress runs correct; verifier
+      clean after the threads finish.
 - [ ] **7. Later.** Generations for the cycle collector, finalizers, freeing
       module bytecode.
 
-## 6. Open questions / known limits
+## 6. Threads
 
-* **Threads.** Until stage 6b, nothing is freed while extra threads run
-  (memory catches up once they've all finished). The switch flips inside our
-  `pthread_create` wrapper (`gc_custom.c`, the same trick as Boehm's
-  `GC_pthread_create`), *before* the new thread runs: natives often hand a
-  new thread objects nothing counts, and a safe point in between would free
-  them. A thread created some other way (not through `pthread_create`)
-  isn't seen at all.
+Every thread that may touch objects has a record (`GCThread` in `gc.c`) in
+one of three states:
+
+| state | meaning |
+|---|---|
+| `RUNNING` | executing; may touch objects at any moment |
+| `PARKED` | stopped at a safe point because another thread wants to collect |
+| `BLOCKING` | has promised not to touch objects: inside `gc_blocking_begin`/`end`, or not registered with the runtime (yet, or any more) |
+
+**Collecting.** A thread whose safe point finds work to do sets
+`stop_requested`; every other running thread notices at its next safe point
+and parks. Once all of them are parked or blocking, the collector traces
+*every* thread's VM roots, collects, and wakes them. If someone doesn't stop
+within 2 ms (a long native call, say), it gives up and tries again later, so
+a native that forgets to mark a wait can delay collection but never deadlock
+it.
+
+**The epoch rule across threads.** Each thread's suspended natives can hold
+objects born before that thread's current epoch. So with several threads an
+object may only be freed if it was born after the current epoch of *every*
+thread. That's conservative: while one thread is deep in a native call that
+started recently, older garbage waits for a later collection.
+
+**Starting and stopping threads.** The `pthread_create` wrapper makes the new
+thread's record *in the parent*, as `BLOCKING`, with an epoch that protects
+every object existing at that moment, because natives hand new threads
+objects nothing counts (the threading module's `thread_arg`). The thread
+becomes `RUNNING` when it calls the native API's `register_thread`, goes back
+to `BLOCKING` at `unregister_thread`, and its record goes when its start
+routine returns.
+
+**Blocking regions.** Natives that wait should wrap the wait in
+`api->blocking_begin()` / `api->blocking_end()`, and not touch any object in
+between. `Join` (threading), `sleep` (time) and the shell's input already do.
+
+**Counting.** While more than one thread exists, refcount updates are atomic
+and `gc_assign` swaps atomically; allocation and the ZCT take a lock. With a
+single thread none of that costs anything.
+
+## 7. Open questions / known limits
+
+* **Threads created without `pthread_create`** aren't seen at all, and
+  mustn't touch objects.
+* **Unmarked waits** in natives (network reads, subprocess waits, ...) stop
+  collection from happening while they wait (after a 2 ms attempt, with a
+  backoff). Marking them with `blocking_begin/end` fixes that.
+* **Stress mode with threads is slow:** `ARGON_GC_STRESS=N` counts
+  allocations across all threads and stops every thread each time; use a
+  few thousand rather than 50.
+* **Natives holding objects in their own memory** (like `thread_arg`) rely on
+  the epoch protection above. Incref/decref in the native API would let them
+  hold counted references instead, which is less conservative.
+* **Not yet run under ThreadSanitizer** (`libtsan` isn't installed on the
+  development machine); that's the obvious next check for this stage.
 * **Unsynchronised writes from several threads** to the same array element
   through the raw-write paths in `array.c` (slice assignment, delete) can
   still lose a count, because those paths move elements without the

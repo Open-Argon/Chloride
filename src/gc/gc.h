@@ -270,13 +270,41 @@ GCStats gc_stats(void);
 
 // Reads ARGON_GC_STATS, ARGON_GC_STRESS, ARGON_GC_VERIFY, ARGON_GC_NOFREE.
 void gc_init(void);
-// Threads. Call gc_thread_started just *before* creating a thread, and
-// gc_thread_finished once that thread can no longer touch any object (the
-// custom backend does both from its pthread_create wrapper). While any such
-// thread exists, counting is atomic, allocation takes a lock, and safe points
-// don't free anything; when the last one finishes, freeing resumes.
-void gc_thread_started(void);
-void gc_thread_finished(void);
+// ---------------------------------------------------------------------------
+// Threads (see README.md, "Threads")
+// ---------------------------------------------------------------------------
+
+// Thread lifecycle. The custom backend calls these from its pthread_create
+// wrapper: gc_thread_started in the parent just *before* creating the
+// thread (it returns the new thread's record), gc_thread_adopt first thing
+// in the new thread, and gc_thread_finished when its start routine is done.
+void *gc_thread_started(void);
+void gc_thread_adopt(void *thread);
+void gc_thread_finished(void *thread);
+
+// A new thread starts out promising not to touch objects. attach ends that
+// promise (the native API's register_thread), detach makes it again
+// (unregister_thread). Until attach, a thread's C code is protected: every
+// object that existed when it was created is kept alive.
+void gc_thread_attach(void);
+void gc_thread_detach(void);
+
+// Wrap any wait that may take a while (joining a thread, sleeping, reading
+// input) so other threads can collect in the meantime. Between the two
+// calls, don't touch any object. Calls may nest.
+void gc_blocking_begin(void);
+void gc_blocking_end(void);
+
+// Per-thread roots: each thread has one pointer the interpreter may use
+// (runtime.c keeps the list of the thread's runtime() invocations there),
+// and every registered tracer is called with each thread's pointer at every
+// safe point. The objects reported are uncounted roots.
+typedef void (*gc_thread_root_tracer)(void *thread_roots, gc_visit_fn visit,
+                                      void *ctx);
+void **gc_thread_roots(void);
+void gc_add_thread_roots(gc_thread_root_tracer tracer);
+// Every uncounted root (global and per-thread), for the verifier.
+void gc_trace_all_uncounted_roots(gc_visit_fn visit, void *ctx);
 void gc_shutdown(void); // prints the stats summary if ARGON_GC_STATS is set
 
 #endif // ARGON_GC_H

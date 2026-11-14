@@ -282,5 +282,8 @@ ArgonNativeAPI native_api = {
     .remove_from_hashmap_string_key = api_remove_entry_from_hashmap_string_key,
     .remove_from_hashmap = api_remove_entry_from_hashmap,
 
-    .create_argon_array = create_array
+    .create_argon_array = create_array,
+
+    .blocking_begin = gc_blocking_begin,
+    .blocking_end = gc_blocking_end
 };

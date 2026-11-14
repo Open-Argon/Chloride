@@ -144,6 +144,13 @@ struct ArgonNativeAPI {
   void (*remove_from_hashmap_string_key)(ArgonHashmap *hashmap, char *key);
 
   ArgonObject *(*create_argon_array)(ArgonObject ** array, size_t size);
+
+  // Wrap any wait that may take a while (joining a thread, sleeping, blocking
+  // IO) in these, so other threads can garbage collect meanwhile. Between
+  // the two calls, don't touch any Argon object. (Added at the end of the
+  // struct so natives built against an older Argon.h keep working.)
+  void (*blocking_begin)(void);
+  void (*blocking_end)(void);
 };
 
 #define ARGON_STRING_FROM_C_STRING(str)                                        \

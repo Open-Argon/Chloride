@@ -162,8 +162,7 @@ GCVerifyResult gc_verify(void) {
     gc_counted_roots[i](count_reference, &v);
   // Uncounted roots aren't in any refcount, so they don't add to the tallies,
   // but what they point at must still be real (and not freed) objects.
-  for (size_t i = 0; i < gc_uncounted_root_count; i++)
-    gc_uncounted_roots[i](check_uncounted, &v);
+  gc_trace_all_uncounted_roots(check_uncounted, &v);
 
   heap_for_each(compare, &v);
   heap_for_each(reset_tally, NULL); // gc_refs must be 0 outside collections
