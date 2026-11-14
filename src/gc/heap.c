@@ -65,7 +65,9 @@ typedef struct Page {
   size_t ncells;     // cells in this page (1 for large objects)
   size_t npages;     // 64 KiB pages covered (1 for small pages)
   size_t live;       // currently allocated cells
+  uint32_t div_magic; // ceil(2^32 / cell_size): see cell_index
   uint8_t cls;       // index into class_sizes, or LARGE_CLASS
+  uint8_t idle_trims; // heap_trims in a row that found it empty (see there)
   bool in_partial;   // on its size class's "has free cells" list
   void *free_list;   // free cells, linked through their first word
   struct Page *prev_all, *next_all; // every page of this class (or large)
@@ -81,6 +83,13 @@ typedef struct {
 static SizeClass classes[NUM_CLASSES];
 static Page *large_objects;
 static HeapStats stats;
+
+// Which cell of small page p does addr fall in? A division, done as a
+// multiplication by a precomputed reciprocal: exact here because offsets are
+// below 2^16 and cell sizes at most 2^14, and a lot cheaper on the hot paths.
+static inline size_t cell_index(const Page *p, uintptr_t addr) {
+  return (size_t)(((uint64_t)(addr - p->start) * p->div_magic) >> 32);
+}
 
 static inline bool bit_get(const uint64_t *b, size_t i) {
   return (b[i >> 6] >> (i & 63)) & 1;
@@ -189,8 +198,15 @@ static void os_release(uintptr_t start, size_t len) {
 }
 
 static void os_discard(uintptr_t start) {
-  // Drop the physical memory; the page reads as zero when next touched.
+  // Let the OS take the physical memory back. MADV_FREE does it lazily (only
+  // if memory gets tight), so reusing the page soon costs no page faults;
+  // the contents are then undefined, which is fine: the allocator zeroes
+  // every cell it hands out.
+#ifdef MADV_FREE
+  madvise((void *)start, PAGE_SIZE, MADV_FREE);
+#else
   madvise((void *)start, PAGE_SIZE, MADV_DONTNEED);
+#endif
 }
 
 #endif
@@ -290,8 +306,14 @@ static void push_partial(Page *p) {
   p->in_partial = true;
 }
 
-// Give completely empty small pages back (to the spare pool or the OS) and
-// rebuild every partial list.
+// Give back small pages that have stayed empty, and rebuild every partial
+// list. A page found empty is first just left where it is (still on its size
+// class's free lists, ready to use at no cost); only a page that is *still*
+// empty at the next trim, i.e. nothing needed it for a whole interval, goes
+// back to the spare pool or the OS. Programs that keep freeing and
+// reallocating about the same amount (most of them) then stop paying for
+// unmapping and page faults, while memory that's really no longer needed
+// is still returned.
 void heap_trim(void) {
   for (size_t cls = 0; cls < NUM_CLASSES; cls++) {
     SizeClass *sc = &classes[cls];
@@ -300,7 +322,9 @@ void heap_trim(void) {
     while (p) {
       Page *next = p->next_all;
       p->in_partial = false;
-      if (p->live == 0) {
+      if (p->live == 0 && ++p->idle_trims < 2) {
+        push_partial(p); // keep it for now (its free list is intact)
+      } else if (p->live == 0) {
         unlink_all(p);
         page_table_set(p->start, 1, NULL);
         give_back_page(p->start);
@@ -325,6 +349,7 @@ static Page *new_small_page(int cls) {
     oom(sizeof(Page));
   p->start = take_page();
   p->cell_size = cell;
+  p->div_magic = (uint32_t)((((uint64_t)1 << 32) + cell - 1) / cell);
   p->ncells = ncells;
   p->npages = 1;
   p->cls = cls;
@@ -342,20 +367,22 @@ static Page *new_small_page(int cls) {
   return p;
 }
 
-static void *alloc_small(int cls) {
+static void *alloc_small(int cls, size_t size) {
   SizeClass *sc = &classes[cls];
   Page *p = sc->partial;
   if (!p)
     p = new_small_page(cls);
   void *cell = p->free_list;
   p->free_list = *(void **)cell;
-  bit_set(p->alloc_bits, ((uintptr_t)cell - p->start) / p->cell_size);
+  bit_set(p->alloc_bits, cell_index(p, (uintptr_t)cell));
   p->live++;
+  p->idle_trims = 0;
   if (!p->free_list) { // now full: off the partial list (it's the head)
     sc->partial = p->next_partial;
     p->in_partial = false;
   }
-  memset(cell, 0, p->cell_size);
+  // Zero what was asked for (the rest of the cell is never read).
+  memset(cell, 0, size);
   return cell;
 }
 
@@ -379,19 +406,22 @@ static void *alloc_large(size_t size) {
 void *heap_alloc(size_t size) {
   if (size == 0)
     size = 1;
-  void *cell = size <= MAX_SMALL
-                   ? alloc_small(size_to_class[(size + GRANULE - 1) / GRANULE])
-                   : alloc_large(size);
-  stats.allocated_bytes += heap_cell_size(cell);
+  void *cell;
+  if (size <= MAX_SMALL) {
+    int cls = size_to_class[(size + GRANULE - 1) / GRANULE];
+    cell = alloc_small(cls, size);
+    stats.allocated_bytes += class_sizes[cls];
+  } else {
+    cell = alloc_large(size);
+    stats.allocated_bytes += heap_cell_size(cell);
+  }
   stats.allocated_cells++;
   return cell;
 }
 
 void heap_free(void *ptr) {
   Page *p = page_lookup((uintptr_t)ptr);
-  size_t idx = p && p->cls != LARGE_CLASS
-                   ? ((uintptr_t)ptr - p->start) / p->cell_size
-                   : 0;
+  size_t idx = p && p->cls != LARGE_CLASS ? cell_index(p, (uintptr_t)ptr) : 0;
   if (!p || (uintptr_t)ptr != p->start + idx * p->cell_size ||
       !bit_get(p->alloc_bits, idx)) {
     fprintf(stderr, "panic: gc: heap_free of invalid pointer %p\n", ptr);
@@ -430,7 +460,7 @@ void *heap_cell_of(const void *ptr) {
     return NULL;
   size_t idx = 0;
   if (p->cls != LARGE_CLASS) {
-    idx = ((uintptr_t)ptr - p->start) / p->cell_size;
+    idx = cell_index(p, (uintptr_t)ptr);
     if (idx >= p->ncells) // the unused tail at the end of a page
       return NULL;
   }

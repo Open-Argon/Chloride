@@ -265,11 +265,39 @@ static void object_finalize(GCHeader *h) {
   }
 }
 
+// Can't be part of a cycle: a type whose value holds no object references,
+// no attribute dict, and built-in slots pointing only at immortal objects
+// (true of nearly every number and string: just their built-in class). The
+// cycle collector skips these, which matters when there are millions.
+static bool object_acyclic(GCHeader *h) {
+  ArgonObject *o = (ArgonObject *)h;
+  switch (o->type) {
+  case TYPE_NUMBER:
+  case TYPE_STRING:
+  case TYPE_NULL:
+  case TYPE_BOOL:
+  case TYPE_BUFFER:
+  case TYPE_NATIVE_FUNCTION:
+    break;
+  default:
+    return false;
+  }
+  if (o->dict)
+    return false;
+  for (size_t i = 0; i < o->built_in_slot_length; i++) {
+    GCHeader *v = (GCHeader *)o->built_in_slot[i].value;
+    if (v && (v->flags & GC_MORTAL))
+      return false;
+  }
+  return true;
+}
+
 static const GCKind object_kind = {
     .name = "ArgonObject",
     .traverse = object_traverse,
     .finalize = object_finalize,
     .describe = object_describe,
+    .acyclic = object_acyclic,
 };
 
 // ---------------------------------------------------------------------------

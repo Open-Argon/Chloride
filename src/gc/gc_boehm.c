@@ -92,6 +92,8 @@ void *gc_new(uint8_t kind, size_t size) {
   return h;
 }
 
+void *gc_new_leaf(uint8_t kind, size_t size) { return gc_new(kind, size); }
+
 size_t gc_object_size(const void *obj) { return GC_size(obj); }
 void gc_immortalize(void *obj) { (void)obj; }
 void gc_immortalize_all(void) {}

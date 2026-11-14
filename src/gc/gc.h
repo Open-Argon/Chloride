@@ -79,6 +79,12 @@ typedef struct GCKind {
 
   // Optional: write a short human description for verifier reports.
   void (*describe)(GCHeader *obj, char *buf, size_t len);
+
+  // Optional: true if `obj` can't currently be part of a reference cycle,
+  // because it holds no references to mortal objects (a number pointing only
+  // at its built-in class, say). Such objects are skipped by the cycle
+  // collector, which is most of the cost of collecting cycles. Must be cheap.
+  bool (*acyclic)(GCHeader *obj);
 } GCKind;
 
 // Registers a kind and returns its id. Call during startup, before gc_new.
@@ -92,10 +98,17 @@ uint8_t gc_register_kind(const GCKind *kind);
 // refcount of 0, which is fine: until a safe point, C locals keep it alive.
 void *gc_new(uint8_t kind, size_t size);
 
+// The same, for objects that will almost never be part of a cycle (numbers,
+// strings): they're left out of young cycle collections, which then don't
+// have to look at millions of them. (Full collections still examine every
+// object, so a cycle through one is found eventually.)
+void *gc_new_leaf(uint8_t kind, size_t size);
+
 #ifdef ARGON_GC_CUSTOM
 
 void gc_zero_count(GCHeader *h); // refcount reached 0: list it in the ZCT
 void gc_bad_decref(GCHeader *h); // decref of an object whose count is 0
+void gc_first_reference(GCHeader *h); // refcount went 0 -> 1 while in the ZCT
 
 // True while threads other than the main one exist (see gc_thread_started).
 // Counting is then atomic, so counts stay exact even when two threads touch
@@ -111,8 +124,8 @@ static inline void gc_incref(void *obj) {
   if (h && (h->flags & GC_MORTAL)) {
     if (__builtin_expect(gc_threads_running(), 0))
       __atomic_fetch_add(&h->refcount, 1, __ATOMIC_RELAXED);
-    else
-      h->refcount++;
+    else if (h->refcount++ == 0 && (h->flags & GC_IN_ZCT))
+      gc_first_reference(h); // usually a brand new object being stored
   }
 }
 

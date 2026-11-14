@@ -111,8 +111,15 @@ ArgonObject *new_small_object(size_t endSize) {
 #ifdef ARGON_GC_CUSTOM
   // The custom GC's size classes already make small allocations cheap, and
   // carving many objects out of one chunk would keep the whole chunk alive as
-  // long as any one of them is reachable.
-  return new_object(endSize);
+  // long as any one of them is reachable. Only numbers and strings come
+  // through here, so tell the GC they're leaves (see gc_new_leaf).
+  ArgonObject *leaf =
+      gc_new_leaf(ARGON_OBJECT_GC_KIND, sizeof(ArgonObject) + endSize);
+  leaf->built_in_slot_length = 0;
+  leaf->type = TYPE_OBJECT;
+  leaf->dict = NULL;
+  leaf->as_bool = true;
+  return leaf;
 #endif
   ThreadLocalPool *pool = get_thread_pool();
   ArgonObject *object;
@@ -195,13 +202,25 @@ ArgonObject *new_instance(ArgonObject *of, size_t endSize) {
   return object;
 }
 
-// Attribute dicts own their keys (C strings): a key that pointed into some
-// string object's characters would dangle once that string is freed. Only
-// called for keys not already in the dict, so each name is copied once.
-static char *own_key(const char *name, size_t length) {
-  char *key = ar_alloc_atomic(length + 1);
-  memcpy(key, name, length);
-  key[length] = '\0';
+// Attribute names, interned: one permanent copy of each distinct name, which
+// every attribute dict uses as its key. A key can't simply point at the
+// caller's characters (often some string object's, which may be freed), and
+// copying it into every dict that uses it meant a malloc and a free per
+// attribute per object. Programs use a small, fixed set of attribute names,
+// so the table stays small. (Keyed by hash, like the dicts themselves.)
+static struct hashmap_GC *attribute_names;
+
+static char *intern_attribute_name(const char *name, size_t length,
+                                   uint64_t hash) {
+  if (!attribute_names)
+    attribute_names = createHashmap_GC_with(0); // not objects, never freed
+  char *key = hashmap_lookup_GC(attribute_names, hash);
+  if (!key) {
+    key = ar_alloc_atomic(length + 1);
+    memcpy(key, name, length);
+    key[length] = '\0';
+    hashmap_insert_GC(attribute_names, hash, NULL, key, 0);
+  }
   return key;
 }
 
@@ -209,16 +228,12 @@ static void insert_attribute(ArgonObject *target, const char *name,
                              uint64_t hash, size_t length,
                              ArgonObject *object) {
   if (!target->dict) {
-    // Keys are C strings owned by the dict, values are (counted) objects.
-    target->dict =
-        createHashmap_GC_with(HASHMAP_GC_OBJECT_VALUES | HASHMAP_GC_OWNS_KEYS);
+    // Keys are interned names (see above), values are (counted) objects.
+    target->dict = createHashmap_GC_with(HASHMAP_GC_OBJECT_VALUES);
     hashmap_GC_claim(target->dict, target);
   }
-  // An existing entry keeps its key; only a new entry needs a copy.
-  char *key = hashmap_lookup_node_GC(target->dict, hash)
-                  ? (char *)name
-                  : own_key(name, length);
-  hashmap_insert_GC(target->dict, hash, key, object, 0);
+  hashmap_insert_GC(target->dict, hash,
+                    intern_attribute_name(name, length, hash), object, 0);
 }
 
 inline void add_builtin_field(ArgonObject *target, built_in_fields field,

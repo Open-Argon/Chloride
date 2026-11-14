@@ -91,9 +91,14 @@ $(LEXER_C) $(LEXER_H): $(LEXER_SRC)
 # ------------------------------------------------------------
 # Compile rule
 # ------------------------------------------------------------
+# -MMD -MP: also write a .d file listing the headers each object includes, so
+# changing a header (a struct layout, an inline function) rebuilds everything
+# that uses it.
 $(BUILD_DIR)/%.o: %.c
 	@mkdir -p $(dir $@)
-	$(CC) -O3 -c $< -o $@ $(CFLAGS)
+	$(CC) -O3 -MMD -MP -c $< -o $@ $(CFLAGS)
+
+-include $(OBJFILES:.o=.d)
 
 # ------------------------------------------------------------
 # Link final binary

@@ -280,6 +280,46 @@ On the stress script this took cycle collection from 312 ms to about 120 ms
 (longest pause 43 ms -> 22 ms) and the whole run from 1.2 s to 1.06 s
 (Boehm: 1.11 s).
 
+### Making it fast
+
+`for (i in 1 to 10) array(1 to 1e6)` took 5.6 s against Boehm's 1.5 s. The
+fixes, roughly in order of how much they mattered:
+
+* **Acyclic objects aren't cycle candidates.** A kind's `acyclic` callback
+  says when an object holds no references to mortal objects (nearly every
+  number and string: just its built-in class); trial deletion skips those.
+  Before, every young and full collection examined millions of numbers.
+* **Numbers and strings skip the young list** (`gc_new_leaf`): they're almost
+  never part of a cycle, so young collections don't even have to look at
+  them (full collections still do).
+* **New objects leave the ZCT on their first reference.** Every new object
+  starts in the ZCT, and is usually stored straight away while it's still
+  the last entry (`gc_first_reference` pops it). The ZCT then holds only
+  things that actually died.
+* **Leaves are freed where they die.** When freeing an object drops an
+  acyclic child to zero (and nothing else protects it), `release_child` frees
+  it on the spot, while it's still in cache, instead of listing it in the ZCT
+  and visiting it again later from cold memory.
+* **The ZCT is processed by allocation count too** (after the larger of 1,024
+  and the number of entries the last pass kept), since one entry can be an
+  array holding a million objects; that keeps rescans of kept entries
+  amortised.
+* **Young collections look candidates up by address** (a small hash set), so
+  traversing a big array doesn't read the header of every element just to
+  see it isn't a candidate.
+* **Empty pages are kept** for one trim interval before going back to the OS
+  (and on POSIX with `MADV_FREE`), so a program that frees and reallocates
+  the same amount stops paying for page faults (214k -> 63k on the example).
+* **Cheaper allocation:** no page-table lookup per allocation, only the
+  requested bytes are zeroed, and cell indices use a multiply by a
+  precomputed reciprocal instead of a division.
+* **Interned attribute names**: one shared copy per distinct name instead of
+  a `malloc`'d copy per attribute per object.
+
+Result on that example: about 2.0 s vs Boehm's 1.7 s wall time (equal in CPU
+time: Boehm marks with several threads). The stress script is faster than
+Boehm; the cycle-heavy one about 1.2x slower.
+
 ---
 
 ## 4. Debugging tools
@@ -370,6 +410,7 @@ because the pointers to it live in our pages where it can't look.
       clean after the threads finish.
 - [ ] **7. Later.**
   - [x] Generations for the cycle collector (see "Generations").
+  - [x] Speed: see "Making it fast".
   - [ ] Per-thread allocation, so threads don't contend on one lock for
         every allocation (threaded programs are still about twice as slow
         as with Boehm).

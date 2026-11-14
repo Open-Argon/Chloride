@@ -240,6 +240,12 @@ static size_t stress_counter;
 static GCHeader **zct;
 static size_t zct_len, zct_cap;
 static size_t zct_limit = ZCT_MIN;
+// The ZCT is also processed after this many allocations, however short it
+// is: one entry can be a big dead structure (an array of a million numbers).
+// It's the larger of ZCT_MIN and the entries the last pass had to keep, so
+// those are re-examined at most once per that many allocations.
+static size_t zct_alloc_limit = ZCT_MIN;
+static size_t allocs_since_zct;
 
 static size_t allocs_since_cycle;
 // Every object allocated since the last cycle collection (plus some older
@@ -315,7 +321,15 @@ static void zct_push(GCHeader *h) {
     gc_work_due = true;
 }
 
-void *gc_new(uint8_t kind, size_t size) {
+static void *allocate(uint8_t kind, size_t size, bool young_candidate);
+
+void *gc_new(uint8_t kind, size_t size) { return allocate(kind, size, true); }
+
+void *gc_new_leaf(uint8_t kind, size_t size) {
+  return allocate(kind, size, false);
+}
+
+static void *allocate(uint8_t kind, size_t size, bool young_candidate) {
   if (kind >= gc_kind_count) {
     fprintf(stderr, "panic: gc: gc_new with unregistered kind %u\n", kind);
     abort();
@@ -334,7 +348,10 @@ void *gc_new(uint8_t kind, size_t size) {
   // the next safe point, it's garbage, so it starts out in the ZCT.
   zct_push(h);
 
-  gc_vec_push(&young, h);
+  if (young_candidate)
+    gc_vec_push(&young, h);
+  if (++allocs_since_zct >= zct_alloc_limit)
+    gc_work_due = true;
   if (++allocs_since_cycle >= YOUNG_THRESHOLD)
     gc_work_due = true;
   if (gc_config.stress_every && ++stress_counter >= gc_config.stress_every) {
@@ -345,6 +362,18 @@ void *gc_new(uint8_t kind, size_t size) {
   if (lock)
     gc_mutex_unlock(&alloc_lock);
   return h;
+}
+
+// A new object starts in the ZCT, and is usually stored somewhere straight
+// away, while it's still the last entry. Then it can come straight back out,
+// so the ZCT doesn't fill up with (and later re-examine, from cold memory)
+// objects that were never garbage. Single-threaded only, and not while a
+// safe point is walking the table.
+void gc_first_reference(GCHeader *h) {
+  if (!in_collection && zct_len && zct[zct_len - 1] == h) {
+    zct_len--;
+    h->flags &= ~GC_IN_ZCT;
+  }
 }
 
 void gc_zero_count(GCHeader *h) {
@@ -476,13 +505,38 @@ void gc_leave(gc_epoch previous) { me()->epoch = previous; }
 // Freeing
 // ---------------------------------------------------------------------------
 
+static void free_object(GCHeader *h);
+
 // Drop the reference a dying object holds on `child`. Children that are
 // themselves part of a garbage cycle being freed are skipped: they're going
 // away regardless, and their counts no longer matter.
+//
+// This only runs inside a safe point (other threads, if any, are stopped),
+// so the decref can be a plain one, and a child that dies here can often be
+// freed on the spot instead of going through the ZCT: that saves a second
+// trip to memory that has long left the cache (freeing an array of a million
+// numbers, say). That's only done for acyclic children (whose own children
+// are all immortal, so it can't recurse) that nothing else protects: not
+// listed in the ZCT (the entry would dangle), not held by a root, and born
+// in the current epoch.
 static void release_child(GCHeader *child, void *ctx) {
   (void)ctx;
-  if (child && !(child->flags & GC_DYING))
-    gc_decref(child); // may put the child in the ZCT
+  if (!child || (child->flags & GC_DYING) || !(child->flags & GC_MORTAL))
+    return;
+  if (child->refcount == 0) {
+    gc_bad_decref(child);
+    return;
+  }
+  if (--child->refcount > 0)
+    return;
+  const GCKind *k = gc_kind_of(child);
+  if (!(child->flags & (GC_IN_ZCT | GC_ROOTED | GC_ZOMBIE)) &&
+      child->birth >= collect_epoch && k->acyclic && k->acyclic(child)) {
+    stats.freed_by_rc++;
+    free_object(child);
+  } else {
+    gc_zero_count(child);
+  }
 }
 
 // Give the memory back (the object's references are already released).
@@ -540,9 +594,15 @@ static void process_zct(void) {
     }
   }
   zct_len = kept;
-  // Kept entries are re-examined every time; let the table grow in
-  // proportion so that doesn't turn quadratic.
+  // Kept entries are re-examined every time; let the table (and the time
+  // between passes) grow in proportion so that doesn't turn quadratic.
   zct_limit = 2 * kept + ZCT_MIN;
+  zct_alloc_limit = kept > ZCT_MIN ? kept : ZCT_MIN;
+  allocs_since_zct = 0;
+}
+
+static bool zct_due(void) {
+  return zct_len >= zct_limit || allocs_since_zct >= zct_alloc_limit;
 }
 
 // ---------------------------------------------------------------------------
@@ -554,9 +614,10 @@ static void process_zct(void) {
 // uncounted roots (already there, see hold_root).
 static void add_candidate(void *cell, void *ctx) {
   GCHeader *h = cell;
+  const GCKind *k = gc_kind_of(h);
   if (!(h->flags & GC_MORTAL) ||
       (h->flags & (GC_ZOMBIE | GC_CANDIDATE | GC_DYING)) ||
-      h->birth < collect_epoch || !gc_kind_of(h)->traverse)
+      h->birth < collect_epoch || !k->traverse || (k->acyclic && k->acyclic(h)))
     return;
   h->flags |= GC_CANDIDATE;
   h->gc_refs += h->refcount;
@@ -565,10 +626,58 @@ static void add_candidate(void *cell, void *ctx) {
 
 #define GC_REFS_BROKEN 0x80000000u
 
+// Is `child` a candidate? Normally that's the GC_CANDIDATE flag. But a young
+// collection has few candidates, and checking the flag means reading the
+// header of every child of every candidate - for an array of a million
+// numbers, a million cache misses to learn that none of them is one. So a
+// young collection also puts its candidates in a small hash set of
+// addresses, which answers without touching the child at all.
+static struct {
+  GCHeader **slots; // NULL when not in use
+  size_t mask;
+} candidate_set;
+
+static size_t candidate_hash(const GCHeader *p) {
+  return (size_t)(((uintptr_t)p >> 4) * 0x9E3779B97F4A7C15ull >> 20);
+}
+
+static void candidate_set_build(GCVec *candidates) {
+  size_t cap = 64;
+  while (cap < 2 * candidates->len)
+    cap *= 2;
+  candidate_set.slots = calloc(cap, sizeof(GCHeader *));
+  if (!candidate_set.slots)
+    return; // fall back to the flag
+  candidate_set.mask = cap - 1;
+  for (size_t i = 0; i < candidates->len; i++) {
+    size_t j = candidate_hash(candidates->items[i]) & candidate_set.mask;
+    while (candidate_set.slots[j])
+      j = (j + 1) & candidate_set.mask;
+    candidate_set.slots[j] = candidates->items[i];
+  }
+}
+
+static void candidate_set_free(void) {
+  free(candidate_set.slots);
+  candidate_set.slots = NULL;
+}
+
+static inline bool is_candidate(GCHeader *child) {
+  if (!child)
+    return false;
+  if (!candidate_set.slots)
+    return child->flags & GC_CANDIDATE;
+  for (size_t j = candidate_hash(child) & candidate_set.mask;
+       candidate_set.slots[j]; j = (j + 1) & candidate_set.mask)
+    if (candidate_set.slots[j] == child)
+      return true;
+  return false;
+}
+
 // Step 1: remove references that come from inside the candidate set.
 static void subtract_internal(GCHeader *child, void *ctx) {
   (void)ctx;
-  if (!child || !(child->flags & GC_CANDIDATE))
+  if (!is_candidate(child))
     return;
   if (child->gc_refs == 0) {
     // More references from candidates than its refcount admits: the count
@@ -585,8 +694,7 @@ static void subtract_internal(GCHeader *child, void *ctx) {
 // Step 2: anything still referenced from outside is alive, and so is
 // everything it reaches.
 static void mark_reachable(GCHeader *child, void *ctx) {
-  if (child && (child->flags & GC_CANDIDATE) &&
-      !(child->flags & GC_REACHABLE)) {
+  if (is_candidate(child) && !(child->flags & GC_REACHABLE)) {
     child->flags |= GC_REACHABLE;
     gc_vec_push(ctx, child);
   }
@@ -616,7 +724,8 @@ static size_t scan_young(GCVec *candidates) {
   return protected_now;
 }
 
-static void collect_cycles(bool full) {
+// Returns true if some garbage was left in the ZCT (DYING) to be freed there.
+static bool collect_cycles(bool full) {
   double t0 = now_ms();
 
   // Step 0: the candidates. A young collection only looks at recent
@@ -631,6 +740,8 @@ static void collect_cycles(bool full) {
     protected_now = scan_young(&candidates);
   }
 
+  if (!full)
+    candidate_set_build(&candidates);
   for (size_t i = 0; i < candidates.len; i++) {
     GCHeader *h = candidates.items[i];
     gc_kind_of(h)->traverse(h, subtract_internal, NULL);
@@ -649,6 +760,7 @@ static void collect_cycles(bool full) {
     gc_kind_of(h)->traverse(h, mark_reachable, &work);
   }
   gc_vec_free(&work);
+  candidate_set_free();
 
   // Step 3: whatever is left is referenced only by other garbage.
   GCVec garbage = {0};
@@ -673,9 +785,13 @@ static void collect_cycles(bool full) {
     GCHeader *h = garbage.items[i];
     gc_kind_of(h)->traverse(h, release_child, NULL);
   }
-  for (size_t i = 0; i < garbage.len; i++)
-    if (!(garbage.items[i]->flags & GC_IN_ZCT))
+  bool left_in_zct = false;
+  for (size_t i = 0; i < garbage.len; i++) {
+    if (garbage.items[i]->flags & GC_IN_ZCT)
+      left_in_zct = true;
+    else
       destroy(garbage.items[i]);
+  }
   stats.freed_by_cycle += garbage.len;
   if (full) {
     promoted_since_full = 0;
@@ -692,6 +808,7 @@ static void collect_cycles(bool full) {
   stats.cycle_pause_ms_total += pause;
   if (pause > stats.cycle_pause_ms_max)
     stats.cycle_pause_ms_max = pause;
+  return left_in_zct;
 }
 
 // ---------------------------------------------------------------------------
@@ -713,15 +830,16 @@ static void collect(int cycles) {
   bool full = cycles == CYCLES_FULL ||
               (cycles == CYCLES_DUE && full_collection_due());
   trace_uncounted_roots(hold_root);
-  // Every ZCT pass re-examines the entries the epoch rule or a root keeps
-  // alive, so only make one when the table has grown enough (or for a full
-  // collection), not just because a young collection is due.
-  if (cycles == CYCLES_NONE || full || zct_len >= zct_limit)
+  // A ZCT pass re-examines the entries the epoch rule or a root keeps
+  // alive, so only make one when it's due (or for a full collection), not
+  // just because a young cycle collection is.
+  if (full || zct_due())
     process_zct();
   if (cycles != CYCLES_NONE) {
-    collect_cycles(full);
-    if (full)
-      process_zct(); // free what the cycle collector released, right away
+    // Garbage it finds that's still listed in the ZCT is left DYING for a
+    // ZCT pass to free; make sure one sees it now.
+    if (collect_cycles(full) || full)
+      process_zct();
     allocs_since_cycle = 0;
     if (full) {
       heap_trim();
@@ -744,7 +862,7 @@ static void collect(int cycles) {
     gc_verify();
 
   stress_pending = false;
-  gc_work_due = zct_len >= zct_limit || allocs_since_cycle >= YOUNG_THRESHOLD;
+  gc_work_due = zct_due() || allocs_since_cycle >= YOUNG_THRESHOLD;
   in_collection = false;
 }
 
