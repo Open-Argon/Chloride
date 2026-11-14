@@ -237,13 +237,16 @@ void append_objects_fields_recursively(darray_armem *array, hashmap_GC *used,
 
   for (size_t i = 0; i < obj->built_in_slot_length; i++) {
     if (obj->built_in_slot[i].value) {
-      if (!hashmap_lookup_GC(used, built_in_field_hashes[i])) {
-        ArgonObject *key = new_string_object(built_in_field_names[i],
-                                             strlen(built_in_field_names[i]),
-                                             built_in_field_hashes[i]);
+      // Slots aren't stored in field order: name each one by the field it
+      // holds, not by its position.
+      built_in_fields field = obj->built_in_slot[i].field;
+      if (!hashmap_lookup_GC(used, built_in_field_hashes[field])) {
+        ArgonObject *key = new_string_object(built_in_field_names[field],
+                                             strlen(built_in_field_names[field]),
+                                             built_in_field_hashes[field]);
         darray_armem_insert(array, array->size, &key);
-        hashmap_insert_GC(used, built_in_field_hashes[i], NULL, (void *)true,
-                          0);
+        hashmap_insert_GC(used, built_in_field_hashes[field], NULL,
+                          (void *)true, 0);
       }
     }
   }
