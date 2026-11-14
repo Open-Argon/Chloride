@@ -38,6 +38,24 @@ static inline void release_node(struct hashmap_GC *t, struct node_GC *n) {
   if (t->gc_flags & HASHMAP_GC_OBJECT_VALUES)
     gc_decref(n->val);
 }
+// Free the memory behind an entry that's going away (not its objects).
+static inline void free_key(struct hashmap_GC *t, struct node_GC *n) {
+  if (t->gc_flags & HASHMAP_GC_OWNS_KEYS)
+    ar_free_owned(n->key);
+}
+static void free_list_nodes(struct hashmap_GC *t) {
+  if (!t->list)
+    return;
+  for (size_t i = 0; i < (size_t)t->size; i++) {
+    struct node_GC *n = t->list[i];
+    while (n) {
+      struct node_GC *next = n->next;
+      free_key(t, n);
+      ar_free_owned(n);
+      n = next;
+    }
+  }
+}
 // Overwrite the value of an existing entry (the key stays).
 static inline void replace_val(struct hashmap_GC *t, struct node_GC *n,
                                void *val) {
@@ -117,6 +135,7 @@ static void resize_hashmap_GC_nolock(struct hashmap_GC *t) {
     t->list[i] = lo;
     t->list[i + old_size] = hi;
   }
+  ar_free_owned(old_list);
 }
 
 static void hashmap_insert_GC_nolock(struct hashmap_GC *t, uint64_t hash,
@@ -199,6 +218,10 @@ void clear_hashmap_GC(struct hashmap_GC *t) {
         for (struct node_GC *n = t->list[i]; n; n = n->next)
           release_node(t, n);
 
+    for (size_t i = 0; i < t->inline_count; i++)
+      free_key(t, &t->inline_values[i]);
+    free_list_nodes(t);
+
     t->order = 1;
     t->count = 0;
     t->inline_count = 0;
@@ -211,37 +234,46 @@ void clear_hashmap_GC(struct hashmap_GC *t) {
 
 struct node_GC **hashmap_GC_to_array(struct hashmap_GC *t,
                                      size_t *array_length) {
-  RWBLOCK size_t cap = 8;
+  RWBLOCK struct node_GC **arr = NULL;
   *array_length = 0;
-  RWBLOCK struct node_GC **arr = ar_alloc(cap * sizeof(*arr));
 
   RWLOCK_RDLOCK(t->lock, {
-    // Inline values
-    for (size_t i = 0; i < t->inline_count; i++) {
-      if (*array_length == cap) {
-        cap *= 2;
-        arr = ar_realloc(arr, cap * sizeof(*arr));
-      }
-      arr[(*array_length)++] = &t->inline_values[i];
-    }
+    size_t n = t->inline_count;
+    for (size_t i = 0; t->list && i < (size_t)t->size; i++)
+      for (struct node_GC *node = t->list[i]; node; node = node->next)
+        n++;
 
-    // Hash list
-    for (size_t i = 0; i < t->size; i++) {
-      struct node_GC *n = t->list[i];
-      while (n) {
-        if (*array_length == cap) {
-          cap *= 2;
-          arr = ar_realloc(arr, cap * sizeof(*arr));
-        }
-        arr[(*array_length)++] = n;
-        n = n->next;
-      }
+    // One block: the pointer array, then the node copies it points at.
+    arr = ar_alloc(n * (sizeof(struct node_GC *) + sizeof(struct node_GC)) +
+                   1);
+    struct node_GC *copies = (struct node_GC *)(arr + n);
+    for (size_t i = 0; i < t->inline_count; i++)
+      copies[(*array_length)++] = t->inline_values[i];
+    for (size_t i = 0; t->list && i < (size_t)t->size; i++)
+      for (struct node_GC *node = t->list[i]; node; node = node->next)
+        copies[(*array_length)++] = *node;
+    for (size_t i = 0; i < n; i++) {
+      copies[i].next = NULL;
+      arr[i] = &copies[i];
     }
   });
 
   qsort(arr, *array_length, sizeof(struct node_GC *), compare_node_asc);
 
   return arr;
+}
+
+void hashmap_GC_free_array(struct node_GC **array) { ar_free_owned(array); }
+
+void hashmap_GC_free(struct hashmap_GC *t) {
+  if (!t)
+    return;
+  for (size_t i = 0; i < t->inline_count; i++)
+    free_key(t, &t->inline_values[i]);
+  free_list_nodes(t);
+  ar_free_owned(t->list);
+  RWLOCK_DESTROY(&t->lock);
+  ar_free_owned(t);
 }
 
 int hashmap_remove_GC(struct hashmap_GC *t, uint64_t hash) {
@@ -253,6 +285,7 @@ int hashmap_remove_GC(struct hashmap_GC *t, uint64_t hash) {
     for (size_t i = 0; i < t->inline_count; i++) {
       if (t->inline_values[i].hash == hash) {
         release_node(t, &t->inline_values[i]);
+        free_key(t, &t->inline_values[i]);
         memmove(&t->inline_values[i], &t->inline_values[i + 1],
                 (t->inline_count - i - 1) * sizeof(struct node_GC));
         t->inline_count--;
@@ -279,6 +312,8 @@ int hashmap_remove_GC(struct hashmap_GC *t, uint64_t hash) {
           // insert...) keep doubling their bucket array forever.
           t->hashmap_count--;
           t->count--;
+          free_key(t, cur);
+          ar_free_owned(cur);
           result = 1;
           break;
         }
@@ -391,13 +426,14 @@ void hashmap_GC_for_each_value(struct hashmap_GC *t, gc_visit_fn visit,
       visit(n->val, ctx);
 }
 
-void hashmap_GC_claim(struct hashmap_GC *t, void *holder) {
+bool hashmap_GC_claim(struct hashmap_GC *t, void *holder) {
   if (!t)
-    return;
+    return false;
   if (!t->gc_owner)
     t->gc_owner = holder;
   else if (t->gc_owner != (GCHeader *)holder)
     gc_incref(t->gc_owner); // a view keeps the owner (and so the map) alive
+  return t->gc_owner == (GCHeader *)holder;
 }
 
 void hashmap_GC_traverse_from(struct hashmap_GC *t, void *holder,

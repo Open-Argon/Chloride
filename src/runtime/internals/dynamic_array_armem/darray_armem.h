@@ -35,6 +35,9 @@ void darray_armem_init(darray_armem *arr, size_t element_size, size_t initial_si
 // initial_size elements start out NULL.
 void darray_armem_init_objects(darray_armem *arr, size_t initial_size);
 
+// Free the element buffer (not the elements, and not `arr` itself).
+void darray_armem_free_data(darray_armem *arr);
+
 // Element `index` of an object array, as an lvalue-friendly pointer.
 #define DARRAY_OBJECT_SLOT(arr, index)                                         \
   ((ArgonObject **)darray_armem_get((arr), (index)))

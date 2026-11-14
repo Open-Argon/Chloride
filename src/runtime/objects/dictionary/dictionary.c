@@ -184,6 +184,7 @@ ARGON_METHOD(ARGON_DICTIONARY_TYPE, __string__, {
   string_length += length;
   ArgonObject *result = new_string_object(string, string_length, 0);
   free(string);
+  hashmap_GC_free_array(nodes);
   hashmap_remove(is_being_repr, (uint64_t)object);
   if (!is_being_repr->count)
     hashmap_free(is_being_repr, NULL);
@@ -328,6 +329,7 @@ ARGON_METHOD(ARGON_DICTIONARY_TYPE, __iter__, {
   }
   it->size = size;
   gc_incref_each(it->pairs, 2 * size); // the snapshot holds its own references
+  hashmap_GC_free_array(nodes);
 
   return iterator;
 })
@@ -389,6 +391,10 @@ ArgonObject *create_dictionary(struct hashmap_GC *hashmap) {
   ArgonObject *object = new_instance(ARGON_DICTIONARY_TYPE, 0);
   object->type = TYPE_DICTIONARY;
   object->value.as_hashmap = hashmap;
-  hashmap_GC_claim(hashmap, object); // owner, or a view of someone else's map
+  // Owner, or a view of someone else's map. Remember which, without having
+  // to look at the map: when a view and its owner die together, the map may
+  // already be gone by the time the view is finalized.
+  if (hashmap_GC_claim(hashmap, object))
+    object->gc.flags |= GC_KIND_BIT;
   return object;
 }

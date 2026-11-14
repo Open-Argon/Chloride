@@ -198,9 +198,10 @@ int shell() {
     return resp;
   }
   cwk_path_join(CWD, "<shell>", path, sizeof(path));
+  // A copy: a string owns (and eventually frees) its characters, so it
+  // can't point at the static license text.
   add_to_scope(main_scope, "license",
-               new_string_object_without_memcpy((char *)LICENSE_txt,
-                                                LICENSE_txt_len, 0));
+               new_string_object((char *)LICENSE_txt, LICENSE_txt_len, 0));
 
   printf("Chloride %s Copyright (C) 2026 William Bell\n"
          "This program comes with ABSOLUTELY NO WARRANTY; for details type "

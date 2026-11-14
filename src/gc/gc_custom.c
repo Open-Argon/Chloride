@@ -15,8 +15,11 @@
 
 #ifdef ARGON_GC_CUSTOM
 
+#define _GNU_SOURCE // RTLD_NEXT
 #include "../memory.h"
 #include "gc.h"
+#include <dlfcn.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -37,16 +40,39 @@ void *ar_realloc(void *old, size_t size) {
 }
 
 void ar_free(void *ptr) { free(ptr); }
+void ar_free_owned(void *ptr) { free(ptr); }
 
 void ar_finalizer(void *obj, ar_finalizer_fn fn, void *client_data) {
   // Nothing registers finalizers today; see README.md, stage 7.
   (void)obj, (void)fn, (void)client_data;
 }
 
-// The collector is single-threaded until stage 6; for now a second thread
-// only switches allocation over to a lock.
-int ar_register_thread(void) {
+// The collector is single-threaded until stage 6. Once a second thread
+// exists, allocation takes a lock and safe points stop freeing (see gc.c).
+//
+// That switch has to flip *before* the new thread runs, not when it gets
+// round to calling ar_register_thread: a native that starts a thread often
+// hands it objects that nothing counts (the threading module passes a fresh
+// bound method), and a safe point on this thread in between would free them.
+// So, like Boehm's GC_pthread_create, we wrap pthread_create itself. The
+// executable exports this one symbol (see the Makefile), so calls from native
+// modules land here too.
+int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
+                   void *(*start)(void *), void *arg) {
+  static int (*real_pthread_create)(pthread_t *, const pthread_attr_t *,
+                                    void *(*)(void *), void *);
+  if (!real_pthread_create)
+    *(void **)&real_pthread_create = dlsym(RTLD_NEXT, "pthread_create");
+  if (!real_pthread_create) {
+    fprintf(stderr, "panic: gc: can't find the real pthread_create\n");
+    abort();
+  }
   gc_enable_thread_safety();
+  return real_pthread_create(thread, attr, start, arg);
+}
+
+int ar_register_thread(void) {
+  gc_enable_thread_safety(); // already on (pthread_create), but be safe
   return 0;
 }
 int ar_unregister_thread(void) { return 0; }

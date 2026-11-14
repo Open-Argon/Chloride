@@ -220,9 +220,17 @@ Every managed object starts with a `GCHeader`:
 
 ### Freeing an object
 
-`dealloc(kind)` decrefs each child the object holds (children reaching zero
-join the ZCT), frees the object's owned buffers, then returns the cell to its
-page's free list.
+Three steps (`free_object` in `gc.c`):
+
+1. `traverse` with a visitor that decrefs each child (children reaching zero
+   join the ZCT, so even a million-long list is freed without recursion);
+2. the kind's `finalize` frees the buffers the object owns (in
+   `runtime/gc_kinds.c`, next to `traverse`);
+3. the cell goes back on its page's free list.
+
+A garbage cycle is freed the same way, except that step 1 runs for *every*
+object in the cycle before any step 2, so no finalizer can free something
+another member's traverse still needs.
 
 ### A safe point
 
@@ -250,6 +258,23 @@ if (zct is big enough || cycle collection is due)
 `NOFREE` + `VERIFY` is how the conversion gets done: run a program, read the
 list of miscounted objects (the verifier names the kind and the holder), fix
 those stores, and repeat until it's clean. Then try it with freeing on.
+
+**AddressSanitizer** catches mistakes in what gets freed (double frees,
+freeing something not owned, using a freed buffer), because owned buffers
+come from `malloc` in the custom build. Object cells come from our own pages,
+which ASan can't see inside; `NOFREE` + `VERIFY` covers those instead.
+
+```
+make GC=custom full-debug     # bin/argon-customgc with ASan
+ARGON_GC_STRESS=50 ASAN_OPTIONS=hard_rss_limit_mb=1500:detect_leaks=0 \
+    ./bin/argon-customgc program.ar
+```
+
+ASan needs a huge virtual address range, so cap it with `hard_rss_limit_mb`
+rather than `ulimit -v`. With `detect_leaks=1` *and* `ARGON_GC_STATS=1` (which
+collects once more at exit) the leak report lists what's really left: only
+program-lifetime data (bytecode, bootstrap objects), which LSan reports
+because the pointers to it live in our pages where it can't look.
 
 ---
 
@@ -279,12 +304,17 @@ those stores, and repeat until it's clean. Then try it with freeing on.
       (most stdlib natives: file, network, regex, subprocess, ...) haven't
       been verified yet: run your programs with
       `ARGON_GC_NOFREE=1 ARGON_GC_VERIFY=1 ARGON_GC_STRESS=10000` to check.
-- [ ] **5. Freeing on.** Write `finalize` for each type, freeing what it owns
-      (some value structs live inline in the object's cell, others are
-      separate allocations, so this needs care). Boehm never calls
-      `finalize`, so owned buffers need a small allocator wrapper (`malloc`/
-      `free` in the custom build, Boehm in the Boehm build). Then turn freeing
-      on and stress-test with `ARGON_GC_STRESS`.
+- [x] **5. Freeing on.** `finalize` for `ArgonObject` (per type) and `Stack`
+      frees what they own: string characters, bignum limbs, array buffers,
+      dictionaries' and attribute dicts' hashmaps (with their nodes and owned
+      keys), buffer data, dictionary-iterator snapshots. Value structs inside
+      the object's own cell are left alone. The VM frees its frames, pending
+      calls and temporary argument arrays, hashmaps free removed nodes, and
+      hashmap snapshots are copies that their users free. `ar_free_owned` is
+      `free` in the custom build and does nothing under Boehm, so the Boehm
+      build behaves exactly as before. Checked with ASan under
+      `ARGON_GC_STRESS`: no errors, and output identical to Boehm. The stress
+      script now peaks at 269 MB (Boehm: 243 MB; before this stage: 728 MB).
 - [ ] **6. Threads.** Atomic refcounts (or biased refcounting), per-thread
       epochs and ZCTs, cooperative stop-the-world at safe points.
 - [ ] **7. Later.** Generations for the cycle collector, finalizers, freeing
@@ -294,16 +324,19 @@ those stores, and repeat until it's clean. Then try it with freeing on.
 
 * **Threads.** Until stage 6, once a second thread starts, allocation takes a
   lock and safe points stop freeing anything (counts aren't atomic, and other
-  threads' VM roots aren't traced). Correct, but memory then only grows.
+  threads' VM roots aren't traced). Correct, but memory then only grows. The
+  switch flips inside our `pthread_create` wrapper (`gc_custom.c`, the same
+  trick as Boehm's `GC_pthread_create`), so it happens *before* the new
+  thread runs: natives often hand a new thread objects nothing counts, and a
+  safe point in between would free them.
 * **Error objects written through pointers.** `err_object_to_err` hands
   natives a pointer into an error object; writes through it aren't counted.
   Only the threading module does this, and threads already disable freeing.
-* **Owned buffers aren't freed yet** (stage 5), so the custom build frees
-  object cells but still leaks every array buffer, hashmap node and string.
-
+* **Natives keeping objects in `malloc`'d memory** (like the threading
+  module's `thread_arg`) aren't counted. Stage 6 needs incref/decref in the
+  native API so they can be.
 * **ZCT growth inside long native calls.** Temporaries created by a lambda
   that `map` calls die at the next safe point inside the nested loop, which is
   fine. But objects *older* than the nested call that die during it wait until
   the call returns.
 * **Bytecode and constants** are treated as immortal for now.
-* **Threads** are not supported by the custom backend until stage 6.

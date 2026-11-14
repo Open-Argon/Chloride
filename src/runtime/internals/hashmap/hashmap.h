@@ -7,6 +7,7 @@
 #ifndef HASHMAP_GC_H
 #define HASHMAP_GC_H
 
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 #include "../../../RWLock.h"
@@ -47,6 +48,8 @@ struct hashmap_GC {
 #define HASHMAP_GC_OBJECT_KEYS 1
 #define HASHMAP_GC_OBJECT_VALUES 2
 #define HASHMAP_GC_OBJECTS (HASHMAP_GC_OBJECT_KEYS | HASHMAP_GC_OBJECT_VALUES)
+// Keys are buffers the map owns (from ar_alloc); freed with their entry.
+#define HASHMAP_GC_OWNS_KEYS 4
 
 /* Public API (thread-safe) */
 
@@ -63,7 +66,8 @@ void hashmap_GC_traverse(struct hashmap_GC *t, gc_visit_fn visit, void *ctx);
 // `import` returns, which is a live view of the module's scope) is a *view*:
 // it holds a counted reference to the owner rather than to the entries, so
 // the entries are only ever counted, traversed and freed once.
-void hashmap_GC_claim(struct hashmap_GC *t, void *holder);
+// Returns true if `holder` is (now) the owner.
+bool hashmap_GC_claim(struct hashmap_GC *t, void *holder);
 
 // What `holder` should traverse for the map it holds: the entries if it owns
 // the map, or just the owner if it's a view.
@@ -76,10 +80,20 @@ void hashmap_GC_for_each_value(struct hashmap_GC *t, gc_visit_fn visit,
 
 void clear_hashmap_GC(struct hashmap_GC *t);
 
+// A snapshot of the entries in insertion order. The nodes are copies, so the
+// snapshot stays valid even if the map changes (or is freed) meanwhile; its
+// keys and values aren't counted, so hold on to the map while using it.
+// Release it with hashmap_GC_free_array.
 struct node_GC **hashmap_GC_to_array(
     struct hashmap_GC *t,
     size_t *array_length
 );
+void hashmap_GC_free_array(struct node_GC **array);
+
+// Free the map's own memory (entries, buckets, owned keys, the struct). Does
+// NOT decref the keys/values: for GC finalizers, where the collector has
+// already released them through traverse.
+void hashmap_GC_free(struct hashmap_GC *t);
 
 int hashmap_remove_GC(struct hashmap_GC *t, uint64_t hash);
 

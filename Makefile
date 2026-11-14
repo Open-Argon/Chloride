@@ -66,6 +66,8 @@ ifeq ($(GC),boehm)
 CFLAGS += -Iexternal/bdwgc/include $(shell pkg-config --cflags bdw-gc)
 else ifeq ($(GC),custom)
 CFLAGS += -DARGON_GC_CUSTOM
+# gc_custom.c wraps pthread_create; export it so native modules use it too
+LDFLAGS += -Wl,--export-dynamic-symbol=pthread_create
 # separate binary so both backends can be compared side by side
 BINARY := $(BINARY:bin/argon%=bin/argon-customgc%)
 else

@@ -198,3 +198,10 @@ darray_armem darray_armem_slice(darray_armem *arr, size_t start, size_t end) {
 
   return slice;
 }
+
+void darray_armem_free_data(darray_armem *arr) {
+  ar_free_owned(arr->data);
+  arr->data = NULL;
+  arr->size = arr->capacity = 0;
+  RWLOCK_DESTROY(&arr->lock);
+}

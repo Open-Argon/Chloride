@@ -49,6 +49,7 @@ void *ar_alloc_uncollectable(size_t size) {
 }
 
 void ar_free(void *ptr) { GC_FREE(ptr); }
+void ar_free_owned(void *ptr) { (void)ptr; }
 
 void ar_finalizer(void *obj, ar_finalizer_fn fn, void *client_data) {
   GC_register_finalizer_no_order(obj, fn, client_data, NULL, NULL);
@@ -85,6 +86,7 @@ void *gc_new(uint8_t kind, size_t size) {
   return h;
 }
 
+size_t gc_object_size(const void *obj) { return GC_size(obj); }
 void gc_immortalize(void *obj) { (void)obj; }
 void gc_immortalize_all(void) {}
 void gc_register_static(void *obj) { (void)obj; }

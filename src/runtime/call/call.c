@@ -217,6 +217,7 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
                                 (int)object_name->value.as_str->length,
                                 object_name->value.as_str->data,
                                 (int)name->length, name->data);
+              hashmap_GC_free_array(kwargs_array);
               free(bound);
               return;
             }
@@ -245,6 +246,7 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
                     (int)object_name->value.as_str->length,
                     object_name->value.as_str->data, (int)name->length,
                     name->data);
+                hashmap_GC_free_array(kwargs_array);
                 free(bound);
                 return;
               }
@@ -265,6 +267,7 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
                 TypeError, "%.*s got an unexpected keyword argument '%.*s'",
                 (int)object_name->value.as_str->length,
                 object_name->value.as_str->data, (int)name->length, name->data);
+            hashmap_GC_free_array(kwargs_array);
             free(bound);
             return;
           }
@@ -276,6 +279,7 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
               0);
         }
       }
+      hashmap_GC_free_array(kwargs_array);
     }
 
     // ── fill defaults for unbound params ──────────────────────────────────
@@ -374,6 +378,7 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
                          state->c_depth + 1},
           scope, err);
       state->registers[0] = registers[0];
+      ar_free_owned(registers);
       return;
     }
     StackFrame *currentStackFrame = ar_alloc(
@@ -442,6 +447,8 @@ void run_call(ArgonObject *original_object, size_t argc, ArgonObject **argv,
     }
     state->registers[0] =
         object->value.native_fn(argc, argv, kwargs, err, state, &native_api);
+    if (binding_object && argc > 1) // the copy with `self` prepended
+      ar_free_owned(argv);
     if (KeyboardInterrupted) {
       err->ptr = KeyboardInterrupt_instance;
       KeyboardInterrupted = 0;

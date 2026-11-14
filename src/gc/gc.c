@@ -188,6 +188,8 @@ void gc_bad_decref(GCHeader *h) {
     abort(); // memory is about to be corrupted; stop while it's debuggable
 }
 
+size_t gc_object_size(const void *obj) { return heap_cell_size(obj); }
+
 void gc_immortalize(void *obj) {
   GCHeader *h = obj;
   if (h)

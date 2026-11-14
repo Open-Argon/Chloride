@@ -30,6 +30,12 @@ char *ar_strdup(const char *str);
 
 void ar_finalizer(void *obj, ar_finalizer_fn fn, void *client_data);
 
+// Free a buffer that exactly one owner (a managed object, or the VM) holds,
+// from ar_alloc / ar_alloc_atomic / ar_realloc. Called by GC finalizers and
+// when the VM drops frames. With Boehm it does nothing: Boehm reclaims the
+// memory by itself, and freeing early could only add risk there.
+void ar_free_owned(void *ptr);
+
 // --- uncollectable heap ---------------------------------------------------
 // Never freed by the collector, but scanned for pointers (i.e. acts as a root).
 // Must be released with ar_free.

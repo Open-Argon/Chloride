@@ -210,7 +210,8 @@ static void insert_attribute(ArgonObject *target, const char *name,
                              ArgonObject *object) {
   if (!target->dict) {
     // Keys are C strings owned by the dict, values are (counted) objects.
-    target->dict = createHashmap_GC_with(HASHMAP_GC_OBJECT_VALUES);
+    target->dict =
+        createHashmap_GC_with(HASHMAP_GC_OBJECT_VALUES | HASHMAP_GC_OWNS_KEYS);
     hashmap_GC_claim(target->dict, target);
   }
   // An existing entry keeps its key; only a new entry needs a copy.

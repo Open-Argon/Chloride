@@ -4,17 +4,26 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-// What every managed type points at, for the garbage collector.
+// What every managed type points at, and what it owns, for the garbage
+// collector.
 //
-// Each traverse function must visit exactly the references the type *counts*
-// (see the rules in src/gc/README.md). When you add a field that holds an
-// ArgonObject or a Stack to any of these structs, add it here too, or the
-// collector won't know the object keeps it alive.
+// traverse must visit exactly the references the type *counts* (see the rules
+// in src/gc/README.md). When you add a field that holds an ArgonObject or a
+// Stack to any of these structs, add it there too, or the collector won't
+// know the object keeps it alive.
+//
+// finalize frees the memory the object owns *by itself*: buffers allocated
+// separately from the object's own cell (value structs placed right after the
+// object, `(char *)obj + sizeof(ArgonObject)`, are part of the cell and go
+// with it). It never decrefs: the collector has already released the
+// object's references through traverse by the time finalize runs.
 
 #include "gc_kinds.h"
 #include "../arobject.h"
 #include "../gc/gc.h"
+#include "../memory.h"
 #include "objects/object.h"
+#include <gmp.h>
 #include <stdio.h>
 
 uint8_t ARGON_OBJECT_GC_KIND;
@@ -155,10 +164,62 @@ static void object_describe(GCHeader *h, char *buf, size_t len) {
   snprintf(buf, len, "%s", type_name(o->type));
 }
 
+// Free `p` unless it lives inside the object's own cell.
+static void free_unless_inline(ArgonObject *o, void *p) {
+  char *cell = (char *)o;
+  if (p && !((char *)p >= cell && (char *)p < cell + gc_object_size(o)))
+    ar_free_owned(p);
+}
+
+static void object_finalize(GCHeader *h) {
+  ArgonObject *o = (ArgonObject *)h;
+
+  // An attribute dict always belongs to its object (it's never shared).
+  hashmap_GC_free(o->dict);
+
+  switch (o->type) {
+  case TYPE_STRING:
+    if (o->value.as_str)
+      free_unless_inline(o, o->value.as_str->data); // the characters
+    break;
+  case TYPE_NUMBER: {
+    struct as_number *n = o->value.as_number;
+    if (n && !n->is_int64 && n->n.mpq) { // a big or fractional number
+      mpq_clear(*n->n.mpq);              // its limbs
+      free_unless_inline(o, n->n.mpq);
+    }
+    break;
+  }
+  case TYPE_ARRAY:
+    if (o->value.as_array) {
+      darray_armem_free_data(o->value.as_array);
+      free_unless_inline(o, o->value.as_array);
+    }
+    break;
+  case TYPE_DICTIONARY:
+    // Only if it owns the map: a view (see create_dictionary) doesn't.
+    if (h->flags & GC_KIND_BIT)
+      hashmap_GC_free(o->value.as_hashmap);
+    break;
+  case TYPE_BUFFER:
+    if (o->value.as_buffer)
+      free_unless_inline(o, o->value.as_buffer->data);
+    break;
+  case TYPE_DICTIONARY_ITERATOR:
+    if (o->value.as_dictionary_iterator)
+      free_unless_inline(o, o->value.as_dictionary_iterator->pairs);
+    break;
+  // Everything else keeps its state inline (functions, tuples, the other
+  // iterators) or in slots, or owns nothing (native functions, errors).
+  default:
+    break;
+  }
+}
+
 static const GCKind object_kind = {
     .name = "ArgonObject",
     .traverse = object_traverse,
-    .finalize = NULL, // owned buffers are freed from stage 5 on
+    .finalize = object_finalize,
     .describe = object_describe,
 };
 
@@ -172,10 +233,16 @@ static void stack_traverse(GCHeader *h, gc_visit_fn visit, void *ctx) {
   VISIT(s->prev);
 }
 
+static void stack_finalize(GCHeader *h) {
+  // A scope's variables map is created by (and belongs to) its Stack. Views
+  // of it (the dictionary `import` returns) keep the Stack alive instead.
+  hashmap_GC_free(((Stack *)h)->scope);
+}
+
 static const GCKind stack_kind = {
     .name = "Stack",
     .traverse = stack_traverse,
-    .finalize = NULL,
+    .finalize = stack_finalize,
     .describe = NULL,
 };
 

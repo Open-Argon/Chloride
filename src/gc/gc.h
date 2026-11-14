@@ -50,6 +50,8 @@ enum {
   GC_REACHABLE = 1 << 4, // scratch: proven reachable from outside the set
   GC_DYING = 1 << 5,     // scratch: in a garbage cycle being freed
   GC_ROOTED = 1 << 6,    // scratch: held by an uncounted root (safe point)
+  GC_KIND_BIT = 1 << 7,  // not used by the collector: free for the kind's own
+                         // bookkeeping (it survives everything but freeing)
 };
 
 // ---------------------------------------------------------------------------
@@ -140,6 +142,11 @@ static inline void gc_decref(void *obj) { (void)obj; }
     for (size_t gc_i_ = 0, gc_n_ = (count); gc_i_ < gc_n_; gc_i_++)            \
       gc_incref(gc_items_[gc_i_]);                                             \
   } while (0)
+
+// Usable size in bytes of a managed object's memory (at least what was asked
+// for in gc_new). Lets a finalizer tell inline value structs from separate
+// allocations.
+size_t gc_object_size(const void *obj);
 
 // Make an object permanent: counting it does nothing and it is never freed.
 void gc_immortalize(void *obj);

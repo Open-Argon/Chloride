@@ -263,6 +263,7 @@ void append_objects_fields_recursively(darray_armem *array, hashmap_GC *used,
       hashmap_insert_GC(used, nodes[i]->hash, NULL, (void *)true, 0);
     }
   }
+  hashmap_GC_free_array(nodes);
 }
 
 ARGON_FUNCTION(__dir__, {
@@ -281,8 +282,9 @@ ARGON_FUNCTION(__dir__, {
   darray_armem_init_objects(output_array->value.as_array, 0);
 
   // A set of field hashes already seen: no keys, values are just `true`.
-  append_objects_fields_recursively(output_array->value.as_array,
-                                    createHashmap_GC_with(0), class);
+  hashmap_GC *seen = createHashmap_GC_with(0);
+  append_objects_fields_recursively(output_array->value.as_array, seen, class);
+  hashmap_GC_free(seen);
 
   return output_array;
 })
@@ -917,9 +919,13 @@ ARGON_METHOD(ARGON_STRING_TYPE, __init__, {
         argon_call(string_convert_method, 0, NULL, NULL, err, state);
     if (is_error(err))
       return ARGON_NULL;
-    init_string(self, string_object->value.as_str->data,
-                string_object->value.as_str->length,
-                string_object->value.as_str->hash);
+    // Copy the characters: they belong to string_object, and each string
+    // must own (and eventually free) its own.
+    size_t length = string_object->value.as_str->length;
+    char *data = ar_alloc_atomic(length + 1);
+    memcpy(data, string_object->value.as_str->data, length);
+    data[length] = '\0';
+    init_string(self, data, length, string_object->value.as_str->hash);
     return ARGON_NULL;
   }
   *err = create_err(ConversionError, "cannot convert to string");
@@ -1452,6 +1458,19 @@ int compare_by_order(const void *a, const void *b) {
   return itemA->order - itemB->order;
 }
 
+// A keyword-argument name for a call_instance's kwargs map, which owns it:
+// the string_struct and a copy of its characters in one block.
+static struct string_struct *new_kwargs_key(const char *data, size_t length,
+                                            uint64_t hash) {
+  struct string_struct *key =
+      ar_alloc(sizeof(struct string_struct) + length + 1);
+  char *chars = (char *)(key + 1);
+  memcpy(chars, data, length);
+  chars[length] = '\0';
+  *key = (struct string_struct){hash, chars, length};
+  return key;
+}
+
 static inline void load_const(uint8_t to_register, size_t length,
                               uint64_t offset, uint64_t hash,
                               Translated *translated, RuntimeState *state) {
@@ -1616,6 +1635,47 @@ static void trace_vm_roots(gc_visit_fn visit, void *ctx) {
 #undef VISIT
 
 void register_vm_roots(void) { gc_add_uncounted_roots(trace_vm_roots); }
+
+// ---------------------------------------------------------------------------
+// Freeing the VM's own memory (frames and pending calls belong to the VM,
+// not to the GC). ar_free_owned does nothing under Boehm.
+// ---------------------------------------------------------------------------
+
+static void free_call_instance(call_instance *ci) {
+  ar_free_owned(ci->args.arr);
+  hashmap_GC_free(ci->kwargs); // values are uncounted roots: nothing to drop
+  ar_free_owned(ci);
+}
+
+// Free the pending calls from `from` back to (not including) `until`.
+static void free_call_instances(call_instance *from, call_instance *until) {
+  while (from && from != until) {
+    call_instance *previous = from->previous;
+    free_call_instance(from);
+    from = previous;
+  }
+}
+
+// Does an exception handler of this frame remember `ci` (to restore it)?
+static bool catch_remembers(RuntimeState *state, call_instance *ci) {
+  for (size_t i = 0; state->catch_errors.data && i < state->catch_errors.size;
+       i++)
+    if (((ErrorCatch *)darray_armem_get(&state->catch_errors, i))
+            ->callInstance == ci)
+      return true;
+  return false;
+}
+
+// A frame that has finished (returned, or let an error out). Its registers
+// are either inside the same allocation or belong to whoever called
+// runtime(), so only the frame itself, its pending calls and its exception
+// handler list go here.
+static void free_frame(StackFrame *frame) {
+  free_call_instances(frame->state.call_instance, NULL);
+  if (frame->state.catch_errors.data)
+    darray_armem_free_data(&frame->state.catch_errors);
+  ar_free_owned(frame);
+}
 
 void runtime(Translated _translated, RuntimeState _state, Stack *stack,
              ArErr *err_ptr) {
@@ -1988,6 +2048,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
           hashmap_insert_GC(init_scope(stack)->scope, nodes[i]->hash,
                             nodes[i]->key, nodes[i]->val, 0);
         }
+        hashmap_GC_free_array(nodes);
         continue;
       }
     DO_EXPOSE:
@@ -2252,9 +2313,11 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
         *key = (struct string_struct){
             hash, arena_get(&translated->constants, offset), length};
         if (!state->call_instance->kwargs)
-          // Keys are struct string_struct *. Like the rest of a pending
+          // Keys are struct string_struct * that the map owns (one block:
+          // the struct, then its characters). Like the rest of a pending
           // call, the values are uncounted VM roots (see trace_vm_roots).
-          state->call_instance->kwargs = createHashmap_GC_with(0);
+          state->call_instance->kwargs =
+              createHashmap_GC_with(HASHMAP_GC_OWNS_KEYS);
         hashmap_insert_GC(state->call_instance->kwargs, hash, key,
                           state->registers[0], 0);
         continue;
@@ -2262,9 +2325,11 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
     DO_UNPACK_KEY_WORD_ARGS:
       {
         if (!state->call_instance->kwargs)
-          // Keys are struct string_struct *. Like the rest of a pending
+          // Keys are struct string_struct * that the map owns (one block:
+          // the struct, then its characters). Like the rest of a pending
           // call, the values are uncounted VM roots (see trace_vm_roots).
-          state->call_instance->kwargs = createHashmap_GC_with(0);
+          state->call_instance->kwargs =
+              createHashmap_GC_with(HASHMAP_GC_OWNS_KEYS);
 
         ArgonObject *object = state->registers[0];
         ArgonObject *iterator_method =
@@ -2328,12 +2393,9 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
 
           // Copy the key: as_str belongs to the key string object, which
           // nothing else keeps alive.
-          struct string_struct *key_copy =
-              ar_alloc(sizeof(struct string_struct));
-          char *key_data = ar_alloc_atomic(key->value.as_str->length + 1);
-          memcpy(key_data, key->value.as_str->data, key->value.as_str->length);
-          *key_copy = (struct string_struct){key->value.as_str->hash, key_data,
-                                             key->value.as_str->length};
+          struct string_struct *key_copy = new_kwargs_key(
+              key->value.as_str->data, key->value.as_str->length,
+              key->value.as_str->hash);
           hashmap_insert_GC(state->call_instance->kwargs, hash, key_copy,
                             value, 0);
         }
@@ -2346,7 +2408,14 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
                  state->call_instance->args.length,
                  state->call_instance->args.arr, state->call_instance->kwargs,
                  state, false, &err);
-        state->call_instance = (*state->call_instance).previous;
+        {
+          // The call has been made: a native has returned, or an Argon
+          // callee has bound its arguments into its own scope.
+          call_instance *done = state->call_instance;
+          state->call_instance = done->previous;
+          if (!catch_remembers(state, done))
+            free_call_instance(done);
+        }
         ip = currentStackFrame->state.head;
         bytecode = &currentStackFrame->translated.bytecode;
         bytecode_size = bytecode->size;
@@ -3444,6 +3513,9 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
         currentStackFrame = err_catch.stackFrame;
         currentStackFrame->stack = err_catch.stack;
         currentStackFrame->state.registers[0] = err.ptr;
+        // Calls started after the handler was pushed will never be made.
+        free_call_instances(currentStackFrame->state.call_instance,
+                            err_catch.callInstance);
         currentStackFrame->state.call_instance = err_catch.callInstance;
         err.ptr = ARGON_NULL;
         currentStackFrame->state.head = err_catch.jump_to;
@@ -3451,7 +3523,9 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       }
     }
     ArgonObject *result = currentStackFrame->state.registers[0];
+    StackFrame *finished = currentStackFrame;
     currentStackFrame = currentStackFrame->previousStackFrame;
+    free_frame(finished);
     if (currentStackFrame)
       currentStackFrame->state.registers[0] = result;
   }
