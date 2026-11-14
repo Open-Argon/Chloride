@@ -274,8 +274,8 @@ void gc_init(void);
 // Threads (see README.md, "Threads")
 // ---------------------------------------------------------------------------
 
-// Thread lifecycle. The custom backend calls these from its pthread_create
-// wrapper: gc_thread_started in the parent just *before* creating the
+// Thread lifecycle. The custom backend calls these through ar_prepare_thread
+// (memory.h): gc_thread_started in the parent just *before* creating the
 // thread (it returns the new thread's record), gc_thread_adopt first thing
 // in the new thread, and gc_thread_finished when its start routine is done.
 void *gc_thread_started(void);

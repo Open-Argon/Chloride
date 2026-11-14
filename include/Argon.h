@@ -151,6 +151,15 @@ struct ArgonNativeAPI {
   // struct so natives built against an older Argon.h keep working.)
   void (*blocking_begin)(void);
   void (*blocking_end)(void);
+
+  // Required before starting any thread that will use this API or hold
+  // Argon objects (with pthread_create, CreateThread, ...): pass its start
+  // routine and argument through prepare_thread and start the thread with
+  // what comes back, so the garbage collector knows about the thread before
+  // it runs (otherwise objects handed to it can be freed). If starting it
+  // fails, call cancel_thread with the argument prepare_thread gave you.
+  void (*prepare_thread)(void *(**start)(void *), void **arg);
+  void (*cancel_thread)(void *arg);
 };
 
 #define ARGON_STRING_FROM_C_STRING(str)                                        \

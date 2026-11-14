@@ -43,6 +43,14 @@ void *ar_alloc_uncollectable(size_t size);
 void ar_free(void *ptr);
 
 // --- threads ----------------------------------------------------------------
+// Before starting a thread (with pthread_create, CreateThread, ...), pass its
+// start routine and argument through ar_prepare_thread, and start the thread
+// with what it gives back. That tells the collector about the thread before
+// it runs. If creating the thread then fails, call ar_cancel_thread with the
+// argument ar_prepare_thread gave you.
+void ar_prepare_thread(void *(**start)(void *), void **arg);
+void ar_cancel_thread(void *arg);
+
 // Any thread other than the main thread must register before touching the
 // heap, and unregister before it exits.
 int ar_register_thread(void);

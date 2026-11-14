@@ -96,7 +96,13 @@ ARGON_FUNCTION(Thread, {
   atomic_init(&gc_args->status, UNCHANGED);
   atomic_init(&gc_args->finished, 0);
   atomic_init(&gc_args->freed, 0);
-  if (mt_thread_start(&gc_args->thread, thread_fn, gc_args) != 0) {
+  // Let the garbage collector know about the thread before it starts: it
+  // will hold gc_args->target, which nothing counts.
+  void *(*start)(void *) = thread_fn;
+  void *start_arg = gc_args;
+  api->prepare_thread(&start, &start_arg);
+  if (mt_thread_start(&gc_args->thread, start, start_arg) != 0) {
+    api->cancel_thread(start_arg);
     return api->throw_argon_error(err, api->RuntimeError,
                                   "Failed to create thread");
   }

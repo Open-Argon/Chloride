@@ -285,5 +285,8 @@ ArgonNativeAPI native_api = {
     .create_argon_array = create_array,
 
     .blocking_begin = gc_blocking_begin,
-    .blocking_end = gc_blocking_end
+    .blocking_end = gc_blocking_end,
+
+    .prepare_thread = ar_prepare_thread,
+    .cancel_thread = ar_cancel_thread
 };

@@ -12,11 +12,10 @@
 
 #include "gc_internal.h"
 #include "heap.h"
-#include <pthread.h>
+#include "platform.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
 
 // Process the ZCT once it holds this many entries (more than the ones we had
 // to keep last time). Small = prompt freeing, large = less overhead.
@@ -68,6 +67,7 @@ typedef struct GCThread {
   gc_epoch epoch;
   void *roots; // for gc_add_thread_roots tracers (runtime.c's frame list)
   int blocking_depth;
+  bool self_registered; // made by gc_thread_attach, not gc_thread_started
   struct {
     gc_epoch epoch;
     int state;
@@ -77,18 +77,18 @@ typedef struct GCThread {
 
 bool gc_multithreaded;
 static size_t live_threads; // extra threads started but not yet finished
-static pthread_mutex_t alloc_lock = PTHREAD_MUTEX_INITIALIZER;
+static gc_mutex alloc_lock = GC_MUTEX_INIT;
 
 static GCThread main_thread = {.state = GC_THREAD_RUNNING};
 static GCThread *threads = &main_thread; // the registry
 static __thread GCThread *self;          // this thread's record
-static pthread_mutex_t threads_lock = PTHREAD_MUTEX_INITIALIZER;
-static pthread_cond_t parked_cv = PTHREAD_COND_INITIALIZER;
-static pthread_cond_t resume_cv = PTHREAD_COND_INITIALIZER;
+static gc_mutex threads_lock = GC_MUTEX_INIT;
+static gc_cond parked_cv = GC_COND_INIT;
+static gc_cond resume_cv = GC_COND_INIT;
 static bool stop_requested; // guarded by threads_lock; read racily as a hint
 static size_t retry_after_alloc; // backoff after a stop attempt timed out
 
-#define STOP_TIMEOUT_NS 2000000 // how long to wait for others to park: 2 ms
+#define STOP_TIMEOUT_MS 2.0 // how long to wait for others to park
 #define RETRY_ALLOCS 20000      // don't try again for this many allocations
 
 static gc_thread_root_tracer *thread_root_tracers;
@@ -100,9 +100,9 @@ static uint64_t current_birth(void) {
   return __atomic_load_n(&birth_counter, __ATOMIC_RELAXED);
 }
 
-// Threads not created through our pthread_create wrapper have no record;
-// they get a private one so the API still works, but no collection ever
-// knows about them (they mustn't touch objects).
+// Threads not started through ar_prepare_thread have no record until they
+// call the native API's register_thread (see gc_thread_attach); until then
+// they get a private one, which no collection knows about.
 static __thread GCThread unknown_thread;
 static GCThread *me(void) { return self ? self : &unknown_thread; }
 
@@ -116,16 +116,16 @@ void *gc_thread_started(void) {
   // Everything that exists now may have been handed to the new thread, and
   // nothing counts those references: protect it all until the thread enters
   // runtime() (whose epoch is later) or finishes.
-  pthread_mutex_lock(&threads_lock); // waits for any collection in progress
+  gc_mutex_lock(&threads_lock); // waits for any collection in progress
   t->epoch = current_birth();
   t->next = threads;
   threads->prev = t;
   threads = t;
-  pthread_mutex_lock(&alloc_lock);
+  gc_mutex_lock(&alloc_lock);
   live_threads++;
   __atomic_store_n(&gc_multithreaded, true, __ATOMIC_RELEASE);
-  pthread_mutex_unlock(&alloc_lock);
-  pthread_mutex_unlock(&threads_lock);
+  gc_mutex_unlock(&alloc_lock);
+  gc_mutex_unlock(&threads_lock);
   return t;
 }
 
@@ -133,21 +133,21 @@ void gc_thread_adopt(void *thread) { self = thread; }
 
 void gc_thread_finished(void *thread) {
   GCThread *t = thread;
-  pthread_mutex_lock(&threads_lock);
+  gc_mutex_lock(&threads_lock);
   if (t->prev)
     t->prev->next = t->next;
   else
     threads = t->next;
   if (t->next)
     t->next->prev = t->prev;
-  pthread_mutex_lock(&alloc_lock);
+  gc_mutex_lock(&alloc_lock);
   if (--live_threads == 0) {
     __atomic_store_n(&gc_multithreaded, false, __ATOMIC_RELEASE);
     gc_work_due = true; // catch up on everything that died meanwhile
   }
-  pthread_mutex_unlock(&alloc_lock);
-  pthread_cond_broadcast(&parked_cv); // a collector may be waiting on it
-  pthread_mutex_unlock(&threads_lock);
+  gc_mutex_unlock(&alloc_lock);
+  gc_cond_broadcast(&parked_cv); // a collector may be waiting on it
+  gc_mutex_unlock(&threads_lock);
   if (self == t)
     self = NULL;
   free(t);
@@ -157,28 +157,38 @@ void gc_thread_finished(void *thread) {
 // be freeing things this thread is about to look at. threads_lock held.
 static void resume_running(GCThread *t, int state) {
   while (stop_requested)
-    pthread_cond_wait(&resume_cv, &threads_lock);
+    gc_cond_wait(&resume_cv, &threads_lock);
   t->state = state;
 }
 
 void gc_thread_attach(void) {
+  if (!self) {
+    // A thread we weren't told about (its creator didn't use
+    // ar_prepare_thread): register it now. It's protected from here on,
+    // though not in the moment between its creation and this call.
+    GCThread *t = gc_thread_started();
+    t->self_registered = true;
+    self = t;
+  }
   GCThread *t = me();
-  pthread_mutex_lock(&threads_lock);
+  gc_mutex_lock(&threads_lock);
   resume_running(t, GC_THREAD_RUNNING);
-  pthread_mutex_unlock(&threads_lock);
+  gc_mutex_unlock(&threads_lock);
 }
 
 void gc_thread_detach(void) {
   GCThread *t = me();
-  pthread_mutex_lock(&threads_lock);
+  gc_mutex_lock(&threads_lock);
   t->state = GC_THREAD_BLOCKING;
-  pthread_cond_broadcast(&parked_cv);
-  pthread_mutex_unlock(&threads_lock);
+  gc_cond_broadcast(&parked_cv);
+  gc_mutex_unlock(&threads_lock);
+  if (t->self_registered) // nobody else will finish it for us
+    gc_thread_finished(t);
 }
 
 void gc_blocking_begin(void) {
   GCThread *t = me();
-  pthread_mutex_lock(&threads_lock);
+  gc_mutex_lock(&threads_lock);
   if (t->blocking_depth < MAX_BLOCKING_DEPTH) {
     t->blocking_saved[t->blocking_depth].epoch = t->epoch;
     t->blocking_saved[t->blocking_depth].state = t->state;
@@ -187,20 +197,20 @@ void gc_blocking_begin(void) {
   // Whatever the blocked C code holds was born before now.
   t->epoch = current_birth();
   t->state = GC_THREAD_BLOCKING;
-  pthread_cond_broadcast(&parked_cv);
-  pthread_mutex_unlock(&threads_lock);
+  gc_cond_broadcast(&parked_cv);
+  gc_mutex_unlock(&threads_lock);
 }
 
 void gc_blocking_end(void) {
   GCThread *t = me();
-  pthread_mutex_lock(&threads_lock);
+  gc_mutex_lock(&threads_lock);
   if (t->blocking_depth > 0 && --t->blocking_depth < MAX_BLOCKING_DEPTH) {
     t->epoch = t->blocking_saved[t->blocking_depth].epoch;
     resume_running(t, t->blocking_saved[t->blocking_depth].state);
   } else {
     resume_running(t, t->state);
   }
-  pthread_mutex_unlock(&threads_lock);
+  gc_mutex_unlock(&threads_lock);
 }
 
 void **gc_thread_roots(void) { return &me()->roots; }
@@ -230,11 +240,7 @@ static size_t cycle_threshold = CYCLE_MIN;
 static GCStats stats;
 static double last_cycle_pause_ms;
 
-static double now_ms(void) {
-  struct timespec ts;
-  clock_gettime(CLOCK_MONOTONIC, &ts);
-  return ts.tv_sec * 1e3 + ts.tv_nsec / 1e6;
-}
+static double now_ms(void) { return gc_now_ms(); }
 
 static void *xrealloc(void *p, size_t size) {
   p = realloc(p, size);
@@ -304,7 +310,7 @@ void *gc_new(uint8_t kind, size_t size) {
   }
   bool lock = gc_threads_running();
   if (lock)
-    pthread_mutex_lock(&alloc_lock);
+    gc_mutex_lock(&alloc_lock);
   GCHeader *h = heap_alloc(size); // zeroed: refcount 0, gc_refs 0
   h->kind = kind;
   h->flags = GC_MORTAL;
@@ -324,16 +330,16 @@ void *gc_new(uint8_t kind, size_t size) {
     gc_work_due = true;
   }
   if (lock)
-    pthread_mutex_unlock(&alloc_lock);
+    gc_mutex_unlock(&alloc_lock);
   return h;
 }
 
 void gc_zero_count(GCHeader *h) {
   if (gc_threads_running()) {
-    pthread_mutex_lock(&alloc_lock);
+    gc_mutex_lock(&alloc_lock);
     if (!(h->flags & GC_IN_ZCT))
       zct_push(h);
-    pthread_mutex_unlock(&alloc_lock);
+    gc_mutex_unlock(&alloc_lock);
     return;
   }
   if (!(h->flags & GC_IN_ZCT))
@@ -364,10 +370,10 @@ void gc_immortalize(void *obj) {
   // on another thread, so change them under the lock while threads run.
   bool lock = gc_threads_running();
   if (lock)
-    pthread_mutex_lock(&alloc_lock);
+    gc_mutex_lock(&alloc_lock);
   h->flags &= ~GC_MORTAL; // the ZCT drops it next time it is processed
   if (lock)
-    pthread_mutex_unlock(&alloc_lock);
+    gc_mutex_unlock(&alloc_lock);
 }
 
 static void immortalize_cell(void *cell, void *ctx) {
@@ -672,9 +678,9 @@ static bool others_stopped(void) {
 // Called with threads_lock held, when another thread has asked to collect.
 static void park(GCThread *t) {
   t->state = GC_THREAD_PARKED;
-  pthread_cond_broadcast(&parked_cv);
+  gc_cond_broadcast(&parked_cv);
   while (stop_requested)
-    pthread_cond_wait(&resume_cv, &threads_lock);
+    gc_cond_wait(&resume_cv, &threads_lock);
   t->state = GC_THREAD_RUNNING;
 }
 
@@ -683,28 +689,22 @@ static void collect_world(bool full) {
   GCThread *t = me();
   if (!self) // an unknown thread never collects
     return;
-  pthread_mutex_lock(&threads_lock);
+  gc_mutex_lock(&threads_lock);
   if (stop_requested) { // someone else got there first
     park(t);
-    pthread_mutex_unlock(&threads_lock);
+    gc_mutex_unlock(&threads_lock);
     return;
   }
 
   stop_requested = true;
   gc_work_due = true; // sends every running thread into its slow path
-  struct timespec deadline;
-  clock_gettime(CLOCK_REALTIME, &deadline);
-  deadline.tv_nsec += STOP_TIMEOUT_NS;
-  if (deadline.tv_nsec >= 1000000000L) {
-    deadline.tv_sec++;
-    deadline.tv_nsec -= 1000000000L;
-  }
+  double deadline = now_ms() + STOP_TIMEOUT_MS;
   bool stopped = others_stopped();
   while (!stopped) {
-    if (pthread_cond_timedwait(&parked_cv, &threads_lock, &deadline) != 0) {
-      stopped = others_stopped();
+    double left = deadline - now_ms();
+    if (left <= 0)
       break; // timed out
-    }
+    gc_cond_wait_ms(&parked_cv, &threads_lock, left);
     stopped = others_stopped();
   }
 
@@ -724,8 +724,8 @@ static void collect_world(bool full) {
   }
 
   stop_requested = false;
-  pthread_cond_broadcast(&resume_cv);
-  pthread_mutex_unlock(&threads_lock);
+  gc_cond_broadcast(&resume_cv);
+  gc_mutex_unlock(&threads_lock);
 }
 
 static void run_safe_point(bool full) {
@@ -745,10 +745,10 @@ void gc_safe_point_slow(void) {
   if (__atomic_load_n(&gc_multithreaded, __ATOMIC_ACQUIRE)) {
     // Asked to stop for someone else's collection?
     if (__atomic_load_n(&stop_requested, __ATOMIC_ACQUIRE) && self) {
-      pthread_mutex_lock(&threads_lock);
+      gc_mutex_lock(&threads_lock);
       if (stop_requested)
         park(self);
-      pthread_mutex_unlock(&threads_lock);
+      gc_mutex_unlock(&threads_lock);
       return;
     }
     // Backing off after a stop attempt that timed out.

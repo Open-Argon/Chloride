@@ -63,6 +63,12 @@ int ar_register_thread(void) {
 
 int ar_unregister_thread(void) { return GC_unregister_my_thread(); }
 
+// Boehm learns about threads when they register; nothing to do beforehand.
+void ar_prepare_thread(void *(**start)(void *), void **arg) {
+  (void)start, (void)arg;
+}
+void ar_cancel_thread(void *arg) { (void)arg; }
+
 void ar_gc_collect(void) { GC_gcollect(); }
 
 // ---------------------------------------------------------------------------

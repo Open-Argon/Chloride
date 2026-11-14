@@ -188,6 +188,7 @@ memory.h        public API used by the interpreter (both backends)
 gc/gc.h         the API: GCHeader, kinds, incref/decref/gc_assign, epochs,
                 safe points, verifier (works in both builds)
 gc/heap.c       page allocator: size classes, free lists, page table
+gc/platform.h   mutex, condition variable, clock: Win32 or POSIX
 gc/gc.c         refcounts, ZCT, safe points, epochs, trial deletion
 gc/verify.c     debug verifier: recounts every reference and compares
 gc/gc_custom.c  memory.h for GC=custom; for now untyped ar_alloc is
@@ -320,9 +321,9 @@ because the pointers to it live in our pages where it can't look.
 - [x] **6a. Threads, stepping stone.** While any extra thread exists,
       refcounts are updated atomically and `gc_assign` swaps atomically, so
       counts stay exact even when threads share objects; allocation and the
-      ZCT take a lock; epochs are per thread; safe points don't free. The
-      `pthread_create` wrapper counts live threads, and when the last one
-      finishes, freeing resumes and catches up. Error objects (written
+      ZCT take a lock; epochs are per thread; safe points don't free. Live
+      threads are counted (now through `ar_prepare_thread`, see "Threads"),
+      and when the last one finishes, freeing resumes and catches up. Error objects (written
       through raw pointers by other threads) are uncounted roots rather than
       counted holders. Checked: verifier clean after six threads hammered a
       shared dict; ASan clean; 40/40 runs of the start-up race test.
@@ -362,13 +363,33 @@ object may only be freed if it was born after the current epoch of *every*
 thread. That's conservative: while one thread is deep in a native call that
 started recently, older garbage waits for a later collection.
 
-**Starting and stopping threads.** The `pthread_create` wrapper makes the new
-thread's record *in the parent*, as `BLOCKING`, with an epoch that protects
-every object existing at that moment, because natives hand new threads
-objects nothing counts (the threading module's `thread_arg`). The thread
-becomes `RUNNING` when it calls the native API's `register_thread`, goes back
-to `BLOCKING` at `unregister_thread`, and its record goes when its start
-routine returns.
+**Starting and stopping threads.** Natives hand new threads objects nothing
+counts (the threading module's `thread_arg` holds the function to run), so
+the collector must know about a thread *before* it runs. Whoever starts a
+thread passes its start routine and argument through `api->prepare_thread`
+(`ar_prepare_thread` inside the interpreter) and starts the thread - with
+`pthread_create`, `CreateThread`, whatever - using what comes back:
+
+```c
+void *(*start)(void *) = thread_fn;
+void *arg = my_arg;
+api->prepare_thread(&start, &arg);    // makes the thread's GC record now
+if (create_the_thread(start, arg) != 0)
+  api->cancel_thread(arg);            // no thread after all
+```
+
+The record is made *in the parent*, as `BLOCKING`, with an epoch that
+protects every object existing at that moment. What comes back is a
+trampoline that adopts the record, runs the real start routine, and
+finishes the record afterwards (on POSIX also on `pthread_exit` or
+cancellation). The thread becomes `RUNNING` when it calls the native API's
+`register_thread` and goes back to `BLOCKING` at `unregister_thread`.
+
+A thread started *without* `prepare_thread` gets a record late, when it
+calls `register_thread`. That's a fallback, not a safe alternative: objects
+handed to the thread can be freed before it registers (forcing this in a
+test gave wrong results in 3 runs out of 15). Any native that starts
+threads must use `prepare_thread`.
 
 **Blocking regions.** Natives that wait should wrap the wait in
 `api->blocking_begin()` / `api->blocking_end()`, and not touch any object in
@@ -378,10 +399,27 @@ between. `Join` (threading), `sleep` (time) and the shell's input already do.
 and `gc_assign` swaps atomically; allocation and the ZCT take a lock. With a
 single thread none of that costs anything.
 
-## 7. Open questions / known limits
+## 7. Platforms
 
-* **Threads created without `pthread_create`** aren't seen at all, and
-  mustn't touch objects.
+The custom backend is meant to build and run on Windows, macOS and Linux.
+What depends on the OS is kept in two places:
+
+| | Windows | macOS, Linux (POSIX) |
+|---|---|---|
+| pages (`heap.c`, "The OS layer") | `VirtualAlloc`, `VirtualFree`, `MEM_RESET`; pages mapped one at a time (`VirtualFree` releases whole allocations only) | `mmap`, `munmap`, `madvise`; 16 pages mapped at a time, over-mapped and trimmed for 64 KiB alignment |
+| locks, condition variables, clock (`platform.h`) | `SRWLOCK`, `CONDITION_VARIABLE`, `QueryPerformanceCounter` | pthreads, `clock_gettime` |
+
+Everything else is plain C11 plus GCC/Clang builtins (`__atomic_*`,
+`__typeof__`, `__builtin_ctzll`) and `__thread`, which MinGW-w64 GCC and
+Apple Clang both support. The page table assumes user addresses fit in 48
+bits, true of current 64-bit Windows, macOS and Linux; it aborts with a
+message if one doesn't. `make gc-test` uses AddressSanitizer, so it's a
+Linux/macOS developer target.
+
+## 8. Open questions / known limits
+
+* **Natives that start threads without `prepare_thread`** are unsafe (see
+  "Starting and stopping threads"). The threading module uses it.
 * **Unmarked waits** in natives (network reads, subprocess waits, ...) stop
   collection from happening while they wait (after a 2 ms attempt, with a
   backoff). Marking them with `blocking_begin/end` fixes that.

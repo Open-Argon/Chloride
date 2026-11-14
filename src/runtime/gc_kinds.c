@@ -24,7 +24,7 @@
 #include "../memory.h"
 #include "objects/object.h"
 #include <gmp.h>
-#include <pthread.h>
+#include "../gc/platform.h"
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -43,10 +43,10 @@ uint8_t STACK_GC_KIND;
 
 static ArgonObject **error_objects;
 static size_t error_object_count, error_object_cap;
-static pthread_mutex_t error_objects_lock = PTHREAD_MUTEX_INITIALIZER;
+static gc_mutex error_objects_lock = GC_MUTEX_INIT;
 
 void gc_track_error_object(ArgonObject *object) {
-  pthread_mutex_lock(&error_objects_lock);
+  gc_mutex_lock(&error_objects_lock);
   if (error_object_count == error_object_cap) {
     error_object_cap = error_object_cap ? error_object_cap * 2 : 16;
     error_objects =
@@ -57,17 +57,17 @@ void gc_track_error_object(ArgonObject *object) {
     }
   }
   error_objects[error_object_count++] = object;
-  pthread_mutex_unlock(&error_objects_lock);
+  gc_mutex_unlock(&error_objects_lock);
 }
 
 static void untrack_error_object(ArgonObject *object) {
-  pthread_mutex_lock(&error_objects_lock);
+  gc_mutex_lock(&error_objects_lock);
   for (size_t i = 0; i < error_object_count; i++)
     if (error_objects[i] == object) {
       error_objects[i] = error_objects[--error_object_count];
       break;
     }
-  pthread_mutex_unlock(&error_objects_lock);
+  gc_mutex_unlock(&error_objects_lock);
 }
 
 static void trace_error_objects(gc_visit_fn visit, void *ctx) {

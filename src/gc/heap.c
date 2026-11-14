@@ -17,20 +17,29 @@
 
 #ifdef ARGON_GC_CUSTOM
 
-#if defined(_WIN32)
-#error "GC=custom does not support Windows yet (heap.c needs VirtualAlloc)"
-#endif
-
 #include "heap.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#ifdef _WIN32
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <windows.h>
+#else
 #include <sys/mman.h>
+#endif
 
 #define PAGE_SHIFT 16
 #define PAGE_SIZE ((uintptr_t)1 << PAGE_SHIFT) // 64 KiB
 #define PAGE_MASK (~(PAGE_SIZE - 1))
-#define CHUNK_PAGES 16     // pages mapped from the OS at a time
+#ifdef _WIN32
+// VirtualFree can only release a whole allocation, so map pages one by one.
+#define CHUNK_PAGES 1
+#else
+#define CHUNK_PAGES 16 // pages mapped from the OS at a time
+#endif
 #define MAX_SPARE_PAGES 64 // empty pages kept for reuse before unmapping
 #define GRANULE 16
 
@@ -101,6 +110,59 @@ static void oom(size_t size) {
 
 static Page ***page_table;
 
+// ---------------------------------------------------------------------------
+// The OS layer: everything heap.c needs from the operating system.
+//   os_map(len)          zeroed, readable+writable memory
+//   os_map_aligned(n)    n pages, aligned to PAGE_SIZE (counted in stats)
+//   os_unmap(start, len) give back something from os_map_aligned
+//   os_discard(start)    keep a spare page mapped but drop its contents
+// ---------------------------------------------------------------------------
+
+#ifdef _WIN32
+
+static void *os_map(size_t len) {
+  void *m = VirtualAlloc(NULL, len, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+  if (!m)
+    oom(len);
+  return m;
+}
+
+// Windows hands out memory in units of its allocation granularity, which is
+// 64 KiB (= PAGE_SIZE) everywhere in practice, so this is normally aligned
+// already. If not, reserve a bigger range to find an aligned address inside
+// it, release it, and claim exactly that address (retrying if another thread
+// took it in between).
+static void *os_map_aligned_raw(size_t len) {
+  void *m = os_map(len);
+  if (((uintptr_t)m & (PAGE_SIZE - 1)) == 0)
+    return m;
+  VirtualFree(m, 0, MEM_RELEASE);
+  for (;;) {
+    void *range = VirtualAlloc(NULL, len + PAGE_SIZE, MEM_RESERVE, PAGE_NOACCESS);
+    if (!range)
+      oom(len);
+    uintptr_t aligned = ((uintptr_t)range + PAGE_SIZE - 1) & PAGE_MASK;
+    VirtualFree(range, 0, MEM_RELEASE);
+    m = VirtualAlloc((void *)aligned, len, MEM_RESERVE | MEM_COMMIT,
+                     PAGE_READWRITE);
+    if (m)
+      return m;
+  }
+}
+
+static void os_release(uintptr_t start, size_t len) {
+  (void)len; // VirtualFree releases the whole allocation starting there
+  VirtualFree((void *)start, 0, MEM_RELEASE);
+}
+
+static void os_discard(uintptr_t start) {
+  // The contents can be thrown away; the page stays mapped. (It isn't
+  // zeroed, which is fine: the allocator zeroes every cell it hands out.)
+  VirtualAlloc((void *)start, PAGE_SIZE, MEM_RESET, PAGE_READWRITE);
+}
+
+#else // POSIX
+
 static void *os_map(size_t len) {
   void *m = mmap(NULL, len, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS,
                  -1, 0);
@@ -108,6 +170,30 @@ static void *os_map(size_t len) {
     oom(len);
   return m;
 }
+
+// mmap only guarantees OS-page alignment (4 or 16 KiB), so over-map by one
+// of our pages and trim.
+static void *os_map_aligned_raw(size_t len) {
+  uint8_t *raw = os_map(len + PAGE_SIZE);
+  uintptr_t start = ((uintptr_t)raw + PAGE_SIZE - 1) & PAGE_MASK;
+  size_t head = start - (uintptr_t)raw;
+  if (head)
+    munmap(raw, head);
+  if (PAGE_SIZE - head)
+    munmap((void *)(start + len), PAGE_SIZE - head);
+  return (void *)start;
+}
+
+static void os_release(uintptr_t start, size_t len) {
+  munmap((void *)start, len);
+}
+
+static void os_discard(uintptr_t start) {
+  // Drop the physical memory; the page reads as zero when next touched.
+  madvise((void *)start, PAGE_SIZE, MADV_DONTNEED);
+}
+
+#endif
 
 static inline Page *page_lookup(uintptr_t addr) {
   if (addr >> ADDR_BITS)
@@ -118,6 +204,13 @@ static inline Page *page_lookup(uintptr_t addr) {
 }
 
 static void page_table_set(uintptr_t start, size_t npages, Page *p) {
+  if ((start + npages * PAGE_SIZE - 1) >> ADDR_BITS) {
+    // Every current 64-bit OS gives user programs at most 47-48 bit
+    // addresses; the page table would need another level for more.
+    fprintf(stderr, "panic: gc: address %p is beyond %d bits\n",
+            (void *)start, ADDR_BITS);
+    abort();
+  }
   for (size_t i = 0; i < npages; i++) {
     uintptr_t pn = (start >> PAGE_SHIFT) + i;
     Page ***leaf = &page_table[pn >> LEAF_BITS];
@@ -134,22 +227,15 @@ static void page_table_set(uintptr_t start, size_t npages, Page *p) {
 static uintptr_t spare_pages[MAX_SPARE_PAGES];
 static size_t spare_count;
 
-// mmap only guarantees 4 KiB alignment, so over-map by one page and trim.
 static uintptr_t os_map_aligned(size_t npages) {
   size_t len = npages * PAGE_SIZE;
-  uint8_t *raw = os_map(len + PAGE_SIZE);
-  uintptr_t start = ((uintptr_t)raw + PAGE_SIZE - 1) & PAGE_MASK;
-  size_t head = start - (uintptr_t)raw;
-  if (head)
-    munmap(raw, head);
-  if (PAGE_SIZE - head)
-    munmap((void *)(start + len), PAGE_SIZE - head);
+  uintptr_t start = (uintptr_t)os_map_aligned_raw(len);
   stats.mapped_bytes += len;
   return start;
 }
 
 static void os_unmap(uintptr_t start, size_t len) {
-  munmap((void *)start, len);
+  os_release(start, len);
   stats.mapped_bytes -= len;
 }
 
@@ -164,8 +250,7 @@ static uintptr_t take_page(void) {
 
 static void give_back_page(uintptr_t start) {
   if (spare_count < MAX_SPARE_PAGES) {
-    // Drop the physical memory; the page reads as zero when next touched.
-    madvise((void *)start, PAGE_SIZE, MADV_DONTNEED);
+    os_discard(start);
     spare_pages[spare_count++] = start;
   } else {
     os_unmap(start, PAGE_SIZE);
@@ -279,7 +364,7 @@ static void *alloc_large(size_t size) {
   Page *p = calloc(1, sizeof(Page) + sizeof(uint64_t));
   if (!p)
     oom(sizeof(Page));
-  p->start = os_map_aligned(npages); // fresh mmap memory is already zero
+  p->start = os_map_aligned(npages); // fresh OS memory is already zero
   p->cell_size = npages * PAGE_SIZE;
   p->ncells = 1;
   p->npages = npages;

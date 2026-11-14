@@ -50,8 +50,6 @@ set(ARGON_GC "boehm" CACHE STRING "Garbage collector backend (boehm or custom)")
 set_property(CACHE ARGON_GC PROPERTY STRINGS boehm custom)
 if(ARGON_GC STREQUAL "custom")
     target_compile_definitions(argon PRIVATE ARGON_GC_CUSTOM)
-    # gc_custom.c wraps pthread_create; export it so native modules use it too
-    target_link_options(argon PRIVATE -Wl,--export-dynamic-symbol=pthread_create)
 elseif(NOT ARGON_GC STREQUAL "boehm")
     message(FATAL_ERROR "ARGON_GC must be 'boehm' or 'custom', got '${ARGON_GC}'")
 endif()
