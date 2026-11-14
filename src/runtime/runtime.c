@@ -1521,6 +1521,7 @@ Stack *create_scope(Stack *prev
   // stack->fake_new_scopes = 0;
   stack->scope = NULL;
   stack->prev = prev;
+  stack->captured = false;
   return stack;
   // }
   // prev->fake_new_scopes++;
@@ -1811,6 +1812,10 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
         object->value.argon_fn->bytecode_length = bytecode_length;
         Stack *current = currentStackFrame->stack;
         object->value.argon_fn->stack = current;
+        // The closure can see this scope and every scope above it. Stop at
+        // the first one already marked: its ancestors are marked too.
+        for (Stack *s = current; s && !s->captured; s = s->prev)
+          s->captured = true;
 
         // make any fake scopes real
         // for (uint64_t i = 0;i<current->fake_new_scopes;i++) {
@@ -2057,7 +2062,13 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
       );
       continue;
     DO_EMPTY_SCOPE:
-      clear_hashmap_GC(currentStackFrame->stack->scope);
+      // Start the next loop iteration with no variables. If a closure
+      // captured this iteration's scope, it must keep its own copy of the
+      // variables, so swap in a fresh scope rather than wiping the shared one.
+      if (currentStackFrame->stack->captured)
+        currentStackFrame->stack = create_scope(currentStackFrame->stack->prev);
+      else
+        clear_hashmap_GC(currentStackFrame->stack->scope);
       continue;
     DO_POP_SCOPE:
       // if (currentStackFrame->stack->fake_new_scopes) {
