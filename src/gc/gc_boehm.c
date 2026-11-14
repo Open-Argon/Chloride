@@ -95,6 +95,7 @@ void gc_add_root_tracer(gc_root_tracer tracer) { (void)tracer; }
 GCVerifyResult gc_verify(void) { return (GCVerifyResult){0}; }
 GCStats gc_stats(void) { return (GCStats){0}; }
 void gc_init(void) {}
+void gc_enable_thread_safety(void) {}
 void gc_shutdown(void) {}
 
 #endif // ARGON_GC_CUSTOM

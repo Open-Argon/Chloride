@@ -23,6 +23,9 @@
 //                    (missing traverse or root tracer). It will never be freed.
 // tally from zombie  DANGLING (only with ARGON_GC_NOFREE): a live object
 //                    still points at something that has already been freed.
+// not an object      INVALID: a traverse function visited a pointer that is
+//                    neither a live heap object nor a registered static, so
+//                    the traverse (or a hashmap's gc_flags) is wrong.
 //
 // The tally reuses GCHeader.gc_refs, which is free outside cycle collection.
 
@@ -31,13 +34,30 @@
 #include "gc_internal.h"
 #include "heap.h"
 #include <stdio.h>
+#include <stdlib.h>
 
 #define MAX_EXAMPLES 10
 
 typedef struct {
   GCHeader *holder; // whose references we're counting (NULL = a root)
   GCVerifyResult result;
+  GCHeader **statics; // sorted copy of gc_statics, for lookups
 } VerifyCtx;
+
+static int compare_ptr(const void *a, const void *b) {
+  uintptr_t x = (uintptr_t)*(GCHeader *const *)a;
+  uintptr_t y = (uintptr_t)*(GCHeader *const *)b;
+  return x < y ? -1 : x > y;
+}
+
+// Is `p` the start of a live heap object or a registered static? Must not
+// dereference p until this says yes.
+static bool is_managed_object(VerifyCtx *v, GCHeader *p) {
+  if (heap_cell_of(p) == p)
+    return p->kind < gc_kind_count;
+  return v->statics && bsearch(&p, v->statics, gc_static_count,
+                               sizeof(GCHeader *), compare_ptr) != NULL;
+}
 
 static void reset_tally(void *cell, void *ctx) {
   (void)ctx;
@@ -46,7 +66,21 @@ static void reset_tally(void *cell, void *ctx) {
 
 static void count_reference(GCHeader *child, void *ctx) {
   VerifyCtx *v = ctx;
-  if (!child || !(child->flags & GC_MORTAL))
+  if (!child)
+    return;
+  if (!is_managed_object(v, child)) {
+    if (v->result.invalid++ < MAX_EXAMPLES) {
+      char from[160] = "a root";
+      if (v->holder)
+        gc_describe(v->holder, from, sizeof from);
+      fprintf(stderr,
+              "gc verify: INVALID %s holds %p, which is not a managed object "
+              "(wrong traverse or hashmap gc_flags)\n",
+              from, (void *)child);
+    }
+    return;
+  }
+  if (!(child->flags & GC_MORTAL))
     return; // immortal objects aren't counted
   if (child->flags & GC_ZOMBIE) {
     if (v->result.dangling++ < MAX_EXAMPLES) {
@@ -97,6 +131,14 @@ static void compare(void *cell, void *ctx) {
 
 GCVerifyResult gc_verify(void) {
   VerifyCtx v = {0};
+  if (gc_static_count) {
+    v.statics = malloc(gc_static_count * sizeof(GCHeader *));
+    if (v.statics) {
+      for (size_t i = 0; i < gc_static_count; i++)
+        v.statics[i] = gc_statics[i];
+      qsort(v.statics, gc_static_count, sizeof(GCHeader *), compare_ptr);
+    }
+  }
   heap_for_each(reset_tally, NULL);
 
   heap_for_each(count_from_object, &v);
@@ -108,13 +150,15 @@ GCVerifyResult gc_verify(void) {
 
   heap_for_each(compare, &v);
   heap_for_each(reset_tally, NULL); // gc_refs must be 0 outside collections
+  free(v.statics);
 
-  if (v.result.too_low || v.result.too_high || v.result.dangling)
+  GCVerifyResult r = v.result;
+  if (r.too_low || r.too_high || r.dangling || r.invalid)
     fprintf(stderr,
-            "gc verify: %zu too low, %zu too high, %zu dangling%s\n",
-            v.result.too_low, v.result.too_high, v.result.dangling,
-            (v.result.too_low > MAX_EXAMPLES || v.result.too_high > MAX_EXAMPLES ||
-             v.result.dangling > MAX_EXAMPLES)
+            "gc verify: %zu too low, %zu too high, %zu dangling, %zu invalid%s\n",
+            r.too_low, r.too_high, r.dangling, r.invalid,
+            (r.too_low > MAX_EXAMPLES || r.too_high > MAX_EXAMPLES ||
+             r.dangling > MAX_EXAMPLES || r.invalid > MAX_EXAMPLES)
                 ? " (only the first few of each are listed)"
                 : "");
   return v.result;

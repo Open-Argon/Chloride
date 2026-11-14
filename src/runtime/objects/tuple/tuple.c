@@ -281,6 +281,7 @@ ARGON_METHOD(ARGON_TUPLE_TYPE, __iter__, {
       (struct as_tuple_iterator *)((char *)iterator + sizeof(ArgonObject));
   iterator->value.as_tuple_iterator->current = 0;
   iterator->value.as_tuple_iterator->tuple = &self->value.as_tuple;
+  iterator->value.as_tuple_iterator->source = self;
   return iterator;
 })
 

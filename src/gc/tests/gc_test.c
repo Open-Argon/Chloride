@@ -100,7 +100,8 @@ static void expect_clean_heap(void) {
 
 static void expect_verify_clean(void) {
   GCVerifyResult r = gc_verify();
-  CHECK(r.too_low == 0 && r.too_high == 0 && r.dangling == 0);
+  CHECK(r.too_low == 0 && r.too_high == 0 && r.dangling == 0 &&
+        r.invalid == 0);
 }
 
 // ---------------------------------------------------------------------------
@@ -245,6 +246,14 @@ static void test_verifier(void) {
   CHECK(r.dangling == 1);
   holder->child[0] = NULL;
   gc_config.nofree = false;
+
+  // A traverse that visits something that isn't an object is reported, not
+  // dereferenced (a hashmap of flags, say, traversed as if it held objects).
+  static long not_an_object[4];
+  holder->child[2] = (Node *)not_an_object;
+  r = gc_verify();
+  CHECK(r.invalid == 1);
+  holder->child[2] = NULL;
 
   expect_clean_heap();
   printf("  verifier: ok\n");

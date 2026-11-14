@@ -10,6 +10,7 @@
 #include "../include/Argon.h"
 #include "../include/ArgonTypes.h"
 #include "dynamic_array/darray.h"
+#include "gc/gc.h"
 #include "runtime/internals/dynamic_array_armem/darray_armem.h"
 #include "runtime/internals/hashmap/hashmap.h"
 #include <gmp.h>
@@ -157,6 +158,7 @@ struct string_struct {
 };
 
 typedef struct Stack {
+  GCHeader gc; // must be first: Stack is a managed type (see src/gc/README.md)
   // uint64_t fake_new_scopes;
   struct hashmap_GC *scope;
   struct Stack *prev;
@@ -217,21 +219,28 @@ struct as_range_iterator {
   } step;
 };
 
+// Iterators that point *into* another object (its element buffer, its
+// characters) also hold that object in `source`, so the collector knows the
+// iterator keeps it alive.
 struct as_array_iterator {
   size_t current;
   darray_armem *array;
+  ArgonObject *source; // the array object that owns `array`
 };
 
 struct as_string_iterator {
   size_t current;
   const char *data;
   size_t length;
+  ArgonObject *source; // the string object that owns `data`
 };
 
+// A snapshot of the dictionary's entries taken when iteration starts:
+// pairs[2*i] is a key and pairs[2*i + 1] its value.
 struct as_dictionary_iterator {
   size_t current;
   size_t size;
-  struct node_GC **array;
+  ArgonObject **pairs;
 };
 
 struct tuple_struct {
@@ -242,10 +251,12 @@ struct tuple_struct {
 struct as_tuple_iterator {
   size_t current;
   struct tuple_struct *tuple;
+  ArgonObject *source; // the tuple object that `tuple` lives inside
 };
 
 // full definition of ArgonObject (no typedef again!)
 struct ArgonObject {
+  GCHeader gc; // must be first: ArgonObject is a managed type
   ArgonType type;
   bool as_bool;
   uint8_t built_in_slot_length;

@@ -33,6 +33,7 @@
 #include "objects/term/term.h"
 #include "objects/tuple/tuple.h"
 #include "objects/type/type.h"
+#include "gc_kinds.h"
 #include <fcntl.h>
 #include <gmp.h>
 #include <inttypes.h>
@@ -275,8 +276,9 @@ ARGON_FUNCTION(__dir__, {
 
   darray_armem_init(output_array->value.as_array, sizeof(ArgonObject *), 0);
 
+  // A set of field hashes already seen: no keys, values are just `true`.
   append_objects_fields_recursively(output_array->value.as_array,
-                                    createHashmap_GC(), class);
+                                    createHashmap_GC_with(0), class);
 
   return output_array;
 })
@@ -1230,6 +1232,10 @@ void bootstrap_types() {
   MOUNT_ARGON_METHOD(ARGON_BOOL_TYPE, __string__)
   MOUNT_ARGON_METHOD(ARGON_BOOL_TYPE, __number__)
   FUNC___dir__ = *create_argon_native_function("__dir__", ARGON_FUNC___dir__);
+  // That copied a heap object's GCHeader too; a static must have a zeroed
+  // header (immortal) instead.
+  FUNC___dir__.gc = (GCHeader){0};
+  gc_register_static(&FUNC___dir__);
   ADDITION_FUNCTION =
       create_argon_native_function("add", ARGON_FUNC_ARGON_ADDITION_FUNCTION);
   SUBTRACTION_FUNCTION = create_argon_native_function(
@@ -1516,7 +1522,7 @@ Stack *create_scope(Stack *prev
                     // , bool force
 ) {
   // if (force || !prev || prev->scope->count) {
-  Stack *stack = ar_alloc(sizeof(Stack));
+  Stack *stack = gc_new(STACK_GC_KIND, sizeof(Stack));
   // stack->fake_new_scopes = 0;
   stack->scope = NULL;
   stack->prev = prev;
@@ -2177,7 +2183,9 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
         *key = (struct string_struct){
             hash, arena_get(&translated->constants, offset), length};
         if (!state->call_instance->kwargs)
-          state->call_instance->kwargs = createHashmap_GC();
+          // keys are struct string_struct *, values are objects
+          state->call_instance->kwargs =
+              createHashmap_GC_with(HASHMAP_GC_OBJECT_VALUES);
         hashmap_insert_GC(state->call_instance->kwargs, hash, key,
                           state->registers[0], 0);
         continue;
@@ -2185,7 +2193,9 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
     DO_UNPACK_KEY_WORD_ARGS:
       {
         if (!state->call_instance->kwargs)
-          state->call_instance->kwargs = createHashmap_GC();
+          // keys are struct string_struct *, values are objects
+          state->call_instance->kwargs =
+              createHashmap_GC_with(HASHMAP_GC_OBJECT_VALUES);
 
         ArgonObject *object = state->registers[0];
         ArgonObject *iterator_method =

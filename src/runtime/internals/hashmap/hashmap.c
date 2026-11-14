@@ -145,9 +145,14 @@ static void hashmap_insert_GC_nolock(struct hashmap_GC *t, uint64_t hash,
    =========================== */
 
 struct hashmap_GC *createHashmap_GC(void) {
+  return createHashmap_GC_with(HASHMAP_GC_OBJECTS);
+}
+
+struct hashmap_GC *createHashmap_GC_with(uint8_t gc_flags) {
   struct hashmap_GC *t = ar_alloc(sizeof(struct hashmap_GC));
   memset(t, 0, sizeof(*t));
   t->order = 1;
+  t->gc_flags = gc_flags;
 
   RWLOCK_CREATE(&t->lock);  
   // GC_register_finalizer(t, hashmap_finalizer, NULL, NULL, NULL);
@@ -305,4 +310,25 @@ void *hashmap_lookup_GC(struct hashmap_GC *t, uint64_t hash) {
   });
 
   return result;
+}
+
+static inline void visit_node(struct hashmap_GC *t, struct node_GC *n,
+                              gc_visit_fn visit, void *ctx) {
+  if (t->gc_flags & HASHMAP_GC_OBJECT_KEYS)
+    visit(n->key, ctx);
+  if (t->gc_flags & HASHMAP_GC_OBJECT_VALUES)
+    visit(n->val, ctx);
+}
+
+// No lock: the collector only runs at safe points (single-threaded for now).
+void hashmap_GC_traverse(struct hashmap_GC *t, gc_visit_fn visit, void *ctx) {
+  if (!t || !t->gc_flags)
+    return;
+  for (size_t i = 0; i < t->inline_count; i++)
+    visit_node(t, &t->inline_values[i], visit, ctx);
+  if (!t->list)
+    return;
+  for (size_t i = 0; i < t->size; i++)
+    for (struct node_GC *n = t->list[i]; n; n = n->next)
+      visit_node(t, n, visit, ctx);
 }

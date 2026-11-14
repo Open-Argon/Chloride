@@ -12,6 +12,7 @@
 #include "runtime/internals/hashmap/hashmap.h"
 #include "runtime/objects/literals/literals.h"
 #include "runtime/objects/object.h"
+#include "runtime/gc_kinds.h"
 #include "runtime/objects/string/string.h"
 #include "runtime/runtime.h"
 #include "shell.h"
@@ -63,19 +64,25 @@ int main(int argc, char *argv[]) {
   }
   setlocale(LC_ALL, "");
   ar_memory_init();
+  register_gc_kinds();
   // generate_siphash_key(siphash_key);
   init_built_in_field_hashes();
   bootstrap_types();
   bootstrap_globals();
 
-  imported_hash_table = createHashmap_GC();
-  importing_hash_table = createHashmap_GC();
+  // path (char *) -> module Stack
+  imported_hash_table = createHashmap_GC_with(HASHMAP_GC_OBJECT_VALUES);
+  // path (char *) -> "currently importing" flag
+  importing_hash_table = createHashmap_GC_with(0);
   // runtime_hash_table = createHashmap_GC();
   get_current_directory(CWD, sizeof(CWD));
   get_executable_path(EXC, sizeof(EXC));
   cwk_path_get_absolute(EXC, "..", EXC_DIR, sizeof(EXC_DIR));
   CWD_ARGON = new_string_object_null_terminated(CWD);
   EXC_ARGON = new_string_object_null_terminated(EXC);
+  // Everything made while bootstrapping (types, builtins, globals) lives for
+  // the whole program; making it immortal means it's never counted or freed.
+  gc_immortalize_all();
   if (argc <= 1)
     return shell();
 #ifdef _WIN32

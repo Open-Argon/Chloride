@@ -164,6 +164,8 @@ gc/verify.c     debug verifier: recounts every reference and compares
 gc/gc_custom.c  memory.h for GC=custom; for now untyped ar_alloc is
                 plain calloc and is never freed (shrinks as stage 4 goes on)
 gc/gc_boehm.c   Boehm backend (incref/decref compile to nothing)
+runtime/gc_kinds.c   the interpreter's managed types (ArgonObject, Stack):
+                what each one points at, per ArgonType
 gc/tests/       standalone tests, run by `make gc-test`: heap_test.c, and
                 gc_test.c, which drives the core with a toy managed type and
                 checks a randomized object graph against a shadow model
@@ -212,7 +214,7 @@ if (zct is big enough || cycle collection is due)
 |---|---|
 | `ARGON_GC_STATS=1` | print every collection and a summary at exit |
 | `ARGON_GC_STRESS=N` | run a full safe point every N allocations |
-| `ARGON_GC_VERIFY=1` | at each safe point, recount every reference by traversing everything and report objects whose refcount is wrong (too low → would crash, too high → would leak) |
+| `ARGON_GC_VERIFY=1` | at each full safe point and at exit, recount every reference by traversing everything and report objects whose refcount is wrong (too low → would crash, too high → would leak), plus any pointer a `traverse` visits that isn't an object at all (*invalid*: a traverse or hashmap-flag bug) |
 | `ARGON_GC_NOFREE=1` | do all the bookkeeping but never free anything; pair it with `VERIFY` while code is still being converted |
 
 `NOFREE` + `VERIFY` is how the conversion gets done: run a program, read the
@@ -230,22 +232,36 @@ those stores, and repeat until it's clean. Then try it with freeing on.
 - [x] **2. Core.** `GCHeader`, kinds, incref/decref, ZCT, epochs, safe points,
       trial deletion, verifier, with a standalone C test (`make gc-test`).
       Not used by the interpreter yet.
-- [ ] **3. Managed types.** Headers plus `traverse`/`dealloc` for
-      `ArgonObject` (per `ArgonType`) and `Stack`; owned buffers moved to
-      `malloc`; statics made immortal; hashmaps told whether their keys/values
-      are objects. Boehm never calls `finalize`, so owned buffers need a small
-      allocator wrapper (`malloc`/`free` in the custom build, Boehm in the
-      Boehm build).
+- [x] **3. Managed types.** `GCHeader` in `ArgonObject` and `Stack`, which
+      now come from `gc_new`; `traverse` per `ArgonType`
+      (`runtime/gc_kinds.c`); iterators hold the object they iterate over
+      (dictionary iterators take a snapshot of the entries); hashmaps record
+      whether keys/values are objects; statics registered; everything created
+      during bootstrap is immortal. Checked with `ARGON_GC_VERIFY`: 0 invalid
+      pointers on every test script.
 - [ ] **4. Counted holders.** Convert stores subsystem by subsystem, driven by
       `NOFREE` + `VERIFY`: registers and frames → scopes → objects and slots
       → arrays/tuples/dicts → calls and errors → natives and the stdlib API.
-- [ ] **5. Freeing on.** Turn freeing on and stress-test with `ARGON_GC_STRESS`.
+- [ ] **5. Freeing on.** Write `finalize` for each type, freeing what it owns
+      (some value structs live inline in the object's cell, others are
+      separate allocations, so this needs care). Boehm never calls
+      `finalize`, so owned buffers need a small allocator wrapper (`malloc`/
+      `free` in the custom build, Boehm in the Boehm build). Then turn freeing
+      on and stress-test with `ARGON_GC_STRESS`.
 - [ ] **6. Threads.** Atomic refcounts (or biased refcounting), per-thread
       epochs and ZCTs, cooperative stop-the-world at safe points.
 - [ ] **7. Later.** Generations for the cycle collector, finalizers, freeing
       module bytecode.
 
 ## 6. Open questions / known limits
+
+* **Borrowed hashmap keys.** Object attribute dicts (`obj->dict`) and call
+  kwargs maps use `char *` / `struct string_struct *` keys that point *into* a
+  string object's data without holding the string. Once objects are freed,
+  those keys dangle. Stage 4 must make these maps hold the key string objects
+  (or copy the key).
+* **Allocation and threads.** Until stage 6, a second thread only makes
+  `gc_new` take a lock; counting and safe points aren't thread-safe.
 
 * **ZCT growth inside long native calls.** Temporaries created by a lambda
   that `map` calls die at the next safe point inside the nested loop, which is

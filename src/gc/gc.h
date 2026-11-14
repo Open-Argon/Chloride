@@ -187,6 +187,8 @@ typedef struct {
   size_t too_low;  // refcount < references found: would be freed while used
   size_t too_high; // refcount > references found: would leak forever
   size_t dangling; // a live object references a freed (zombie) object
+  size_t invalid;  // a traverse function visited something that isn't a
+                   // managed object at all (a traverse or flags bug)
 } GCVerifyResult;
 
 // Recount every reference and compare with every refcount; prints a report
@@ -210,6 +212,9 @@ GCStats gc_stats(void);
 
 // Reads ARGON_GC_STATS, ARGON_GC_STRESS, ARGON_GC_VERIFY, ARGON_GC_NOFREE.
 void gc_init(void);
+// Call when a second thread starts using the heap (stage 6 will replace this:
+// for now it only makes allocation thread-safe).
+void gc_enable_thread_safety(void);
 void gc_shutdown(void); // prints the stats summary if ARGON_GC_STATS is set
 
 #endif // ARGON_GC_H

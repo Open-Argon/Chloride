@@ -43,8 +43,12 @@ void ar_finalizer(void *obj, ar_finalizer_fn fn, void *client_data) {
   (void)obj, (void)fn, (void)client_data;
 }
 
-// Single-threaded until stage 6.
-int ar_register_thread(void) { return 0; }
+// The collector is single-threaded until stage 6; for now a second thread
+// only switches allocation over to a lock.
+int ar_register_thread(void) {
+  gc_enable_thread_safety();
+  return 0;
+}
 int ar_unregister_thread(void) { return 0; }
 
 void ar_gc_collect(void) { gc_collect_now(); }

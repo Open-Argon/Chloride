@@ -1213,6 +1213,9 @@ void init_small_ints() {
     small_ints[i].obj.value.as_number->is_int64 = true;
     small_ints[i].obj.value.as_number->n.i64 = n;
     small_ints[i].obj.as_bool = n;
+    // Static, so immortal (zeroed GCHeader); registered so the GC can see
+    // anything stored on it later.
+    gc_register_static(&small_ints[i].obj);
   }
 }
 

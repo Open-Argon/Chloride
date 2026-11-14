@@ -8,6 +8,7 @@
 #include "../../err.h"
 #include "../../hash_data/hash_data.h"
 #include "../../memory.h"
+#include "../gc_kinds.h"
 #include "../call/call.h"
 #include "exceptions/exceptions.h"
 #include "literals/literals.h"
@@ -140,7 +141,8 @@ ArgonObject *new_small_object(size_t endSize) {
 }
 
 ArgonObject *new_object(size_t endSize) {
-  ArgonObject *object = ar_alloc(sizeof(ArgonObject) + endSize);
+  ArgonObject *object =
+      gc_new(ARGON_OBJECT_GC_KIND, sizeof(ArgonObject) + endSize);
   object->built_in_slot_length = 0;
   object->type = TYPE_OBJECT;
   object->dict = NULL;
@@ -207,7 +209,7 @@ inline void add_builtin_field(ArgonObject *target, built_in_fields field,
     if (!target->dict) {
       // pthread_rwlock_unlock(&target->lock);
       // pthread_rwlock_wrlock(&target->lock);
-      target->dict = createHashmap_GC();
+      target->dict = createHashmap_GC_with(HASHMAP_GC_OBJECT_VALUES);
     }
     // pthread_rwlock_unlock(&target->lock);
     hashmap_insert_GC(target->dict, built_in_field_hashes[field],
@@ -236,7 +238,10 @@ void add_field_l(ArgonObject *target, char *name, uint64_t hash, size_t length,
   if (!target->dict) {
     // pthread_rwlock_unlock(&target->lock);
     // pthread_rwlock_wrlock(&target->lock);
-    target->dict = createHashmap_GC();
+    // Keys are C strings (field names), values are objects.
+    // TODO(gc stage 4): add_field_l's keys point into a string object's
+    // data without holding that object.
+    target->dict = createHashmap_GC_with(HASHMAP_GC_OBJECT_VALUES);
   }
   // pthread_rwlock_unlock(&target->lock);
   hashmap_insert_GC(target->dict, hash, name, object, 0);

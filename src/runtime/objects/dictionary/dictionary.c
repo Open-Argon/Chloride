@@ -5,6 +5,7 @@
  */
 #include "dictionary.h"
 #include "../../../err.h"
+#include "../../../memory.h"
 #include "../../call/call.h"
 #include "../exceptions/exceptions.h"
 
@@ -312,10 +313,20 @@ ARGON_METHOD(ARGON_DICTIONARY_TYPE, __iter__, {
   iterator->value.as_dictionary_iterator =
       (struct as_dictionary_iterator *)((char *)iterator + sizeof(ArgonObject));
 
-  iterator->value.as_dictionary_iterator->current = 0;
+  struct as_dictionary_iterator *it = iterator->value.as_dictionary_iterator;
+  it->current = 0;
 
-  iterator->value.as_dictionary_iterator->array = hashmap_GC_to_array(
-      self->value.as_hashmap, &iterator->value.as_dictionary_iterator->size);
+  // Snapshot the entries (in insertion order) rather than keeping pointers to
+  // the hashmap's nodes, which belong to the dictionary and can go away if
+  // it's modified mid-iteration.
+  size_t size;
+  struct node_GC **nodes = hashmap_GC_to_array(self->value.as_hashmap, &size);
+  it->pairs = ar_alloc(2 * size * sizeof(ArgonObject *) + 1);
+  for (size_t i = 0; i < size; i++) {
+    it->pairs[2 * i] = nodes[i]->key;
+    it->pairs[2 * i + 1] = nodes[i]->val;
+  }
+  it->size = size;
 
   return iterator;
 })
@@ -336,12 +347,11 @@ ARGON_METHOD(ARGON_DICTIONARY_ITERATOR_TYPE, __next__, {
     return ARGON_NULL;
   }
 
-  struct node_GC *node =
-      self->value.as_dictionary_iterator
-          ->array[self->value.as_dictionary_iterator->current++];
+  struct as_dictionary_iterator *it = self->value.as_dictionary_iterator;
+  ArgonObject **pair = &it->pairs[2 * it->current++];
 
-  return ARGON_FUNC_TUPLE_CREATE(2, (ArgonObject *[]){node->key, node->val},
-                                 NULL, err, state, api);
+  return ARGON_FUNC_TUPLE_CREATE(2, (ArgonObject *[]){pair[0], pair[1]}, NULL,
+                                 err, state, api);
 })
 
 void create_ARGON_DICTIONARY_TYPE() {

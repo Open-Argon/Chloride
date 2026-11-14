@@ -822,6 +822,7 @@ ARGON_METHOD(ARRAY_TYPE, __iter__, {
       (struct as_array_iterator *)((char *)iterator + sizeof(ArgonObject));
   iterator->value.as_array_iterator->current = 0;
   iterator->value.as_array_iterator->array = self->value.as_array;
+  iterator->value.as_array_iterator->source = self;
   return iterator;
 })
 

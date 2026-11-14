@@ -12,6 +12,7 @@
 
 #include "gc_internal.h"
 #include "heap.h"
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -35,6 +36,14 @@ gc_root_tracer *gc_root_tracers;
 size_t gc_root_tracer_count;
 
 bool gc_work_due;
+
+// Until stage 6 (threads) the collector is single-threaded, but threads can
+// already allocate. Once a second thread exists, allocation takes this lock.
+// Counting and safe points are NOT thread-safe yet.
+static bool multithreaded;
+static pthread_mutex_t alloc_lock = PTHREAD_MUTEX_INITIALIZER;
+
+void gc_enable_thread_safety(void) { multithreaded = true; }
 
 static uint64_t birth_counter;  // birth number of the next allocation
 static gc_epoch current_epoch;  // objects born before this can't be freed now
@@ -125,6 +134,9 @@ void *gc_new(uint8_t kind, size_t size) {
     fprintf(stderr, "panic: gc: gc_new with unregistered kind %u\n", kind);
     abort();
   }
+  bool lock = multithreaded;
+  if (lock)
+    pthread_mutex_lock(&alloc_lock);
   GCHeader *h = heap_alloc(size); // zeroed: refcount 0, gc_refs 0
   h->kind = kind;
   h->flags = GC_MORTAL;
@@ -143,6 +155,8 @@ void *gc_new(uint8_t kind, size_t size) {
     stress_pending = true;
     gc_work_due = true;
   }
+  if (lock)
+    pthread_mutex_unlock(&alloc_lock);
   return h;
 }
 
@@ -429,6 +443,8 @@ void gc_init(void) {
 GCStats gc_stats(void) { return stats; }
 
 void gc_shutdown(void) {
+  if (gc_config.verify)
+    gc_verify();
   if (!gc_config.print_stats)
     return;
   HeapStats hs = heap_stats();

@@ -1213,6 +1213,9 @@ void init_small_chars() {
   empty_str.obj.value.as_str->data = "\0";
   empty_str.obj.value.as_str->length = 0;
   empty_str.obj.as_bool = false;
+  // Static, so immortal (zeroed GCHeader); registered so the GC can see
+  // anything stored on these later.
+  gc_register_static(&empty_str.obj);
 
   for (int64_t i = 0; i <= CHAR_MAX - CHAR_MIN; i++) {
     int64_t n = i + CHAR_MIN;
@@ -1225,6 +1228,7 @@ void init_small_chars() {
     small_chars[i].obj.value.as_str->data = small_chars[i].chr;
     small_chars[i].obj.value.as_str->length = 1;
     small_chars[i].obj.as_bool = true;
+    gc_register_static(&small_chars[i].obj);
   }
 }
 
@@ -1341,6 +1345,7 @@ ARGON_METHOD(ARGON_STRING_TYPE, __iter__, {
   iterator->value.as_string_iterator->current = 0;
   iterator->value.as_string_iterator->data = self.data;
   iterator->value.as_string_iterator->length = self.length;
+  iterator->value.as_string_iterator->source = argv[0];
   return iterator;
 })
 
