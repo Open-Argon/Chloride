@@ -16,7 +16,7 @@
 #ifdef ARGON_GC_CUSTOM
 
 #include "../memory.h"
-#include "heap.h"
+#include "gc.h"
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -47,9 +47,9 @@ void ar_finalizer(void *obj, ar_finalizer_fn fn, void *client_data) {
 int ar_register_thread(void) { return 0; }
 int ar_unregister_thread(void) { return 0; }
 
-void ar_gc_collect(void) {}
+void ar_gc_collect(void) { gc_collect_now(); }
 
-void ar_memory_init(void) { heap_init(); }
-void ar_memory_shutdown(void) {}
+void ar_memory_init(void) { gc_init(); }
+void ar_memory_shutdown(void) { gc_shutdown(); }
 
 #endif // ARGON_GC_CUSTOM

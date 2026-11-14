@@ -156,13 +156,17 @@ These are what the conversion work is about.
 
 ```
 memory.h        public API used by the interpreter (both backends)
+gc/gc.h         the API: GCHeader, kinds, incref/decref/gc_assign, epochs,
+                safe points, verifier (works in both builds)
 gc/heap.c       page allocator: size classes, free lists, page table
-gc/gc.c         refcounts, ZCT, safe points, epochs, trial deletion   (stage 2)
-gc/verify.c     debug verifier: recounts every reference and compares (stage 2)
+gc/gc.c         refcounts, ZCT, safe points, epochs, trial deletion
+gc/verify.c     debug verifier: recounts every reference and compares
 gc/gc_custom.c  memory.h for GC=custom; for now untyped ar_alloc is
                 plain calloc and is never freed (shrinks as stage 4 goes on)
 gc/gc_boehm.c   Boehm backend (incref/decref compile to nothing)
-gc/tests/       standalone tests, run by `make gc-test`
+gc/tests/       standalone tests, run by `make gc-test`: heap_test.c, and
+                gc_test.c, which drives the core with a toy managed type and
+                checks a randomized object graph against a shadow model
 ```
 
 ### The heap (`heap.c`)
@@ -223,12 +227,15 @@ those stores, and repeat until it's clean. Then try it with freeing on.
       build switch for Make and CMake.
 - [x] **1. Heap.** Page allocator (`heap.c`) with a randomized test.
       `GC=custom` runs the interpreter but leaks everything (the baseline).
-- [ ] **2. Core.** `GCHeader`, kinds, incref/decref, ZCT, epochs, safe points,
+- [x] **2. Core.** `GCHeader`, kinds, incref/decref, ZCT, epochs, safe points,
       trial deletion, verifier, with a standalone C test (`make gc-test`).
+      Not used by the interpreter yet.
 - [ ] **3. Managed types.** Headers plus `traverse`/`dealloc` for
       `ArgonObject` (per `ArgonType`) and `Stack`; owned buffers moved to
       `malloc`; statics made immortal; hashmaps told whether their keys/values
-      are objects.
+      are objects. Boehm never calls `finalize`, so owned buffers need a small
+      allocator wrapper (`malloc`/`free` in the custom build, Boehm in the
+      Boehm build).
 - [ ] **4. Counted holders.** Convert stores subsystem by subsystem, driven by
       `NOFREE` + `VERIFY`: registers and frames → scopes → objects and slots
       → arrays/tuples/dicts → calls and errors → natives and the stdlib API.

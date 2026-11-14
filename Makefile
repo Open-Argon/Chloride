@@ -136,7 +136,9 @@ GC_TEST_FLAGS = -O1 -g -Wall -Wextra -DARGON_GC_CUSTOM -fsanitize=address
 gc-test:
 	@mkdir -p build/gc-test
 	$(CC) $(GC_TEST_FLAGS) src/gc/tests/heap_test.c src/gc/heap.c -o build/gc-test/heap_test
+	$(CC) $(GC_TEST_FLAGS) src/gc/tests/gc_test.c src/gc/gc.c src/gc/verify.c src/gc/heap.c -o build/gc-test/gc_test
 	./build/gc-test/heap_test
+	./build/gc-test/gc_test
 
 .PHONY: gc-test
 

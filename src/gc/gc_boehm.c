@@ -10,6 +10,7 @@
 
 #define GC_THREADS
 #include "../memory.h"
+#include "gc.h"
 #include <gc/gc.h>
 #include <inttypes.h>
 #include <stdio.h>
@@ -62,5 +63,38 @@ int ar_register_thread(void) {
 int ar_unregister_thread(void) { return GC_unregister_my_thread(); }
 
 void ar_gc_collect(void) { GC_gcollect(); }
+
+// ---------------------------------------------------------------------------
+// gc.h on top of Boehm: managed objects are ordinary Boehm allocations and
+// every counting / collection operation is a no-op, because Boehm finds
+// garbage by itself. Note that Boehm never calls GCKind.finalize, so memory a
+// managed object "owns" must come from Boehm too in this build.
+// ---------------------------------------------------------------------------
+
+static size_t kind_count;
+
+uint8_t gc_register_kind(const GCKind *kind) {
+  (void)kind;
+  return (uint8_t)kind_count++;
+}
+
+void *gc_new(uint8_t kind, size_t size) {
+  GCHeader *h = ar_alloc(size);
+  h->kind = kind;
+  h->flags = GC_MORTAL;
+  return h;
+}
+
+void gc_immortalize(void *obj) { (void)obj; }
+void gc_immortalize_all(void) {}
+void gc_register_static(void *obj) { (void)obj; }
+gc_epoch gc_enter(void) { return 0; }
+void gc_leave(gc_epoch previous) { (void)previous; }
+void gc_collect_now(void) { GC_gcollect(); }
+void gc_add_root_tracer(gc_root_tracer tracer) { (void)tracer; }
+GCVerifyResult gc_verify(void) { return (GCVerifyResult){0}; }
+GCStats gc_stats(void) { return (GCStats){0}; }
+void gc_init(void) {}
+void gc_shutdown(void) {}
 
 #endif // ARGON_GC_CUSTOM
