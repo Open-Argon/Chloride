@@ -4,12 +4,12 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+// Backend-independent memory helpers. The GC backends live in src/gc/.
+
 #include "memory.h"
-#include <stddef.h>
 #include <stdio.h>
-#include <stdlib.h> // for malloc/free (temp arena fallback)
+#include <stdlib.h>
 #include <string.h>
-#include <inttypes.h>
 
 void *checked_malloc(size_t size) {
   void *ptr = malloc(size);
@@ -29,52 +29,9 @@ void *checked_realloc(void *ptr, size_t size) {
   return new_ptr;
 }
 
-void ar_memory_init() {
-  GC_INIT();
-  GC_allow_register_threads();
-  // memory_allocations_size = 8;
-  // memory_allocations = malloc(memory_allocations_size*sizeof(struct
-  // allocation));
-}
-
-void ar_memory_shutdown() {
-  // for (size_t i = 0; i<memory_allocations_size;i++) {
-  //   if (memory_allocations[i].status != allocation_fully_freed) {
-  //     free(memory_allocations[i].ptr);
-  //   }
-  // }
-  // free(memory_allocations);
-}
-
-void *ar_alloc(size_t size) {
-  void *ptr = GC_MALLOC(size);
-  if (!ptr) {
-    fprintf(stderr, "panic: unable to allocate memory: %"PRId64"\n", size);
-    exit(EXIT_FAILURE);
-  }
-  return ptr;
-}
-
-void *ar_realloc(void *old, size_t size) {
-  void *ptr = GC_REALLOC(old, size);
-  if (!ptr) {
-    fprintf(stderr, "panic: unable to reallocate memory (%p): %"PRId64"\n", old, size);
-    exit(EXIT_FAILURE);
-  }
-  return ptr;
-}
-
-void ar_finalizer(void *obj, GC_finalization_proc fn, void *client_data,
-                  GC_finalization_proc *old_fn, void **old_client_data) {
-  return GC_register_finalizer_no_order(obj, fn, client_data, old_fn,
-                                        old_client_data);
-}
-
-void *ar_alloc_atomic(size_t size) { return GC_MALLOC_ATOMIC(size); }
-
 char *ar_strdup(const char *str) {
   size_t len = strlen(str) + 1;
-  char *copy = (char *)GC_MALLOC(len);
+  char *copy = ar_alloc_atomic(len);
   memcpy(copy, str, len);
   return copy;
 }

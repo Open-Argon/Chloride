@@ -149,16 +149,14 @@ struct array argon_to_array(ArgonObject *obj, ArErr *err) {
 }
 
 int register_thread() {
-  struct GC_stack_base sb;
   atomic_fetch_add(&thread_count, 1);
-  GC_get_stack_base(&sb);
-  return GC_register_my_thread(&sb);
+  return ar_register_thread();
 }
 
 int unregister_thread() {
   atomic_fetch_sub(&thread_count, 1);
   unregister_thread_pool();
-  return GC_unregister_my_thread();
+  return ar_unregister_thread();
 }
 
 ArgonObject *create_err_object() {
@@ -265,8 +263,8 @@ ArgonNativeAPI native_api = {
     .err_object_to_err = err_object_to_err,
     .new_state = new_state,
     .set_err = set_err,
-    .malloc = GC_malloc_uncollectable,
-    .free = GC_free,
+    .malloc = ar_alloc_uncollectable,
+    .free = ar_free,
     .argon_to_array = argon_to_array,
     .argon_get_ArgonType = argon_to_argonType,
     .argon_is_i64 = argon_is_i64,

@@ -6,20 +6,28 @@
 # Configurable variables
 # ------------------------------------------------------------
 TARGET_OS ?= posix       # default target, can be 'posix' or 'windows'
+GC        ?= boehm       # garbage collector backend: 'boehm' or 'custom'
+override GC := $(strip $(GC))
 
 ifeq ($(TARGET_OS),windows)
 	CC     = x86_64-w64-mingw32-gcc
 	BINARY = bin/argon.exe
-	LDFLAGS = -lgc -lgmp -lm -lmpfr -lbcrypt
+	LDFLAGS = -lgmp -lm -lmpfr -lbcrypt
+	ifeq ($(GC),boehm)
+		LDFLAGS += -lgc
+	endif
 else
 	CC     = gcc
 	BINARY = bin/argon
-	LDFLAGS = $(shell pkg-config --libs gmp mpfr bdw-gc) -lm
+	LDFLAGS = $(shell pkg-config --libs gmp mpfr) -lm -lpthread
+	ifeq ($(GC),boehm)
+		LDFLAGS += $(shell pkg-config --libs bdw-gc)
+	endif
 # 	CFLAGS  += $(shell pkg-config --cflags gmp mpfr bdw-gc)
 endif
 
 FLEX_TOOL  = flex
-BUILD_DIR  = build/dev
+BUILD_DIR  = build/dev-$(GC)
 
 # Install prefix
 PREFIX	   ?= /usr/local
@@ -30,7 +38,7 @@ CFILES = \
 	external/xxhash/xxhash.c \
 	external/cwalk/src/cwalk.c \
 	external/libdye/src/dye.c \
-	$(filter-out $(LEXER_C),$(shell find src -name '*.c'))
+	$(filter-out $(LEXER_C),$(shell find src -name '*.c' -not -path 'src/gc/tests/*'))
 
 # Include linenoise for any POSIX target (i.e., not Windows)
 ifeq ($(TARGET_OS),windows)
@@ -52,8 +60,17 @@ CFLAGS  = $(ARCHFLAGS) -Wall -Wextra -Wno-unused-function \
           -Werror=unused-result \
           -Iexternal/cwalk/include \
           -Iexternal/libdye/include \
-          -Iexternal/bdwgc/include \
-		  $(shell pkg-config --cflags gmp mpfr bdw-gc)
+		  $(shell pkg-config --cflags gmp mpfr)
+
+ifeq ($(GC),boehm)
+CFLAGS += -Iexternal/bdwgc/include $(shell pkg-config --cflags bdw-gc)
+else ifeq ($(GC),custom)
+CFLAGS += -DARGON_GC_CUSTOM
+# separate binary so both backends can be compared side by side
+BINARY := $(BINARY:bin/argon%=bin/argon-customgc%)
+else
+$(error GC must be 'boehm' or 'custom', got '$(GC)')
+endif
 
 VERSION := $(shell git describe --tags)
 CFLAGS += -DVERSION=\"$(VERSION)\"
@@ -110,6 +127,18 @@ optimised:
 	$(BINARY) rand_test.ar
 	$(MAKE) clean
 	$(MAKE) CFLAGS="$(CFLAGS) -O3 -fprofile-use" STRIP_FLAG=-s $(BINARY)
+
+# ------------------------------------------------------------
+# Custom GC unit tests (standalone, don't need the interpreter)
+# ------------------------------------------------------------
+GC_TEST_FLAGS = -O1 -g -Wall -Wextra -DARGON_GC_CUSTOM -fsanitize=address
+
+gc-test:
+	@mkdir -p build/gc-test
+	$(CC) $(GC_TEST_FLAGS) src/gc/tests/heap_test.c src/gc/heap.c -o build/gc-test/heap_test
+	./build/gc-test/heap_test
+
+.PHONY: gc-test
 
 # ------------------------------------------------------------
 # Cleanup

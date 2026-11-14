@@ -21,6 +21,7 @@ file(GLOB_RECURSE CFILES CONFIGURE_DEPENDS
     ${CMAKE_CURRENT_SOURCE_DIR}/src/*.c
 )
 list(REMOVE_ITEM CFILES ${LEXER_C})  # remove if globbed
+list(FILTER CFILES EXCLUDE REGEX "/src/gc/tests/")  # standalone GC tests have their own main()
 
 # Step 1: Custom command to generate lexer
 add_custom_command(
@@ -43,6 +44,15 @@ endif()
 
 # Step 3: Add executable
 add_executable(argon ${SOURCES})
+
+# Garbage collector backend: -DARGON_GC=boehm (default) or -DARGON_GC=custom
+set(ARGON_GC "boehm" CACHE STRING "Garbage collector backend (boehm or custom)")
+set_property(CACHE ARGON_GC PROPERTY STRINGS boehm custom)
+if(ARGON_GC STREQUAL "custom")
+    target_compile_definitions(argon PRIVATE ARGON_GC_CUSTOM)
+elseif(NOT ARGON_GC STREQUAL "boehm")
+    message(FATAL_ERROR "ARGON_GC must be 'boehm' or 'custom', got '${ARGON_GC}'")
+endif()
 
 # added this for homebrew formula
 install(TARGETS argon DESTINATION bin)
@@ -93,11 +103,13 @@ find_package(Threads REQUIRED)
 if(CONAN_EXPORTED OR EXISTS "${CMAKE_BINARY_DIR}/conan_toolchain.cmake")
     # Conan build
     set(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
-    find_package(BDWgc REQUIRED)
+    if(ARGON_GC STREQUAL "boehm")
+        find_package(BDWgc REQUIRED)
+        target_link_libraries(argon PRIVATE BDWgc::BDWgc)
+    endif()
     find_package(gmp REQUIRED)
     find_package(mpfr REQUIRED)
     target_link_libraries(argon PRIVATE
-        BDWgc::BDWgc
         gmp::gmp
         mpfr::mpfr
         Threads::Threads
@@ -110,7 +122,9 @@ else()
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(GMP REQUIRED gmp)
     pkg_check_modules(MPFR REQUIRED mpfr)
-    pkg_check_modules(BDWGC REQUIRED bdw-gc)
+    if(ARGON_GC STREQUAL "boehm")
+        pkg_check_modules(BDWGC REQUIRED bdw-gc)
+    endif()
     target_include_directories(argon PRIVATE
         ${GMP_INCLUDE_DIRS}
         ${MPFR_INCLUDE_DIRS}

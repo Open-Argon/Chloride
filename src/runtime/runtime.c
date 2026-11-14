@@ -34,7 +34,6 @@
 #include "objects/tuple/tuple.h"
 #include "objects/type/type.h"
 #include <fcntl.h>
-#include <gc/gc.h>
 #include <gmp.h>
 #include <inttypes.h>
 #include <stddef.h>

@@ -4,26 +4,52 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#define GC_THREADS
-
 #ifndef ARGON_MEMORY_H
 #define ARGON_MEMORY_H
 
-#include <stddef.h> // for size_t
-#include <stdbool.h>
-#include <gc/gc.h>
+// This header is the *only* interface the rest of the interpreter uses to talk
+// to the garbage collector. Nothing outside src/gc/ should include <gc/gc.h>
+// or call GC_* directly, so the backend can be swapped at build time:
+//
+//   make            -> Boehm backend   (src/gc/gc_boehm.c)
+//   make GC=custom  -> custom backend  (src/gc/gc_custom.c)
 
-void ar_finalizer(void *obj, GC_finalization_proc fn, void *client_data,
-                  GC_finalization_proc *old_fn, void **old_client_data);
+#include <stdbool.h>
+#include <stddef.h> // for size_t
+
+typedef void (*ar_finalizer_fn)(void *obj, void *client_data);
+
+// --- collected heap -------------------------------------------------------
+// Memory that may contain pointers to other collected memory.
 void *ar_alloc(size_t size);
-void *ar_realloc(void * old,size_t size);
+void *ar_realloc(void *old, size_t size);
+// Memory that will never contain pointers (strings, bytecode, GMP limbs).
+// The collector does not scan it, so never store a GC pointer in it.
 void *ar_alloc_atomic(size_t size);
 char *ar_strdup(const char *str);
 
-// Memory init/shutdown
-void ar_memory_init();
-void ar_memory_shutdown();
+void ar_finalizer(void *obj, ar_finalizer_fn fn, void *client_data);
 
+// --- uncollectable heap ---------------------------------------------------
+// Never freed by the collector, but scanned for pointers (i.e. acts as a root).
+// Must be released with ar_free.
+void *ar_alloc_uncollectable(size_t size);
+void ar_free(void *ptr);
+
+// --- threads ----------------------------------------------------------------
+// Any thread other than the main thread must register before touching the
+// heap, and unregister before it exits.
+int ar_register_thread(void);
+int ar_unregister_thread(void);
+
+// --- control ----------------------------------------------------------------
+void ar_gc_collect(void);
+
+void ar_memory_init(void);
+void ar_memory_shutdown(void);
+
+// --- plain malloc (not collected, not scanned) ------------------------------
+// Never store a GC pointer in memory from these: the collector can't see it.
 void *checked_malloc(size_t size);
 void *checked_realloc(void *ptr, size_t size);
 

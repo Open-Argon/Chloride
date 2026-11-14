@@ -12,7 +12,6 @@
 #include "exceptions/exceptions.h"
 #include "literals/literals.h"
 #include "type/type.h"
-#include <gc/gc.h>
 #include <pthread.h>
 #include <stdatomic.h>
 #include <stdbool.h>
@@ -75,8 +74,8 @@ static ThreadLocalPool *get_thread_pool(void) {
   init_tls_index();
   ThreadLocalPool *pool = (ThreadLocalPool *)TlsGetValue(tls_index);
   if (!pool) {
-    // Use GC_MALLOC_UNCOLLECTABLE so Boehm can see it safely
-    pool = (ThreadLocalPool *)GC_MALLOC_UNCOLLECTABLE(sizeof(ThreadLocalPool));
+    // Uncollectable so the collector scans it (it points at the current chunk)
+    pool = (ThreadLocalPool *)ar_alloc_uncollectable(sizeof(ThreadLocalPool));
     pool->small_objects = NULL;
     pool->small_objects_pos = 0;
     TlsSetValue(tls_index, pool);
@@ -86,12 +85,12 @@ static ThreadLocalPool *get_thread_pool(void) {
 
 #else
 // Linux/macOS: __thread is fine if we also wrap small_objects in
-// GC_MALLOC_UNCOLLECTABLE
+// ar_alloc_uncollectable
 static __thread ThreadLocalPool *pool = NULL;
 
 static ThreadLocalPool *get_thread_pool(void) {
   if (!pool) {
-    pool = (ThreadLocalPool *)GC_MALLOC_UNCOLLECTABLE(sizeof(ThreadLocalPool));
+    pool = (ThreadLocalPool *)ar_alloc_uncollectable(sizeof(ThreadLocalPool));
     pool->small_objects = NULL;
     pool->small_objects_pos = 0;
   }
@@ -104,10 +103,16 @@ void unregister_thread_pool() {
   ThreadLocalPool *pool = (ThreadLocalPool *)TlsGetValue(tls_index);
 #endif
   if (pool)
-    GC_free(pool);
+    ar_free(pool);
 }
 
 ArgonObject *new_small_object(size_t endSize) {
+#ifdef ARGON_GC_CUSTOM
+  // The custom GC's size classes already make small allocations cheap, and
+  // carving many objects out of one chunk would keep the whole chunk alive as
+  // long as any one of them is reachable.
+  return new_object(endSize);
+#endif
   ThreadLocalPool *pool = get_thread_pool();
   ArgonObject *object;
 
