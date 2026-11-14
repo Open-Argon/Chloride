@@ -30,6 +30,8 @@ void runtime_assignment(int64_t length, int64_t offset, int64_t hash,
     if (!assignable_keys)
       assignable_keys = createHashmap_GC();
     key = new_string_object(data, length, hash);
+    // The cache of variable-name strings lives as long as the program.
+    gc_immortalize(key);
     hashmap_insert_GC(assignable_keys, hash, NULL, key, 0);
   }
   hashmap_insert_GC(init_scope(stack)->scope, hash, key, state->registers[from_register],

@@ -38,6 +38,10 @@ struct hashmap_GC {
   // only those; maps with other keys or values (C strings, flags...) must say
   // so when they're created.
   uint8_t gc_flags;
+
+  // The managed object this map belongs to (a Stack, an object's attribute
+  // dict, a dictionary), or NULL. See hashmap_GC_claim.
+  GCHeader *gc_owner;
 };
 
 #define HASHMAP_GC_OBJECT_KEYS 1
@@ -53,6 +57,22 @@ struct hashmap_GC *createHashmap_GC_with(uint8_t gc_flags);
 
 // Visit every key and value that is a managed object (see gc_flags).
 void hashmap_GC_traverse(struct hashmap_GC *t, gc_visit_fn visit, void *ctx);
+
+// A hashmap belongs to exactly one managed object, its owner: the first to
+// claim it. Anyone else that claims it afterwards (e.g. the dictionary
+// `import` returns, which is a live view of the module's scope) is a *view*:
+// it holds a counted reference to the owner rather than to the entries, so
+// the entries are only ever counted, traversed and freed once.
+void hashmap_GC_claim(struct hashmap_GC *t, void *holder);
+
+// What `holder` should traverse for the map it holds: the entries if it owns
+// the map, or just the owner if it's a view.
+void hashmap_GC_traverse_from(struct hashmap_GC *t, void *holder,
+                              gc_visit_fn visit, void *ctx);
+
+// Visit every value, whatever gc_flags says (for maps of uncounted roots).
+void hashmap_GC_for_each_value(struct hashmap_GC *t, gc_visit_fn visit,
+                               void *ctx);
 
 void clear_hashmap_GC(struct hashmap_GC *t);
 

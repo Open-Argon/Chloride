@@ -91,7 +91,8 @@ void gc_register_static(void *obj) { (void)obj; }
 gc_epoch gc_enter(void) { return 0; }
 void gc_leave(gc_epoch previous) { (void)previous; }
 void gc_collect_now(void) { GC_gcollect(); }
-void gc_add_root_tracer(gc_root_tracer tracer) { (void)tracer; }
+void gc_add_counted_roots(gc_root_tracer tracer) { (void)tracer; }
+void gc_add_uncounted_roots(gc_root_tracer tracer) { (void)tracer; }
 GCVerifyResult gc_verify(void) { return (GCVerifyResult){0}; }
 GCStats gc_stats(void) { return (GCStats){0}; }
 void gc_init(void) {}

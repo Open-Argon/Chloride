@@ -641,9 +641,7 @@ ARGON_METHOD(ARGON_STRING_TYPE, split, {
   object->type = TYPE_ARRAY;
   object->value.as_array = darray_armem_create();
 
-  darray_armem_init(object->value.as_array,
-                    sizeof(ArgonObject *),
-                    0);
+  darray_armem_init_objects(object->value.as_array, 0);
 
   /* Guard: if source string is empty or has no data, return array with
    * just the original (empty) string as the sole element. */
@@ -1346,6 +1344,7 @@ ARGON_METHOD(ARGON_STRING_TYPE, __iter__, {
   iterator->value.as_string_iterator->data = self.data;
   iterator->value.as_string_iterator->length = self.length;
   iterator->value.as_string_iterator->source = argv[0];
+  gc_incref(argv[0]);
   return iterator;
 })
 

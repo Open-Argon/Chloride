@@ -48,11 +48,27 @@ void darray_armem_init(darray_armem *arr, size_t element_size,
   }
 
   RWLOCK_CREATE(&arr->lock);
+  arr->gc_objects = false;
 
   // GC_register_finalizer(arr, darray_armem_finalizer, NULL, NULL, NULL);
 }
 
+void darray_armem_init_objects(darray_armem *arr, size_t initial_size) {
+  darray_armem_init(arr, sizeof(struct ArgonObject *), initial_size);
+  memset(arr->data, 0, arr->capacity * sizeof(struct ArgonObject *));
+  arr->gc_objects = true;
+}
+
+struct ArgonObject;
+static inline struct ArgonObject **object_at(darray_armem *arr, size_t index) {
+  return (struct ArgonObject **)arr->data + arr->offset + index;
+}
+
 static void darray_armem_resize_nolock(darray_armem *arr, size_t new_size) {
+  size_t old_size = arr->size;
+  if (arr->gc_objects) // elements dropped by shrinking are released
+    for (size_t i = new_size; i < old_size; i++)
+      gc_decref(*object_at(arr, i));
   size_t required_bytes = (arr->offset + new_size) * arr->element_size;
   size_t new_capacity_bytes = required_bytes * 2;
   size_t new_capacity = new_capacity_bytes / arr->element_size;
@@ -66,6 +82,10 @@ static void darray_armem_resize_nolock(darray_armem *arr, size_t new_size) {
     arr->capacity = new_capacity;
   }
 
+  // Elements gained by growing start out NULL (realloc doesn't zero them).
+  if (new_size > old_size)
+    memset((char *)arr->data + (arr->offset + old_size) * arr->element_size, 0,
+           (new_size - old_size) * arr->element_size);
   arr->size = new_size;
 }
 
@@ -94,6 +114,8 @@ void darray_armem_insert(darray_armem *arr, size_t pos_, void *element) {
     }
 
     memcpy(target, element, arr->element_size);
+    if (arr->gc_objects)
+      gc_incref(*(struct ArgonObject **)element);
   });
 }
 
@@ -115,6 +137,10 @@ bool darray_armem_pop(darray_armem *arr, size_t pos_, void *out) {
       if (out) {
         memcpy(out, target, arr->element_size);
       }
+      // The popped element now lives only in the caller's C local (or
+      // nowhere), which isn't counted.
+      if (arr->gc_objects)
+        gc_decref(*(struct ArgonObject **)target);
 
       if (pos < arr->size - 1) {
         memmove(target, (char *)target + arr->element_size,
@@ -164,6 +190,10 @@ darray_armem darray_armem_slice(darray_armem *arr, size_t start, size_t end) {
 
     slice.offset = 0;
     RWLOCK_CREATE(&slice.lock);
+    slice.gc_objects = arr->gc_objects;
+    if (slice.gc_objects) // the copy holds its own references
+      for (size_t i = 0; i < slice.size; i++)
+        gc_incref(((struct ArgonObject **)slice.data)[i]);
   });
 
   return slice;

@@ -220,7 +220,7 @@ ARGON_METHOD(ARGON_BUFFER_TYPE, split, {
   ArgonObject *object = new_instance(ARRAY_TYPE, sizeof(darray_armem));
   object->type = TYPE_ARRAY;
   object->value.as_array = darray_armem_create();
-  darray_armem_init(object->value.as_array, sizeof(ArgonObject *), 0);
+  darray_armem_init_objects(object->value.as_array, 0);
 
   char *start = (char *)self.data;
   char *end = (char *)self.data + self.size;

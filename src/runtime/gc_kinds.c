@@ -41,7 +41,7 @@ static void object_traverse(GCHeader *h, gc_visit_fn visit, void *ctx) {
   // and its attribute dictionary.
   for (size_t i = 0; i < o->built_in_slot_length; i++)
     VISIT(o->built_in_slot[i].value);
-  hashmap_GC_traverse(o->dict, visit, ctx);
+  hashmap_GC_traverse_from(o->dict, o, visit, ctx);
 
   // Then whatever its type keeps in `value`.
   switch (o->type) {
@@ -55,7 +55,7 @@ static void object_traverse(GCHeader *h, gc_visit_fn visit, void *ctx) {
     break;
   }
   case TYPE_DICTIONARY:
-    hashmap_GC_traverse(o->value.as_hashmap, visit, ctx);
+    hashmap_GC_traverse_from(o->value.as_hashmap, o, visit, ctx);
     break;
   case TYPE_ARRAY: {
     darray_armem *a = o->value.as_array;
@@ -168,7 +168,7 @@ static const GCKind object_kind = {
 
 static void stack_traverse(GCHeader *h, gc_visit_fn visit, void *ctx) {
   Stack *s = (Stack *)h;
-  hashmap_GC_traverse(s->scope, visit, ctx);
+  hashmap_GC_traverse_from(s->scope, s, visit, ctx);
   VISIT(s->prev);
 }
 

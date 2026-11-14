@@ -714,6 +714,8 @@ Stack *ar_import(char *current_directory, char *path_relative, ArErr *err,
   double time_spent = (double)(end - start) / CLOCKS_PER_SEC;
   fprintf(stderr, "Execution time taken: %f seconds\n", time_spent);
 #endif
+  // Imported modules stay loaded for the rest of the program.
+  gc_immortalize(main_scope);
   hashmap_insert_GC(imported_hash_table, hash, path, main_scope, 0);
   hashmap_insert_GC(importing_hash_table, hash, path, (void *)NULL, 0);
   return main_scope;

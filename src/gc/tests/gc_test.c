@@ -82,6 +82,15 @@ static void trace_roots(gc_visit_fn visit, void *ctx) {
 
 static bool is_live(Node *n) { return heap_cell_of(n) == n; }
 
+// Fake VM registers: an UNCOUNTED root (stores into it never incref).
+#define NREGS 8
+static Node *regs[NREGS];
+
+static void trace_regs(gc_visit_fn visit, void *ctx) {
+  for (int i = 0; i < NREGS; i++)
+    visit(regs[i] ? &regs[i]->gc : NULL, ctx);
+}
+
 // Objects the tests deliberately leave behind for good (an immortal node and
 // a NOFREE zombie); every "is the heap empty?" check allows for them.
 static size_t permanent;
@@ -190,6 +199,24 @@ static void test_epochs(void) {
   gc_collect_now(); // back at the outer level, both can go now
   CHECK(gc_stats().live == 0);
   printf("  epochs: ok\n");
+}
+
+static void test_uncounted_roots(void) {
+  Node *a = node_new(); // refcount 0, only in a register
+  regs[0] = a;          // plain store: registers aren't counted
+  Node *b = node_new(), *c = node_new(); // a cycle, only reachable from a reg
+  gc_assign(&b->child[0], c);
+  gc_assign(&c->child[0], b);
+  regs[1] = b;
+  gc_collect_now();
+  CHECK(is_live(a) && is_live(b) && is_live(c));
+  CHECK(a->gc.gc_refs == 0 && !(a->gc.flags & GC_ROOTED)); // scratch cleared
+  expect_verify_clean(); // register references aren't counted references
+
+  regs[0] = regs[1] = NULL; // the "frame" returned
+  gc_collect_now();
+  CHECK(gc_stats().live == permanent);
+  printf("  uncounted roots: ok\n");
 }
 
 static void test_immortal(void) {
@@ -390,13 +417,15 @@ int main(void) {
   setvbuf(stdout, NULL, _IONBF, 0);
   gc_init();
   NODE = gc_register_kind(&node_kind);
-  gc_add_root_tracer(trace_roots);
+  gc_add_counted_roots(trace_roots);
+  gc_add_uncounted_roots(trace_regs);
 
   printf("gc_test:\n");
   test_refcount_basics();
   test_long_chain();
   test_cycles();
   test_epochs();
+  test_uncounted_roots();
   test_immortal();
   expect_clean_heap();
   test_verifier();

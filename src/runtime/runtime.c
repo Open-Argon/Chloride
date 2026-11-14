@@ -238,9 +238,9 @@ void append_objects_fields_recursively(darray_armem *array, hashmap_GC *used,
   for (size_t i = 0; i < obj->built_in_slot_length; i++) {
     if (obj->built_in_slot[i].value) {
       if (!hashmap_lookup_GC(used, built_in_field_hashes[i])) {
-        ArgonObject *key = new_string_object_without_memcpy(
-            (char *)built_in_field_names[i], strlen(built_in_field_names[i]),
-            built_in_field_hashes[i]);
+        ArgonObject *key = new_string_object(built_in_field_names[i],
+                                             strlen(built_in_field_names[i]),
+                                             built_in_field_hashes[i]);
         darray_armem_insert(array, array->size, &key);
         hashmap_insert_GC(used, built_in_field_hashes[i], NULL, (void *)true,
                           0);
@@ -253,8 +253,9 @@ void append_objects_fields_recursively(darray_armem *array, hashmap_GC *used,
   struct node_GC **nodes = hashmap_GC_to_array(obj->dict, &array_length);
   for (size_t i = 0; i < array_length; i++) {
     if (!hashmap_lookup_GC(used, nodes[i]->hash)) {
-      ArgonObject *key = new_string_object_without_memcpy(
-          nodes[i]->key, strlen(nodes[i]->key), nodes[i]->hash);
+      // Copy the name: the dict owns its keys, and they go when it does.
+      ArgonObject *key = new_string_object(nodes[i]->key,
+                                           strlen(nodes[i]->key), nodes[i]->hash);
       darray_armem_insert(array, array->size, &key);
       hashmap_insert_GC(used, nodes[i]->hash, NULL, (void *)true, 0);
     }
@@ -274,7 +275,7 @@ ARGON_FUNCTION(__dir__, {
 
   output_array->value.as_array = darray_armem_create();
 
-  darray_armem_init(output_array->value.as_array, sizeof(ArgonObject *), 0);
+  darray_armem_init_objects(output_array->value.as_array, 0);
 
   // A set of field hashes already seen: no keys, values are just `true`.
   append_objects_fields_recursively(output_array->value.as_array,
@@ -1526,6 +1527,7 @@ Stack *create_scope(Stack *prev
   // stack->fake_new_scopes = 0;
   stack->scope = NULL;
   stack->prev = prev;
+  gc_incref(prev); // a scope keeps its enclosing scope alive
   stack->captured = false;
   return stack;
   // }
@@ -1534,8 +1536,10 @@ Stack *create_scope(Stack *prev
 }
 
 Stack *init_scope(Stack *scope) {
-  if (!scope->scope)
+  if (!scope->scope) {
     scope->scope = createHashmap_GC();
+    hashmap_GC_claim(scope->scope, scope);
+  }
   return scope;
 }
 
@@ -1561,8 +1565,61 @@ bool is_instance(ArgonObject *object, ArgonObject *type_) {
   return false;
 }
 
+// ---------------------------------------------------------------------------
+// The VM's uncounted GC roots (see src/gc/README.md, "Deferred reference
+// counting"). Registers, a frame's current scope, half-built calls and saved
+// exception handlers change far too often to count. Instead, each safe point
+// asks trace_vm_roots for everything they point at, and keeps it alive.
+// ---------------------------------------------------------------------------
+
+// Every runtime() invocation that hasn't returned yet, innermost first.
+// (Per thread; the collector itself only runs single-threaded for now.)
+typedef struct ActiveRuntime {
+  StackFrame **frame; // that invocation's currentStackFrame
+  struct ActiveRuntime *prev;
+} ActiveRuntime;
+
+static __thread ActiveRuntime *active_runtimes;
+
+#define VISIT(ptr) visit((GCHeader *)(ptr), ctx)
+
+static void trace_call_instances(call_instance *ci, gc_visit_fn visit,
+                                 void *ctx) {
+  for (; ci; ci = ci->previous) {
+    VISIT(ci->to_call);
+    for (size_t i = 0; i < ci->args.length; i++)
+      VISIT(ci->args.arr[i]);
+    hashmap_GC_for_each_value(ci->kwargs, visit, ctx);
+  }
+}
+
+static void trace_vm_roots(gc_visit_fn visit, void *ctx) {
+  for (ActiveRuntime *r = active_runtimes; r; r = r->prev) {
+    for (StackFrame *f = *r->frame; f; f = f->previousStackFrame) {
+      for (size_t i = 0; i < f->translated.registerCount; i++)
+        VISIT(f->state.registers[i]);
+      VISIT(f->stack);
+      trace_call_instances(f->state.call_instance, visit, ctx);
+      darray_armem *catches = &f->state.catch_errors;
+      for (size_t i = 0; catches->data && i < catches->size; i++) {
+        ErrorCatch *c = darray_armem_get(catches, i);
+        VISIT(c->stack);
+        trace_call_instances(c->callInstance, visit, ctx);
+      }
+    }
+  }
+}
+
+#undef VISIT
+
+void register_vm_roots(void) { gc_add_uncounted_roots(trace_vm_roots); }
+
 void runtime(Translated _translated, RuntimeState _state, Stack *stack,
              ArErr *err_ptr) {
+  // Safe points in this invocation may only free objects born from here on:
+  // whoever called us (perhaps a native, part-way through its work) may
+  // still hold older ones in C locals.
+  gc_epoch outer_epoch = gc_enter();
   static void *const dispatch_table[] = {
       [OP_LOAD_STRING] = &&DO_LOAD_STRING,
       [OP_DECLARE] = &&DO_DECLARE,
@@ -1649,6 +1706,8 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
   StackFrame *currentStackFrame = ar_alloc(sizeof(StackFrame));
   *currentStackFrame = (StackFrame){_translated, _state, stack, NULL, 0, {}};
   currentStackFrame->state.currentStackFramePointer = &currentStackFrame;
+  ActiveRuntime active = {&currentStackFrame, active_runtimes};
+  active_runtimes = &active;
   while (currentStackFrame) {
     size_t ip = currentStackFrame->state.head;
     DArray *bytecode = &currentStackFrame->translated.bytecode;
@@ -1665,6 +1724,10 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
         KeyboardInterrupted = 0;
         break;
       }
+
+      // Between two instructions, every live value is in a register, a
+      // scope or some other VM structure, so this is a safe point.
+      gc_safe_point();
 
       uint8_t instruction = POP_BYTE();
       // printf("instruction: %d %s:%zu:%zu\n", instruction, state->path,
@@ -1766,6 +1829,8 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
         }
 
         state->registers[to_register] = new_number_object(r);
+        // Cached constants live as long as the program: make them immortal.
+        gc_immortalize(state->registers[to_register]);
         hashmap_insert_GC(state->load_number_cache, uuid, NULL,
                           state->registers[to_register], 0);
         mpq_clear(r);
@@ -1816,7 +1881,7 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
             arena_get(&translated->constants, bytecode_offset);
         object->value.argon_fn->bytecode_length = bytecode_length;
         Stack *current = currentStackFrame->stack;
-        object->value.argon_fn->stack = current;
+        gc_assign(&object->value.argon_fn->stack, current); // the closure
         // The closure can see this scope and every scope above it. Stop at
         // the first one already marked: its ancestors are marked too.
         for (Stack *s = current; s && !s->captured; s = s->prev)
@@ -1900,9 +1965,10 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
             ->value.argon_fn->default_parameters[index]
             .key.hash = hash;
 
-        state->registers[func_register]
-            ->value.argon_fn->default_parameters[index]
-            .value = state->registers[0];
+        gc_assign(&state->registers[func_register]
+                       ->value.argon_fn->default_parameters[index]
+                       .value,
+                  state->registers[0]);
         continue;
       }
     DO_IMPORT:
@@ -2183,9 +2249,9 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
         *key = (struct string_struct){
             hash, arena_get(&translated->constants, offset), length};
         if (!state->call_instance->kwargs)
-          // keys are struct string_struct *, values are objects
-          state->call_instance->kwargs =
-              createHashmap_GC_with(HASHMAP_GC_OBJECT_VALUES);
+          // Keys are struct string_struct *. Like the rest of a pending
+          // call, the values are uncounted VM roots (see trace_vm_roots).
+          state->call_instance->kwargs = createHashmap_GC_with(0);
         hashmap_insert_GC(state->call_instance->kwargs, hash, key,
                           state->registers[0], 0);
         continue;
@@ -2193,9 +2259,9 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
     DO_UNPACK_KEY_WORD_ARGS:
       {
         if (!state->call_instance->kwargs)
-          // keys are struct string_struct *, values are objects
-          state->call_instance->kwargs =
-              createHashmap_GC_with(HASHMAP_GC_OBJECT_VALUES);
+          // Keys are struct string_struct *. Like the rest of a pending
+          // call, the values are uncounted VM roots (see trace_vm_roots).
+          state->call_instance->kwargs = createHashmap_GC_with(0);
 
         ArgonObject *object = state->registers[0];
         ArgonObject *iterator_method =
@@ -2257,8 +2323,16 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
             break;
           }
 
-          hashmap_insert_GC(state->call_instance->kwargs, hash,
-                            key->value.as_str, value, 0);
+          // Copy the key: as_str belongs to the key string object, which
+          // nothing else keeps alive.
+          struct string_struct *key_copy =
+              ar_alloc(sizeof(struct string_struct));
+          char *key_data = ar_alloc_atomic(key->value.as_str->length + 1);
+          memcpy(key_data, key->value.as_str->data, key->value.as_str->length);
+          *key_copy = (struct string_struct){key->value.as_str->hash, key_data,
+                                             key->value.as_str->length};
+          hashmap_insert_GC(state->call_instance->kwargs, hash, key_copy,
+                            value, 0);
         }
         continue;
       }
@@ -3378,6 +3452,8 @@ void runtime(Translated _translated, RuntimeState _state, Stack *stack,
     if (currentStackFrame)
       currentStackFrame->state.registers[0] = result;
   }
+  active_runtimes = active.prev;
+  gc_leave(outer_epoch);
   if (is_error(&err))
     *err_ptr = err;
 }

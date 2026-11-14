@@ -49,6 +49,7 @@ enum {
   GC_CANDIDATE = 1 << 3, // scratch: in the current cycle collection's set
   GC_REACHABLE = 1 << 4, // scratch: proven reachable from outside the set
   GC_DYING = 1 << 5,     // scratch: in a garbage cycle being freed
+  GC_ROOTED = 1 << 6,    // scratch: held by an uncounted root (safe point)
 };
 
 // ---------------------------------------------------------------------------
@@ -131,6 +132,15 @@ static inline void gc_decref(void *obj) { (void)obj; }
     gc_decref(gc_old_);                                                        \
   } while (0)
 
+// incref every element of an array of object pointers (after copying a block
+// of them into a counted holder with memcpy, say).
+#define gc_incref_each(items, count)                                           \
+  do {                                                                         \
+    __typeof__(&(items)[0]) gc_items_ = (items);                               \
+    for (size_t gc_i_ = 0, gc_n_ = (count); gc_i_ < gc_n_; gc_i_++)            \
+      gc_incref(gc_items_[gc_i_]);                                             \
+  } while (0)
+
 // Make an object permanent: counting it does nothing and it is never freed.
 void gc_immortalize(void *obj);
 // Make every object allocated so far immortal (call at the end of bootstrap).
@@ -174,14 +184,24 @@ static inline void gc_safe_point(void) {}
 void gc_collect_now(void);
 
 // ---------------------------------------------------------------------------
-// Roots for the verifier
+// Roots
 // ---------------------------------------------------------------------------
 
-// Counted holders that aren't managed objects (VM registers, frames...) must
-// be reported to the verifier, otherwise their references look like leaks.
-// Trial deletion itself never needs roots.
+// A root tracer calls visit(obj, ctx) for every object some non-heap holder
+// points at. There are two sorts of holder:
 typedef void (*gc_root_tracer)(gc_visit_fn visit, void *ctx);
-void gc_add_root_tracer(gc_root_tracer tracer);
+
+// UNCOUNTED roots: holders that never incref, because they change far too
+// often to be worth counting - the VM's registers, frames and argument lists.
+// Every safe point scans them first, and anything they point at is kept alive
+// (not freed from the ZCT, and treated as externally referenced by the cycle
+// collector). This is the "deferred" in deferred reference counting.
+void gc_add_uncounted_roots(gc_root_tracer tracer);
+
+// COUNTED roots: holders that do incref but aren't managed objects (a global
+// hashmap, say). The collector doesn't need them (their counts already keep
+// things alive) but the verifier does, or their references look like leaks.
+void gc_add_counted_roots(gc_root_tracer tracer);
 
 typedef struct {
   size_t too_low;  // refcount < references found: would be freed while used

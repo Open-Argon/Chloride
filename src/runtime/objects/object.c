@@ -195,29 +195,50 @@ ArgonObject *new_instance(ArgonObject *of, size_t endSize) {
   return object;
 }
 
+// Attribute dicts own their keys (C strings): a key that pointed into some
+// string object's characters would dangle once that string is freed. Only
+// called for keys not already in the dict, so each name is copied once.
+static char *own_key(const char *name, size_t length) {
+  char *key = ar_alloc_atomic(length + 1);
+  memcpy(key, name, length);
+  key[length] = '\0';
+  return key;
+}
+
+static void insert_attribute(ArgonObject *target, const char *name,
+                             uint64_t hash, size_t length,
+                             ArgonObject *object) {
+  if (!target->dict) {
+    // Keys are C strings owned by the dict, values are (counted) objects.
+    target->dict = createHashmap_GC_with(HASHMAP_GC_OBJECT_VALUES);
+    hashmap_GC_claim(target->dict, target);
+  }
+  // An existing entry keeps its key; only a new entry needs a copy.
+  char *key = hashmap_lookup_node_GC(target->dict, hash)
+                  ? (char *)name
+                  : own_key(name, length);
+  hashmap_insert_GC(target->dict, hash, key, object, 0);
+}
+
 inline void add_builtin_field(ArgonObject *target, built_in_fields field,
                               ArgonObject *object) {
   // pthread_rwlock_rdlock(&target->lock);
   for (size_t i = 0; i < target->built_in_slot_length; i++) {
     if (target->built_in_slot[i].field == field) {
-      target->built_in_slot[i].value = object;
+      gc_assign(&target->built_in_slot[i].value, object);
       // pthread_rwlock_unlock(&target->lock);
       return;
     }
   }
   if (field > BUILT_IN_ARRAY_COUNT) {
-    if (!target->dict) {
-      // pthread_rwlock_unlock(&target->lock);
-      // pthread_rwlock_wrlock(&target->lock);
-      target->dict = createHashmap_GC_with(HASHMAP_GC_OBJECT_VALUES);
-    }
-    // pthread_rwlock_unlock(&target->lock);
-    hashmap_insert_GC(target->dict, built_in_field_hashes[field],
-                      (char *)built_in_field_names[field], object, 0);
+    insert_attribute(target, built_in_field_names[field],
+                     built_in_field_hashes[field],
+                     strlen(built_in_field_names[field]), object);
     return;
   }
   // pthread_rwlock_unlock(&target->lock);
   // pthread_rwlock_wrlock(&target->lock);
+  gc_incref(object);
   target->built_in_slot[target->built_in_slot_length++] =
       (struct built_in_slot){field, object};
   // pthread_rwlock_unlock(&target->lock);
@@ -235,16 +256,7 @@ void add_field_l(ArgonObject *target, char *name, uint64_t hash, size_t length,
       return;
     }
   }
-  if (!target->dict) {
-    // pthread_rwlock_unlock(&target->lock);
-    // pthread_rwlock_wrlock(&target->lock);
-    // Keys are C strings (field names), values are objects.
-    // TODO(gc stage 4): add_field_l's keys point into a string object's
-    // data without holding that object.
-    target->dict = createHashmap_GC_with(HASHMAP_GC_OBJECT_VALUES);
-  }
-  // pthread_rwlock_unlock(&target->lock);
-  hashmap_insert_GC(target->dict, hash, name, object, 0);
+  insert_attribute(target, name, hash, length, object);
 }
 
 ArgonObject *bind_object_to_function(ArgonObject *object,

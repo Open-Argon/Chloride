@@ -107,4 +107,7 @@ void add_to_hashmap(struct hashmap_GC *hashmap, char *name, ArgonObject *value);
 void runtime(Translated translated, RuntimeState state, Stack *stack,
              ArErr *err);
 
+// Tell the GC how to find the VM's uncounted roots. Call once at startup.
+void register_vm_roots(void);
+
 #endif // RUNTIME_H

@@ -32,14 +32,16 @@ const GCKind *gc_kinds[256];
 size_t gc_kind_count;
 GCHeader **gc_statics;
 size_t gc_static_count;
-gc_root_tracer *gc_root_tracers;
-size_t gc_root_tracer_count;
+gc_root_tracer *gc_counted_roots, *gc_uncounted_roots;
+size_t gc_counted_root_count, gc_uncounted_root_count;
 
 bool gc_work_due;
 
 // Until stage 6 (threads) the collector is single-threaded, but threads can
-// already allocate. Once a second thread exists, allocation takes this lock.
-// Counting and safe points are NOT thread-safe yet.
+// already allocate. Once a second thread exists, allocation and the ZCT take
+// this lock and safe points stop freeing anything: refcount updates aren't
+// atomic yet, and other threads' VM roots aren't visible. Memory then grows
+// until exit, but nothing is freed while still in use.
 static bool multithreaded;
 static pthread_mutex_t alloc_lock = PTHREAD_MUTEX_INITIALIZER;
 
@@ -161,6 +163,13 @@ void *gc_new(uint8_t kind, size_t size) {
 }
 
 void gc_zero_count(GCHeader *h) {
+  if (multithreaded) {
+    pthread_mutex_lock(&alloc_lock);
+    if (!(h->flags & GC_IN_ZCT))
+      zct_push(h);
+    pthread_mutex_unlock(&alloc_lock);
+    return;
+  }
   if (!(h->flags & GC_IN_ZCT))
     zct_push(h);
 }
@@ -197,10 +206,48 @@ void gc_register_static(void *obj) {
   gc_statics[gc_static_count++] = obj;
 }
 
-void gc_add_root_tracer(gc_root_tracer tracer) {
-  gc_root_tracers = xrealloc(gc_root_tracers, (gc_root_tracer_count + 1) *
-                                                  sizeof *gc_root_tracers);
-  gc_root_tracers[gc_root_tracer_count++] = tracer;
+static void add_tracer(gc_root_tracer **list, size_t *count,
+                       gc_root_tracer tracer) {
+  *list = xrealloc(*list, (*count + 1) * sizeof **list);
+  (*list)[(*count)++] = tracer;
+}
+
+void gc_add_counted_roots(gc_root_tracer tracer) {
+  add_tracer(&gc_counted_roots, &gc_counted_root_count, tracer);
+}
+
+void gc_add_uncounted_roots(gc_root_tracer tracer) {
+  add_tracer(&gc_uncounted_roots, &gc_uncounted_root_count, tracer);
+}
+
+// ---------------------------------------------------------------------------
+// Uncounted roots
+//
+// At the start of a safe point every object an uncounted root points at gets
+// GC_ROOTED, and gc_refs counts how many such references it has (the cycle
+// collector adds its refcount on top, so rooted objects always look
+// externally referenced). At the end, both are cleared again.
+// ---------------------------------------------------------------------------
+
+static void hold_root(GCHeader *obj, void *ctx) {
+  (void)ctx;
+  if (obj && (obj->flags & GC_MORTAL)) {
+    obj->flags |= GC_ROOTED;
+    obj->gc_refs++;
+  }
+}
+
+static void release_root(GCHeader *obj, void *ctx) {
+  (void)ctx;
+  if (obj && (obj->flags & GC_MORTAL)) {
+    obj->flags &= ~GC_ROOTED;
+    obj->gc_refs = 0;
+  }
+}
+
+static void trace_uncounted_roots(gc_visit_fn visit) {
+  for (size_t i = 0; i < gc_uncounted_root_count; i++)
+    gc_uncounted_roots[i](visit, NULL);
 }
 
 // ---------------------------------------------------------------------------
@@ -253,6 +300,8 @@ static void free_object(GCHeader *h) {
 // Walk the ZCT. Every entry is one of:
 //   * counted again (refcount > 0), or immortal, or a zombie: just drop it
 //   * dead (refcount 0) and born in the current epoch: free it
+//   * refcount 0 but held by an uncounted root (a VM register, say): keep it;
+//     it dies once the root lets go of it
 //   * dead but older than the current epoch: a suspended native might still
 //     be holding it, so keep it for a shallower safe point
 // Freeing an object decrefs its children, which may append them to the ZCT;
@@ -265,7 +314,7 @@ static void process_zct(void) {
     if (h->refcount > 0 || !(h->flags & GC_MORTAL) ||
         (h->flags & GC_ZOMBIE)) {
       h->flags &= ~GC_IN_ZCT;
-    } else if (h->birth >= current_epoch) {
+    } else if (h->birth >= current_epoch && !(h->flags & GC_ROOTED)) {
       h->flags &= ~GC_IN_ZCT;
       stats.freed_by_rc++;
       free_object(h);
@@ -284,14 +333,15 @@ static void process_zct(void) {
 // ---------------------------------------------------------------------------
 
 // Step 0: candidates are mortal, live, container objects born in the current
-// epoch. Their gc_refs start as a copy of their refcount.
+// epoch. Their gc_refs start as their refcount, plus any references from
+// uncounted roots (already there, see hold_root).
 static void add_candidate(void *cell, void *ctx) {
   GCHeader *h = cell;
   if (!(h->flags & GC_MORTAL) || (h->flags & GC_ZOMBIE) ||
       h->birth < current_epoch || !gc_kind_of(h)->traverse)
     return;
   h->flags |= GC_CANDIDATE;
-  h->gc_refs = h->refcount;
+  h->gc_refs += h->refcount;
   gc_vec_push(ctx, h);
 }
 
@@ -390,8 +440,13 @@ static void collect_cycles(void) {
 static void run_safe_point(bool full) {
   if (in_collection)
     return;
+  if (multithreaded) { // see alloc_lock above
+    gc_work_due = false;
+    return;
+  }
   in_collection = true;
 
+  trace_uncounted_roots(hold_root);
   process_zct();
   if (full) {
     collect_cycles();
@@ -407,9 +462,10 @@ static void run_safe_point(bool full) {
               stats.cycle_collections, last_cycle_pause_ms, stats.live,
               hs.mapped_bytes / 1024);
     }
-    if (gc_config.verify)
-      gc_verify();
   }
+  trace_uncounted_roots(release_root);
+  if (full && gc_config.verify)
+    gc_verify(); // after release_root: it needs gc_refs to be 0
 
   stress_pending = false;
   gc_work_due = zct_len >= zct_limit || allocs_since_cycle >= cycle_threshold;
@@ -443,6 +499,12 @@ void gc_init(void) {
 GCStats gc_stats(void) { return stats; }
 
 void gc_shutdown(void) {
+  if (!gc_config.print_stats && !gc_config.verify)
+    return;
+  // The program has finished, so no frame or native holds anything any more:
+  // collect once more so "live" shows only what is really still referenced
+  // (module globals and immortal objects), which makes leaks stand out.
+  gc_collect_now();
   if (gc_config.verify)
     gc_verify();
   if (!gc_config.print_stats)

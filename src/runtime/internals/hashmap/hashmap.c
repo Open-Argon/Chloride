@@ -22,6 +22,32 @@ static inline int hashCode_GC_nolock(struct hashmap_GC *t, uint64_t hash) {
 static void hashmap_insert_GC_nolock(struct hashmap_GC *t, uint64_t hash,
                                      void *key, void *val, size_t order);
 
+// Reference counting (see src/gc/README.md): a hashmap is a counted holder
+// for whichever of its keys / values are managed objects (gc_flags).
+static inline void count_key(struct hashmap_GC *t, void *key) {
+  if (t->gc_flags & HASHMAP_GC_OBJECT_KEYS)
+    gc_incref(key);
+}
+static inline void count_val(struct hashmap_GC *t, void *val) {
+  if (t->gc_flags & HASHMAP_GC_OBJECT_VALUES)
+    gc_incref(val);
+}
+static inline void release_node(struct hashmap_GC *t, struct node_GC *n) {
+  if (t->gc_flags & HASHMAP_GC_OBJECT_KEYS)
+    gc_decref(n->key);
+  if (t->gc_flags & HASHMAP_GC_OBJECT_VALUES)
+    gc_decref(n->val);
+}
+// Overwrite the value of an existing entry (the key stays).
+static inline void replace_val(struct hashmap_GC *t, struct node_GC *n,
+                               void *val) {
+  void *old = n->val;
+  count_val(t, val);
+  n->val = val;
+  if (t->gc_flags & HASHMAP_GC_OBJECT_VALUES)
+    gc_decref(old);
+}
+
 void hashmap_finalizer(void *obj, void *client_data) {
   (void)client_data;
   struct hashmap_GC *hashmap = obj;
@@ -101,12 +127,14 @@ static void hashmap_insert_GC_nolock(struct hashmap_GC *t, uint64_t hash,
   /* Inline storage */
   for (size_t i = 0; i < t->inline_count; i++) {
     if (t->inline_values[i].hash == hash) {
-      t->inline_values[i].val = val;
+      replace_val(t, &t->inline_values[i], val);
       return;
     }
   }
 
   if (!t->list && t->inline_count < INLINE_HASHMAP_ARRAY_SIZE) {
+    count_key(t, key);
+    count_val(t, val);
     t->inline_values[t->inline_count++] = (struct node_GC){
         .hash = hash, .key = key, .val = val, .order = order, .next = NULL};
     t->count++;
@@ -122,12 +150,14 @@ static void hashmap_insert_GC_nolock(struct hashmap_GC *t, uint64_t hash,
 
   while (temp) {
     if (temp->hash == hash) {
-      temp->val = val;
+      replace_val(t, temp, val);
       return;
     }
     temp = temp->next;
   }
 
+  count_key(t, key);
+  count_val(t, val);
   struct node_GC *n = ar_alloc(sizeof(struct node_GC));
   *n = (struct node_GC){.hash = hash,
                         .key = key,
@@ -162,6 +192,13 @@ struct hashmap_GC *createHashmap_GC_with(uint8_t gc_flags) {
 void clear_hashmap_GC(struct hashmap_GC *t) {
   if (!t) return;
   RWLOCK_WRLOCK(t->lock, {
+    for (size_t i = 0; i < t->inline_count; i++)
+      release_node(t, &t->inline_values[i]);
+    if (t->list)
+      for (size_t i = 0; i < (size_t)t->size; i++)
+        for (struct node_GC *n = t->list[i]; n; n = n->next)
+          release_node(t, n);
+
     t->order = 1;
     t->count = 0;
     t->inline_count = 0;
@@ -215,6 +252,7 @@ int hashmap_remove_GC(struct hashmap_GC *t, uint64_t hash) {
     // Inline values
     for (size_t i = 0; i < t->inline_count; i++) {
       if (t->inline_values[i].hash == hash) {
+        release_node(t, &t->inline_values[i]);
         memmove(&t->inline_values[i], &t->inline_values[i + 1],
                 (t->inline_count - i - 1) * sizeof(struct node_GC));
         t->inline_count--;
@@ -230,6 +268,7 @@ int hashmap_remove_GC(struct hashmap_GC *t, uint64_t hash) {
 
       while (cur) {
         if (cur->hash == hash) {
+          release_node(t, cur);
           if (prev)
             prev->next = cur->next;
           else
@@ -331,4 +370,36 @@ void hashmap_GC_traverse(struct hashmap_GC *t, gc_visit_fn visit, void *ctx) {
   for (size_t i = 0; i < t->size; i++)
     for (struct node_GC *n = t->list[i]; n; n = n->next)
       visit_node(t, n, visit, ctx);
+}
+
+void hashmap_GC_for_each_value(struct hashmap_GC *t, gc_visit_fn visit,
+                               void *ctx) {
+  if (!t)
+    return;
+  for (size_t i = 0; i < t->inline_count; i++)
+    visit(t->inline_values[i].val, ctx);
+  if (!t->list)
+    return;
+  for (size_t i = 0; i < t->size; i++)
+    for (struct node_GC *n = t->list[i]; n; n = n->next)
+      visit(n->val, ctx);
+}
+
+void hashmap_GC_claim(struct hashmap_GC *t, void *holder) {
+  if (!t)
+    return;
+  if (!t->gc_owner)
+    t->gc_owner = holder;
+  else if (t->gc_owner != (GCHeader *)holder)
+    gc_incref(t->gc_owner); // a view keeps the owner (and so the map) alive
+}
+
+void hashmap_GC_traverse_from(struct hashmap_GC *t, void *holder,
+                              gc_visit_fn visit, void *ctx) {
+  if (!t)
+    return;
+  if (!t->gc_owner || t->gc_owner == (GCHeader *)holder)
+    hashmap_GC_traverse(t, visit, ctx);
+  else
+    visit(t->gc_owner, ctx);
 }

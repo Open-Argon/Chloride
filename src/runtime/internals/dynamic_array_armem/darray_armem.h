@@ -10,6 +10,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include "../../../RWLock.h"
+#include "../../../gc/gc.h"
 
 #define DARRAY_ARMEM_CHUNK_SIZE 128
 
@@ -20,12 +21,28 @@ typedef struct {
   size_t capacity;
   size_t offset;          // space at the start for efficient pops
   RWLock lock;
+  // Elements are ArgonObject * and the array is a counted holder of them
+  // (see src/gc/README.md): insert/pop/resize/slice incref and decref.
+  bool gc_objects;
 } darray_armem;
 
 darray_armem* darray_armem_create();
 
 // Initialize the dynamic array
 void darray_armem_init(darray_armem *arr, size_t element_size, size_t initial_size);
+
+// Initialize an array of ArgonObject * that counts its elements. The
+// initial_size elements start out NULL.
+void darray_armem_init_objects(darray_armem *arr, size_t initial_size);
+
+// Element `index` of an object array, as an lvalue-friendly pointer.
+#define DARRAY_OBJECT_SLOT(arr, index)                                         \
+  ((ArgonObject **)darray_armem_get((arr), (index)))
+
+// Store into element `index` of an object array: increfs the new value and
+// decrefs the old one.
+#define darray_armem_set_object(arr, index, value)                             \
+  gc_assign(DARRAY_OBJECT_SLOT((arr), (index)), (value))
 
 // Insert element at position (size = append)
 void darray_armem_insert(darray_armem *arr, size_t pos, void *element);

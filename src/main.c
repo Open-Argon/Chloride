@@ -65,6 +65,7 @@ int main(int argc, char *argv[]) {
   setlocale(LC_ALL, "");
   ar_memory_init();
   register_gc_kinds();
+  register_vm_roots();
   // generate_siphash_key(siphash_key);
   init_built_in_field_hashes();
   bootstrap_types();

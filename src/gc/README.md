@@ -85,8 +85,23 @@ interpreter and the stdlib. Instead we use **deferred reference counting**
   is truly dead.
 
 Our safe point is the **top of the bytecode loop in `runtime()`, between two
-instructions**. At that moment the only live values belong to the VM, and the
-VM's holders are all counted.
+instructions**. At that moment the only live values belong to the VM.
+
+### Uncounted VM roots
+
+The VM's own holders are deferred too. Registers, each frame's current
+scope, half-built calls (callee, arguments, kwargs) and saved exception
+handlers are rewritten constantly, so counting them would make every
+instruction pay for two refcount updates. They aren't counted at all.
+Instead, a safe point first asks `trace_vm_roots` (in `runtime.c`) for every
+object they point at, and treats each one as alive:
+
+* ZCT entries that a root points at aren't freed (they stay in the ZCT);
+* for the cycle collector, a root reference counts as an outside reference.
+
+So when a frame returns, nothing needs to be decref'd: its registers simply
+stop being roots, and anything that only they held dies at the next safe
+point. This is the classic form of deferred reference counting.
 
 ### Birth numbers: safe points inside nested calls
 
@@ -128,27 +143,39 @@ Objects never change address once allocated. C code can keep raw
 These are what the conversion work is about.
 
 1. **Counted holders.** Any store of an object pointer into one of these must
-   incref the new value and decref the old one:
-   object fields and built-in slots, hashmaps, arrays, tuples, function
-   structs (closure stack, default values), `Stack` scopes, VM registers,
-   `StackFrame`s, `call_instance` argument lists and kwargs, `ErrorCatch`
-   entries, iterator state.
-2. **C locals are free.** A pointer in a local variable or argument needs no
+   incref the new value and decref the old one (use `gc_assign`):
+   object fields and built-in slots, hashmaps, object arrays, tuples, function
+   structs (closure stack, default values), `Stack` scopes, iterator state.
+   Hashmaps and object darrays do this themselves on insert/remove/pop/etc.;
+   code that writes an array's elements directly must use
+   `darray_armem_set_object` (or `gc_incref_each` after a `memcpy`).
+2. **Uncounted VM roots.** Registers, frames, `call_instance`s and
+   `ErrorCatch` entries are *not* counted; `trace_vm_roots` reports them at
+   every safe point instead. A new VM structure that holds objects across
+   instructions must be added there.
+3. **C locals are free.** A pointer in a local variable or argument needs no
    bookkeeping, *as long as it doesn't survive past a safe point that could
    free it*. The birth rule makes that automatic for natives that call back
    into Argon.
-3. **Globals.** A C global (or `static`) that points at an object must hold
+4. **Globals.** A C global (or `static`) that points at an object must hold
    an immortal object. Call `gc_immortalize(obj)` when storing one after
-   bootstrap.
-4. **Memory outside the GC.** Never keep the only reference to an object in
+   bootstrap. Caches that live for the whole program (variable-name strings,
+   number constants, imported modules) do exactly this.
+5. **Memory outside the GC.** Never keep the only reference to an object in
    `malloc`'d memory without counting it (the same rule Boehm already has).
-5. **Holders must be traversable.** Every managed type has a `traverse`
+6. **Holders must be traversable.** Every managed type has a `traverse`
    function listing its outgoing references. A store into a structure the
    collector can't traverse is invisible to it.
-6. **Internal buffers are owned, not shared.** An array's element buffer, a
+7. **Internal buffers are owned, not shared.** An array's element buffer, a
    hashmap's buckets, a string's bytes and so on belong to exactly one managed
    object and are freed with it (plain `malloc`/`free`). They are not
-   refcounted themselves.
+   refcounted themselves. A hashmap can still be *viewed* by a second object
+   (`import` returns a dictionary that is a live view of the module's scope):
+   `hashmap_GC_claim` makes the first holder the owner, and any later holder
+   counts a reference to the owner instead of to the entries.
+8. **Don't borrow another object's memory.** A key or string that points into
+   some other object's characters dangles once that object is freed; copy it
+   (attribute dict keys and unpacked kwargs keys are copied for this reason).
 
 ---
 
@@ -202,8 +229,11 @@ page's free list.
 ```
 if (zct is big enough || cycle collection is due)
     gc_safe_point()
-        1. process ZCT: free entries with refcount 0 and birth >= epoch
+        0. mark everything the uncounted VM roots point at as rooted
+        1. process ZCT: free entries with refcount 0, birth >= epoch and
+           not rooted
         2. maybe run trial deletion over objects with birth >= epoch
+        3. clear the root marks
 ```
 
 ---
@@ -239,9 +269,16 @@ those stores, and repeat until it's clean. Then try it with freeing on.
       whether keys/values are objects; statics registered; everything created
       during bootstrap is immortal. Checked with `ARGON_GC_VERIFY`: 0 invalid
       pointers on every test script.
-- [ ] **4. Counted holders.** Convert stores subsystem by subsystem, driven by
-      `NOFREE` + `VERIFY`: registers and frames → scopes → objects and slots
-      → arrays/tuples/dicts → calls and errors → natives and the stdlib API.
+- [x] **4. Counted holders.** Object slots and attribute dicts, hashmaps,
+      object arrays, tuples, closures and default values, scopes, iterators
+      are counted; VM registers/frames/calls are uncounted roots traced at
+      safe points; the safe point and epochs are in `runtime()`. With
+      `NOFREE` + `VERIFY` every test script is clean (no miscounted object),
+      and with freeing switched on the output is unchanged, also when
+      collecting every 50 allocations. Code paths that no script exercised
+      (most stdlib natives: file, network, regex, subprocess, ...) haven't
+      been verified yet: run your programs with
+      `ARGON_GC_NOFREE=1 ARGON_GC_VERIFY=1 ARGON_GC_STRESS=10000` to check.
 - [ ] **5. Freeing on.** Write `finalize` for each type, freeing what it owns
       (some value structs live inline in the object's cell, others are
       separate allocations, so this needs care). Boehm never calls
@@ -255,13 +292,14 @@ those stores, and repeat until it's clean. Then try it with freeing on.
 
 ## 6. Open questions / known limits
 
-* **Borrowed hashmap keys.** Object attribute dicts (`obj->dict`) and call
-  kwargs maps use `char *` / `struct string_struct *` keys that point *into* a
-  string object's data without holding the string. Once objects are freed,
-  those keys dangle. Stage 4 must make these maps hold the key string objects
-  (or copy the key).
-* **Allocation and threads.** Until stage 6, a second thread only makes
-  `gc_new` take a lock; counting and safe points aren't thread-safe.
+* **Threads.** Until stage 6, once a second thread starts, allocation takes a
+  lock and safe points stop freeing anything (counts aren't atomic, and other
+  threads' VM roots aren't traced). Correct, but memory then only grows.
+* **Error objects written through pointers.** `err_object_to_err` hands
+  natives a pointer into an error object; writes through it aren't counted.
+  Only the threading module does this, and threads already disable freeing.
+* **Owned buffers aren't freed yet** (stage 5), so the custom build frees
+  object cells but still leaks every array buffer, hashmap node and string.
 
 * **ZCT growth inside long native calls.** Temporaries created by a lambda
   that `map` calls die at the next safe point inside the nested loop, which is

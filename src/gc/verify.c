@@ -96,6 +96,19 @@ static void count_reference(GCHeader *child, void *ctx) {
   child->gc_refs++;
 }
 
+static void check_uncounted(GCHeader *child, void *ctx) {
+  VerifyCtx *v = ctx;
+  if (!child)
+    return;
+  uint32_t saved = 0;
+  bool managed = is_managed_object(v, child);
+  if (managed)
+    saved = child->gc_refs;
+  count_reference(child, ctx); // reports invalid / dangling
+  if (managed)
+    child->gc_refs = saved;    // ... but doesn't count
+}
+
 static void count_from_object(void *cell, void *ctx) {
   GCHeader *h = cell;
   VerifyCtx *v = ctx;
@@ -145,8 +158,12 @@ GCVerifyResult gc_verify(void) {
   for (size_t i = 0; i < gc_static_count; i++)
     count_from_object(gc_statics[i], &v);
   v.holder = NULL;
-  for (size_t i = 0; i < gc_root_tracer_count; i++)
-    gc_root_tracers[i](count_reference, &v);
+  for (size_t i = 0; i < gc_counted_root_count; i++)
+    gc_counted_roots[i](count_reference, &v);
+  // Uncounted roots aren't in any refcount, so they don't add to the tallies,
+  // but what they point at must still be real (and not freed) objects.
+  for (size_t i = 0; i < gc_uncounted_root_count; i++)
+    gc_uncounted_roots[i](check_uncounted, &v);
 
   heap_for_each(compare, &v);
   heap_for_each(reset_tally, NULL); // gc_refs must be 0 outside collections

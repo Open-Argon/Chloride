@@ -84,6 +84,16 @@ ARGON_METHOD(ARGON_RANGE_ITERATOR_TYPE, __init__, {
     return ARGON_NULL;
   }
   ArgonObject *self = argv[0];
+  struct as_range_iterator *r = self->value.as_range_iterator;
+  // Re-initialising: let go of any number objects from before.
+  if (!r->is_int64) {
+    gc_decref(r->current.obj);
+    gc_decref(r->stop.obj);
+    gc_decref(r->step.obj);
+  }
+  // (cleared either way: in int64 mode these hold integers, not pointers)
+  r->current.obj = r->stop.obj = r->step.obj = NULL;
+  r->is_int64 = false;
   self->value.as_range_iterator->inclusive = false;
   if (argc == 2) {
     if (argv[1]->type == TYPE_NUMBER && argv[1]->value.as_number->is_int64) {
@@ -93,10 +103,9 @@ ARGON_METHOD(ARGON_RANGE_ITERATOR_TYPE, __init__, {
       self->value.as_range_iterator->step.i64 = 1;
     } else {
       self->value.as_range_iterator->is_int64 = false;
-      self->value.as_range_iterator->stop.obj = argv[1];
-      self->value.as_range_iterator->current.obj = &small_ints[-small_ints_min].obj;
-      self->value.as_range_iterator->step.obj =
-          &small_ints[-small_ints_min + 1].obj;
+      gc_assign(&r->stop.obj, argv[1]);
+      gc_assign(&r->current.obj, &small_ints[-small_ints_min].obj);
+      gc_assign(&r->step.obj, &small_ints[-small_ints_min + 1].obj);
     }
   } else {
     if ((argv[1]->type == TYPE_NUMBER && argv[1]->value.as_number->is_int64) &&
@@ -118,13 +127,10 @@ ARGON_METHOD(ARGON_RANGE_ITERATOR_TYPE, __init__, {
       }
     } else {
       self->value.as_range_iterator->is_int64 = false;
-      self->value.as_range_iterator->current.obj = argv[1];
-      self->value.as_range_iterator->stop.obj = argv[2];
-      self->value.as_range_iterator->step.obj =
-          &small_ints[-small_ints_min + 1].obj;
-      if (argc == 4) {
-        self->value.as_range_iterator->step.obj = argv[3];
-      }
+      gc_assign(&r->current.obj, argv[1]);
+      gc_assign(&r->stop.obj, argv[2]);
+      gc_assign(&r->step.obj, argc == 4 ? argv[3]
+                                        : &small_ints[-small_ints_min + 1].obj);
     }
   }
   return ARGON_NULL;
@@ -147,6 +153,12 @@ ARGON_METHOD(ARGON_RANGE_ITERATOR_TYPE, __iter__, {
       (struct as_range_iterator *)((char *)new_obj + sizeof(ArgonObject));
 
   *new_obj->value.as_range_iterator = *self->value.as_range_iterator;
+  struct as_range_iterator *copy = new_obj->value.as_range_iterator;
+  if (!copy->is_int64) { // the copy holds its own references
+    gc_incref(copy->current.obj);
+    gc_incref(copy->stop.obj);
+    gc_incref(copy->step.obj);
+  }
   return new_obj;
 })
 
@@ -191,8 +203,10 @@ ARGON_METHOD(ARGON_RANGE_ITERATOR_TYPE, __next__, {
       return ARGON_NULL;
     }
 
-    range_iterator->current.obj = ARGON_FUNC_ARGON_NUMBER_TYPE___add__(
-        2, (ArgonObject *[]){current_val, step_val}, NULL, err, state, api);
+    gc_assign(&range_iterator->current.obj,
+              ARGON_FUNC_ARGON_NUMBER_TYPE___add__(
+                  2, (ArgonObject *[]){current_val, step_val}, NULL, err, state,
+                  api));
 
     return current_val;
   }

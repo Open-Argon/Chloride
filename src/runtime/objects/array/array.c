@@ -31,9 +31,10 @@ ArgonObject *create_array(ArgonObject **argv, size_t argc) {
 
   object->value.as_array = darray_armem_create();
 
-  darray_armem_init(object->value.as_array, sizeof(ArgonObject *), argc);
+  darray_armem_init_objects(object->value.as_array, argc);
 
   memcpy(object->value.as_array->data, argv, argc * sizeof(ArgonObject *));
+  gc_incref_each(argv, argc);
 
   return object;
 }
@@ -63,7 +64,7 @@ ARGON_METHOD(ARRAY_TYPE, __new__, {
   ArgonObject *object = new_instance(ARRAY_TYPE, sizeof(darray_armem));
   object->type = TYPE_ARRAY;
   object->value.as_array = darray_armem_create();
-  darray_armem_init(object->value.as_array, sizeof(ArgonObject *), 0);
+  darray_armem_init_objects(object->value.as_array, 0);
 
   while (true) {
     ArgonObject *item = argon_call(next_method, 0, NULL, NULL, err, state);
@@ -177,6 +178,7 @@ ARGON_METHOD(ARRAY_TYPE, append, {
   darray_armem_resize(self->value.as_array, start + argc - 1);
   memcpy(self->value.as_array->data + (start * sizeof(ArgonObject *)), argv + 1,
          (argc - 1) * sizeof(ArgonObject *));
+  gc_incref_each(argv + 1, argc - 1);
   return self;
 })
 
@@ -194,10 +196,10 @@ ARGON_METHOD(ARRAY_TYPE, of_size, {
 
   object->value.as_array = darray_armem_create();
 
-  darray_armem_init(object->value.as_array, sizeof(ArgonObject *), size);
+  darray_armem_init_objects(object->value.as_array, size);
 
   for (int64_t i = 0; i < size; i++) {
-    ((ArgonObject **)object->value.as_array->data)[i] = ARGON_NULL;
+    darray_armem_set_object(object->value.as_array, i, ARGON_NULL);
   }
 
   return object;
@@ -317,6 +319,7 @@ ARGON_METHOD(ARRAY_TYPE, insert, {
   ArgonObject **data = self->value.as_array->data;
   memmove(data + pos + size, data + pos, move_size * sizeof(ArgonObject *));
   memcpy(data + pos, argv + 2, size * sizeof(ArgonObject *));
+  gc_incref_each(argv + 2, size);
   return self;
 })
 
@@ -363,13 +366,13 @@ ARGON_METHOD(ARRAY_TYPE, __getitem__, {
       size =
           (indices.start - indices.stop - indices.step - 1) / (-indices.step);
 
-    darray_armem_init(slice->value.as_array, sizeof(ArgonObject *), size);
+    darray_armem_init_objects(slice->value.as_array, size);
 
     for (int64_t i = 0; i < size; i++) {
       int64_t src_index =
           indices.start + i * indices.step; // source index follows step
-      ((ArgonObject **)slice->value.as_array->data)[i] =
-          *(ArgonObject **)darray_armem_get(arr, src_index);
+      darray_armem_set_object(slice->value.as_array, i,
+                              *DARRAY_OBJECT_SLOT(arr, src_index));
     }
 
     return slice;
@@ -450,7 +453,7 @@ ARGON_METHOD(ARRAY_TYPE, __setitem__, {
       for (int64_t i = 0; i < slice_len; i++) {
         int64_t dst = indices.start + i * indices.step;
         ArgonObject *val = *(ArgonObject **)darray_armem_get(new_items, i);
-        *(ArgonObject **)darray_armem_get(arr, dst) = val;
+        darray_armem_set_object(arr, dst, val);
       }
     } else {
       // Simple slice (step == 1 or step == -1):
@@ -473,6 +476,13 @@ ARGON_METHOD(ARRAY_TYPE, __setitem__, {
       int64_t del_count = slice_len; // elements being removed
       int64_t old_size = (int64_t)arr->size;
       int64_t new_size = old_size - del_count + new_len;
+
+      // Refcounting: release the elements being replaced once, here. The
+      // shifts below only move elements (no count changes), and the final
+      // loop writes (and counts) the new ones over whatever is left in
+      // [start, start + new_len).
+      for (int64_t i = start; i < start + del_count; i++)
+        gc_decref(*DARRAY_OBJECT_SLOT(arr, i));
 
       if (new_len < del_count) {
         // Shrink: shift tail left
@@ -499,7 +509,8 @@ ARGON_METHOD(ARRAY_TYPE, __setitem__, {
       // Write new values into [start .. start+new_len)
       for (int64_t i = 0; i < new_len; i++) {
         ArgonObject *val = *(ArgonObject **)darray_armem_get(new_items, i);
-        *(ArgonObject **)darray_armem_get(arr, start + i) = val;
+        gc_incref(val);
+        *DARRAY_OBJECT_SLOT(arr, start + i) = val; // old value released above
       }
     }
 
@@ -515,7 +526,7 @@ ARGON_METHOD(ARRAY_TYPE, __setitem__, {
   if (index >= (int64_t)arr->size || index < 0)
     return api->throw_argon_error(err, IndexError, "index out of range");
 
-  *(ArgonObject **)darray_armem_get(arr, index) = argv[2];
+  darray_armem_set_object(arr, index, argv[2]);
   return argv[2];
 })
 
@@ -529,13 +540,13 @@ ARGON_METHOD(ARRAY_TYPE, map, {
 
   object->value.as_array = darray_armem_create();
 
-  darray_armem_init(object->value.as_array, sizeof(ArgonObject *),
-                    self->value.as_array->size);
+  darray_armem_init_objects(object->value.as_array, self->value.as_array->size);
 
   for (size_t i = 0; i < object->value.as_array->size; i++) {
-    *(ArgonObject **)darray_armem_get(object->value.as_array, i) = api->call(
+    ArgonObject *mapped = api->call(
         argv[1], 1, (ArgonObject **)darray_armem_get(self->value.as_array, i),
         NULL, err, state);
+    darray_armem_set_object(object->value.as_array, i, mapped);
     if (api->is_error(err))
       return api->ARGON_NULL;
   }
@@ -553,7 +564,7 @@ ARGON_METHOD(ARRAY_TYPE, filter, {
 
   object->value.as_array = darray_armem_create();
 
-  darray_armem_init(object->value.as_array, sizeof(ArgonObject *), 0);
+  darray_armem_init_objects(object->value.as_array, 0);
 
   for (size_t i = 0; i < self->value.as_array->size; i++) {
     ArgonObject **item =
@@ -724,6 +735,7 @@ ARGON_METHOD(ARRAY_TYPE, sort, {
   }
 
   // Write sorted pointers back — sort in place like JS Array.prototype.sort
+  // (a permutation of the same elements, so no refcounts change)
   memcpy(self->value.as_array->data, arr, n * sizeof(ArgonObject *));
   for (size_t i = 0; i < n; i++)
     *(ArgonObject **)darray_armem_get(self->value.as_array, i) = arr[i];
@@ -763,6 +775,9 @@ ARGON_METHOD(ARRAY_TYPE, __delitem__, {
       int64_t old_size = (int64_t)arr->size;
       int64_t new_size = old_size - slice_len;
 
+      for (int64_t i = start; i < start + slice_len; i++) // released once;
+        gc_decref(*DARRAY_OBJECT_SLOT(arr, i));             // the rest move
+
       // Shift tail left over the deleted region
       for (int64_t i = start; i < new_size; i++)
         *(ArgonObject **)darray_armem_get(arr, i) =
@@ -775,7 +790,7 @@ ARGON_METHOD(ARRAY_TYPE, __delitem__, {
       // Mark slots as NULL first, then squeeze them out.
       for (int64_t i = 0; i < slice_len; i++) {
         int64_t idx = indices.start + i * indices.step;
-        *(ArgonObject **)darray_armem_get(arr, idx) = NULL;
+        darray_armem_set_object(arr, idx, NULL); // releases it
       }
 
       int64_t write = 0;
@@ -800,6 +815,7 @@ ARGON_METHOD(ARRAY_TYPE, __delitem__, {
     return api->throw_argon_error(err, IndexError, "index out of range");
 
   // Shift everything after the deleted index one slot left
+  gc_decref(*DARRAY_OBJECT_SLOT(arr, index));
   for (int64_t i = index; i < (int64_t)arr->size - 1; i++)
     *(ArgonObject **)darray_armem_get(arr, i) =
         *(ArgonObject **)darray_armem_get(arr, i + 1);
@@ -823,6 +839,7 @@ ARGON_METHOD(ARRAY_TYPE, __iter__, {
   iterator->value.as_array_iterator->current = 0;
   iterator->value.as_array_iterator->array = self->value.as_array;
   iterator->value.as_array_iterator->source = self;
+  gc_incref(self);
   return iterator;
 })
 

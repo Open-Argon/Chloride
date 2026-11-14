@@ -327,6 +327,7 @@ ARGON_METHOD(ARGON_DICTIONARY_TYPE, __iter__, {
     it->pairs[2 * i + 1] = nodes[i]->val;
   }
   it->size = size;
+  gc_incref_each(it->pairs, 2 * size); // the snapshot holds its own references
 
   return iterator;
 })
@@ -388,5 +389,6 @@ ArgonObject *create_dictionary(struct hashmap_GC *hashmap) {
   ArgonObject *object = new_instance(ARGON_DICTIONARY_TYPE, 0);
   object->type = TYPE_DICTIONARY;
   object->value.as_hashmap = hashmap;
+  hashmap_GC_claim(hashmap, object); // owner, or a view of someone else's map
   return object;
 }

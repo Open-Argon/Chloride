@@ -33,6 +33,7 @@ ARGON_FUNCTION(TUPLE_CREATE, {
   object->type = TYPE_TUPLE;
   object->value.as_tuple.size = argc;
   memcpy(object->value.as_tuple.data, argv, argc * sizeof(ArgonObject *));
+  gc_incref_each(argv, argc);
 
   return object;
 })
@@ -52,6 +53,7 @@ ARGON_METHOD(ARGON_TUPLE_TYPE, __new__, {
   new_obj->value.as_tuple.size = (argc - 1);
   memcpy(new_obj->value.as_tuple.data, argv + 1,
          (argc - 1) * sizeof(ArgonObject *));
+  gc_incref_each(argv + 1, argc - 1);
   return new_obj;
 })
 
@@ -102,6 +104,7 @@ ARGON_METHOD(ARGON_TUPLE_TYPE, of, {
   object->value.as_tuple.size = items_index;
   memcpy(object->value.as_tuple.data, items,
          items_index * sizeof(ArgonObject *));
+  gc_incref_each(items, items_index);
   return object;
 })
 
@@ -250,6 +253,7 @@ ARGON_METHOD(ARGON_TUPLE_TYPE, __getitem__, {
       int64_t src_index =
           indices.start + i * indices.step; // source index follows step
       slice->value.as_tuple.data[i] = tuple->data[src_index];
+      gc_incref(tuple->data[src_index]);
     }
 
     return slice;
@@ -282,6 +286,7 @@ ARGON_METHOD(ARGON_TUPLE_TYPE, __iter__, {
   iterator->value.as_tuple_iterator->current = 0;
   iterator->value.as_tuple_iterator->tuple = &self->value.as_tuple;
   iterator->value.as_tuple_iterator->source = self;
+  gc_incref(self);
   return iterator;
 })
 

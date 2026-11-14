@@ -24,8 +24,8 @@ extern size_t gc_kind_count;
 
 extern GCHeader **gc_statics;
 extern size_t gc_static_count;
-extern gc_root_tracer *gc_root_tracers;
-extern size_t gc_root_tracer_count;
+extern gc_root_tracer *gc_counted_roots, *gc_uncounted_roots;
+extern size_t gc_counted_root_count, gc_uncounted_root_count;
 
 static inline const GCKind *gc_kind_of(const GCHeader *h) {
   return gc_kinds[h->kind];
