@@ -96,24 +96,48 @@ void *gc_new(uint8_t kind, size_t size);
 void gc_zero_count(GCHeader *h); // refcount reached 0: list it in the ZCT
 void gc_bad_decref(GCHeader *h); // decref of an object whose count is 0
 
+// True while threads other than the main one exist (see gc_thread_started).
+// Counting is then atomic, so counts stay exact even when two threads touch
+// the same object at once; with a single thread it's a plain increment.
+extern bool gc_multithreaded;
+
+static inline bool gc_threads_running(void) {
+  return __atomic_load_n(&gc_multithreaded, __ATOMIC_RELAXED);
+}
+
 static inline void gc_incref(void *obj) {
   GCHeader *h = obj;
-  if (h && (h->flags & GC_MORTAL))
-    h->refcount++;
+  if (h && (h->flags & GC_MORTAL)) {
+    if (__builtin_expect(gc_threads_running(), 0))
+      __atomic_fetch_add(&h->refcount, 1, __ATOMIC_RELAXED);
+    else
+      h->refcount++;
+  }
 }
 
 static inline void gc_decref(void *obj) {
   GCHeader *h = obj;
-  if (h && (h->flags & GC_MORTAL)) {
-    if (__builtin_expect(h->refcount == 0, 0))
+  if (!h || !(h->flags & GC_MORTAL))
+    return;
+  if (__builtin_expect(gc_threads_running(), 0)) {
+    uint32_t before = __atomic_fetch_sub(&h->refcount, 1, __ATOMIC_ACQ_REL);
+    if (__builtin_expect(before == 0, 0)) {
+      __atomic_fetch_add(&h->refcount, 1, __ATOMIC_RELAXED); // undo
       gc_bad_decref(h);
-    else if (--h->refcount == 0)
+    } else if (before == 1) {
       gc_zero_count(h);
+    }
+    return;
   }
+  if (__builtin_expect(h->refcount == 0, 0))
+    gc_bad_decref(h);
+  else if (--h->refcount == 0)
+    gc_zero_count(h);
 }
 
 #else // Boehm: nothing to count
 
+static inline bool gc_threads_running(void) { return false; }
 static inline void gc_incref(void *obj) { (void)obj; }
 static inline void gc_decref(void *obj) { (void)obj; }
 
@@ -123,14 +147,21 @@ static inline void gc_decref(void *obj) { (void)obj; }
 // was there. Increfs first, so assigning a slot to itself is safe.
 //   gc_assign(&obj->field, value);
 // (A macro using typeof so the slot keeps its real pointer type; casting to
-// void ** would break strict aliasing.)
+// void ** would break strict aliasing.) While threads run, the swap is atomic:
+// two threads assigning the same slot at once then each release exactly the
+// value they replaced, so no count is lost or doubled.
 #define gc_assign(slot_ptr, value)                                             \
   do {                                                                         \
     __typeof__(slot_ptr) gc_slot_ = (slot_ptr);                                \
-    __typeof__(*gc_slot_) gc_old_ = *gc_slot_;                                 \
     __typeof__(*gc_slot_) gc_new_ = (value);                                   \
+    __typeof__(*gc_slot_) gc_old_;                                             \
     gc_incref(gc_new_);                                                        \
-    *gc_slot_ = gc_new_;                                                       \
+    if (gc_threads_running())                                                  \
+      gc_old_ = __atomic_exchange_n(gc_slot_, gc_new_, __ATOMIC_ACQ_REL);      \
+    else {                                                                     \
+      gc_old_ = *gc_slot_;                                                     \
+      *gc_slot_ = gc_new_;                                                     \
+    }                                                                          \
     gc_decref(gc_old_);                                                        \
   } while (0)
 
@@ -239,9 +270,13 @@ GCStats gc_stats(void);
 
 // Reads ARGON_GC_STATS, ARGON_GC_STRESS, ARGON_GC_VERIFY, ARGON_GC_NOFREE.
 void gc_init(void);
-// Call when a second thread starts using the heap (stage 6 will replace this:
-// for now it only makes allocation thread-safe).
-void gc_enable_thread_safety(void);
+// Threads. Call gc_thread_started just *before* creating a thread, and
+// gc_thread_finished once that thread can no longer touch any object (the
+// custom backend does both from its pthread_create wrapper). While any such
+// thread exists, counting is atomic, allocation takes a lock, and safe points
+// don't free anything; when the last one finishes, freeing resumes.
+void gc_thread_started(void);
+void gc_thread_finished(void);
 void gc_shutdown(void); // prints the stats summary if ARGON_GC_STATS is set
 
 #endif // ARGON_GC_H

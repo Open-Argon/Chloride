@@ -19,6 +19,7 @@
 #include "../memory.h"
 #include "gc.h"
 #include <dlfcn.h>
+#include <errno.h>
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -47,16 +48,37 @@ void ar_finalizer(void *obj, ar_finalizer_fn fn, void *client_data) {
   (void)obj, (void)fn, (void)client_data;
 }
 
-// The collector is single-threaded until stage 6. Once a second thread
-// exists, allocation takes a lock and safe points stop freeing (see gc.c).
-//
-// That switch has to flip *before* the new thread runs, not when it gets
-// round to calling ar_register_thread: a native that starts a thread often
-// hands it objects that nothing counts (the threading module passes a fresh
+// Threads. Freeing has to switch off *before* a new thread runs, not when it
+// gets round to calling ar_register_thread: a native that starts a thread
+// often hands it objects nothing counts (the threading module passes a fresh
 // bound method), and a safe point on this thread in between would free them.
-// So, like Boehm's GC_pthread_create, we wrap pthread_create itself. The
-// executable exports this one symbol (see the Makefile), so calls from native
-// modules land here too.
+// It has to switch back on only once the thread can't touch objects any
+// more. So, like Boehm's GC_pthread_create, we wrap pthread_create itself:
+// the executable exports this one symbol (see the Makefile), so calls from
+// native modules land here too, and the new thread runs a trampoline that
+// reports when its start routine is done.
+
+typedef struct {
+  void *(*start)(void *);
+  void *arg;
+} ThreadStart;
+
+static void thread_done(void *unused) {
+  (void)unused;
+  gc_thread_finished();
+}
+
+static void *thread_trampoline(void *p) {
+  ThreadStart ts = *(ThreadStart *)p;
+  free(p);
+  void *result;
+  // Also runs if the thread calls pthread_exit or is cancelled.
+  pthread_cleanup_push(thread_done, NULL);
+  result = ts.start(ts.arg);
+  pthread_cleanup_pop(1);
+  return result;
+}
+
 int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
                    void *(*start)(void *), void *arg) {
   static int (*real_pthread_create)(pthread_t *, const pthread_attr_t *,
@@ -67,14 +89,20 @@ int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
     fprintf(stderr, "panic: gc: can't find the real pthread_create\n");
     abort();
   }
-  gc_enable_thread_safety();
-  return real_pthread_create(thread, attr, start, arg);
+  ThreadStart *ts = malloc(sizeof *ts);
+  if (!ts)
+    return EAGAIN;
+  *ts = (ThreadStart){start, arg};
+  gc_thread_started();
+  int result = real_pthread_create(thread, attr, thread_trampoline, ts);
+  if (result != 0) { // no thread after all
+    free(ts);
+    gc_thread_finished();
+  }
+  return result;
 }
 
-int ar_register_thread(void) {
-  gc_enable_thread_safety(); // already on (pthread_create), but be safe
-  return 0;
-}
+int ar_register_thread(void) { return 0; }
 int ar_unregister_thread(void) { return 0; }
 
 void ar_gc_collect(void) { gc_collect_now(); }

@@ -152,7 +152,9 @@ These are what the conversion work is about.
 2. **Uncounted VM roots.** Registers, frames, `call_instance`s and
    `ErrorCatch` entries are *not* counted; `trace_vm_roots` reports them at
    every safe point instead. A new VM structure that holds objects across
-   instructions must be added there.
+   instructions must be added there. Error objects (`TYPE_ERROR`) work the
+   same way, because natives write into them through raw pointers: their
+   `err.ptr` is reported by `trace_error_objects` in `gc_kinds.c`.
 3. **C locals are free.** A pointer in a local variable or argument needs no
    bookkeeping, *as long as it doesn't survive past a safe point that could
    free it*. The birth rule makes that automatic for natives that call back
@@ -315,23 +317,45 @@ because the pointers to it live in our pages where it can't look.
       build behaves exactly as before. Checked with ASan under
       `ARGON_GC_STRESS`: no errors, and output identical to Boehm. The stress
       script now peaks at 269 MB (Boehm: 243 MB; before this stage: 728 MB).
-- [ ] **6. Threads.** Atomic refcounts (or biased refcounting), per-thread
-      epochs and ZCTs, cooperative stop-the-world at safe points.
+- [x] **6a. Threads, stepping stone.** While any extra thread exists,
+      refcounts are updated atomically and `gc_assign` swaps atomically, so
+      counts stay exact even when threads share objects; allocation and the
+      ZCT take a lock; epochs are per thread; safe points don't free. The
+      `pthread_create` wrapper counts live threads, and when the last one
+      finishes, freeing resumes and catches up. Error objects (written
+      through raw pointers by other threads) are uncounted roots rather than
+      counted holders. Checked: verifier clean after six threads hammered a
+      shared dict; ASan clean; 40/40 runs of the start-up race test.
+- [ ] **6b. Threads, parallel collection.** So memory is also reclaimed
+      *while* threads run:
+      * a registry of threads and their `active_runtimes`, so a collection
+        can trace every thread's VM roots;
+      * cooperative stop-the-world: the collecting thread asks the others to
+        park at their next safe point;
+      * a "blocking" marker natives put around waits (join, sleep, IO), so a
+        thread stuck in one counts as parked;
+      * the epoch rule across threads: an object may only be freed if it was
+        born after the current epoch of *every* thread;
+      * incref/decref in the native API, so natives can hold objects in
+        their own memory (the threading module's `thread_arg`).
 - [ ] **7. Later.** Generations for the cycle collector, finalizers, freeing
       module bytecode.
 
 ## 6. Open questions / known limits
 
-* **Threads.** Until stage 6, once a second thread starts, allocation takes a
-  lock and safe points stop freeing anything (counts aren't atomic, and other
-  threads' VM roots aren't traced). Correct, but memory then only grows. The
-  switch flips inside our `pthread_create` wrapper (`gc_custom.c`, the same
-  trick as Boehm's `GC_pthread_create`), so it happens *before* the new
-  thread runs: natives often hand a new thread objects nothing counts, and a
-  safe point in between would free them.
-* **Error objects written through pointers.** `err_object_to_err` hands
-  natives a pointer into an error object; writes through it aren't counted.
-  Only the threading module does this, and threads already disable freeing.
+* **Threads.** Until stage 6b, nothing is freed while extra threads run
+  (memory catches up once they've all finished). The switch flips inside our
+  `pthread_create` wrapper (`gc_custom.c`, the same trick as Boehm's
+  `GC_pthread_create`), *before* the new thread runs: natives often hand a
+  new thread objects nothing counts, and a safe point in between would free
+  them. A thread created some other way (not through `pthread_create`)
+  isn't seen at all.
+* **Unsynchronised writes from several threads** to the same array element
+  through the raw-write paths in `array.c` (slice assignment, delete) can
+  still lose a count, because those paths move elements without the
+  darray's lock. Programs that share an array between threads without
+  synchronisation already race under Boehm; here it could also leak or
+  corrupt that array's elements.
 * **Natives keeping objects in `malloc`'d memory** (like the threading
   module's `thread_arg`) aren't counted. Stage 6 needs incref/decref in the
   native API so they can be.

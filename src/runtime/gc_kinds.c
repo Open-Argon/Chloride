@@ -24,10 +24,56 @@
 #include "../memory.h"
 #include "objects/object.h"
 #include <gmp.h>
+#include <pthread.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 uint8_t ARGON_OBJECT_GC_KIND;
 uint8_t STACK_GC_KIND;
+
+// ---------------------------------------------------------------------------
+// Error objects (TYPE_ERROR, from the native API's create_err_object)
+//
+// Natives get a raw ArErr * into one of these (err_object_to_err) and the
+// error gets written through it, often by another thread (the threading
+// module stores a thread's error there). Writes like that can't be counted,
+// so err.ptr isn't a counted reference: instead every live error object is
+// listed here, and what they hold is reported as an uncounted root.
+// ---------------------------------------------------------------------------
+
+static ArgonObject **error_objects;
+static size_t error_object_count, error_object_cap;
+static pthread_mutex_t error_objects_lock = PTHREAD_MUTEX_INITIALIZER;
+
+void gc_track_error_object(ArgonObject *object) {
+  pthread_mutex_lock(&error_objects_lock);
+  if (error_object_count == error_object_cap) {
+    error_object_cap = error_object_cap ? error_object_cap * 2 : 16;
+    error_objects =
+        realloc(error_objects, error_object_cap * sizeof *error_objects);
+    if (!error_objects) {
+      fprintf(stderr, "panic: unable to allocate memory\n");
+      exit(EXIT_FAILURE);
+    }
+  }
+  error_objects[error_object_count++] = object;
+  pthread_mutex_unlock(&error_objects_lock);
+}
+
+static void untrack_error_object(ArgonObject *object) {
+  pthread_mutex_lock(&error_objects_lock);
+  for (size_t i = 0; i < error_object_count; i++)
+    if (error_objects[i] == object) {
+      error_objects[i] = error_objects[--error_object_count];
+      break;
+    }
+  pthread_mutex_unlock(&error_objects_lock);
+}
+
+static void trace_error_objects(gc_visit_fn visit, void *ctx) {
+  for (size_t i = 0; i < error_object_count; i++)
+    visit((GCHeader *)error_objects[i]->value.err.ptr, ctx);
+}
 
 // The GCHeader is the first member of every managed struct, so a pointer to
 // the struct is a pointer to its header (and NULL stays NULL).
@@ -78,7 +124,7 @@ static void object_traverse(GCHeader *h, gc_visit_fn visit, void *ctx) {
                        ctx);
     break;
   case TYPE_ERROR:
-    VISIT(o->value.err.ptr);
+    // Not counted: see "Error objects" below.
     break;
   case TYPE_RANGE_ITERATOR: {
     struct as_range_iterator *r = o->value.as_range_iterator;
@@ -209,6 +255,9 @@ static void object_finalize(GCHeader *h) {
     if (o->value.as_dictionary_iterator)
       free_unless_inline(o, o->value.as_dictionary_iterator->pairs);
     break;
+  case TYPE_ERROR:
+    untrack_error_object(o);
+    break;
   // Everything else keeps its state inline (functions, tuples, the other
   // iterators) or in slots, or owns nothing (native functions, errors).
   default:
@@ -249,4 +298,5 @@ static const GCKind stack_kind = {
 void register_gc_kinds(void) {
   ARGON_OBJECT_GC_KIND = gc_register_kind(&object_kind);
   STACK_GC_KIND = gc_register_kind(&stack_kind);
+  gc_add_uncounted_roots(trace_error_objects);
 }

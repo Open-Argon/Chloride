@@ -37,18 +37,38 @@ size_t gc_counted_root_count, gc_uncounted_root_count;
 
 bool gc_work_due;
 
-// Until stage 6 (threads) the collector is single-threaded, but threads can
-// already allocate. Once a second thread exists, allocation and the ZCT take
-// this lock and safe points stop freeing anything: refcount updates aren't
-// atomic yet, and other threads' VM roots aren't visible. Memory then grows
-// until exit, but nothing is freed while still in use.
-static bool multithreaded;
+// Threads (stage 6a). While any thread besides the main one exists:
+//   * refcount updates are atomic (gc.h), so counts stay exact;
+//   * allocation, the ZCT and flag changes take alloc_lock;
+//   * safe points don't free anything, because collecting would need every
+//     thread stopped at a safe point and all their VM roots traced (6b).
+// When the last extra thread finishes, the counts are still exact, so
+// freeing simply resumes: whatever died meanwhile is waiting in the ZCT (or,
+// for cycles, gets found by the next cycle collection).
+bool gc_multithreaded;
+static size_t live_threads; // started but not yet finished
 static pthread_mutex_t alloc_lock = PTHREAD_MUTEX_INITIALIZER;
 
-void gc_enable_thread_safety(void) { multithreaded = true; }
+void gc_thread_started(void) {
+  pthread_mutex_lock(&alloc_lock);
+  live_threads++;
+  __atomic_store_n(&gc_multithreaded, true, __ATOMIC_RELEASE);
+  pthread_mutex_unlock(&alloc_lock);
+}
 
-static uint64_t birth_counter;  // birth number of the next allocation
-static gc_epoch current_epoch;  // objects born before this can't be freed now
+void gc_thread_finished(void) {
+  pthread_mutex_lock(&alloc_lock);
+  if (--live_threads == 0) {
+    __atomic_store_n(&gc_multithreaded, false, __ATOMIC_RELEASE);
+    gc_work_due = true; // catch up on everything that died meanwhile
+  }
+  pthread_mutex_unlock(&alloc_lock);
+}
+
+static uint64_t birth_counter; // birth number of the next allocation
+// Objects born before this can't be freed at this thread's safe points. Per
+// thread: each thread has its own nest of runtime() invocations.
+static __thread gc_epoch current_epoch;
 static bool in_collection;      // guards against re-entering a safe point
 static bool stress_pending;     // ARGON_GC_STRESS asked for a full safe point
 static size_t stress_counter;
@@ -136,7 +156,7 @@ void *gc_new(uint8_t kind, size_t size) {
     fprintf(stderr, "panic: gc: gc_new with unregistered kind %u\n", kind);
     abort();
   }
-  bool lock = multithreaded;
+  bool lock = gc_threads_running();
   if (lock)
     pthread_mutex_lock(&alloc_lock);
   GCHeader *h = heap_alloc(size); // zeroed: refcount 0, gc_refs 0
@@ -163,7 +183,7 @@ void *gc_new(uint8_t kind, size_t size) {
 }
 
 void gc_zero_count(GCHeader *h) {
-  if (multithreaded) {
+  if (gc_threads_running()) {
     pthread_mutex_lock(&alloc_lock);
     if (!(h->flags & GC_IN_ZCT))
       zct_push(h);
@@ -192,8 +212,16 @@ size_t gc_object_size(const void *obj) { return heap_cell_size(obj); }
 
 void gc_immortalize(void *obj) {
   GCHeader *h = obj;
-  if (h)
-    h->flags &= ~GC_MORTAL; // the ZCT drops it next time it is processed
+  if (!h)
+    return;
+  // flags share a word with other header bits that zct_push may be setting
+  // on another thread, so change them under the lock while threads run.
+  bool lock = gc_threads_running();
+  if (lock)
+    pthread_mutex_lock(&alloc_lock);
+  h->flags &= ~GC_MORTAL; // the ZCT drops it next time it is processed
+  if (lock)
+    pthread_mutex_unlock(&alloc_lock);
 }
 
 static void immortalize_cell(void *cell, void *ctx) {
@@ -258,7 +286,7 @@ static void trace_uncounted_roots(gc_visit_fn visit) {
 
 gc_epoch gc_enter(void) {
   gc_epoch previous = current_epoch;
-  current_epoch = birth_counter;
+  current_epoch = __atomic_load_n(&birth_counter, __ATOMIC_RELAXED);
   return previous;
 }
 
@@ -442,7 +470,9 @@ static void collect_cycles(void) {
 static void run_safe_point(bool full) {
   if (in_collection)
     return;
-  if (multithreaded) { // see alloc_lock above
+  // See alloc_lock above. ACQUIRE pairs with gc_thread_finished, so once we
+  // see no threads, we also see every count update they made.
+  if (__atomic_load_n(&gc_multithreaded, __ATOMIC_ACQUIRE)) {
     gc_work_due = false;
     return;
   }

@@ -18,4 +18,8 @@ extern uint8_t STACK_GC_KIND;        // Stack (a scope)
 // Call once, right after ar_memory_init and before allocating any object.
 void register_gc_kinds(void);
 
+struct ArgonObject;
+// Every TYPE_ERROR object must be passed here when created (see gc_kinds.c).
+void gc_track_error_object(struct ArgonObject *object);
+
 #endif // ARGON_GC_KINDS_H

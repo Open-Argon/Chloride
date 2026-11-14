@@ -8,6 +8,7 @@
 #include "../../err.h"
 #include "../../hash_data/hash_data.h"
 #include "../../memory.h"
+#include "../gc_kinds.h"
 #include "../call/call.h"
 #include "../objects/buffer/buffer.h"
 #include "../objects/array/array.h"
@@ -163,6 +164,7 @@ ArgonObject *create_err_object() {
   ArgonObject *obj = new_object(0);
   obj->type = TYPE_ERROR;
   obj->value.err = no_err;
+  gc_track_error_object(obj);
   return obj;
 }
 
