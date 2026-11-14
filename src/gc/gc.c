@@ -20,11 +20,18 @@
 // Process the ZCT once it holds this many entries (more than the ones we had
 // to keep last time). Small = prompt freeing, large = less overhead.
 #define ZCT_MIN 1024
-// Run the cycle collector after this many allocations, or after as many
-// allocations as there are live objects, whichever is larger. Each cycle
-// collection walks the whole heap, so scaling with heap size keeps the
-// average cost per allocation constant.
-#define CYCLE_MIN 10000
+// Cycle collection is generational (README.md, "Generations"):
+//  * a YOUNG collection every YOUNG_THRESHOLD allocations looks only at
+//    objects allocated since the last cycle collection;
+//  * a FULL collection walks the whole heap, once objects that survived
+//    young collections since the last full one reach a quarter of what was
+//    live after it (and at least FULL_MIN), so its cost per allocation stays
+//    constant however big the heap gets.
+#define YOUNG_THRESHOLD 10000
+#define FULL_MIN 50000
+
+// What a safe point should do besides processing the ZCT.
+enum { CYCLES_NONE, CYCLES_DUE, CYCLES_FULL };
 
 static void *xrealloc(void *p, size_t size);
 
@@ -235,7 +242,12 @@ static size_t zct_len, zct_cap;
 static size_t zct_limit = ZCT_MIN;
 
 static size_t allocs_since_cycle;
-static size_t cycle_threshold = CYCLE_MIN;
+// Every object allocated since the last cycle collection (plus some older
+// ones the epoch rule kept out of it): the young generation's candidates.
+// Entries for objects freed meanwhile are spotted with heap_cell_of.
+static GCVec young;
+static size_t promoted_since_full; // young survivors since the last full one
+static size_t live_after_full;
 
 static GCStats stats;
 static double last_cycle_pause_ms;
@@ -322,7 +334,8 @@ void *gc_new(uint8_t kind, size_t size) {
   // the next safe point, it's garbage, so it starts out in the ZCT.
   zct_push(h);
 
-  if (++allocs_since_cycle >= cycle_threshold)
+  gc_vec_push(&young, h);
+  if (++allocs_since_cycle >= YOUNG_THRESHOLD)
     gc_work_due = true;
   if (gc_config.stress_every && ++stress_counter >= gc_config.stress_every) {
     stress_counter = 0;
@@ -508,6 +521,13 @@ static void process_zct(void) {
   size_t kept = 0;
   for (size_t i = 0; i < zct_len; i++) {
     GCHeader *h = zct[i];
+    if (h->flags & GC_DYING) {
+      // Garbage the cycle collector found while it was still listed here:
+      // its references are already released; only the memory is left.
+      h->flags &= ~GC_IN_ZCT;
+      destroy(h);
+      continue;
+    }
     if (h->refcount > 0 || !(h->flags & GC_MORTAL) ||
         (h->flags & GC_ZOMBIE)) {
       h->flags &= ~GC_IN_ZCT;
@@ -534,7 +554,8 @@ static void process_zct(void) {
 // uncounted roots (already there, see hold_root).
 static void add_candidate(void *cell, void *ctx) {
   GCHeader *h = cell;
-  if (!(h->flags & GC_MORTAL) || (h->flags & GC_ZOMBIE) ||
+  if (!(h->flags & GC_MORTAL) ||
+      (h->flags & (GC_ZOMBIE | GC_CANDIDATE | GC_DYING)) ||
       h->birth < collect_epoch || !gc_kind_of(h)->traverse)
     return;
   h->flags |= GC_CANDIDATE;
@@ -571,11 +592,44 @@ static void mark_reachable(GCHeader *child, void *ctx) {
   }
 }
 
-static void collect_cycles(void) {
+// Empty the young list, and (for a young collection) take its candidates
+// from it, skipping entries for objects freed since. Objects the epoch rule
+// protects right now aren't candidates; like the survivors they become old
+// (counted as promoted), and a full collection deals with them later.
+// (Keeping them for the next young collection instead made each one rescan
+// all of them: inside a long native call that's most of the heap.)
+static size_t scan_young(GCVec *candidates) {
+  size_t protected_now = 0;
+  for (size_t i = 0; i < young.len; i++) {
+    GCHeader *h = young.items[i];
+    if (heap_cell_of(h) != h) // freed (a reused cell is a newer object,
+      continue;               // which has its own entry: no harm either way)
+    if (!candidates)
+      continue;
+    if (h->birth < collect_epoch && (h->flags & GC_MORTAL) &&
+        !(h->flags & GC_ZOMBIE))
+      protected_now++;
+    else
+      add_candidate(h, candidates);
+  }
+  young.len = 0;
+  return protected_now;
+}
+
+static void collect_cycles(bool full) {
   double t0 = now_ms();
 
+  // Step 0: the candidates. A young collection only looks at recent
+  // objects; references to them from older objects count as coming from
+  // outside, which is safe (anything an old object points at is kept).
   GCVec candidates = {0};
-  heap_for_each(add_candidate, &candidates);
+  size_t protected_now = 0;
+  if (full) {
+    heap_for_each(add_candidate, &candidates);
+    scan_young(NULL);
+  } else {
+    protected_now = scan_young(&candidates);
+  }
 
   for (size_t i = 0; i < candidates.len; i++) {
     GCHeader *h = candidates.items[i];
@@ -607,19 +661,29 @@ static void collect_cycles(void) {
     h->flags &= ~(GC_CANDIDATE | GC_REACHABLE);
     h->gc_refs = 0;
   }
+  size_t candidates_examined = candidates.len;
   gc_vec_free(&candidates);
 
   // Step 4: free it. First release every reference from garbage to
   // non-garbage (those objects may die too, via the ZCT), then free memory.
-  // Garbage objects can't be in the ZCT: process_zct ran just before us, and
-  // anything in the current epoch with refcount 0 was freed there.
+  // A garbage object still listed in the ZCT can't be freed yet (the ZCT
+  // would point at a freed cell): it stays DYING, and the next ZCT pass
+  // frees it. That way a collection doesn't have to process the ZCT first.
   for (size_t i = 0; i < garbage.len; i++) {
     GCHeader *h = garbage.items[i];
     gc_kind_of(h)->traverse(h, release_child, NULL);
   }
   for (size_t i = 0; i < garbage.len; i++)
-    destroy(garbage.items[i]);
+    if (!(garbage.items[i]->flags & GC_IN_ZCT))
+      destroy(garbage.items[i]);
   stats.freed_by_cycle += garbage.len;
+  if (full) {
+    promoted_since_full = 0;
+  } else {
+    // survivors, plus young objects the epoch rule kept out of this one
+    promoted_since_full += candidates_examined - garbage.len + protected_now;
+    stats.young_collections++;
+  }
   gc_vec_free(&garbage);
 
   double pause = now_ms() - t0;
@@ -636,35 +700,51 @@ static void collect_cycles(void) {
 
 // The work of a safe point. Runs with no other thread touching objects:
 // either there is only one thread, or every other one is parked/blocking.
-static void collect(bool full) {
+static bool full_collection_due(void) {
+  size_t limit = live_after_full / 4;
+  return promoted_since_full >= (limit > FULL_MIN ? limit : FULL_MIN);
+}
+
+// The work of a safe point. Runs with no other thread touching objects:
+// either there is only one thread, or every other one is parked/blocking.
+static void collect(int cycles) {
   in_collection = true;
 
+  bool full = cycles == CYCLES_FULL ||
+              (cycles == CYCLES_DUE && full_collection_due());
   trace_uncounted_roots(hold_root);
-  process_zct();
-  if (full) {
-    collect_cycles();
-    process_zct(); // objects released by the cycle collector
-    heap_trim();
+  // Every ZCT pass re-examines the entries the epoch rule or a root keeps
+  // alive, so only make one when the table has grown enough (or for a full
+  // collection), not just because a young collection is due.
+  if (cycles == CYCLES_NONE || full || zct_len >= zct_limit)
+    process_zct();
+  if (cycles != CYCLES_NONE) {
+    collect_cycles(full);
+    if (full)
+      process_zct(); // free what the cycle collector released, right away
     allocs_since_cycle = 0;
-    cycle_threshold = stats.live > CYCLE_MIN ? stats.live : CYCLE_MIN;
+    if (full) {
+      heap_trim();
+      live_after_full = stats.live;
+    }
     if (gc_config.print_stats) {
       HeapStats hs = heap_stats();
       fprintf(stderr,
-              "[gc] cycle collection #%zu: %.2f ms, %zu live objects, "
+              "[gc] %s cycle collection #%zu: %.2f ms, %zu live objects, "
               "%zu KiB heap%s\n",
-              stats.cycle_collections, last_cycle_pause_ms, stats.live,
-              hs.mapped_bytes / 1024,
+              full ? "full" : "young", stats.cycle_collections,
+              last_cycle_pause_ms, stats.live, hs.mapped_bytes / 1024,
               gc_threads_running() ? " (threads stopped)" : "");
     }
   }
   trace_uncounted_roots(release_root);
   // The verifier walks every thread's roots too, but keep it simple: only
   // with a single thread (after release_root: it needs gc_refs to be 0).
-  if (full && gc_config.verify && !gc_threads_running())
+  if (cycles != CYCLES_NONE && gc_config.verify && !gc_threads_running())
     gc_verify();
 
   stress_pending = false;
-  gc_work_due = zct_len >= zct_limit || allocs_since_cycle >= cycle_threshold;
+  gc_work_due = zct_len >= zct_limit || allocs_since_cycle >= YOUNG_THRESHOLD;
   in_collection = false;
 }
 
@@ -685,7 +765,7 @@ static void park(GCThread *t) {
 }
 
 // Collect with several threads: stop the others, collect, restart them.
-static void collect_world(bool full) {
+static void collect_world(int cycles) {
   GCThread *t = me();
   if (!self) // an unknown thread never collects
     return;
@@ -716,7 +796,7 @@ static void collect_world(bool full) {
     for (GCThread *u = threads; u; u = u->next)
       if (u->epoch > collect_epoch)
         collect_epoch = u->epoch;
-    collect(full);
+    collect(cycles);
   } else {
     // Someone is busy outside a safe point (a long native call, say). Don't
     // wait for them; try again a little later.
@@ -728,17 +808,17 @@ static void collect_world(bool full) {
   gc_mutex_unlock(&threads_lock);
 }
 
-static void run_safe_point(bool full) {
+static void run_safe_point(int cycles) {
   if (in_collection)
     return;
   // ACQUIRE pairs with gc_thread_finished: once we see no other threads, we
   // also see every count update they made.
   if (!__atomic_load_n(&gc_multithreaded, __ATOMIC_ACQUIRE)) {
     collect_epoch = me()->epoch;
-    collect(full);
+    collect(cycles);
     return;
   }
-  collect_world(full);
+  collect_world(cycles);
 }
 
 void gc_safe_point_slow(void) {
@@ -756,10 +836,12 @@ void gc_safe_point_slow(void) {
         __atomic_load_n(&retry_after_alloc, __ATOMIC_RELAXED))
       return;
   }
-  run_safe_point(stress_pending || allocs_since_cycle >= cycle_threshold);
+  run_safe_point(stress_pending ? CYCLES_FULL
+                 : allocs_since_cycle >= YOUNG_THRESHOLD ? CYCLES_DUE
+                                                         : CYCLES_NONE);
 }
 
-void gc_collect_now(void) { run_safe_point(true); }
+void gc_collect_now(void) { run_safe_point(CYCLES_FULL); }
 
 // ---------------------------------------------------------------------------
 // Setup and stats
@@ -796,11 +878,13 @@ void gc_shutdown(void) {
   HeapStats hs = heap_stats();
   fprintf(stderr,
           "[gc] %zu allocated, %zu freed by refcount, %zu freed by cycle "
-          "collection, %zu live; %zu cycle collections (%.2f ms total, %.2f "
-          "ms max); heap %zu KiB\n",
+          "collection, %zu live; %zu cycle collections (%zu young, %zu full; "
+          "%.2f ms total, %.2f ms max); heap %zu KiB\n",
           stats.allocated, stats.freed_by_rc, stats.freed_by_cycle, stats.live,
-          stats.cycle_collections, stats.cycle_pause_ms_total,
-          stats.cycle_pause_ms_max, hs.mapped_bytes / 1024);
+          stats.cycle_collections, stats.young_collections,
+          stats.cycle_collections - stats.young_collections,
+          stats.cycle_pause_ms_total, stats.cycle_pause_ms_max,
+          hs.mapped_bytes / 1024);
 }
 
 #endif // ARGON_GC_CUSTOM

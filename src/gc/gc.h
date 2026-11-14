@@ -48,7 +48,8 @@ enum {
   GC_ZOMBIE = 1 << 2,   // "freed" while ARGON_GC_NOFREE is on (debugging)
   GC_CANDIDATE = 1 << 3, // scratch: in the current cycle collection's set
   GC_REACHABLE = 1 << 4, // scratch: proven reachable from outside the set
-  GC_DYING = 1 << 5,     // scratch: in a garbage cycle being freed
+  GC_DYING = 1 << 5,     // in a garbage cycle being freed (and, if it was
+                         // still in the ZCT, until the ZCT frees it)
   GC_ROOTED = 1 << 6,    // scratch: held by an uncounted root (safe point)
   GC_KIND_BIT = 1 << 7,  // not used by the collector: free for the kind's own
                          // bookkeeping (it survives everything but freeing)
@@ -262,7 +263,8 @@ typedef struct {
   size_t freed_by_rc;   // freed because their refcount reached zero
   size_t freed_by_cycle; // freed by the cycle collector
   size_t live;          // currently allocated (including zombies)
-  size_t cycle_collections;
+  size_t cycle_collections;  // young + full
+  size_t young_collections;  // ... of which young (see README, "Generations")
   double cycle_pause_ms_total, cycle_pause_ms_max;
 } GCStats;
 

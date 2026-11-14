@@ -113,8 +113,9 @@ static void count_from_object(void *cell, void *ctx) {
   GCHeader *h = cell;
   VerifyCtx *v = ctx;
   const GCKind *k = gc_kind_of(h);
-  // A zombie's references were released when it was "freed".
-  if ((h->flags & GC_ZOMBIE) || !k || !k->traverse)
+  // A zombie's references were released when it was "freed", and so were
+  // those of garbage waiting in the ZCT to be freed (DYING).
+  if ((h->flags & (GC_ZOMBIE | GC_DYING)) || !k || !k->traverse)
     return;
   v->holder = h;
   k->traverse(h, count_reference, v);
@@ -123,7 +124,7 @@ static void count_from_object(void *cell, void *ctx) {
 static void compare(void *cell, void *ctx) {
   GCHeader *h = cell;
   VerifyCtx *v = ctx;
-  if (!(h->flags & GC_MORTAL) || (h->flags & GC_ZOMBIE))
+  if (!(h->flags & GC_MORTAL) || (h->flags & (GC_ZOMBIE | GC_DYING)))
     return;
   if (h->refcount == h->gc_refs)
     return;

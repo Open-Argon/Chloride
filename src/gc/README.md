@@ -241,11 +241,44 @@ another member's traverse still needs.
 if (zct is big enough || cycle collection is due)
     gc_safe_point()
         0. mark everything the uncounted VM roots point at as rooted
-        1. process ZCT: free entries with refcount 0, birth >= epoch and
-           not rooted
-        2. maybe run trial deletion over objects with birth >= epoch
+        1. if the ZCT is big enough (or for a full collection): process it,
+           freeing entries with refcount 0, birth >= epoch and not rooted
+        2. if due: trial deletion over the young generation, or every
+           object (a full collection), born >= epoch
         3. clear the root marks
 ```
+
+### Generations
+
+Each cycle collection used to examine the whole heap. Most garbage cycles
+are young, though, so now there are two kinds (as in CPython):
+
+* a **young** collection every 10,000 allocations looks only at objects
+  allocated since the last cycle collection. `gc_new` appends every new
+  object to a list (`young` in `gc.c`) that the collection empties; entries
+  for objects freed meanwhile are skipped with `heap_cell_of`. References to
+  young objects from older ones count as coming from outside, so anything
+  an old object points at is kept - safe, just not exhaustive;
+* a **full** collection examines everything, once the objects that survived
+  young collections since the last full one add up to a quarter of what was
+  live after it (and at least 50,000). That keeps its cost per allocation
+  constant however big the heap is.
+
+Young objects the epoch rule protects at that moment aren't candidates; they
+count as survivors and wait for a full collection. (Keeping them on the young
+list instead made every young collection rescan all of them, which inside a
+long native call is most of the heap.)
+
+A young collection doesn't make the safe point process the ZCT first (each
+pass re-examines every entry the epoch rule or a root keeps, which got
+expensive when young collections came every 10,000 allocations). So the
+cycle collector may find garbage that is still listed in the ZCT. It
+releases such an object's references as usual but leaves it `DYING`, and
+the next ZCT pass frees it.
+
+On the stress script this took cycle collection from 312 ms to about 120 ms
+(longest pause 43 ms -> 22 ms) and the whole run from 1.2 s to 1.06 s
+(Boehm: 1.11 s).
 
 ---
 
@@ -335,8 +368,13 @@ because the pointers to it live in our pages where it can't look.
       246 MB; 6a: 925 MB); a 6-thread script at 20 MB (Boehm: 59 MB).
       ASan clean; 25/25 and 15/15 repeated stress runs correct; verifier
       clean after the threads finish.
-- [ ] **7. Later.** Generations for the cycle collector, finalizers, freeing
-      module bytecode.
+- [ ] **7. Later.**
+  - [x] Generations for the cycle collector (see "Generations").
+  - [ ] Per-thread allocation, so threads don't contend on one lock for
+        every allocation (threaded programs are still about twice as slow
+        as with Boehm).
+  - [ ] Finalizers (`ar_finalizer`; nothing uses them yet).
+  - [ ] Freeing module bytecode (modules are immortal for now).
 
 ## 6. Threads
 

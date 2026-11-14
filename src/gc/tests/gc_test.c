@@ -219,6 +219,51 @@ static void test_uncounted_roots(void) {
   printf("  uncounted roots: ok\n");
 }
 
+// Allocate garbage until a young cycle collection is due, then run a safe
+// point (which picks young or full by policy; here it's young).
+static void run_young_collection(void) {
+  size_t before = gc_stats().young_collections;
+  for (int i = 0; i < 12000; i++)
+    node_new();
+  gc_safe_point();
+  CHECK(gc_stats().young_collections == before + 1);
+}
+
+static void test_generations(void) {
+  // An old garbage cycle: survives a full collection while rooted (so it's
+  // no longer young), then loses its root.
+  Node *e = node_new(), *f = node_new();
+  gc_assign(&e->child[0], f);
+  gc_assign(&f->child[0], e);
+  gc_assign(&roots[0], e);
+  // An old object that will point at a young cycle.
+  Node *old = node_new();
+  gc_assign(&roots[1], old);
+  gc_collect_now(); // full: everything so far is old now
+  gc_assign(&roots[0], NULL);
+
+  // Young: a garbage cycle, and a cycle only an old object points at.
+  Node *c = node_new(), *d = node_new();
+  gc_assign(&c->child[0], d);
+  gc_assign(&d->child[0], c);
+  Node *a = node_new(), *b = node_new();
+  gc_assign(&a->child[0], b);
+  gc_assign(&b->child[0], a);
+  gc_assign(&old->child[0], a);
+
+  run_young_collection();
+  CHECK(!is_live(c) && !is_live(d)); // young garbage cycle: gone
+  CHECK(is_live(a) && is_live(b));   // held by an old object: kept
+  CHECK(is_live(e) && is_live(f));   // old garbage: not a young candidate
+
+  gc_collect_now(); // full
+  CHECK(!is_live(e) && !is_live(f));
+  CHECK(is_live(a) && is_live(b) && is_live(old));
+  expect_verify_clean();
+  expect_clean_heap();
+  printf("  generations: ok\n");
+}
+
 static void test_immortal(void) {
   Node *a = node_new();
   gc_immortalize(a);
@@ -426,6 +471,7 @@ int main(void) {
   test_cycles();
   test_epochs();
   test_uncounted_roots();
+  test_generations();
   test_immortal();
   expect_clean_heap();
   test_verifier();
