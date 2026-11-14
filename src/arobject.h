@@ -160,6 +160,11 @@ typedef struct Stack {
   // uint64_t fake_new_scopes;
   struct hashmap_GC *scope;
   struct Stack *prev;
+  // True once a function has been created in this scope or in a scope nested
+  // inside it, i.e. some closure can see this scope's variables. Loops must
+  // then give each iteration a fresh scope instead of clearing this one.
+  // Invariant: if a scope is captured, so are all of its ancestors.
+  bool captured;
 } Stack;
 
 struct default_value {
