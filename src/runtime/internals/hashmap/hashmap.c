@@ -213,6 +213,7 @@ int hashmap_remove_GC(struct hashmap_GC *t, uint64_t hash) {
         memmove(&t->inline_values[i], &t->inline_values[i + 1],
                 (t->inline_count - i - 1) * sizeof(struct node_GC));
         t->inline_count--;
+        t->count--;
         result = 1;
         break;
       }
@@ -229,6 +230,11 @@ int hashmap_remove_GC(struct hashmap_GC *t, uint64_t hash) {
             prev->next = cur->next;
           else
             t->list[pos] = cur->next;
+          // Keep the counts right: hashmap_count decides when to resize, so
+          // never decrementing it made maps that churn (insert, delete,
+          // insert...) keep doubling their bucket array forever.
+          t->hashmap_count--;
+          t->count--;
           result = 1;
           break;
         }
